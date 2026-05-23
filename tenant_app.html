@@ -11078,15 +11078,57 @@
             renderQuizHistory();
         }
 
-        // Quiz History — past attempts (passed + not passed) from localStorage markers.
-        // Source: quiz_contract_* and quiz_wellness_* keys. Each value parsed as
-        // {score, total, passed, at}. Sorted newest first, capped at 10.
-        // Title resolution: contract → "Contract Quiz"; wellness → article title by id.
+        // Quiz History — past attempts (passed + not passed). Session B: Firestore
+        // markers (wellnessQuizPassed/contractQuizPassed subcoll) are SoT; localStorage
+        // is a fallback for months before Session B migration / offline writes.
+        // Sorted newest first, capped at 10.
         function renderQuizHistory() {
             const list = document.getElementById('quiz-history-list');
             if (!list) return;
             const entries = [];
             const wellnessSrc = _wellnessList.length ? _wellnessList : WELLNESS_ARTICLES;
+            // Helper: turn Firestore timestamp/Date/number → millis
+            const _toMillis = (v) => {
+                if (v == null) return 0;
+                if (typeof v === 'number') return v;
+                if (typeof v.toMillis === 'function') return v.toMillis();
+                if (v.seconds) return v.seconds * 1000;
+                const t = new Date(v).getTime();
+                return isNaN(t) ? 0 : t;
+            };
+            const seenKeys = new Set();
+            // 1. Firestore wellness markers (authoritative, including current month)
+            for (const fsKey of Object.keys(_wellnessQuizMarkers || {})) {
+                const m = _wellnessQuizMarkers[fsKey];
+                if (!m) continue;
+                const parts = fsKey.split('_');
+                if (parts.length < 2) continue;
+                const ym = parts[parts.length - 1]; // YYYY-MM
+                const articleId = parts.slice(0, -1).join('_');
+                const art = wellnessSrc.find(x => x.id === articleId);
+                seenKeys.add(`w:${articleId}:${ym}`);
+                entries.push({
+                    at: _toMillis(m.at),
+                    title: art ? art.title : (articleId || 'Wellness Quiz'),
+                    icon: '🌿',
+                    score: m.score, total: m.total, passed: m.passed,
+                    reward: m.reward,
+                });
+            }
+            // 2. Firestore contract markers
+            for (const ym of Object.keys(_contractQuizMarkers || {})) {
+                const m = _contractQuizMarkers[ym];
+                if (!m) continue;
+                seenKeys.add(`c:${ym}`);
+                entries.push({
+                    at: _toMillis(m.at),
+                    title: 'Contract Quiz',
+                    icon: '📜',
+                    score: m.score, total: m.total, passed: m.passed,
+                    reward: m.reward,
+                });
+            }
+            // 3. localStorage fallback — only for entries Firestore doesn't already have
             for (let i = 0; i < localStorage.length; i++) {
                 const k = localStorage.key(i);
                 if (!k) continue;
@@ -11094,23 +11136,21 @@
                 let p;
                 try { p = JSON.parse(localStorage.getItem(k) || '{}'); } catch(e) { continue; }
                 if (!p || typeof p.at !== 'number') continue;
-                // Parse month from key suffix YYYYMM (last 6 digits)
-                const m = k.match(/_(\d{6})$/);
-                const monthLabel = m ? `${m[1].slice(4,6)}/${m[1].slice(0,4)}` : '';
-                // Resolve title
+                const m6 = k.match(/_(\d{6})$/);
+                const ym = m6 ? `${m6[1].slice(0,4)}-${m6[1].slice(4,6)}` : '';
                 let title = 'Contract Quiz';
                 let icon = '📜';
+                let dedup = `c:${ym}`;
                 if (k.startsWith('quiz_wellness_')) {
-                    // Strip prefix + bld + room + trailing _YYYYMM to get articleId
-                    // Pattern: quiz_wellness_{b}_{r}_{articleId}_{YYYYMM}
                     const parts = k.replace(/_(\d{6})$/, '').split('_');
-                    // parts[0]='quiz', [1]='wellness', [2]=b, [3]=r, [4..]=articleId (may contain '_')
                     const articleId = parts.slice(4).join('_');
                     const art = wellnessSrc.find(x => x.id === articleId);
                     title = art ? art.title : (articleId || 'Wellness Quiz');
                     icon = '🌿';
+                    dedup = `w:${articleId}:${ym}`;
                 }
-                entries.push({ at: p.at, title, icon, monthLabel, score: p.score, total: p.total, passed: p.passed });
+                if (seenKeys.has(dedup)) continue;
+                entries.push({ at: p.at, title, icon, score: p.score, total: p.total, passed: p.passed });
             }
             entries.sort((a, b) => b.at - a.at);
             const top = entries.slice(0, 10);
@@ -11141,16 +11181,25 @@
             const list = document.getElementById('quiz-hub-list');
             if (!list) return;
             const cards = [];
-            // 1. Contract Quiz card — only if there's a lease (otherwise no content to quiz on)
+            // 1. Contract Quiz card — only if there's a lease (otherwise no content to quiz on).
+            // Source-of-truth: Firestore _contractQuizMarkers (current ym lookup); localStorage hint fallback.
             if (_taLease && (_taLease.endDate || _taLease.moveOutDate)) {
-                const done = !!localStorage.getItem(_quizMonthKey());
+                const fsMarker = (typeof window._getContractQuizMarker === 'function') ? window._getContractQuizMarker() : null;
+                let done = !!fsMarker;
                 let scoreLine = '';
-                try {
-                    if (done) {
-                        const p = JSON.parse(localStorage.getItem(_quizMonthKey()));
-                        if (p && typeof p.score === 'number') scoreLine = `ตอบถูก ${p.score}/${p.total}`;
-                    }
-                } catch(e) {}
+                if (fsMarker && typeof fsMarker.score === 'number') {
+                    scoreLine = `ตอบถูก ${fsMarker.score}/${fsMarker.total}`;
+                } else {
+                    // Fallback to localStorage hint
+                    try {
+                        const ls = localStorage.getItem(_quizMonthKey());
+                        if (ls) {
+                            done = true;
+                            const p = JSON.parse(ls);
+                            if (p && typeof p.score === 'number') scoreLine = `ตอบถูก ${p.score}/${p.total}`;
+                        }
+                    } catch(e) {}
+                }
                 cards.push({
                     title: 'Contract Quiz',
                     subtitle: 'รู้จักสัญญาของคุณดีแค่ไหน',
@@ -11160,19 +11209,28 @@
                     icon: '📜',
                 });
             }
-            // 2. Wellness article quizzes
+            // 2. Wellness article quizzes — Firestore markers first, localStorage hint fallback.
             const src = _wellnessList.length ? _wellnessList : WELLNESS_ARTICLES;
+            const ym = _bkkYm();
             for (const a of src) {
                 if (!Array.isArray(a.quiz) || a.quiz.length === 0) continue;
-                const monthKey = _wellnessQuizMonthKey(a.id);
-                const done = !!localStorage.getItem(monthKey);
+                const fsKey = `${a.id}_${ym}`;
+                const fsMarker = _wellnessQuizMarkers && _wellnessQuizMarkers[fsKey];
+                let done = !!fsMarker;
                 let scoreLine = '';
-                try {
-                    if (done) {
-                        const p = JSON.parse(localStorage.getItem(monthKey));
-                        if (p && typeof p.score === 'number') scoreLine = `ตอบถูก ${p.score}/${p.total}`;
-                    }
-                } catch(e) {}
+                if (fsMarker && typeof fsMarker.score === 'number') {
+                    scoreLine = `ตอบถูก ${fsMarker.score}/${fsMarker.total}`;
+                } else {
+                    const monthKey = _wellnessQuizMonthKey(a.id);
+                    try {
+                        const ls = localStorage.getItem(monthKey);
+                        if (ls) {
+                            done = true;
+                            const p = JSON.parse(ls);
+                            if (p && typeof p.score === 'number') scoreLine = `ตอบถูก ${p.score}/${p.total}`;
+                        }
+                    } catch(e) {}
+                }
                 cards.push({
                     title: a.title,
                     subtitle: a.category || 'Wellness',
@@ -11975,6 +12033,80 @@
             return `quiz_contract_${_taBuilding||'x'}_${_taRoom||'x'}_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`;
         }
 
+        // ===== Session B — server-trusted quiz marker subscriptions ===========
+        // Watches Firestore subcollections written by claimWellnessQuizPoints +
+        // claimContractQuizPoints CFs. Demotes localStorage to a hint — Firestore
+        // is the source of truth.
+        //
+        // §7-U: claim-first guard (wait for _taBuilding/_taRoom)
+        // §7-N: error callback on every onSnapshot
+        // §7-V: tear down prior listener before re-attaching
+        // §7-KK: do NOT clear localStorage hint on cached/pending-writes snapshots
+        let _wellnessQuizUnsub = null;
+        let _contractQuizUnsub = null;
+        const _wellnessQuizMarkers = {}; // articleId_ym → { passed, score, total, at, reward }
+        const _contractQuizMarkers = {}; // ym → { passed, score, total, at, reward }
+
+        function _bkkYm() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function _subscribeQuizMarkers() {
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            if (!_taBuilding || !_taRoom) return; // §7-U: wait for claims
+            // §7-V: tear down prior listeners before re-attaching
+            if (typeof _wellnessQuizUnsub === 'function') { try { _wellnessQuizUnsub(); } catch (_) {} _wellnessQuizUnsub = null; }
+            if (typeof _contractQuizUnsub === 'function') { try { _contractQuizUnsub(); } catch (_) {} _contractQuizUnsub = null; }
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                const wellnessRef = fs.collection(db, `tenants/${_taBuilding}/list/${_taRoom}/wellnessQuizPassed`);
+                _wellnessQuizUnsub = fs.onSnapshot(wellnessRef, snap => {
+                    // Wipe + repopulate the markers map. We don't reconcile localStorage
+                    // hints here for absent keys — only refresh when server explicitly
+                    // says something. (§7-KK: cached snapshots are not authoritative for
+                    // marker-absence; only confirmed-server snapshots are.)
+                    Object.keys(_wellnessQuizMarkers).forEach(k => delete _wellnessQuizMarkers[k]);
+                    snap.forEach(d => { _wellnessQuizMarkers[d.id] = d.data() || {}; });
+                    // Refresh visible quiz hub / history / article prompt
+                    try {
+                        if (typeof renderQuizHub === 'function' && document.getElementById('community-quiz-hub')) renderQuizHub();
+                        if (typeof renderQuizHistory === 'function' && document.getElementById('quiz-history-list')) renderQuizHistory();
+                        if (_currentWellnessArticle && typeof _setupWellnessQuizPrompt === 'function') _setupWellnessQuizPrompt(_currentWellnessArticle);
+                    } catch (uiErr) { console.warn('quiz UI refresh failed:', uiErr?.message); }
+                }, err => {
+                    console.warn('[wellnessQuizPassed] subscribe failed:', err?.message || err);
+                    // §7-U recovery: if claims were stripped mid-flight, reset unsub so
+                    // _onLiffClaimsReady retry path can re-attach when claims return.
+                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                        _wellnessQuizUnsub = null;
+                    }
+                });
+                const contractRef = fs.collection(db, `tenants/${_taBuilding}/list/${_taRoom}/contractQuizPassed`);
+                _contractQuizUnsub = fs.onSnapshot(contractRef, snap => {
+                    Object.keys(_contractQuizMarkers).forEach(k => delete _contractQuizMarkers[k]);
+                    snap.forEach(d => { _contractQuizMarkers[d.id] = d.data() || {}; });
+                    try {
+                        if (typeof setupContractQuizGate === 'function') setupContractQuizGate();
+                        if (typeof renderQuizHub === 'function' && document.getElementById('community-quiz-hub')) renderQuizHub();
+                        if (typeof renderQuizHistory === 'function' && document.getElementById('quiz-history-list')) renderQuizHistory();
+                    } catch (uiErr) { console.warn('contract quiz UI refresh failed:', uiErr?.message); }
+                }, err => {
+                    console.warn('[contractQuizPassed] subscribe failed:', err?.message || err);
+                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                        _contractQuizUnsub = null;
+                    }
+                });
+            } catch (e) {
+                console.warn('quiz markers subscribe init failed:', e?.message || e);
+            }
+        }
+        _onLiffClaimsReady(_subscribeQuizMarkers);
+        window._wellnessQuizMarkers = _wellnessQuizMarkers;
+        window._contractQuizMarkers = _contractQuizMarkers;
+        window._getContractQuizMarker = (ym) => _contractQuizMarkers[ym || _bkkYm()] || null;
+
         // Quiz contract reward — default 20 pts.
         // Override via localStorage `quiz_reward_contract` (dev/manual).
         // (Removed Firestore `settings/{building}.quiz.contractRewardPoints` read:
@@ -11997,7 +12129,10 @@
                 if (descEl) descEl.innerHTML = `ทำ quiz ตอบถูก 2/3 ได้ <strong style="color:var(--primary-green);">+${_quizRewardContract} pts</strong> (ทำได้ 1 ครั้ง/เดือน)`;
             });
             // already done this month?
-            if (localStorage.getItem(_quizMonthKey())) {
+            // Firestore marker = source of truth (Session B). localStorage = hint
+            // for offline / pre-claim window. Either present → gate locked.
+            const fsMarker = (typeof window._getContractQuizMarker === 'function') ? window._getContractQuizMarker() : null;
+            if (fsMarker || localStorage.getItem(_quizMonthKey())) {
                 btn.disabled = true;
                 label.textContent = '✓ ทำ quiz เดือนนี้แล้ว (เดือนหน้าทำได้อีก)';
                 btn.style.opacity = '0.6';
@@ -12145,40 +12280,99 @@
 
         // Submit + close handle BOTH contract quiz and wellness-article quiz —
         // dispatch on _quizState.source ('contract' default | {type:'wellness', articleId}).
-        // Per-source: monthKey, reward amount, post-close UI refresh hook.
-        function submitContractQuiz() {
+        // Server (claimContractQuizPoints / claimWellnessQuizPoints) grades authoritatively;
+        // client preview is shown immediately while CF round-trips (~1-3s).
+        async function submitContractQuiz() {
             const st = _quizState; if (!st) return;
             if (st.current < st.questions.length - 1) {
                 st.current++;
                 renderQuizQuestion();
                 return;
             }
-            // score
-            let correct = 0;
-            st.questions.forEach((q, i) => { if (st.answers[i] === q.correctIdx) correct++; });
+            // Client-side preview score (server is authoritative; this only shapes the UI):
+            let previewCorrect = 0;
+            st.questions.forEach((q, i) => { if (st.answers[i] === q.correctIdx) previewCorrect++; });
             const total = st.questions.length;
-            // Pass threshold: 2/3 for 3-question, otherwise 100% (single-question = must be right)
             const passThreshold = total >= 3 ? 2 : total;
-            const passed = correct >= passThreshold;
-            // Resolve marker key + reward by source
+            const previewPassed = previewCorrect >= passThreshold;
             const isWellness = st.source && st.source.type === 'wellness';
             const monthKey = isWellness
                 ? _wellnessQuizMonthKey(st.source.articleId)
                 : _quizMonthKey();
             const reward = isWellness ? (st.reward || _quizRewardWellness) : (_quizRewardContract || 20);
-            localStorage.setItem(monthKey, JSON.stringify({ score: correct, total, passed, at: Date.now() }));
-            if (passed) awardQuizPoints(reward);
-            // show result
+            // Optimistic localStorage hint — server marker (Firestore) is SoT.
+            // §7-KK: this is overwritten if server says otherwise.
+            localStorage.setItem(monthKey, JSON.stringify({ score: previewCorrect, total, passed: previewPassed, at: Date.now() }));
+            // Show result UI immediately (no waiting for CF)
             document.getElementById('quiz-question').textContent = '';
             document.getElementById('quiz-options').innerHTML = '';
             const resEl = document.getElementById('quiz-result');
             resEl.style.display = 'block';
-            resEl.innerHTML = passed
-                ? `<div style="font-size:3rem;">🎉</div><strong style="color:var(--primary-green);">ตอบถูก ${correct}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ได้รับ <strong style="color:var(--accent-gold,#D4AF37);">+${reward} pts</strong></p>`
-                : `<div style="font-size:3rem;">📖</div><strong>ตอบถูก ${correct}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ต้องตอบถูก ${passThreshold}/${total} ถึงได้แต้ม<br>ลองเดือนหน้านะครับ</p>`;
+            resEl.innerHTML = previewPassed
+                ? `<div style="font-size:3rem;">🎉</div><strong style="color:var(--primary-green);">ตอบถูก ${previewCorrect}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">กำลังบันทึก... <strong style="color:var(--accent-gold,#D4AF37);">+${reward} pts</strong></p>`
+                : `<div style="font-size:3rem;">📖</div><strong>ตอบถูก ${previewCorrect}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ต้องตอบถูก ${passThreshold}/${total} ถึงได้แต้ม<br>ลองเดือนหน้านะครับ</p>`;
             document.getElementById('quiz-submit-btn').textContent = 'ปิด';
             document.getElementById('quiz-submit-btn').disabled = false;
             document.getElementById('quiz-submit-btn').onclick = closeContractQuiz;
+
+            // Server-side claim — authoritative grading + points.
+            try {
+                const fns = window.firebase?.functions;
+                if (!fns) throw new Error('Firebase Functions SDK not loaded');
+                let resp;
+                if (isWellness) {
+                    if (!_taBuilding || !_taRoom) throw new Error('ยังไม่พบข้อมูลห้อง');
+                    const callable = fns.httpsCallable('claimWellnessQuizPoints');
+                    const answers = st.questions.map((_, i) => st.answers[i] != null ? Number(st.answers[i]) : -1);
+                    resp = await callable({
+                        building: _taBuilding,
+                        roomId: String(_taRoom),
+                        articleId: st.source.articleId,
+                        answers,
+                    });
+                } else {
+                    if (!_taBuilding || !_taRoom) throw new Error('ยังไม่พบข้อมูลห้อง');
+                    // Map client question state to server answer shape. Q1 = leaseEndDate,
+                    // Q2 = monthlyRent (when present), Q3+ = policy (q text matched server-side).
+                    // Send literal answer STRINGS — server doesn't trust correctIdx.
+                    const answers = st.questions.map((q, i) => {
+                        const optStr = q.options[st.answers[i]] != null ? String(q.options[st.answers[i]]) : '';
+                        if (/สิ้นสุดวันใด/.test(q.q)) return { kind: 'leaseEndDate', userAnswer: optStr };
+                        if (/ค่าเช่า.*เดือน/.test(q.q)) return { kind: 'monthlyRent', userAnswer: optStr };
+                        return { kind: 'policy', q: q.q, userAnswer: optStr };
+                    });
+                    const callable = fns.httpsCallable('claimContractQuizPoints');
+                    resp = await callable({
+                        building: _taBuilding,
+                        roomId: String(_taRoom),
+                        answers,
+                    });
+                }
+                const r = resp.data || {};
+                // Server-confirmed result — overwrite optimistic marker if server disagrees.
+                localStorage.setItem(monthKey, JSON.stringify({
+                    score: r.score, total: r.total, passed: !!r.passed, reward: r.reward || 0, at: Date.now(),
+                }));
+                // Refresh result UI with server's actual answer.
+                if (typeof r.passed === 'boolean') {
+                    resEl.innerHTML = r.passed
+                        ? `<div style="font-size:3rem;">🎉</div><strong style="color:var(--primary-green);">ตอบถูก ${r.score}/${r.total}</strong><p style="margin:6px 0; color:var(--text-muted);">ได้รับ <strong style="color:var(--accent-gold,#D4AF37);">+${r.reward} pts</strong></p>`
+                        : `<div style="font-size:3rem;">📖</div><strong>ตอบถูก ${r.score}/${r.total}</strong><p style="margin:6px 0; color:var(--text-muted);">ต้องตอบถูก ${r.passThreshold}/${r.total} ถึงได้แต้ม<br>ลองเดือนหน้านะครับ</p>`;
+                }
+                if (typeof r.pointsAfter === 'number' && typeof loadGamificationData === 'function') {
+                    loadGamificationData(); // refresh Quest Ecosystem display
+                }
+            } catch (err) {
+                const code = err?.code || err?.details?.code || '';
+                if (code === 'functions/already-exists') {
+                    toast('ทำ quiz เดือนนี้แล้ว', 'info');
+                } else {
+                    console.warn('quiz claim failed:', err);
+                    // Rollback optimistic marker so user can retry.
+                    localStorage.removeItem(monthKey);
+                    toast('บันทึกไม่สำเร็จ ลองอีกครั้ง', 'error');
+                }
+            }
         }
 
         function closeContractQuiz() {
@@ -12223,8 +12417,19 @@
             const total = article.quiz.length;
             const passThreshold = total >= 3 ? 2 : total;
             if (desc) desc.innerHTML = `ตอบถูก ${passThreshold}/${total} รับ <strong style="color:var(--accent-gold,#D4AF37);">+${_quizRewardWellness} bonus pts</strong> (1 ครั้ง/เดือน/บทความ)`;
-            // Check if already done this month
+            // Firestore marker = source of truth (Session B); localStorage = hint.
+            // Check Firestore first, then localStorage as offline fallback.
             try {
+                const ym = _bkkYm();
+                const fsKey = `${article.id}_${ym}`;
+                const fsMarker = _wellnessQuizMarkers && _wellnessQuizMarkers[fsKey];
+                if (fsMarker) {
+                    btn.disabled = true;
+                    btn.style.opacity = '.55';
+                    btn.textContent = fsMarker.passed ? '✅ ทำแล้วเดือนนี้' : '📖 ทำแล้วเดือนนี้ (ไม่ผ่าน)';
+                    if (status) status.textContent = `ลองอีกครั้งเดือนหน้า • ตอบถูก ${fsMarker.score}/${fsMarker.total}`;
+                    return;
+                }
                 const prior = localStorage.getItem(_wellnessQuizMonthKey(article.id));
                 if (prior) {
                     const parsed = JSON.parse(prior);
@@ -12247,7 +12452,10 @@
                 toast('บทความนี้ยังไม่มี quiz', 'info');
                 return;
             }
-            if (localStorage.getItem(_wellnessQuizMonthKey(article.id))) {
+            // Firestore marker beats localStorage as gate (Session B)
+            const ym = _bkkYm();
+            const fsKey = `${article.id}_${ym}`;
+            if ((_wellnessQuizMarkers && _wellnessQuizMarkers[fsKey]) || localStorage.getItem(_wellnessQuizMonthKey(article.id))) {
                 toast('ทำ quiz บทความนี้แล้วเดือนนี้ เดือนหน้าค่อยทำอีก', 'info');
                 return;
             }

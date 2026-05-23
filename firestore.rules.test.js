@@ -651,6 +651,69 @@ describe('wellnessClaimed — tenant create-only (idempotent)', () => {
   });
 });
 
+describe('wellnessQuizPassed — CF-only create (Session B server-trusted)', () => {
+  // CF-only create is stricter than wellnessClaimed which permits tenant create.
+  // claimWellnessQuizPoints writes via Admin SDK (bypasses rules); direct client
+  // create must fail or a tenant could forge passed-marker.
+  it('anon tenant CANNOT create wellnessQuizPassed (CF-only)', async () => {
+    await seedDoc('tenants/rooms/list/101', { linkedAuthUid: 'tenant-1', building: 'rooms', roomId: '101' });
+    await assertFails(setDoc(
+      doc(ANON().firestore(), 'tenants/rooms/list/101/wellnessQuizPassed/article-1_2026-05'),
+      { passed: true, reward: 10 }
+    ));
+  });
+
+  it('owning tenant CAN read own wellnessQuizPassed marker', async () => {
+    await seedDoc('tenants/rooms/list/101', { linkedAuthUid: 'tenant-1', building: 'rooms', roomId: '101' });
+    await seedDoc('tenants/rooms/list/101/wellnessQuizPassed/article-1_2026-05', { passed: true, reward: 10 });
+    await assertSucceeds(getDoc(
+      doc(ANON().firestore(), 'tenants/rooms/list/101/wellnessQuizPassed/article-1_2026-05')
+    ));
+  });
+
+  it('cross-room tenant CANNOT read other room\'s wellnessQuizPassed', async () => {
+    await seedDoc('tenants/rooms/list/101', { linkedAuthUid: 'other-tenant', building: 'rooms', roomId: '101' });
+    await seedDoc('tenants/rooms/list/101/wellnessQuizPassed/article-1_2026-05', { passed: true });
+    await assertFails(getDoc(
+      doc(ANON().firestore(), 'tenants/rooms/list/101/wellnessQuizPassed/article-1_2026-05')
+    ));
+  });
+
+  it('admin CAN run collectionGroup("wellnessQuizPassed") for engagement insights', async () => {
+    await seedDoc('tenants/rooms/list/101/wellnessQuizPassed/a1_2026-05', { passed: true, reward: 10 });
+    await seedDoc('tenants/nest/list/N201/wellnessQuizPassed/a1_2026-05', { passed: false, reward: 0 });
+    await assertSucceeds(getDocs(
+      query(collectionGroup(EMAIL_ADMIN().firestore(), 'wellnessQuizPassed'))
+    ));
+  });
+});
+
+describe('contractQuizPassed — CF-only create (Session B server-trusted)', () => {
+  it('anon tenant CANNOT create contractQuizPassed (CF-only)', async () => {
+    await seedDoc('tenants/rooms/list/101', { linkedAuthUid: 'tenant-1', building: 'rooms', roomId: '101' });
+    await assertFails(setDoc(
+      doc(ANON().firestore(), 'tenants/rooms/list/101/contractQuizPassed/2026-05'),
+      { passed: true, reward: 20 }
+    ));
+  });
+
+  it('owning tenant CAN read own contractQuizPassed marker', async () => {
+    await seedDoc('tenants/rooms/list/101', { linkedAuthUid: 'tenant-1', building: 'rooms', roomId: '101' });
+    await seedDoc('tenants/rooms/list/101/contractQuizPassed/2026-05', { passed: true, reward: 20 });
+    await assertSucceeds(getDoc(
+      doc(ANON().firestore(), 'tenants/rooms/list/101/contractQuizPassed/2026-05')
+    ));
+  });
+
+  it('admin CAN run collectionGroup("contractQuizPassed") for monthly pass-rate', async () => {
+    await seedDoc('tenants/rooms/list/101/contractQuizPassed/2026-05', { passed: true, reward: 20 });
+    await seedDoc('tenants/nest/list/N201/contractQuizPassed/2026-05', { passed: false, reward: 0 });
+    await assertSucceeds(getDocs(
+      query(collectionGroup(EMAIL_ADMIN().firestore(), 'contractQuizPassed'))
+    ));
+  });
+});
+
 describe('occupancyLog — append-only audit history (Plan B\' S1)', () => {
   // Helper: LIFF tenant with explicit tenantId claim (the rule's read gate)
   const LIFF_WITH_TENANT_ID = (uid, tenantId, room = '101', building = 'rooms') =>

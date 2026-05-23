@@ -349,8 +349,24 @@ async function saveWellnessArticle() {
   }
 
   const db = window.firebase.firestore();
-  const { collection, doc, addDoc, setDoc, serverTimestamp } = window.firebase.firestoreFunctions || {};
+  const { collection, doc, addDoc, setDoc, serverTimestamp, deleteField } = window.firebase.firestoreFunctions || {};
+  // Quiz — optional. Empty array → delete the field on update; new doc → omit.
+  const quizArr = (typeof collectQuizFromForm === 'function') ? collectQuizFromForm() : [];
+  const quizErr = (typeof validateQuiz === 'function') ? validateQuiz(quizArr) : null;
+  if (quizErr) {
+    if (typeof showToast === 'function') showToast(quizErr, 'error');
+    return;
+  }
+  // Strip the in-form _qi marker before saving; keep only canonical fields.
+  const cleanQuiz = quizArr.map(q => ({ q: q.q.trim(), options: q.options.slice(), correctIdx: q.correctIdx }));
+
   const data = { title, icon, excerpt, body, category, readtime, reward, updatedAt: serverTimestamp ? serverTimestamp() : new Date(), coverImage: window._wellnessCoverImage || null };
+  if (cleanQuiz.length > 0) {
+    data.quiz = cleanQuiz;
+  } else if (editId && typeof deleteField === 'function') {
+    // Editing AND quiz is empty → delete the existing field rather than write [].
+    data.quiz = deleteField();
+  }
 
   try {
     if (editId) {
@@ -379,6 +395,9 @@ function resetWellnessForm() {
   if (typeof resetWellnessImages === 'function') resetWellnessImages();
   if (typeof window.clearWellnessCover === 'function') window.clearWellnessCover();
   if (typeof window.pickWellnessIcon === 'function') window.pickWellnessIcon('fa-leaf');
+  // Clear quiz editor too (Session B)
+  if (typeof window._renderQuizQuestions === 'function') window._renderQuizQuestions([]);
+  const det = document.getElementById('wellness-quiz-editor'); if (det) det.open = false;
 }
 
 async function renderWellnessArticlesList() {
@@ -467,6 +486,13 @@ async function editWellnessArticle(id) {
     } else {
       if (typeof window.clearWellnessCover === 'function') window.clearWellnessCover();
     }
+    // Populate quiz editor (Session B). If empty, render empty list.
+    if (typeof window._renderQuizQuestions === 'function') {
+      const q = Array.isArray(a.quiz) ? a.quiz : [];
+      window._renderQuizQuestions(q);
+      const det = document.getElementById('wellness-quiz-editor');
+      if (det) det.open = q.length > 0;
+    }
     document.getElementById('wellness-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (e) { console.error('editWellnessArticle failed:', e); }
 }
@@ -531,4 +557,176 @@ async function deleteWellnessArticle(id, title) {
     if (typeof showToast === 'function') showToast('ลบไม่สำเร็จ', 'error');
   }
 }
+
+// ===== Quiz editor (Session B) ============================================
+// Authoring UI for `quiz: [{q, options, correctIdx}]` field on wellness article
+// docs. tenant_app reads + claimWellnessQuizPoints CF grades. Max 5 questions.
+// All edits are in-DOM until saveWellnessArticle reads the form back into the
+// article doc (collectQuizFromForm -> data.quiz or FieldValue.delete()).
+
+const QUIZ_MAX_QUESTIONS = 5;
+const QUIZ_MIN_OPTIONS = 2;
+const QUIZ_MAX_OPTIONS = 4;
+
+// Dogfood quizzes lifted from tenant_app.html WELLNESS_ARTICLES (~line 11733).
+// Used by "ดึงตัวอย่างจาก hardcoded" button when editing one of these articles.
+const HARDCODED_QUIZ_SAMPLES = {
+  'sleep-bedroom': [
+    { q: 'แสงไฟโทนใดช่วยให้หลั่งเมลาโทนินก่อนนอน?', options: ['ขาว 6500K','เหลือง 2700K','ฟ้า LED','แดง'], correctIdx: 1 },
+    { q: 'ต้นไม้ชนิดใดดูดซับ CO₂ ตอนกลางคืน เหมาะวางหัวเตียง?', options: ['ดอกทานตะวัน','พลูด่าง / ลิ้นมังกร','กระบองเพชร','กล้วยไม้'], correctIdx: 1 },
+    { q: 'อุณหภูมิห้องที่ทำให้หลับลึกที่สุดคือเท่าไร?', options: ['18-20°C','24-26°C','28-30°C','32°C+'], correctIdx: 1 },
+  ],
+  'morning-ritual': [
+    { q: 'ก่อนหยิบมือถือตอนเช้า ควรทำอะไรเป็นอย่างแรก?', options: ['เช็คโซเชียล','ดื่มน้ำเปล่า + เปิดม่าน','ดูหุ้น','คุยกับแฟน'], correctIdx: 1 },
+    { q: 'Gratitude journaling คือการเขียนอะไร?', options: ['งานที่ต้องทำ','3 สิ่งที่รู้สึกขอบคุณ','แผนการเงิน','ตารางออกกำลังกาย'], correctIdx: 1 },
+    { q: 'Morning ritual 10 นาทีควรประกอบด้วยกี่ส่วน?', options: ['1 ส่วน','2 ส่วน','3 ส่วน','5 ส่วน'], correctIdx: 2 },
+  ],
+};
+
+function _escAttr(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+/** Render the quiz editor questions list from an in-memory array. */
+function _renderQuizQuestions(quiz) {
+  const wrap = document.getElementById('wellness-quiz-questions');
+  const countEl = document.getElementById('wellness-quiz-count');
+  if (!wrap) return;
+  const arr = Array.isArray(quiz) ? quiz : [];
+  wrap.innerHTML = arr.map((q, qi) => {
+    const opts = (Array.isArray(q.options) ? q.options : []).slice(0, QUIZ_MAX_OPTIONS);
+    while (opts.length < QUIZ_MIN_OPTIONS) opts.push('');
+    const correctIdx = Number.isInteger(q.correctIdx) ? q.correctIdx : 0;
+    const optsHtml = opts.map((opt, oi) => `
+      <div style="display:flex;align-items:center;gap:.5rem;">
+        <input type="radio" name="quiz-correct-${qi}" value="${oi}" ${oi === correctIdx ? 'checked' : ''}
+               data-action="quizSetCorrect" data-qi="${qi}" data-oi="${oi}"
+               aria-label="ตอบที่ถูกข้อ ${oi+1}" style="cursor:pointer;">
+        <input type="text" value="${_escAttr(opt)}" placeholder="ตัวเลือกที่ ${oi+1}"
+               data-quiz-option data-qi="${qi}" data-oi="${oi}"
+               style="flex:1;padding:.4rem .5rem;border:1px solid var(--border);border-radius:5px;font-family:var(--font-brand);font-size:.85rem;">
+        ${opts.length > QUIZ_MIN_OPTIONS ? `<button type="button" data-action="quizRemoveOption" data-qi="${qi}" data-oi="${oi}" style="background:#fff;color:var(--text-muted);border:1px solid var(--border);border-radius:5px;width:28px;height:28px;cursor:pointer;font-size:.9rem;" title="ลบตัวเลือก">×</button>` : ''}
+      </div>`).join('');
+    return `
+      <div class="quiz-q-card" data-qi="${qi}" style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+          <strong style="font-size:.85rem;color:var(--text-muted);">คำถามที่ ${qi+1}</strong>
+          <button type="button" data-action="quizRemoveQuestion" data-qi="${qi}" style="background:#fff;color:#e74c3c;border:1px solid #f6cfca;border-radius:5px;padding:3px 10px;font-size:.75rem;cursor:pointer;">✕ ลบคำถาม</button>
+        </div>
+        <input type="text" value="${_escAttr(q.q || '')}" placeholder="พิมพ์คำถาม..."
+               data-quiz-q data-qi="${qi}"
+               style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:6px;font-family:var(--font-brand);font-size:.9rem;margin-bottom:.5rem;">
+        <div style="display:flex;flex-direction:column;gap:.4rem;">
+          ${optsHtml}
+        </div>
+        ${opts.length < QUIZ_MAX_OPTIONS ? `<button type="button" data-action="quizAddOption" data-qi="${qi}" style="margin-top:.4rem;background:transparent;color:var(--green);border:1px dashed var(--green);border-radius:5px;padding:.3rem .6rem;font-size:.78rem;cursor:pointer;">+ เพิ่มตัวเลือก</button>` : ''}
+      </div>`;
+  }).join('');
+  if (countEl) countEl.textContent = arr.length === 0 ? 'ไม่มี quiz' : `${arr.length} คำถาม`;
+}
+
+/** Read the current state of the quiz editor form into an array. */
+function collectQuizFromForm() {
+  const wrap = document.getElementById('wellness-quiz-questions');
+  if (!wrap) return [];
+  const cards = Array.from(wrap.querySelectorAll('.quiz-q-card'));
+  return cards.map(card => {
+    const qi = Number(card.dataset.qi);
+    const qInput = card.querySelector('[data-quiz-q]');
+    const q = (qInput?.value || '').trim();
+    const opts = Array.from(card.querySelectorAll('[data-quiz-option]'))
+      .map(el => (el.value || '').trim())
+      .filter(s => s.length > 0);
+    const radio = card.querySelector('input[type="radio"]:checked');
+    const correctIdx = radio ? Number(radio.value) : 0;
+    return { q, options: opts, correctIdx, _qi: qi };
+  }).filter(x => x.q.length > 0 || x.options.length > 0); // drop fully-empty rows
+}
+
+/** Validate quiz array — returns null if ok, error message if invalid. */
+function validateQuiz(quiz) {
+  if (!Array.isArray(quiz) || quiz.length === 0) return null; // empty = ok (no quiz)
+  if (quiz.length > QUIZ_MAX_QUESTIONS) return `quiz เกิน ${QUIZ_MAX_QUESTIONS} คำถาม (ตัด)`;
+  for (let i = 0; i < quiz.length; i++) {
+    const q = quiz[i];
+    if (!q.q || !q.q.trim()) return `คำถามที่ ${i+1} ยังไม่มีข้อความ`;
+    const opts = Array.isArray(q.options) ? q.options.filter(s => s && s.trim()) : [];
+    if (opts.length < QUIZ_MIN_OPTIONS) return `คำถามที่ ${i+1} ต้องมีอย่างน้อย ${QUIZ_MIN_OPTIONS} ตัวเลือก`;
+    if (opts.length > QUIZ_MAX_OPTIONS) return `คำถามที่ ${i+1} มีตัวเลือกเกิน ${QUIZ_MAX_OPTIONS}`;
+    if (!Number.isInteger(q.correctIdx) || q.correctIdx < 0 || q.correctIdx >= opts.length) {
+      return `คำถามที่ ${i+1}: ยังไม่ได้เลือกข้อที่ถูก`;
+    }
+  }
+  return null;
+}
+
+window.quizAddQuestion = function () {
+  const cur = collectQuizFromForm();
+  if (cur.length >= QUIZ_MAX_QUESTIONS) {
+    if (typeof showToast === 'function') showToast(`เกิน ${QUIZ_MAX_QUESTIONS} คำถามแล้ว`, 'warning');
+    return;
+  }
+  cur.push({ q: '', options: ['', ''], correctIdx: 0 });
+  _renderQuizQuestions(cur);
+  // Auto-open the details element if collapsed
+  const det = document.getElementById('wellness-quiz-editor');
+  if (det && !det.open) det.open = true;
+};
+
+window.quizRemoveQuestion = function (qi) {
+  const cur = collectQuizFromForm();
+  const idx = Number(qi);
+  if (idx < 0 || idx >= cur.length) return;
+  cur.splice(idx, 1);
+  _renderQuizQuestions(cur);
+};
+
+window.quizAddOption = function (qi) {
+  const cur = collectQuizFromForm();
+  const idx = Number(qi);
+  if (idx < 0 || idx >= cur.length) return;
+  if (cur[idx].options.length >= QUIZ_MAX_OPTIONS) return;
+  cur[idx].options.push('');
+  _renderQuizQuestions(cur);
+};
+
+window.quizRemoveOption = function (qi, oi) {
+  const cur = collectQuizFromForm();
+  const qIdx = Number(qi);
+  const oIdx = Number(oi);
+  if (qIdx < 0 || qIdx >= cur.length) return;
+  const q = cur[qIdx];
+  if (q.options.length <= QUIZ_MIN_OPTIONS) return;
+  q.options.splice(oIdx, 1);
+  if (q.correctIdx === oIdx) q.correctIdx = 0;
+  else if (q.correctIdx > oIdx) q.correctIdx -= 1;
+  _renderQuizQuestions(cur);
+};
+
+// Radio's `checked` reflects DOM state; collectQuizFromForm reads it back.
+// This handler exists for completeness but no DOM work is needed beyond what
+// the browser already does — the next collectQuizFromForm will pick it up.
+window.quizSetCorrect = function (qi, oi) {
+  // No-op: native radio handles selection state.
+  void qi; void oi;
+};
+
+window.quizImportSample = function () {
+  const editId = document.getElementById('wellness-edit-id')?.value || '';
+  if (!editId) {
+    if (typeof showToast === 'function') showToast('แก้บทความก่อนแล้วค่อย import sample', 'info');
+    return;
+  }
+  const sample = HARDCODED_QUIZ_SAMPLES[editId];
+  if (!sample) {
+    if (typeof showToast === 'function') showToast(`ไม่มี sample quiz สำหรับ ${editId}`, 'info');
+    return;
+  }
+  _renderQuizQuestions(sample.map(q => ({ ...q, options: q.options.slice() })));
+  if (typeof showToast === 'function') showToast(`ดึง ${sample.length} คำถามจาก hardcoded`, 'success');
+};
+
+window.collectQuizFromForm = collectQuizFromForm;
+window.validateQuiz = validateQuiz;
+window._renderQuizQuestions = _renderQuizQuestions;
 

@@ -260,6 +260,172 @@
   }
 
   // ============================================================
+  // FEATURE 1b: Quiz Engagement (Session B) — wellness + contract
+  // ============================================================
+  // Aggregates collectionGroup('wellnessQuizPassed') + collectionGroup(
+  // 'contractQuizPassed'). Both subcollections are CF-only writes (claim*QuizPoints
+  // CFs) so this is the authoritative engagement signal.
+  //
+  // §7-DD live-path discipline: filter out archive-path copies so move-out
+  // doesn't inflate the engagement count (mirror pets/wellnessClaimed handling).
+  async function renderQuizEngagement() {
+    const container = document.getElementById('dashQuizEngagement');
+    if (!container) return;
+    container.innerHTML = loadingHTML();
+    try {
+      if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+        throw new Error('Firebase ยังไม่พร้อม');
+      }
+      const db = window.firebase.firestore();
+      const { collection, collectionGroup, getDocs, query } = window.firebase.firestoreFunctions;
+
+      const [articleSnap, wqSnap, cqSnap] = await Promise.all([
+        getDocs(collection(db, 'wellness_articles')),
+        getDocs(query(collectionGroup(db, 'wellnessQuizPassed'))),
+        getDocs(query(collectionGroup(db, 'contractQuizPassed'))),
+      ]);
+
+      const articles = new Map();
+      articleSnap.forEach(d => {
+        articles.set(d.id, { id: d.id, title: d.data()?.title || '(ไม่ระบุชื่อ)' });
+      });
+
+      // Live-path filter — exclude archive subcoll copies.
+      const isLivePath = (ref) => {
+        const parts = ref.path.split('/');
+        return parts.includes('list') && !parts.includes('archive');
+      };
+
+      // Wellness aggregation: marker doc id = `{articleId}_{ym}`; strip _{ym} for grouping
+      const wellnessByArticle = new Map();
+      let wellnessPasses = 0;
+      let wellnessAttempts = 0;
+      wqSnap.forEach(d => {
+        if (!isLivePath(d.ref)) return;
+        const data = d.data() || {};
+        wellnessAttempts++;
+        if (data.passed) wellnessPasses++;
+        const parts = d.id.split('_');
+        if (parts.length < 2) return;
+        const articleId = parts.slice(0, -1).join('_');
+        if (!wellnessByArticle.has(articleId)) wellnessByArticle.set(articleId, { passes: 0, fails: 0 });
+        const stat = wellnessByArticle.get(articleId);
+        if (data.passed) stat.passes++; else stat.fails++;
+      });
+
+      // Contract aggregation: marker doc id = ym
+      const contractByMonth = new Map();
+      let contractPasses = 0;
+      let contractAttempts = 0;
+      cqSnap.forEach(d => {
+        if (!isLivePath(d.ref)) return;
+        const data = d.data() || {};
+        contractAttempts++;
+        if (data.passed) contractPasses++;
+        const ym = d.id;
+        if (!contractByMonth.has(ym)) contractByMonth.set(ym, { passes: 0, fails: 0 });
+        const stat = contractByMonth.get(ym);
+        if (data.passed) stat.passes++; else stat.fails++;
+      });
+
+      const wellnessRate = wellnessAttempts ? Math.round(wellnessPasses / wellnessAttempts * 100) : 0;
+      const contractRate = contractAttempts ? Math.round(contractPasses / contractAttempts * 100) : 0;
+
+      // Wellness table — sorted by total attempts desc
+      const wRows = Array.from(wellnessByArticle.entries())
+        .map(([id, s]) => ({
+          id, title: articles.get(id)?.title || id,
+          total: s.passes + s.fails, passes: s.passes, fails: s.fails,
+          rate: (s.passes + s.fails) ? Math.round(s.passes / (s.passes + s.fails) * 100) : 0,
+        }))
+        .sort((a, b) => b.total - a.total);
+      const wellnessTable = wRows.length === 0
+        ? `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1.2rem;">ยังไม่มี attempt</td></tr>`
+        : wRows.map(r => {
+            const rateColor = r.rate >= 70 ? 'var(--green-dark)' : r.rate >= 40 ? 'var(--moss,#5a7a5a)' : '#92400e';
+            return `<tr>
+              <td style="padding:.5rem .7rem;">${esc(r.title)}</td>
+              <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.passes} / ${r.total}</td>
+              <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${rateColor};font-weight:600;">${r.rate}%</td>
+            </tr>`;
+          }).join('');
+
+      // Contract table — sorted by month desc
+      const cRows = Array.from(contractByMonth.entries())
+        .map(([ym, s]) => ({
+          ym, total: s.passes + s.fails, passes: s.passes, fails: s.fails,
+          rate: (s.passes + s.fails) ? Math.round(s.passes / (s.passes + s.fails) * 100) : 0,
+        }))
+        .sort((a, b) => b.ym.localeCompare(a.ym))
+        .slice(0, 6); // last 6 months
+      const contractTable = cRows.length === 0
+        ? `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:1.2rem;">ยังไม่มี attempt</td></tr>`
+        : cRows.map(r => {
+            const rateColor = r.rate >= 70 ? 'var(--green-dark)' : r.rate >= 40 ? 'var(--moss,#5a7a5a)' : '#92400e';
+            return `<tr>
+              <td style="padding:.5rem .7rem;">${esc(r.ym)}</td>
+              <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.passes} / ${r.total}</td>
+              <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${rateColor};font-weight:600;">${r.rate}%</td>
+            </tr>`;
+          }).join('');
+
+      container.innerHTML = `
+        <div class="card" style="border-left:4px solid var(--accent-gold,#D4AF37);">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>🎯 Quiz Engagement</span>
+            <button data-action="refreshInsight" data-target="quizEngagement" aria-label="รีเฟรช Quiz"
+                    style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+          </div>
+          <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.7rem;">
+            Wellness: <strong style="color:var(--green-dark);">${wellnessPasses}/${wellnessAttempts}</strong> ผ่าน (${wellnessRate}%) ·
+            Contract: <strong style="color:var(--green-dark);">${contractPasses}/${contractAttempts}</strong> ผ่าน (${contractRate}%)
+          </div>
+          <div style="display:grid;grid-template-columns:1fr;gap:.8rem;">
+            <div>
+              <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.3rem;">📚 บทความ Wellness</div>
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+                  <thead><tr style="background:var(--green-pale);color:var(--green-dark);">
+                    <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">บทความ</th>
+                    <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">ผ่าน / รวม</th>
+                    <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">อัตรา</th>
+                  </tr></thead>
+                  <tbody>${wellnessTable}</tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.3rem;">📜 Contract Quiz (รายเดือน)</div>
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+                  <thead><tr style="background:var(--green-pale);color:var(--green-dark);">
+                    <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">เดือน</th>
+                    <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">ผ่าน / รวม</th>
+                    <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">อัตรา</th>
+                  </tr></thead>
+                  <tbody>${contractTable}</tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${fmtCacheAge(Date.now())}</div>
+        </div>
+      `;
+
+      window._insightsCache = window._insightsCache || {};
+      window._insightsCache.quizEngagement = {
+        wellnessAttempts, wellnessPasses, wellnessRate,
+        contractAttempts, contractPasses, contractRate,
+        wellnessByArticle: Object.fromEntries(wellnessByArticle),
+        contractByMonth: Object.fromEntries(contractByMonth),
+      };
+    } catch (e) {
+      console.error('[insights] quiz engagement failed:', e);
+      container.innerHTML = errorHTML('quizEngagement', e.message);
+    }
+  }
+
+  // ============================================================
   // FEATURE 2: Daily Login Streak Leaderboard
   // ============================================================
   async function renderStreakLeaderboard() {
@@ -1477,6 +1643,7 @@
     if (_commInited) return;
     _commInited = true;
     renderWellnessMatrix();
+    renderQuizEngagement();
     renderStreakLeaderboard();
   }
   function initFinancialInsights() {
@@ -1536,6 +1703,7 @@
   }
   function refreshInsight(target) {
     if (target === 'wellness') { cacheClear('tenants_all'); renderWellnessMatrix(); }
+    else if (target === 'quizEngagement') { renderQuizEngagement(); }
     else if (target === 'streak') { cacheClear('tenants_all'); renderStreakLeaderboard(); }
     else if (target === 'payment') { cacheClear('payment_behavior'); renderPaymentBehavior(); }
     else if (target === 'tenant' || target === 'health' || target === 'churn') {
