@@ -3210,11 +3210,19 @@
     </div>
 
     <!-- Marketplace page — moved out of community 2026-05-23 (10) per user redesign.
-         Reached via home-market-tile in worldmap; nav-community-btn now goes to Quiz. -->
+         Reached via home-market-tile in worldmap; nav-community-btn now goes to Quiz.
+         Nav-bar hidden (showPage hides it for 'marketplace') — back chevron is the only exit. -->
     <div id="marketplace" class="page">
-        <div class="app-bar">
-            <h1 class="page-title-top">ชุมชน 🛒</h1>
-            <p>ตลาดของชุมชน — ของมือสอง บริการ และของแจกฟรี</p>
+        <div class="app-bar" style="display:flex; align-items:center; gap:15px;">
+            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto;"
+                data-action="showPage--updateNavActiveIndex" data-page="world-map" data-nav-index="0"
+                aria-label="กลับ worldmap">
+                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+            </div>
+            <div style="flex:1;">
+                <h1 class="page-title-top" style="margin:0;">ชุมชน 🛒</h1>
+                <p style="margin:4px 0 0;">ตลาดของชุมชน — ของมือสอง บริการ และของแจกฟรี</p>
+            </div>
         </div>
 
         <div id="marketplace-section">
@@ -5055,10 +5063,11 @@
             window.scrollTo(0, 0);
             _currentPageEl = target;
 
-            // Nav bar (ซ่อนเฉพาะตอนอยู่หน้าแผนที่โลก)
+            // Nav bar (ซ่อนตอนอยู่หน้าแผนที่โลก + marketplace ที่เข้าผ่าน worldmap tile)
             const navBar = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
             if (navBar) {
-                navBar.style.display = (id === 'world-map' || target.id === 'world-map-page') ? 'none' : 'flex';
+                const hideNav = id === 'world-map' || target.id === 'world-map-page' || id === 'marketplace';
+                navBar.style.display = hideNav ? 'none' : 'flex';
             }
 
             // Nav item active state — cache nav items lookup (called repeatedly)
