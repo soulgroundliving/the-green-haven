@@ -3802,11 +3802,11 @@
                     <canvas id="cl-signature-canvas"
                         style="width:100%;height:160px;border:1px solid #ddd;border-radius:8px;touch-action:none;background:#fafafa;display:block;">
                     </canvas>
-                    <button id="cl-sig-clear-btn" onclick="clClearSignature()" style="margin-top:.4rem;font-size:.8rem;color:#888;background:none;border:none;cursor:pointer;">🔄 ล้างลายเซ็น</button>
+                    <button id="cl-sig-clear-btn" type="button" data-action="clClearSignature" style="margin-top:.4rem;font-size:.8rem;color:#888;background:none;border:none;cursor:pointer;">🔄 ล้างลายเซ็น</button>
                 </div>
 
                 <!-- Submit -->
-                <button id="cl-submit-btn" onclick="clSubmit()" style="width:100%;margin-top:1.25rem;padding:14px;border-radius:12px;border:none;background:var(--primary-green);color:#fff;font-family:var(--font-brand);font-weight:700;font-size:1rem;cursor:pointer;">
+                <button id="cl-submit-btn" type="button" data-action="clSubmit" style="width:100%;margin-top:1.25rem;padding:14px;border-radius:12px;border:none;background:var(--primary-green);color:#fff;font-family:var(--font-brand);font-weight:700;font-size:1rem;cursor:pointer;">
                     ✅ ส่งใบตรวจห้อง
                 </button>
             </div>
@@ -7371,6 +7371,15 @@
             if (a === 'prepareEditPet' && arg && _ta.prepareEditPet) { _ta.prepareEditPet(arg); return; }
             if (a === '_showUsageMonthDetail' && arg && _ta._showUsageMonthDetail) { _ta._showUsageMonthDetail(arg); return; }
             if (a === 'openWellnessArticle' && arg && _ta.openWellnessArticle) { _ta.openWellnessArticle(arg); return; }
+            // Checklist photo flow — data-idx + data-source (camera|gallery)
+            if (a === 'clRequestPhoto' && _ta.clRequestPhoto) {
+                _ta.clRequestPhoto(Number(el.dataset.idx), el.dataset.source);
+                return;
+            }
+            if (a === 'clRemovePhoto' && _ta.clRemovePhoto) {
+                _ta.clRemovePhoto(Number(el.dataset.idx));
+                return;
+            }
             // Catch-all: try calling window[action]()
             if (a && typeof _ta[a] === 'function') { _ta[a](el, e); return; }
           }
@@ -7382,6 +7391,12 @@
             const el = e.target.closest('[data-action-change]');
             if (!el) return;
             const fn = el.dataset.actionChange;
+            // Checklist file inputs carry idx via data-idx attribute (replaces
+            // inline onchange="clPhotoChange(this, ${idx})"). Pass idx as 2nd arg.
+            if (fn === 'clPhotoChange' && typeof window.clPhotoChange === 'function') {
+              window.clPhotoChange(el, Number(el.dataset.idx));
+              return;
+            }
             if (fn && typeof window[fn] === 'function') window[fn](el, e);
           });
           document.addEventListener('input', function(e) {
@@ -14709,7 +14724,7 @@
             setTimeout(retry, 4000);
             return;
           }
-          statusEl.innerHTML = `<div style="color:#c62828;padding:1rem;">โหลดข้อมูลไม่ได้: ${_esc(err.message || String(err))} <button type="button" onclick="location.reload()" style="display:block;margin:.8rem auto 0;padding:.4rem 1.1rem;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;">🔄 รีเฟรช</button></div>`;
+          statusEl.innerHTML = `<div style="color:#c62828;padding:1rem;">โหลดข้อมูลไม่ได้: ${_esc(err.message || String(err))} <button type="button" data-action="reloadPage" style="display:block;margin:.8rem auto 0;padding:.4rem 1.1rem;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;">🔄 รีเฟรช</button></div>`;
           return;
         }
 
@@ -14766,16 +14781,16 @@
               style="width:100%;padding:.4rem;border:1px solid #ddd;border-radius:6px;font-family:inherit;font-size:.82rem;box-sizing:border-box;resize:none;"></textarea>
 
             <!-- Hidden file inputs: one for camera, one for gallery. -->
-            <input type="file" id="cl-photo-${idx}"        accept="image/*" capture="environment" style="display:none;" onchange="clPhotoChange(this, ${idx})">
-            <input type="file" id="cl-photo-${idx}-gallery" accept="image/*"                      style="display:none;" onchange="clPhotoChange(this, ${idx})">
+            <input type="file" id="cl-photo-${idx}"        accept="image/*" capture="environment" style="display:none;" data-action-change="clPhotoChange" data-idx="${idx}">
+            <input type="file" id="cl-photo-${idx}-gallery" accept="image/*"                      style="display:none;" data-action-change="clPhotoChange" data-idx="${idx}">
 
             <!-- Picker buttons (shown when no photo selected) -->
             <div id="cl-photo-picker-${idx}" style="display:flex;gap:.5rem;margin-top:.4rem;flex-wrap:wrap;">
-              <button type="button" onclick="clRequestPhoto(${idx}, 'camera')"
+              <button type="button" data-action="clRequestPhoto" data-idx="${idx}" data-source="camera"
                 style="flex:1;min-width:120px;padding:.5rem;font-size:.82rem;color:#1976d2;background:#e3f2fd;border:1px dashed #90caf9;border-radius:6px;cursor:pointer;font-family:inherit;">
                 📷 ถ่ายรูป
               </button>
-              <button type="button" onclick="clRequestPhoto(${idx}, 'gallery')"
+              <button type="button" data-action="clRequestPhoto" data-idx="${idx}" data-source="gallery"
                 style="flex:1;min-width:120px;padding:.5rem;font-size:.82rem;color:#388e3c;background:#e8f5e9;border:1px dashed #a5d6a7;border-radius:6px;cursor:pointer;font-family:inherit;">
                 🖼️ เลือกจากคลังภาพ
               </button>
@@ -14844,9 +14859,9 @@
         preview.innerHTML =
           `<img src="${url}" alt="preview" style="max-width:100%;max-height:160px;border-radius:6px;object-fit:cover;display:block;">` +
           `<div style="display:flex;gap:.5rem;margin-top:.3rem;">` +
-            `<button type="button" onclick="clRequestPhoto(${idx}, 'camera')" style="flex:1;padding:.4rem;font-size:.78rem;color:#1976d2;background:#fff;border:1px solid #90caf9;border-radius:6px;cursor:pointer;font-family:inherit;">🔄 ถ่ายใหม่</button>` +
-            `<button type="button" onclick="clRequestPhoto(${idx}, 'gallery')" style="flex:1;padding:.4rem;font-size:.78rem;color:#388e3c;background:#fff;border:1px solid #a5d6a7;border-radius:6px;cursor:pointer;font-family:inherit;">🖼️ เลือกใหม่</button>` +
-            `<button type="button" onclick="clRemovePhoto(${idx})" style="padding:.4rem .65rem;font-size:.78rem;color:#c62828;background:#fff;border:1px solid #ef9a9a;border-radius:6px;cursor:pointer;font-family:inherit;">🗑️</button>` +
+            `<button type="button" data-action="clRequestPhoto" data-idx="${idx}" data-source="camera" style="flex:1;padding:.4rem;font-size:.78rem;color:#1976d2;background:#fff;border:1px solid #90caf9;border-radius:6px;cursor:pointer;font-family:inherit;">🔄 ถ่ายใหม่</button>` +
+            `<button type="button" data-action="clRequestPhoto" data-idx="${idx}" data-source="gallery" style="flex:1;padding:.4rem;font-size:.78rem;color:#388e3c;background:#fff;border:1px solid #a5d6a7;border-radius:6px;cursor:pointer;font-family:inherit;">🖼️ เลือกใหม่</button>` +
+            `<button type="button" data-action="clRemovePhoto" data-idx="${idx}" style="padding:.4rem .65rem;font-size:.78rem;color:#c62828;background:#fff;border:1px solid #ef9a9a;border-radius:6px;cursor:pointer;font-family:inherit;">🗑️</button>` +
           `</div>`;
         if (picker) picker.style.display = 'none';
       };

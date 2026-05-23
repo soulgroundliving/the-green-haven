@@ -453,6 +453,68 @@ function _resolveTenantName(leaseData, tenantData) {
 }
 
 /**
+ * Move the lease contract Storage object from the old room path to the new
+ * room path. Path shape (per storage.rules /leases/{building}/{roomId}/{leaseId}/{fileName}):
+ *   leases/{building}/{roomId}/{leaseId}/{fileName}
+ *
+ * Returns the NEW path if a move happened, OR the input path unchanged if:
+ *   - oldPath empty (legacy lease with no Storage doc) → return ''
+ *   - oldPath doesn't match the canonical pattern (URL or malformed) → return as-is, no move
+ *   - oldPath segments already match new building/room → no-op, return as-is
+ *   - source object doesn't exist in Storage → return target path anyway so the
+ *     stored field points where the file WOULD have been (defensive — admin may
+ *     have manually moved or never uploaded)
+ *
+ * Throws on actual Storage copy/delete failure so the caller can abort BEFORE
+ * Firestore batch commit (per option 1 design — keep contractDocument field
+ * consistent with the file's real location).
+ */
+async function _moveContractStorage(oldPath, newBuilding, newRoomId, leaseId) {
+  if (!oldPath) return '';
+  // Canonical lease Storage path: leases/{b}/{r}/{leaseId}/{fileName}
+  const m = /^leases\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)$/.exec(oldPath);
+  if (!m) {
+    // URL or malformed value (e.g. https://... or a contract uploaded outside the
+    // canonical leases/ tree). Leave it alone — manual cleanup if needed.
+    console.warn(`transferTenant: contractDocument doesn't match canonical leases path, skipping move: ${oldPath}`);
+    return oldPath;
+  }
+  const [, oldB, oldR, oldLeaseId, fileName] = m;
+  // Defensive: leaseId in the path should match the lease being transferred. If
+  // not, log + skip — we don't want to silently move a file under a different
+  // lease's path.
+  if (oldLeaseId !== String(leaseId)) {
+    console.warn(`transferTenant: contractDocument leaseId mismatch ` +
+      `(path=${oldLeaseId}, expected=${leaseId}); skipping move`);
+    return oldPath;
+  }
+  const newPath = `leases/${newBuilding}/${newRoomId}/${leaseId}/${fileName}`;
+  if (oldPath === newPath) return oldPath; // already at target (idempotent re-run)
+
+  const bucket = admin.storage().bucket();
+  const sourceFile = bucket.file(oldPath);
+  const [exists] = await sourceFile.exists();
+  if (!exists) {
+    console.warn(`transferTenant: contractDocument source missing in Storage, ` +
+      `updating field to new path anyway: ${oldPath} -> ${newPath}`);
+    return newPath;
+  }
+  // Copy then delete (move). Throws on either step — caller aborts BEFORE batch.
+  await sourceFile.copy(bucket.file(newPath));
+  try {
+    await sourceFile.delete();
+  } catch (delErr) {
+    // Copy succeeded but delete failed — file now exists at BOTH paths. Log
+    // loud, return newPath so the tenant gets the new contractDocument. The
+    // orphan at oldPath is recoverable via storage console or sweep CF later;
+    // failing the transfer at this point would be worse (file exists at new
+    // path, batch not committed → tenant doc still points at old path).
+    console.error(`transferTenant: contractDocument copy succeeded but delete failed for ${oldPath}: ${delErr.message}`);
+  }
+  return newPath;
+}
+
+/**
  * Variation mode batch. Single lease doc, amendments[] arrayUnion entry.
  * Lease moves room (roomId field updated) but startDate/endDate/leaseId stay.
  *
@@ -497,6 +559,21 @@ async function _runVariationMode(input, callerUid, callerEmail, firestore) {
     notes: notes || '',
   };
 
+  // ── Storage move BEFORE batch (per H2 design option 1) ─────────────────
+  // Move the contract Storage object to its new room path so that direct
+  // getDownloadURL() reads (storage.rules /leases/{b}/{r}/{leaseId}/{fileName})
+  // continue to pass the claim gate after transfer. getLeaseDocUrl CF still
+  // works either way (admin SDK bypasses Storage rules), but moving the file
+  // keeps the canonical state consistent and avoids relying on Path 1c/1d
+  // fallbacks indefinitely.
+  //
+  // Throws on Storage failure → batch never commits, transfer aborts cleanly.
+  const originalDocPath = String(oldLeaseData.contractDocument || '');
+  const carriedDocPath = await _moveContractStorage(
+    originalDocPath, newBuilding, newRoomId, leaseId,
+  );
+  const carriedDocName = String(oldLeaseData.contractFileName || '');
+
   // ── Batch ───────────────────────────────────────────────────────────────
   const batch = firestore.batch();
 
@@ -505,8 +582,6 @@ async function _runVariationMode(input, callerUid, callerEmail, firestore) {
   // tenant_app contract reader (which checks _taLease.contractPath first) stays
   // on the canonical path for variation transfers. Same lease doc, same agreement.
   const carriedIdentity = _carryIdentity(oldTenantData);
-  const carriedDocPath = String(oldLeaseData.contractDocument || '');
-  const carriedDocName = String(oldLeaseData.contractFileName || '');
   const newTenantPatch = {
     ...carriedIdentity,
     building: newBuilding,
@@ -544,7 +619,11 @@ async function _runVariationMode(input, callerUid, callerEmail, firestore) {
   // 2. OLD tenant doc — blank identity (mirror archiveTenantOnMoveOut)
   batch.update(oldTenantRef, _buildOldRoomClearPatch(now));
 
-  // 3. Lease doc — update roomId + building + append amendment entry
+  // 3. Lease doc — update roomId + building + append amendment entry.
+  // contractDocument is updated to the new Storage path if _moveContractStorage
+  // moved the file (otherwise no-change). Keeps the lease doc consistent with
+  // the file's actual location so Path 1c (lease-doc-sot) in getLeaseDocUrl
+  // resolves to a path that storage.rules will permit on direct reads.
   const leasePatch = {
     building: newBuilding,
     roomId: newRoomId,
@@ -552,6 +631,9 @@ async function _runVariationMode(input, callerUid, callerEmail, firestore) {
     lastAmendedAt: now,
     lastAmendedBy: callerUid,
   };
+  if (carriedDocPath !== originalDocPath) {
+    leasePatch.contractDocument = carriedDocPath;
+  }
   if (amendmentsIsArray || existingAmendments === undefined) {
     leasePatch.amendments = admin.firestore.FieldValue.arrayUnion(amendmentEntry);
   } else {
@@ -1061,6 +1143,7 @@ exports._writeAuditLog = _writeAuditLog;
 exports._carryIdentity = _carryIdentity;
 exports._buildOldRoomClearPatch = _buildOldRoomClearPatch;
 exports._resolveTenantName = _resolveTenantName;
+exports._moveContractStorage = _moveContractStorage;
 exports._VALID_MODES = VALID_MODES;
 exports._ROOM_ID_RE = ROOM_ID_RE;
 exports._IDENTITY_FIELDS = IDENTITY_FIELDS;
