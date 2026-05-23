@@ -9138,7 +9138,13 @@
                         // admin-reset / data-rollback scenarios where the per-room/per-player
                         // gate persists across the wipe and would otherwise keep the claim
                         // button disabled despite the server allowing a fresh claim.
-                        if (!_lastDailyClaim) {
+                        //
+                        // Race fix: SKIP reconciliation when this snapshot is from local cache
+                        // OR has pending writes. After an optimistic claim, the cached
+                        // snapshot fires first with the OLD (no-claim) state, and would
+                        // erase the localStorage marker we just set. Only act on
+                        // server-confirmed snapshots.
+                        if (!_lastDailyClaim && !snap.metadata?.fromCache && !snap.metadata?.hasPendingWrites) {
                             try {
                                 const lsKey = `lastDailyClaim_player_${window._playerProfile.tenantId}`;
                                 const today = new Date(Date.now() + 7*3600*1000).toISOString().slice(0,10);
@@ -9181,7 +9187,13 @@
                     // admin-reset (tools/reset-nest-gamification.js) / data-rollback where
                     // the per-room gate persists across the server wipe and would otherwise
                     // keep the claim button disabled despite the server allowing a fresh claim.
-                    if (!_lastDailyClaim) {
+                    //
+                    // Race fix: SKIP reconciliation when this snapshot is from local cache
+                    // OR has pending writes. After an optimistic claim, the cached
+                    // snapshot fires first with the OLD (no-claim) state, and would
+                    // erase the localStorage marker we just set. Only act on
+                    // server-confirmed snapshots.
+                    if (!_lastDailyClaim && !snap.metadata?.fromCache && !snap.metadata?.hasPendingWrites) {
                         try {
                             const lsKey = `lastDailyClaim_${_taBuilding}_${_taRoom}`;
                             const today = new Date(Date.now() + 7*3600*1000).toISOString().slice(0,10);
