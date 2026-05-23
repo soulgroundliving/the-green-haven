@@ -36,8 +36,13 @@
  *   - Does NOT prorate bills. transferDeposit / prorateBills flags accepted
  *     but only recorded in the audit log — actual deposit ledger + meter
  *     pro-rate is a follow-up sprint.
- *   - Does NOT touch gamification (it lives on people/ which is identity-
- *     keyed; transfer is location-only).
+ *   - DOES carry gamification (points/dailyStreak/lastDailyClaim/badges) to
+ *     the new room — IDENTITY_FIELDS below includes 'gamification' so the
+ *     tenant doesn't lose accumulated state when changing rooms. Old room
+ *     is reset to gamification:null in the same batch (next occupant starts
+ *     fresh). people/{tenantId}.gamification is NOT updated by this CF —
+ *     that mirror is only relevant after transitionToPlayer, and a returning
+ *     player is handled by convertBookingToTenant Pass 5, not transferTenant.
  *
  * Mirrors archiveTenantOnMoveOut + renewLease + unlinkLiffUser patterns:
  *   - §7-DD: single batched Firestore write so partial transfers impossible

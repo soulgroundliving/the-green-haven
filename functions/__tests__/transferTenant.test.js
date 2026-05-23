@@ -799,6 +799,38 @@ describe('transferTenant — S7 (top-level integration)', () => {
     assert.ok(_IDENTITY_FIELDS.includes('linkedAuthUid'));
     assert.ok(_IDENTITY_FIELDS.includes('gamification'));
   });
+
+  it('carries gamification (points + dailyStreak + lastDailyClaim + badges) to new room', async () => {
+    const seed = seedTransferable({
+      oldTenantExtras: {
+        gamification: {
+          points: 41,
+          dailyStreak: 5,
+          lastDailyClaim: '2026-05-23',
+          badges: ['eco_starter', 'wellness_5d'],
+        },
+      },
+    });
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const setOp = captured.batchOps.find(o => o.op === 'set' && o.path === seed.newRoomPath);
+    assert.ok(setOp, 'expected new room set op');
+    assert.deepEqual(setOp.data.gamification, {
+      points: 41,
+      dailyStreak: 5,
+      lastDailyClaim: '2026-05-23',
+      badges: ['eco_starter', 'wellness_5d'],
+    }, 'gamification must transfer intact to new room (NOT reset)');
+  });
+
+  it('resets old room gamification to null after transfer (next occupant fresh)', async () => {
+    const seed = seedTransferable({
+      oldTenantExtras: { gamification: { points: 41, dailyStreak: 5 } },
+    });
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const updOp = captured.batchOps.find(o => o.op === 'update' && o.path === seed.oldRoomPath);
+    assert.ok(updOp, 'expected old room update');
+    assert.equal(updOp.data.gamification, null, 'old room gamification must be nulled so next tenant cannot see prior points');
+  });
 });
 
 // ── Plan B' S2 — occupancyLog write asserts ───────────────────────────────────
