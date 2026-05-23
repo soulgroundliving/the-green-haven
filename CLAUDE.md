@@ -898,6 +898,56 @@ grep -rn "signInWithCustomToken" tenant_app.html booking.html login.html dashboa
 
 Fix landed 2026-05-22 (commit `4d40328`) by gating the anon fallback at [tenant_app.html:177](tenant_app.html:177) on `!/Line\//i.test(navigator.userAgent)`. Auto-recovery in `_getLeaseSignedUrl` (§Stale LIFF webview session in auth_liff_sot.md) retained as belt-and-suspenders for one release cycle.
 
+### II. CSP hash drift accumulates silently during Report-Only era, bombs on enforce flip
+
+CSP hashes in `vercel.json` for inline `<style>` and `<script>` blocks must be regenerated **every time** the inline content changes. While `Content-Security-Policy-Report-Only` is the active header, drift is invisible — browsers log a CSP report (often nowhere visible) and render the page anyway. The instant the header flips to enforce mode (`Content-Security-Policy`), all accumulated drift becomes simultaneous blockers — pages render with no `<style>` applied (native browser defaults), or inline `<script>` handlers stop firing.
+
+Incident 2026-05-23: fervent-kare merged with `Content-Security-Policy` enforce flip. Login.html (commit `4ad53ce fix(login): pin input text color`), dashboard.html, tenant_app.html, tax-filing.html, audit-log-viewer.html, payment.html, booking.html, index.html — all 8 had `<style>` and/or `<script>` edits since `54ce1cb fix(csp): roll back to Report-Only mode`. None regenerated CSP hashes. Result: production-wide CSS failure on first user load after the enforce flip. User sent a before/after screenshot of login.html with "page broken" symptoms — root cause took ~3 minutes to find once the verify-via-grep doctrine pointed at `vercel.json` history.
+
+**Rule:** ANY edit to an inline `<style>` or `<script>` block in ANY tracked HTML (8 files: `index/login/dashboard/tenant_app/tax-filing/audit-log-viewer/payment/booking.html`) MUST be followed by hash regen in the same commit:
+
+```bash
+npm run csp:hash                     # rebuilds tools/csp-hashes.json
+node tools/update-vercel-csp.js      # writes the new CSP value into vercel.json (added 2026-05-23 in commit 9f29338)
+git add vercel.json tools/csp-hashes.json
+```
+
+The 2-tool sequence is mandatory because `csp:hash` only updates `tools/csp-hashes.json`; `csp:print` only prints to stdout (was designed for hand-pasting); only `update-vercel-csp.js` writes to vercel.json. Pre-2026-05-23 instructions said "copy from csp:print into vercel.json" — that's error-prone, and the error mode is silent under Report-Only.
+
+**Detection recipe — pre-commit check:**
+
+```bash
+# If you edited any of these files, regen is mandatory:
+git diff --name-only HEAD | grep -E "^(index|login|dashboard|tenant_app|tax-filing|audit-log-viewer|payment|booking)\.html$"
+
+# Then verify CSP is in sync:
+node tools/compute-csp-hashes.js > /tmp/new.json
+diff <(jq -S . tools/csp-hashes.json) <(jq -S . /tmp/new.json)
+# Non-empty diff = hashes drifted → run update-vercel-csp.js
+```
+
+A pre-commit hook to fully automate this is a worthwhile follow-up (mirror of the `verify:memory` hook pattern). Until then: muscle memory + grep.
+
+**Debugging signature** (this bug class is sneaky because the symptom looks like a CSS file failure, not a CSP problem):
+
+1. Production page renders with **NATIVE browser styling** — no card layouts, no rounded corners, no brand fonts. Form elements look unstyled.
+2. CSS files (`shared/brand.css`, `shared/components.css`) load with status 200 and have rules. JS `document.styleSheets[0].cssRules.length` returns >0.
+3. `document.body.classList = ""` and `getComputedStyle(document.body).backgroundColor` returns `rgba(0,0,0,0)` (transparent default).
+4. **The inline `<style>` block exists in the HTML source** but rules from it don't apply.
+5. **No obvious console error** about CSP — the violation log lives in the dev tools "Issues" panel, NOT the console by default. Chrome MCP `read_console_messages` won't see it without explicit pattern matching `Refused to apply|Content Security Policy`.
+6. Filter network requests for the CSS files — they're 200 with content. So the page CAN load CSS, but inline `<style>` defining the page-specific classes (`.login-container`, `.user-type-btn`, etc.) is being **stripped silently by CSP**.
+
+When you see (1) + (2) + (4) simultaneously: hash drift is the first hypothesis. Run `openssl dgst -sha256 -binary <<< "$(awk '/<style>/,/<\/style>/' page.html | sed '1d;$d')" | openssl base64` and compare against vercel.json. Mismatch confirms it. (Note: the `tools/compute-csp-hashes.js` script normalizes CRLF→LF per feedback_hash_tools_lf_normalize.md; manual openssl will give a different hash on Windows checkout — trust the tool's output.)
+
+**Why "ห้องแถว" / "Nest" labels lied during this incident:** when verifying booking.html anon-prospect read of `buildings/*`, page text showed `displayName` strings → I declared "Firestore read works." False positive — those strings are HARDCODED at [booking.html:779,781](booking.html:779) ("ห้องแถว" + "Nest" appear in literal HTML as building-tab labels, NOT pulled from Firestore until the LIFF flow continues). Anti-pattern lesson: when verifying live data, never trust visible text alone — confirm via either (a) a Firestore network request to `firestore.googleapis.com/v1/projects/.../buildings/X`, OR (b) a JS dump of the in-memory state object (e.g. `state.buildings`, `window._buildingsList`). Reading the page is the WRONG primitive when content is also serveable from cached HTML.
+
+**Family:**
+- §7-W (`!important` doesn't beat higher specificity) — same family of "CSS appears to work but doesn't; needs deployed-page inspection." Both only surface on real Vercel deployments.
+- §7-G (cross-session self-conflict check) — applies here: I should have re-read all session diffs (fervent-kare's `vercel.json` change PLUS the chain of recent inline-style edits) end-to-end before declaring "deploy + verify done." A 30-second `git log -10 --oneline -- '*.html'` would have flagged the open CSP-enforce-vs-hash-drift question.
+- §7-J (static deploy ≠ live-data verified) — extension: static deploy ≠ live-page-render verified. Vercel showed "deploy succeeded" on every pre-2026-05-23 fervent-kare push. Production was broken.
+
+Fix landed 2026-05-23 (commit `9f29338`) by `npm run csp:hash && node tools/update-vercel-csp.js && git commit vercel.json tools/csp-hashes.json tools/update-vercel-csp.js` → push → Vercel redeploy → login.html visually verified back to the intended dark-green-gradient + 450px white card design.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md

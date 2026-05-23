@@ -15,6 +15,7 @@
  */
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
+const { assertTenantAccess } = require('./_authSoT');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -84,16 +85,16 @@ exports.claimDailyLoginPoints = functions.region('asia-southeast1').https.onCall
   }
   const canonicalBuilding = String(building).toLowerCase();
 
-  // Ownership check — see redeemReward.js for rationale. Without this,
-  // an attacker can spam-claim daily points for any room and lock the
-  // legitimate tenant out of their own claim that day.
-  const tok = context.auth.token || {};
-  if (tok.admin !== true) {
-    if (tok.room !== String(roomId) || tok.building !== canonicalBuilding) {
-      throw new functions.https.HttpsError('permission-denied',
-        'You can only claim daily points for your own room');
-    }
-  }
+  // Ownership check — _authSoT 6-path model (admin / manager / claim / tenantId-sot
+  // / uid-sot). The SoT fallback survives §7-Z claim-strip windows so legitimate
+  // tenants whose ID token auto-refreshed past the persistent-claim fix can still
+  // claim their daily points without re-opening LIFF.
+  await assertTenantAccess({
+    building: canonicalBuilding,
+    roomId:   String(roomId),
+    context, firestore,
+    HttpsError: functions.https.HttpsError,
+  });
 
   const tenantRef = firestore.collection('tenants').doc(canonicalBuilding).collection('list').doc(String(roomId));
 

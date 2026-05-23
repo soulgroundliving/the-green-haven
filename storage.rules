@@ -18,6 +18,29 @@ service firebase.storage {
              request.resource.contentType == 'application/pdf';
     }
 
+    // SoT fallback — mirrors functions/_authSoT.js assertTenantAccess
+    // Paths 1b / 2a. Called via `||` short-circuit AFTER the claim-equality
+    // check fails, so the Firestore read costs nothing on the happy path.
+    //
+    // Survives §7-Z claim-strip (legacy custom tokens minted before
+    // liffSignIn's setCustomUserClaims fix can lose room/building claims
+    // after Firebase's ~1h ID token auto-refresh) and §7-HH stale LIFF
+    // webview UID — as long as the caller is still the registered tenant
+    // of `tenants/{building}/list/{roomId}` per Firestore SoT.
+    //
+    // Cost: +1 firestore.get per SoT-fallback evaluation. Happy path
+    // (claim match) hits 0 reads thanks to CEL `||` short-circuit.
+    // Returns false if the tenant doc doesn't exist — caller's claim
+    // check is then the only path, matching the original behavior.
+    function isLinkedTenant(building, roomId) {
+      return isSignedIn()
+        && firestore.exists(/databases/(default)/documents/tenants/$(building)/list/$(roomId))
+        && (firestore.get(/databases/(default)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid
+            || (request.auth.token.tenantId != null
+                && request.auth.token.tenantId != ''
+                && firestore.get(/databases/(default)/documents/tenants/$(building)/list/$(roomId)).data.tenantId == request.auth.token.tenantId));
+    }
+
     // ===== PETS — photo + vaccine book =====
     // Path: pets/{building}/{room}/{petId}/{file=**}
     // Write + READ scoped to the caller's own room/building via custom claims
@@ -47,14 +70,17 @@ service firebase.storage {
 
     // ===== LEASES — admin uploads tenant docs =====
     // Path: leases/{building}/{roomId}/{leaseId}/{fileName}
-    // Read scoped: only admin OR the tenant of that room (via claims). Old
-    // rule allowed any signed-in user to read any lease — privacy leak (rent
-    // amount, deposit, signatures across all tenants). Audit 2026-04-28.
+    // Read scoped: only admin OR the tenant of that room. Claim-equality
+    // is the fast path; isLinkedTenant() is the SoT fallback for §7-Z /
+    // §7-HH windows. CF-routed reads (getLeaseDocUrl) bypass Storage rules
+    // entirely via Admin SDK, but a tenant might fall back to direct
+    // getDownloadURL() in an outage — this keeps that path consistent.
+    // Audit 2026-04-28; SoT fallback added 2026-05-22.
     match /leases/{building}/{roomId}/{leaseId}/{fileName} {
       allow read:   if isAdmin()
         || (isSignedIn()
-            && request.auth.token.room == roomId
-            && request.auth.token.building == building);
+            && (request.auth.token.room == roomId && request.auth.token.building == building
+                || isLinkedTenant(building, roomId)));
       allow write:  if isAdmin() && fitsSizeLimit() && isImageOrPdf();
       allow delete: if isAdmin();
     }
@@ -100,25 +126,31 @@ service firebase.storage {
     // Tenant uploads photos/signature for their own instance.
     // Admin reads all (for co-sign review). Tenant reads own instance files.
     //
-    // Claim-based (not auth.uid) because tenant_app uses signInAnonymously:
-    // each fresh LIFF session mints a NEW anonymous UID, but room/building
-    // custom claims always reflect the current tenant. The doc's tenantUid
-    // is frozen at admin-create time, so a uid-equality rule breaks on every
-    // UID rotation. We instead verify (a) the user's claims match the path
-    // prefix, AND (b) the instance lives at the same building+roomId —
-    // making it impossible to touch another room's tree.
+    // Two-layer auth (matches functions/_authSoT.js + getChecklistMediaUrl):
+    //  1. Tenant identity gate — claim-equality OR isLinkedTenant() SoT
+    //     fallback (§7-Z / §7-HH survival). CF-routed reads (signed URLs)
+    //     bypass these rules via Admin SDK, but direct getDownloadURL()
+    //     fallbacks hit them.
+    //  2. Path-integrity gate — the instance doc at {instanceId} MUST
+    //     live at the same building+roomId, so a tenant of room 15
+    //     can't forge a path to /checklists/rooms/15/<inst-from-room-16>/.
+    //
+    // Cost note: firestore.get() results are cached within a single rule
+    // evaluation — the checklistInstances doc is read at most once per
+    // access. isLinkedTenant() adds 1 read only when the claim check fails.
+    // PDPA-sensitive content; SoT fallback added 2026-05-22.
     match /checklists/{building}/{roomId}/{instanceId}/{fileName} {
       allow read: if isAdmin()
         || (isSignedIn()
-            && request.auth.token.room == roomId
-            && request.auth.token.building == building
+            && (request.auth.token.room == roomId && request.auth.token.building == building
+                || isLinkedTenant(building, roomId))
             && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.building == building
             && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.roomId == roomId);
       allow write: if fitsSizeLimit() && isImageOrPdf()
         && (isAdmin()
             || (isSignedIn()
-                && request.auth.token.room == roomId
-                && request.auth.token.building == building
+                && (request.auth.token.room == roomId && request.auth.token.building == building
+                    || isLinkedTenant(building, roomId))
                 && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.building == building
                 && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.roomId == roomId));
       allow delete: if isAdmin();
