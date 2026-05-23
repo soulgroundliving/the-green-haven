@@ -8080,8 +8080,13 @@
         function closeDailyModal() {
             const modal = document.getElementById('daily-modal');
             if (modal) modal.style.display = 'none';
-            const nav = document.getElementById('main-nav-bar');
-            if (nav) nav.style.display = '';
+            // Intentionally NOT touching main-nav-bar here. openDailyModal/checkDailyLogin
+            // can only be triggered from world-map (the 💰 chip lives inside #world-map-page
+            // and disappears with the page), where showPage already set nav display:none.
+            // Setting `nav.style.display = ''` would clear that inline value and fall back
+            // to the CSS .nav-bar rule (display:flex) — nav flashes over the world map.
+            // The original claimDailyPoints.closeModal masks this bug by re-calling
+            // showPage('world-map') right after; peek-mode doesn't need that round-trip.
         }
         window.openDailyModal  = openDailyModal;
         window.closeDailyModal = closeDailyModal;
