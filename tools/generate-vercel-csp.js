@@ -79,6 +79,7 @@ const FRAME_SRC = [
   "'self'",
   'https://www.google.com',    // reCAPTCHA iframe
   'https://www.recaptcha.net',
+  'https://*.firebasedatabase.app',  // RTDB SDK iframe transport fallback (any region/shard, e.g. s-gke-apse1-*.asia-southeast1.firebasedatabase.app)
 ].join(' ');
 
 // Inline style="..." attribute count audited 2026-04-29: dashboard 604,
