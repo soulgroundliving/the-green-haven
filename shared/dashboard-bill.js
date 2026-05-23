@@ -1367,7 +1367,7 @@ async function saveBillToFirebase(d){
 
     // Save to Firebase: bills/{building}/{roomId}/{billId}
     // Tenant app expects: bills/{building}/{room} as an object with billIds as keys
-    const { ref: firebaseRef } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
+    const firebaseRef = window.firebaseRef;
 
     // Determine Firebase building ID. currentBuilding may be a canonical id
     // ('rooms', 'nest', 'test1', …) or a legacy alias ('old', 'new'); the
@@ -1502,7 +1502,7 @@ async function autoGenerateAllBills() {
 
       // Save to Firebase
       try {
-        const { ref: firebaseRef } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
+        const firebaseRef = window.firebaseRef;
         const billsRef = firebaseRef(window.firebaseDatabase, `bills/${fbBuildingId}/${roomId}/${billObject.billId}`);
         await window.firebaseSet(billsRef, billObject);
 
