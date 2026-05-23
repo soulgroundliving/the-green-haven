@@ -236,9 +236,30 @@ service cloud.firestore {
     //     address to every signed-in user incl. booking prospects.
     //     BuildingRegistry.update/create now split writes accordingly.
     //     Migration via tools/migrate-buildings-private.js (one-shot, gated).
+    //
+    // P4.4b defense-in-depth 2026-05-23 (added after live REST verification):
+    //   - Top-level writes are split into create/update/delete because the
+    //     prior catch-all `allow write: if isAdmin()` did not stop ANYTHING
+    //     written into top-level address/contact/ownerEmail by an admin who
+    //     forgot to use BuildingRegistry (or by a future code path that
+    //     bypasses it). The new guard rejects any write that ADDS or CHANGES
+    //     those three fields at top-level — they MUST go to private/admin.
+    //     Removal (FieldValue.delete) is still allowed so the cleanup script
+    //     and BuildingRegistry future migrations work.
     match /buildings/{buildingId} {
-      allow read:  if isSignedIn();
-      allow write: if isAdmin();
+      allow read:   if isSignedIn();
+
+      // Top-level write is admin-only AND must not touch the PII allowlist.
+      // create: PII keys cannot appear in the new doc at all.
+      // update: PII keys cannot be added or changed (removal IS allowed —
+      //         lets cleanup migrations FieldValue.delete them).
+      // delete: unrestricted for admins.
+      allow create: if isAdmin()
+                    && !request.resource.data.keys().hasAny(['address', 'contact', 'ownerEmail']);
+      allow update: if isAdmin()
+                    && !request.resource.data.diff(resource.data).addedKeys().hasAny(['address', 'contact', 'ownerEmail'])
+                    && !request.resource.data.diff(resource.data).changedKeys().hasAny(['address', 'contact', 'ownerEmail']);
+      allow delete: if isAdmin();
 
       // Admin-only contact info — landlord email, phone, building address.
       // Building managers do NOT read this — kept owner-only. If a manager

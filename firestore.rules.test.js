@@ -30,7 +30,7 @@
  */
 
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
-const { setDoc, doc, getDoc, updateDoc, deleteDoc, addDoc, collection, collectionGroup, getDocs, query } = require('firebase/firestore');
+const { setDoc, doc, getDoc, updateDoc, deleteDoc, deleteField, addDoc, collection, collectionGroup, getDocs, query } = require('firebase/firestore');
 const { readFileSync } = require('node:fs');
 const { describe, before, after, beforeEach, it } = require('node:test');
 
@@ -1191,11 +1191,13 @@ describe('deposits — admin write, accountant read, tenants denied', () => {
 
 describe('buildings — admin CRUD, signed-in read (Multi-Property registry)', () => {
   const BLD_PATH = 'buildings/test_b1';
+  // P4.4b (2026-05-23): top-level write rule rejects PII keys —
+  // address/contact/ownerEmail MUST be written to buildings/{id}/private/admin
+  // instead. Tests below preserve this contract; BLD_DATA is intentionally
+  // public-only and mirrors what BuildingRegistry.create() writes.
   const BLD_DATA = {
     displayName: 'Test Building 1',
-    address: '123 Test Road',
     promptPayId: '0812345678',
-    contact: '',
     companyName: '',
     ownerName: '',
     status: 'active'
@@ -1288,6 +1290,56 @@ describe('buildings — admin CRUD, signed-in read (Multi-Property registry)', (
     it('accountant CANNOT read private/admin (admin-only)', async () => {
       await seedDoc(PRIV_PATH, PRIV_DATA);
       await assertFails(getDoc(doc(ACCOUNTANT().firestore(), PRIV_PATH)));
+    });
+  });
+
+  // P4.4b (2026-05-23): defense-in-depth field allowlist at top-level.
+  // Even though BuildingRegistry splits writes correctly, the rule itself
+  // now rejects top-level writes that include address/contact/ownerEmail.
+  // This catches future code paths that bypass BuildingRegistry, manual
+  // Firestore Console edits, and accidental admin writes.
+  describe('P4.4b — top-level PII field guard (defense-in-depth)', () => {
+    it('admin CANNOT create with address at top-level (must go to private/admin)', async () => {
+      await assertFails(setDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH), {
+        ...BLD_DATA, address: '99 Sukhumvit'
+      }));
+    });
+
+    it('admin CANNOT create with contact at top-level', async () => {
+      await assertFails(setDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH), {
+        ...BLD_DATA, contact: '02-555-1212'
+      }));
+    });
+
+    it('admin CANNOT create with ownerEmail at top-level', async () => {
+      await assertFails(setDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH), {
+        ...BLD_DATA, ownerEmail: 'landlord@example.com'
+      }));
+    });
+
+    it('admin CANNOT update to ADD address (was absent, now present)', async () => {
+      await seedDoc(BLD_PATH, BLD_DATA);
+      await assertFails(updateDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH), { address: '99 Sukhumvit' }));
+    });
+
+    it('admin CANNOT update to CHANGE existing address value', async () => {
+      await seedDoc(BLD_PATH, { ...BLD_DATA, address: 'old value' });
+      await assertFails(updateDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH), { address: 'new value' }));
+    });
+
+    it('admin CAN update to REMOVE existing address via deleteField (cleanup path)', async () => {
+      await seedDoc(BLD_PATH, { ...BLD_DATA, address: 'legacy value to clean up' });
+      await assertSucceeds(updateDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH), { address: deleteField() }));
+    });
+
+    it('admin CAN update unrelated field (displayName) even when address pre-exists', async () => {
+      await seedDoc(BLD_PATH, { ...BLD_DATA, address: 'legacy unchanged' });
+      await assertSucceeds(updateDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH), { displayName: 'Renamed' }));
+    });
+
+    it('admin CAN write same PII field with unchanged value (no-op merge)', async () => {
+      await seedDoc(BLD_PATH, { ...BLD_DATA, contact: 'unchanged' });
+      await assertSucceeds(updateDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH), { contact: 'unchanged' }));
     });
   });
 });
