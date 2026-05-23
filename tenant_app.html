@@ -4282,6 +4282,7 @@
             <div class="receipt-item"><span>เริ่มต้นสัญญา:</span><strong id="profile-lease-start">—</strong></div>
             <div class="receipt-item"><span>สิ้นสุดสัญญา:</span><strong id="profile-lease-end">—</strong></div>
             <div class="receipt-item"><span>ระยะเวลาคงเหลือ:</span><strong id="profile-lease-remaining" style="color:var(--primary-green);">—</strong></div>
+            <div class="receipt-item"><span>ค่าเช่ารายเดือน:</span><strong id="profile-rent" style="color:var(--primary-green);">—</strong></div>
             <div class="receipt-item"><span>เงินมัดจำ (Deposit):</span><span style="display:flex;align-items:center;gap:8px;"><strong id="profile-deposit" style="color:var(--danger);">—</strong><span id="profile-deposit-badge" style="display:none;"></span></span></div>
             <button class="btn-main" style="margin-top: 15px; background: #334435;"
                 data-action="showSubPage" data-page="contract-action-page"><i class="fas fa-file-signature"></i> แจ้งต่อสัญญา /
@@ -11439,6 +11440,10 @@
                 } else if (!isNaN(diffMs)) {
                     set('profile-lease-remaining', 'หมดอายุแล้ว');
                 }
+            }
+            const rent = l.rentAmount || l.rent || l.monthlyRent;
+            if (rent) {
+                set('profile-rent', Number(rent).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
             }
             const deposit = l.deposit || l.depositAmount;
             if (deposit) {
