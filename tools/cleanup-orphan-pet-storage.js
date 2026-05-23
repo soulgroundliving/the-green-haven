@@ -77,7 +77,11 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     initOpts.credential = admin.credential.applicationDefault();
   }
 }
-initOpts.storageBucket = `${projectId}.appspot.com`;
+// Firebase Storage default bucket — `firebasestorage.app` for buckets provisioned
+// after May 2024 (this project), `appspot.com` for legacy projects. Confirmed
+// via `gsutil ls gs://the-green-haven.firebasestorage.app/` returning the live
+// `checklists/` + `leases/` directories; `appspot.com` form 404s.
+initOpts.storageBucket = `${projectId}.firebasestorage.app`;
 admin.initializeApp(initOpts);
 
 const firestore = admin.firestore();

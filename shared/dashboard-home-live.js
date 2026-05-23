@@ -43,9 +43,6 @@ function setYear(yr,btn){
 // Delayed to 900ms so Firestore historicalRevenue + RTDB rooms_config have a
 // chance to land first — setYear's initDashboardCharts then renders once with
 // live data instead of rendering twice (once stale, once fresh).
-// We click() the actual 2569 button so the event-delegation hub receives it
-// like a real user click (keeps the button visually active + routes through
-// the standard setYear(yr, btn) path instead of the programmatic fallback).
 if (typeof window !== 'undefined' && !window._initialDashboardYear) {
   window._initialDashboardYear = true;
   document.addEventListener('DOMContentLoaded', () => {
@@ -53,11 +50,12 @@ if (typeof window !== 'undefined' && !window._initialDashboardYear) {
       const beYear = String(new Date().getFullYear() + 543).slice(-2);  // '69'
       try {
         const btn = document.querySelector(`#page-dashboard [data-action="setYear"][data-year="${beYear}"]`);
-        if (btn) {
-          btn.click();
-        } else if (typeof setYear === 'function') {
-          setYear(beYear, null);
-        }
+        // Call setYear directly — btn.click() routes through the event delegation
+        // hub in dashboard-main.js, which is registered inside a DOMContentLoaded
+        // callback that awaits Firebase (up to 2s). At 900ms the hub may not be
+        // listening yet, so the click silently drops. Direct call is guaranteed;
+        // setYear handles the active-tab highlight via btn itself.
+        setYear(beYear, btn || null);
         // Block debounced re-renders for 1s — Firestore/RTDB bursts that arrive
         // right after the initial render would redundantly re-render the same
         // data we just painted.
