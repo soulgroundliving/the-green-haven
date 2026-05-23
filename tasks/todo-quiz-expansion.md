@@ -53,6 +53,29 @@ Phase A2 — Quiz hub in community events
 
 Both 3a and 3b align with existing gamification pattern. Reuses the contract-quiz infrastructure (modal layout, scoring) — minimal new UI primitives. Increases tenant engagement with wellness content via active recall (educational research: quizzing improves retention 2x vs passive reading).
 
-## Review (to be filled at session end)
+## Review
 
-(empty — populated post-implementation)
+### Shipped this session (Session A)
+
+| Commit | Phase | Scope |
+|---|---|---|
+| `6145ccf` | A1 | Wellness article quiz: schema + 2 dogfood articles + modal reuse + monthly marker + bonus pts |
+| `7e54219` | A2 | Quiz Center section in community page: cards for Contract + each wellness article quiz |
+
+### Verification status
+
+- ✅ verify:memory 34/340/0
+- ✅ Pre-commit hooks all green (security, memory, anti-pattern, auth-callback, file-size, CSP hash drift §G)
+- ⏳ Live LIFF verify on user mobile (pending)
+
+### Deferred to Session B
+
+- Admin UI editor in dashboard.html for editing per-article quiz questions (today's hardcoded dogfood serves until then)
+- Firestore rules for `quiz_wellness_*` localStorage marker (NO Firestore rule needed yet — markers are client-only; CF in Session B will write `wellnessQuizPassed/{articleId}_{YYYY-MM}` subcollection with proper idempotency, plus admin analytics)
+- Backend CF for idempotent quiz claim (mirror `claimDailyLoginPoints` shape) — closes the "client-side localStorage = trustable?" gap
+- Per-article admin analytics dashboard
+
+### Open follow-up surfaces
+
+- `lifecycle_wellness_claim.md` memory doc: add quiz extension note (Phase B work; not blocking now)
+- Decision on whether to gate wellness quiz behind "read 10 sec" timer like contract quiz (currently no gate; user opens article → quiz card visible immediately)
