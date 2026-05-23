@@ -35,6 +35,12 @@ const styleHashTokens  = [...styleHashes].map(h => `'sha256-${h}'`).join(' ');
 
 // External origins actually used across the 8 HTML files (audited 2026-04-25).
 // cdn.tailwindcss.com removed after Phase 4E Tailwind migration (pre-built CSS).
+//
+// 2026-05-24: added `https://*.firebasedatabase.app` — Firebase RTDB SDK falls
+// back to JSONP long-polling when its WebSocket can't connect, injecting
+// <script src="https://<project>-default-rtdb.<region>.firebasedatabase.app/..."
+// tags. Without this origin in script-src-elem, the fallback path is blocked
+// and the user sees a flood of CSP violations whenever WebSocket is flaky.
 const SCRIPT_SRC_EXTERNAL = [
   'https://cdnjs.cloudflare.com',
   'https://cdn.jsdelivr.net',
@@ -46,6 +52,8 @@ const SCRIPT_SRC_EXTERNAL = [
   'https://www.google.com',
   'https://www.recaptcha.net',
   'https://apis.google.com',
+  'https://*.firebasedatabase.app',   // RTDB JSONP long-polling fallback
+  'https://*.firebaseio.com',         // RTDB legacy US-region origin
 ].join(' ');
 
 const STYLE_SRC_EXTERNAL = [
@@ -79,7 +87,11 @@ const FRAME_SRC = [
   "'self'",
   'https://www.google.com',    // reCAPTCHA iframe
   'https://www.recaptcha.net',
-  'https://*.firebasedatabase.app',  // RTDB SDK iframe transport fallback (any region/shard, e.g. s-gke-apse1-*.asia-southeast1.firebasedatabase.app)
+  // Firebase RTDB JSONP fallback also injects an iframe pointing at the
+  // <project>-default-rtdb.<region>.firebasedatabase.app endpoint when the
+  // WebSocket can't connect. Mirrors the SCRIPT_SRC_EXTERNAL addition.
+  'https://*.firebasedatabase.app',
+  'https://*.firebaseio.com',
 ].join(' ');
 
 // Inline style="..." attribute count audited 2026-04-29: dashboard 604,

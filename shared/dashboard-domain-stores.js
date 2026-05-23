@@ -164,8 +164,8 @@ function loadAndRenderServiceProviders() {
           <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Type: <strong>${_esc(p.type)}</strong></div>
         </div>
         <div style="display: flex; gap: 0.5rem;">
-          <button onclick="editServiceProvider('${_esc(p.id)}')" class="compact-btn compact-btn-edit">✏️ Edit</button>
-          <button onclick="deleteServiceProvider('${_esc(p.id)}')" class="compact-btn compact-btn-delete">🗑️ Delete</button>
+          <button data-action="editServiceProvider" data-id="${_esc(p.id)}" class="compact-btn compact-btn-edit">✏️ Edit</button>
+          <button data-action="deleteServiceProvider" data-id="${_esc(p.id)}" class="compact-btn compact-btn-delete">🗑️ Delete</button>
         </div>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
@@ -471,8 +471,8 @@ function loadAndRenderCommunityEvents() {
           </div>
         </div>
         <div style="display: flex; gap: 0.5rem;">
-          <button onclick="editEvent('${esc(e.id)}')" class="compact-btn compact-btn-edit">✏️</button>
-          <button onclick="deleteEvent('${esc(e.id)}')" class="compact-btn compact-btn-delete">🗑️</button>
+          <button data-action="editEvent" data-id="${esc(e.id)}" class="compact-btn compact-btn-edit">✏️</button>
+          <button data-action="deleteEvent" data-id="${esc(e.id)}" class="compact-btn compact-btn-delete">🗑️</button>
         </div>
       </div>
       <div style="font-size: 0.9rem; color: var(--text);">📝 ${esc(e.description || '-')}</div>
@@ -696,8 +696,8 @@ function renderComplaints(complaints){
         <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">ห้อง ${c.room || '-'} · ${date}</div>
         <div style="font-size:0.9rem;">${c.desc || ''}</div>
         <div style="margin-top:0.8rem;display:flex;gap:0.5rem;">
-          ${c.status !== 'resolved' ? `<button onclick="updateComplaintStatus('${c.id}','resolved')" style="padding:0.3rem 0.7rem;font-size:0.8rem;background:#e8f5e9;color:#388e3c;border:1px solid #c8e6c9;border-radius:4px;cursor:pointer;">✅ Resolve</button>` : ''}
-          ${c.status === 'open' ? `<button onclick="updateComplaintStatus('${c.id}','in-progress')" style="padding:0.3rem 0.7rem;font-size:0.8rem;background:#e3f2fd;color:#1976d2;border:1px solid #bbdefb;border-radius:4px;cursor:pointer;">🔄 In Progress</button>` : ''}
+          ${c.status !== 'resolved' ? `<button data-action="updateComplaintStatus" data-id="${c.id}" data-arg="resolved" style="padding:0.3rem 0.7rem;font-size:0.8rem;background:#e8f5e9;color:#388e3c;border:1px solid #c8e6c9;border-radius:4px;cursor:pointer;">✅ Resolve</button>` : ''}
+          ${c.status === 'open' ? `<button data-action="updateComplaintStatus" data-id="${c.id}" data-arg="in-progress" style="padding:0.3rem 0.7rem;font-size:0.8rem;background:#e3f2fd;color:#1976d2;border:1px solid #bbdefb;border-radius:4px;cursor:pointer;">🔄 In Progress</button>` : ''}
         </div>
       </div>`;
   }).join('');

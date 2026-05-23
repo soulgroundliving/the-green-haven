@@ -215,6 +215,7 @@ window.openManualVerifyModal = function(){
   const modal = document.createElement('div');
   modal.id = 'mv-modal';
   modal.className = 'u-modal-overlay';
+  modal.dataset.modal = 'true';
   const today = new Date().toISOString().split('T')[0];
   modal.innerHTML = `<div style="background:#fff;border-radius:12px;padding:1.8rem;width:92%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
     <div style="font-size:1.15rem;font-weight:800;margin-bottom:1rem;color:var(--text);">✍️ บันทึกการชำระด้วยตัวเอง</div>
@@ -263,8 +264,8 @@ window.openManualVerifyModal = function(){
     <div style="margin-bottom:1.2rem;"><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">เหตุผลการยืนยันเอง <span style="color:var(--red);">*</span></label>
       <input type="text" id="mv-reason" placeholder="เช่น SlipOK SCB delay ยาว, สลิปไม่คมชัด, มีค่าปรับที่ไม่ได้บันทึก..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
     <div style="display:flex;gap:.6rem;">
-      <button onclick="submitManualVerify()" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Sarabun';font-weight:700;cursor:pointer;">💾 บันทึก</button>
-      <button onclick="document.getElementById('mv-modal').remove()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:8px;padding:10px;font-family:'Sarabun';font-weight:700;cursor:pointer;">ยกเลิก</button>
+      <button data-action="submitManualVerify" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Sarabun';font-weight:700;cursor:pointer;">💾 บันทึก</button>
+      <button data-action="closeNearestDataModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:8px;padding:10px;font-family:'Sarabun';font-weight:700;cursor:pointer;">ยกเลิก</button>
     </div>
   </div>`;
   document.body.appendChild(modal);
@@ -678,13 +679,13 @@ function updateLinkPreview(){
         <div style="background:#f5f5f5;padding:10px;border-radius:6px;word-break:break-all;font-size:.9rem;font-family:monospace;margin-bottom:10px;">
           ${paymentLink}
         </div>
-        <button onclick="copyToClipboard('${paymentLink}')" style="padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.9rem;">📋 คัดลอก</button>
+        <button data-action="copyToClipboard" data-id="${paymentLink}" style="padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.9rem;">📋 คัดลอก</button>
       </div>
 
       <div>
         <label style="display:block;margin-bottom:.5rem;font-weight:700;color:var(--text);">📲 QR Code:</label>
         <div style="background:#f5f5f5;border-radius:6px;padding:1rem;text-align:center;" id="${qrId}"></div>
-        <button onclick="downloadQRCode('${qrId}', 'payment-room-${room}')" style="width:100%;margin-top:10px;padding:8px 16px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.9rem;">⬇️ ดาวน์โหลด QR Code</button>
+        <button data-action="downloadQRCode" data-id="${qrId}" data-arg="payment-room-${room}" style="width:100%;margin-top:10px;padding:8px 16px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.9rem;">⬇️ ดาวน์โหลด QR Code</button>
       </div>
     </div>
   `;

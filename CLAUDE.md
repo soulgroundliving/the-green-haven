@@ -1024,6 +1024,42 @@ Family: §7-N (onSnapshot must have error callback), §7-V (cleanup before re-at
 
 Incident (2026-05-23 late evening (8)): daily-bonus modal appearing on every LIFF reopen after successful claim. Optimistic close + sync localStorage marker was correct, but `_subscribeEcoPoints` reconciliation block cleared it during the cached-snapshot fire (sub-millisecond after the marker write). Fix in commit `2dfc440` — added `!snap.metadata?.fromCache && !snap.metadata?.hasPendingWrites` to both player + tenant branches.
 
+### LL. Firebase RTDB JSONP fallback hits BOTH `script-src-elem` AND `frame-src` — fix in one commit
+
+Firebase RTDB SDK opens a WebSocket by default. When that fails — even momentarily (intermittent network, restrictive proxy, NAT/firewall, single CONNECTION_RESET) — the SDK silently falls back to JSONP long-polling. The fallback creates TWO different DOM elements pointing at the RTDB origin:
+
+1. `<script src="https://<project>-default-rtdb.<region>.firebasedatabase.app/...">` — JSONP payload delivery → hits **`script-src-elem`**
+2. `<iframe src="https://<gke-host>.<region>.firebasedatabase.app">` — cross-origin event channel → hits **`frame-src`** (different subdomain than the script path!)
+
+`connect-src 'self' https: wss:` does NOT matter — `connect-src` gates fetch/XHR/WebSocket, not `<script>` or `<iframe>`. So `connect-src` looking permissive misleads you into thinking RTDB is whitelisted when it isn't.
+
+**Symptom signature** (recognise this fast):
+1. DevTools Issues panel shows 10+ CSP violations per second, growing continuously
+2. Each violation says "Loading the script '<URL>'..." or "Refused to frame ..." where `<URL>` is `https://<project>-default-rtdb.<region>.firebasedatabase.app/...`
+3. Page still works (SDK has internal retry) but DevTools UI slows and the report queue fills
+4. Closing/reopening DevTools doesn't reset the count — violations keep coming until WebSocket re-establishes
+
+**Fix:** in `tools/generate-vercel-csp.js`, add to **BOTH** `SCRIPT_SRC_EXTERNAL` and `FRAME_SRC`:
+
+```js
+'https://*.firebasedatabase.app',   // current multi-region RTDB
+'https://*.firebaseio.com',         // legacy US-region (defensive)
+```
+
+Then `npm run csp:hash && node tools/update-vercel-csp.js`.
+
+**Why this is its own anti-pattern (not just a one-off):** PRs #32→#34 (2026-05-24) shipped the script-src-elem fix first, saw the 10/sec flood disappear, looked done — but a single residual violation surfaced for `s-gke-apse1-nssi2-1.asia-southeast1.firebasedatabase.app` under `frame-src` because the iframe path uses a different subdomain. Took a second deploy cycle to close. When adding an origin for RTDB JSONP fallback, ALWAYS mirror the change in BOTH directives in the same commit — partial fix burns a deploy and looks like the fix didn't land.
+
+**Detection recipe (run before tightening CSP or removing any RTDB-related directive):**
+
+```bash
+grep -oE "script-src-elem [^;]+" vercel.json | grep -c "firebasedatabase\|firebaseio"
+grep -oE "frame-src [^;]+"       vercel.json | grep -c "firebasedatabase\|firebaseio"
+# Both must return >=1
+```
+
+**Family with §7-II (CSP hash drift bombs on enforce flip)** — both are "CSP directive doesn't include something the runtime actually needs, only visible on the deployed page under specific conditions." II is about hashes drifting; LL is about origins being silently missing despite `connect-src` looking permissive. Always test CSP changes on a deploy where the actual SDK runs — static review can't see this class of bug.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md

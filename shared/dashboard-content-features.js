@@ -186,7 +186,7 @@ function renderAnnouncementsList() {
             </div>
             <div style="color: var(--text); line-height: 1.6; white-space: pre-wrap;">${_escCF(ann.content)}</div>
           </div>
-          <button onclick="deleteAnnouncement('${ann.id}')" style="padding: 6px 12px; background: #ffebee; color: var(--red); border: 1px solid var(--red); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">🗑️ ลบ</button>
+          <button data-action="deleteAnnouncement" data-id="${ann.id}" style="padding: 6px 12px; background: #ffebee; color: var(--red); border: 1px solid var(--red); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">🗑️ ลบ</button>
         </div>
       </div>
     `)
@@ -265,10 +265,10 @@ function renderContractPage(){
       ${t?.deposit?`<div class="ct-card-info">💰 มัดจำ: ฿${Number(t.deposit).toLocaleString()}</div>`:''}
       ${t?.note?`<div class="ct-card-info" style="color:var(--text-muted);font-style:italic;">📝 ${_escCF(t.note)}</div>`:''}
       <div class="ct-actions">
-        ${t?.name?`<button class="ct-btn ct-btn-view" onclick="showTenantModal('${r.id}')">✏️ แก้ไข</button>
-        <button class="ct-btn ct-btn-print" onclick="printContract('${r.id}')">🖨️ พิมพ์สัญญา</button>
-        ${s==='expiring'||s==='expired'?`<button class="ct-btn ct-btn-renew" onclick="renewContract('${r.id}')">🔄 ต่อสัญญา</button>`:''}
-        `:`<button class="ct-btn ct-btn-view" onclick="showTenantModal('${r.id}')">➕ เพิ่มผู้เช่า</button>`}
+        ${t?.name?`<button class="ct-btn ct-btn-view" data-action="showTenantModal" data-id="${r.id}">✏️ แก้ไข</button>
+        <button class="ct-btn ct-btn-print" data-action="printContract" data-id="${r.id}">🖨️ พิมพ์สัญญา</button>
+        ${s==='expiring'||s==='expired'?`<button class="ct-btn ct-btn-renew" data-action="renewContract" data-id="${r.id}">🔄 ต่อสัญญา</button>`:''}
+        `:`<button class="ct-btn ct-btn-view" data-action="showTenantModal" data-id="${r.id}">➕ เพิ่มผู้เช่า</button>`}
       </div>
     </div>`;
   }).join('');

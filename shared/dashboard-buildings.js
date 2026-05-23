@@ -76,7 +76,7 @@
         ${_renderRoomChips(b.id, rooms)}
         <div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap;">
           <button data-action="openBuildingModal" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;flex:1;">✏️ แก้ไข</button>
-          <button onclick="openChecklistEditor('${id}')" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;flex:1;background:#e3f2fd;border-color:#90caf9;color:#1565c0;">🗒️ Checklist</button>
+          <button data-action="openChecklistEditor" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;flex:1;background:#e3f2fd;border-color:#90caf9;color:#1565c0;">🗒️ Checklist</button>
           ${status === 'active' && !isFallback ? `<button data-action="archiveBuildingPrompt" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;background:#fff;border:1px solid #f44336;color:#f44336;">🗑️ Archive</button>` : ''}
         </div>
       </div>

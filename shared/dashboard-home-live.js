@@ -758,14 +758,14 @@ function renderMeterTable(){
     else totalPending++;
     let statusCell;
     if (isPaid) {
-      statusCell = `<button class="mt-paid-badge" onclick="showPayDetail('${r.id}',${year},${month})">✅ จ่ายแล้ว ฿${(p.amount||0).toLocaleString()}</button>`;
+      statusCell = `<button class="mt-paid-badge" data-action="showPayDetail" data-id="${r.id}" data-year="${year}" data-month="${month}">✅ จ่ายแล้ว ฿${(p.amount||0).toLocaleString()}</button>`;
     } else if (isVacant && hasUsage) {
       statusCell = `<span class="mt-pending-badge" style="background:#fff3e0;color:#e65100;border-color:#ffb74d;" title="ห้องไม่มีผู้เช่าแต่มิเตอร์เพิ่ม — admin ตรวจสอบ">🟡 ว่าง — มีค้าง</span>`;
     } else {
       statusCell = `<span class="mt-pending-badge">⏳ รอ</span>`;
     }
     const actionCell=isPaid?''
-      :`<button class="mt-go-btn" onclick="goBillFromTable('${r.id}',${year},${month})">📄 ออกบิล</button>`;
+      :`<button class="mt-go-btn" data-action="goBillFromTable" data-id="${r.id}" data-year="${year}" data-month="${month}">📄 ออกบิล</button>`;
     const rowBg=isPaid?'':'';
     const meterStyle=md?'':'color:var(--text-muted);font-style:italic;';
     return`<tr style="${isPaid?'background:#fafffe;':(isVacant&&hasUsage?'background:#fff8f0;':'')}">
@@ -956,11 +956,11 @@ function updatePaymentStatusWidget(_activeRooms, _bills) {
          <div style="display:flex;flex-wrap:wrap;gap:4px;">${[
            ...pendingBills.map(b => {
              const sr = _normRoom(b.room || b.roomId);
-             return `<span onclick="goBillFromTable('${sr}',${beYear},${month})" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;cursor:pointer;" title="ออกบิลแล้ว — รอชำระ">⏳${sr}</span>`;
+             return `<span data-action="goBillFromTable" data-id="${sr}" data-year="${beYear}" data-month="${month}" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;cursor:pointer;" title="ออกบิลแล้ว — รอชำระ">⏳${sr}</span>`;
            }),
            ...unbilledRooms.map(r => {
              const sr = _normRoom(r.id);
-             return `<span onclick="goBillFromTable('${sr}',${beYear},${month})" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;cursor:pointer;" title="ยังไม่ออกบิลเดือนนี้">📄${sr}</span>`;
+             return `<span data-action="goBillFromTable" data-id="${sr}" data-year="${beYear}" data-month="${month}" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;cursor:pointer;" title="ยังไม่ออกบิลเดือนนี้">📄${sr}</span>`;
            })
          ].join('')}</div>`
       : '<div style="color:var(--green);font-weight:700;font-size:.86rem;">🎉 เก็บค่าเช่าครบทุกห้องแล้ว!</div>'}`;
