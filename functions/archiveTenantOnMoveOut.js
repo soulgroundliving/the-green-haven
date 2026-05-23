@@ -57,6 +57,7 @@ const firestore = admin.firestore();
 
 const { getValidBuildings } = require('./buildingRegistry');
 const { appendLog } = require('./_occupancyLog');
+const { deletePetStorageForRoom } = require('./_petStorage');
 
 const VALID_REASONS = new Set(['moved_out', 'reassigned', 'admin_action']);
 
@@ -330,6 +331,29 @@ exports.archiveTenantOnMoveOut = functions
     console.log(`archiveTenantOnMoveOut: ${building}/${roomId} → archive/${contractId} ` +
       `(tenantId=${tenantId}, subdocs=${copiedSubdocs}, reason=${archiveReason}, by=${callerEmail || callerUid})`);
 
+    // ── Post-batch: Storage cleanup (§7-DD analogue for Storage) ───────────
+    // Firestore pet docs were moved to tenants/{b}/archive/{contractId}/pets/*
+    // by the batch above. Storage files at pets/{b}/{r}/{petId}/* are NOT
+    // touched by Firestore batches — clean them here so the next tenant in
+    // this room doesn't inherit photos + vaccine books from the prior tenant.
+    //
+    // Fire-and-forget on purpose: archive batch already committed = the
+    // canonical record. A transient Storage error must not bubble up and
+    // mask success. Per-file errors are logged inside the helper.
+    let storageDeleted = 0;
+    let storageErrors = 0;
+    try {
+      const r = await deletePetStorageForRoom(building, roomId, {
+        reason: `archive:${archiveReason}`,
+      });
+      storageDeleted = r.deletedCount;
+      storageErrors  = r.errors.length;
+    } catch (storageErr) {
+      // Shape-guard throws (empty building/roomId) — programmer error, never
+      // expected at this point because the inputs were validated above.
+      console.error(`archiveTenantOnMoveOut: pet Storage cleanup threw unexpectedly:`, storageErr.message);
+    }
+
     return {
       success: true,
       contractId,
@@ -337,6 +361,8 @@ exports.archiveTenantOnMoveOut = functions
       building,
       roomId,
       archivedSubdocs: copiedSubdocs,
+      archivedPetStorageFiles: storageDeleted,
+      petStorageErrors: storageErrors,
       reason: archiveReason,
     };
   });

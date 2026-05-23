@@ -266,6 +266,20 @@ exports.transitionToPlayer = functions
       throw new functions.https.HttpsError('internal', e.message || 'Batch commit failed');
     }
 
+    // ── Storage cleanup INTENTIONALLY NOT CALLED ────────────────────────────
+    // archiveTenantOnMoveOut deletes pet Storage files via deletePetStorageForRoom
+    // (§7-DD analogue) because move-out is one-way. transitionToPlayer is the
+    // REVERSIBLE archive path — `revertTransitionToPlayer` restores the tenant
+    // from `tenants/{b}/archive/{contractId}/pets/*` (Firestore subcollection).
+    // If we deleted Storage here, the revert flow would restore pet docs whose
+    // photoURL + vaccineBookURL point to deleted files (404 broken images).
+    //
+    // PII concern (next tenant of same room reading old player's pet photos)
+    // is handled by storage.rules:28 — tightened in Phase C to require
+    // token.room/token.building claim match. Do NOT add Storage cleanup here
+    // without first removing the revert flow or coordinating with a Storage
+    // restore mechanism.
+
     // ── Post-batch: set Auth claim + update liffUsers (fire-and-forget) ──
     // Both are non-critical: archive + people doc are committed. If claim set
     // fails, admin can manually set via grant-admin-claim tool with role:'player'.
