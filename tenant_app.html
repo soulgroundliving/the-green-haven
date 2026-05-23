@@ -9088,6 +9088,17 @@
                         }
                         _dailyStreak = Number(gam.dailyStreak) || 0;
                         _lastDailyClaim = gam.lastDailyClaim || null;
+                        // Reconcile stale localStorage when Firestore says no-claim. Handles
+                        // admin-reset / data-rollback scenarios where the per-room/per-player
+                        // gate persists across the wipe and would otherwise keep the claim
+                        // button disabled despite the server allowing a fresh claim.
+                        if (!_lastDailyClaim) {
+                            try {
+                                const lsKey = `lastDailyClaim_player_${window._playerProfile.tenantId}`;
+                                const today = new Date(Date.now() + 7*3600*1000).toISOString().slice(0,10);
+                                if (localStorage.getItem(lsKey) === today) localStorage.removeItem(lsKey);
+                            } catch(_) {}
+                        }
                         _refreshDailyBonusIfOpen();
                         const badges = Array.isArray(gam.badges) ? gam.badges : [];
                         _lastKnownBadges = badges;
@@ -9120,6 +9131,17 @@
                     }
                     _dailyStreak = Number(gam.dailyStreak) || 0;
                     _lastDailyClaim = gam.lastDailyClaim || null;
+                    // Reconcile stale localStorage when Firestore says no-claim. Handles
+                    // admin-reset (tools/reset-nest-gamification.js) / data-rollback where
+                    // the per-room gate persists across the server wipe and would otherwise
+                    // keep the claim button disabled despite the server allowing a fresh claim.
+                    if (!_lastDailyClaim) {
+                        try {
+                            const lsKey = `lastDailyClaim_${_taBuilding}_${_taRoom}`;
+                            const today = new Date(Date.now() + 7*3600*1000).toISOString().slice(0,10);
+                            if (localStorage.getItem(lsKey) === today) localStorage.removeItem(lsKey);
+                        } catch(_) {}
+                    }
                     _refreshDailyBonusIfOpen();
                     const badges = Array.isArray(gam.badges) ? gam.badges : [];
                     _lastKnownBadges = badges;
