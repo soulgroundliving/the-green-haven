@@ -5116,14 +5116,32 @@
 
         // Mirror the CF's streak math: same-day = already claimed, yesterday = continue, gap/none = reset to 1.
         // Returns { cyclePos: 1-7 (today's slot in the 7-day cycle), isClaimableNow: bool }.
+        //
+        // Fallback chain for lastClaim: in-memory _lastDailyClaim (from Firestore snapshot)
+        // → localStorage (persists across page reload before snapshot arrives). Page reload
+        // resets in-memory to null/0, so without the localStorage hop a tenant who claimed
+        // today and re-opened the LIFF would see the GET button enabled for ~500ms until
+        // _subscribeEcoPoints round-trips. claimDailyPoints success already writes the
+        // localStorage key in the same shape, so this is a safe per-room source of truth
+        // for "did we claim today" — even after admin-preview building-switch reload.
         function _computeDailyBonusState() {
             const today = _bkkDateString(new Date());
             const yesterday = _bkkDateString(new Date(Date.now() - 86400000));
+            let lastClaim = _lastDailyClaim;
+            if (!lastClaim) {
+                try {
+                    const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+                    const lsKey = isPlayer
+                        ? `lastDailyClaim_player_${window._playerProfile.tenantId}`
+                        : `lastDailyClaim_${_taBuilding}_${_taRoom}`;
+                    lastClaim = localStorage.getItem(lsKey) || null;
+                } catch(_) {}
+            }
             let nextStreak, isClaimableNow;
-            if (_lastDailyClaim === today) {
+            if (lastClaim === today) {
                 nextStreak = Math.max(1, _dailyStreak || 1);
                 isClaimableNow = false;
-            } else if (_lastDailyClaim === yesterday) {
+            } else if (lastClaim === yesterday) {
                 nextStreak = (_dailyStreak || 0) + 1;
                 isClaimableNow = true;
             } else {
