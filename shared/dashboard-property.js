@@ -61,7 +61,7 @@ function initRoomsPage(){
     const borderColor = r.type==='commercial'?'#4285f4':statusInfo.color;
     const displayId = (r.name || r.id).replace(/^ห้อง |^Nest /, '');
     return `
-    <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" onclick="openTenantModal('rooms', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
+    <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" data-action="openTenantModal" data-building="rooms" data-room="${r.id}" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${displayId}</div>
       <div class="room-rent">฿${r.rentPrice.toLocaleString()}/เดือน</div>
       <div class="room-status">${r.type==='commercial'?'🏪 พาณิชย์':occupancyIcon + (tenant && tenant.name ? ' ' + _escProp(tenant.name) : ' ว่าง')}</div>
@@ -217,9 +217,9 @@ function renderCompactRoomGrid(){
       </div>
       `}
       <div class="compact-card-actions" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
-        <button class="compact-btn" onclick="editRoom('${r.id}')" title="แก้ไขสัญญาเช่า" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
-        <button class="compact-btn" onclick="recordPayment('${r.id}')" title="บันทึกค่าเช่า" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">💰 ชำระ</button>
-        <button class="compact-btn" onclick="goBillFromTable('${r.id}')" title="ดูบิล" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
+        <button class="compact-btn" data-action="editRoom" data-room="${r.id}" title="แก้ไขสัญญาเช่า" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
+        <button class="compact-btn" data-action="recordPayment" data-room="${r.id}" title="บันทึกค่าเช่า" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">💰 ชำระ</button>
+        <button class="compact-btn" data-action="goBillFromTable" data-room="${r.id}" title="ดูบิล" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
       </div>
     </div>`;
   }).join('');
@@ -294,7 +294,7 @@ function renderRoomSelectionCheckboxes() {
   container.innerHTML = rooms.map(room => {
     const currentRent = room.rentPrice || 0;
     return `
-      <label style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;background:white;" onclick="toggleBatchRoomSelection('${room.id}')">
+      <label style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;background:white;" data-action="toggleBatchRoomSelection" data-room="${room.id}">
         <input type="checkbox" id="batchRoom_${room.id}" onchange="updateBatchRoomCount()" style="cursor:pointer;">
         <span style="font-size:0.85rem;font-weight:600;color:#333;">${room.id}</span>
         <span style="font-size:0.75rem;color:#666;">฿${currentRent}</span>
@@ -585,9 +585,9 @@ function renderNestCompactGrid(){
       </div>
       `}
       <div class="compact-card-actions" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
-        <button class="compact-btn" onclick="editRoom('${r.id}')" title="แก้ไขสัญญาเช่า" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
-        <button class="compact-btn" onclick="recordPayment('${r.id}')" title="บันทึกค่าเช่า" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">💰 ชำระ</button>
-        <button class="compact-btn" onclick="goBillFromTable('${r.id}')" title="ดูบิล" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
+        <button class="compact-btn" data-action="editRoom" data-room="${r.id}" title="แก้ไขสัญญาเช่า" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
+        <button class="compact-btn" data-action="recordPayment" data-room="${r.id}" title="บันทึกค่าเช่า" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">💰 ชำระ</button>
+        <button class="compact-btn" data-action="goBillFromTable" data-room="${r.id}" title="ดูบิล" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
       </div>
     </div>`;
   }).join('');
@@ -665,7 +665,7 @@ function initNestPage(){
     const bgColor = statusInfo.color+'40';
     const borderColor = statusInfo.color;
     return `
-    <div class="room-pill ${r.type === 'pet-allowed' ? 'pet-allowed' : 'studio'}" onclick="openTenantModal('nest', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
+    <div class="room-pill ${r.type === 'pet-allowed' ? 'pet-allowed' : 'studio'}" data-action="openTenantModal" data-building="nest" data-room="${r.id}" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${(r.name || r.id).replace(/^ห้อง |^Nest /, '')}</div>
       <div class="room-rent">฿${r.rentPrice.toLocaleString()}/เดือน</div>
       <div class="room-status">${typeIcon} ${tenant && tenant.name ? tenant.name : 'ว่าง'}</div>

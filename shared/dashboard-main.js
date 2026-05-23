@@ -762,6 +762,16 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'transitionToPlayer') { typeof transitionToPlayer === 'function' && transitionToPlayer(); return; }
     if (a === 'revertTransitionToPlayer') { typeof revertTransitionToPlayer === 'function' && revertTransitionToPlayer(); return; }
     if (a === 'openRenewLeaseModal') { typeof window.openRenewLeaseModal === 'function' && window.openRenewLeaseModal(); return; }
+    // Tenant + room grid actions (refactored from inline onclick — closes CSP regression class)
+    if (a === 'openTenantModal') { if (typeof openTenantModal === 'function') openTenantModal(building, el.dataset.room); return; }
+    if (a === 'editRoom') { if (typeof editRoom === 'function') editRoom(el.dataset.room); return; }
+    if (a === 'recordPayment') { if (typeof recordPayment === 'function') recordPayment(el.dataset.room); return; }
+    if (a === 'goBillFromTable') { if (typeof goBillFromTable === 'function') goBillFromTable(el.dataset.room, el.dataset.year, el.dataset.month); return; }
+    if (a === 'showBillingModal') { if (typeof showBillingModal === 'function') showBillingModal(el.dataset.room); return; }
+    if (a === 'showBillingHistoryModal') { if (typeof showBillingHistoryModal === 'function') showBillingHistoryModal(el.dataset.room); return; }
+    if (a === 'saveTenant') { if (typeof saveTenant === 'function') saveTenant(); return; }
+    if (a === 'deleteTenant') { if (typeof deleteTenant === 'function') deleteTenant(el.dataset.room); return; }
+    if (a === 'toggleBatchRoomSelection') { if (typeof toggleBatchRoomSelection === 'function') toggleBatchRoomSelection(el.dataset.room); return; }
     // PDPA §32 admin erasure (modal flow in shared/dashboard-pdpa-erasure.js)
     if (a === 'confirmAdminDataDeletion') { typeof window.confirmAdminDataDeletion === 'function' && window.confirmAdminDataDeletion(); return; }
     if (a === '_pdpaAdmCancel')          { typeof window._pdpaAdmCancel          === 'function' && window._pdpaAdmCancel();          return; }

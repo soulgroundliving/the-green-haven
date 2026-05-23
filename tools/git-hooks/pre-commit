@@ -150,6 +150,27 @@ if [ -n "$STAGED_ADMIN" ]; then
   fi
 fi
 
+# E. Inline event handlers (onclick=, onchange=, onload= etc.) in shared/*.js
+# Wrong:   <button onclick="doX('${id}')">...</button>          (in template literals)
+# Correct: <button data-action="doX" data-room="${id}">...</button>
+#          + handler in dashboard-main.js delegation hub
+# CSP blocks inline event handlers — hashes do NOT apply unless 'unsafe-hashes' is
+# present (we deliberately exclude it). Recurring regression: devs add onclick=
+# back during new-feature work, ship works fine in dev, breaks silently in prod CSP.
+STAGED_SHARED=$(git diff --cached -- 'shared/*.js' 2>/dev/null)
+if [ -n "$STAGED_SHARED" ]; then
+  if echo "$STAGED_SHARED" | grep -E "^\+[^+]" | grep -qE "on(click|change|input|submit|load|blur|focus|mouseover|mouseout|mousedown|mouseup|keydown|keyup|keypress)\s*=\s*[\"']" ; then
+    echo -e "${RED}❌ BLOCKED: Inline event handler added in shared/*.js${NC}"
+    echo "$STAGED_SHARED" | grep -E "^\+[^+]" | grep -nE "on(click|change|input|submit|load|blur|focus|mouseover|mouseout|mousedown|mouseup|keydown|keyup|keypress)\s*=\s*[\"']" | head -5
+    echo -e "${YELLOW}   CSP blocks inline event handlers (hashes do not apply without 'unsafe-hashes')${NC}"
+    echo -e "${YELLOW}   Use the centralized delegation hub in shared/dashboard-main.js:${NC}"
+    echo -e "${YELLOW}     1. Element:  data-action=\"yourFn\" data-room=\"\${id}\" ...${NC}"
+    echo -e "${YELLOW}     2. Handler:  if (a === 'yourFn') { yourFn(el.dataset.room); return; }${NC}"
+    echo -e "${YELLOW}   Examples: 'openTenantModal', 'editRoom', 'showPage' already wired${NC}"
+    ANTIPATTERN_FOUND=1
+  fi
+fi
+
 if [ $ANTIPATTERN_FOUND -eq 1 ]; then
   echo ""
   echo -e "${RED}❌ Commit blocked: Fix anti-patterns and try again${NC}"
