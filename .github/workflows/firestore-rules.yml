@@ -29,6 +29,8 @@ on:
     paths:
       - 'firestore.rules'
       - 'firestore.rules.test.js'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/firestore-rules.yml'
   workflow_dispatch:
 
