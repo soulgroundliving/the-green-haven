@@ -975,6 +975,55 @@ grep -n "DOMContentLoaded.*async\|addEventListener.*click" shared/dashboard-main
 
 Sibling patterns: §7-A (wrong event timing for auth-gated reads), §7-U (claims not ready on first auth event fire). All three are "the trigger fired but the handler wasn't ready yet" variations.
 
+### KK. Optimistic local write vs cached onSnapshot reconciliation race
+
+When a UI optimistically writes localStorage (set marker, close modal) on user action, and a parallel `onSnapshot` reconciliation block "fixes stale local state" by clearing localStorage when the server snapshot says no — there's a race window where the FIRST onSnapshot fire is from local cache (still has pre-action state). The reconciliation then ERASES the optimistic write before the second server-confirmed snapshot can deliver the new state.
+
+Symptoms:
+1. User clicks claim/bookmark/etc. → state appears applied
+2. Toast/feedback may have shown "success"
+3. On next session (or even seconds later), state is gone — appears as if action never happened
+4. localStorage marker silently vanishes — no console error
+
+Root cause timeline:
+```
+T=0       User action → optimistic localStorage write + UI feedback (modal close, toast)
+T=0+1ms   onSnapshot fires from CACHE (stale)
+          → snapshot.field is empty (pre-action state)
+          → reconciliation: "Firestore says no → clear local marker"
+          → optimistic write ERASED 💀
+T=1s      CF write completes server-side
+T=1.5s    onSnapshot fires from SERVER (fresh)
+          → snapshot.field now has today's value
+          → but local was already cleared — too late
+```
+
+**Rule:** Any onSnapshot reconciliation that CLEARS local state when server says no MUST gate on snapshot freshness:
+
+```js
+fs.onSnapshot(ref, snap => {
+  const fresh = (snap.data() || {}).someField || null;
+  // SKIP reconciliation when snapshot is from local cache OR has pending writes —
+  // cached snapshot is stale relative to optimistic write that just happened.
+  if (!fresh && !snap.metadata?.fromCache && !snap.metadata?.hasPendingWrites) {
+    if (localStorage.getItem(lsKey) === today) localStorage.removeItem(lsKey);
+  }
+});
+```
+
+Detection: grep for `localStorage.removeItem` inside onSnapshot callbacks. Each should have a `snap.metadata.fromCache` / `hasPendingWrites` guard.
+
+```bash
+# Find onSnapshot callbacks that clear localStorage — each needs a metadata guard
+grep -B1 -A20 "onSnapshot" tenant_app.html shared/*.js | grep -B5 -A5 "localStorage.removeItem"
+```
+
+Admin-reset case still works correctly: when admin clears Firestore, the server-confirmed snapshot (fromCache=false) fires → reconciliation runs → local cleared. Only the CACHED initial snapshot is skipped.
+
+Family: §7-N (onSnapshot must have error callback), §7-V (cleanup before re-attach) — same family of "silent onSnapshot lifecycle bug." Subtler than missing-callback bugs because it manifests only in the OPTIMISTIC-write + CACHED-snapshot race.
+
+Incident (2026-05-23 late evening (8)): daily-bonus modal appearing on every LIFF reopen after successful claim. Optimistic close + sync localStorage marker was correct, but `_subscribeEcoPoints` reconciliation block cleared it during the cached-snapshot fire (sub-millisecond after the marker write). Fix in commit `2dfc440` — added `!snap.metadata?.fromCache && !snap.metadata?.hasPendingWrites` to both player + tenant branches.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
