@@ -87,6 +87,11 @@ const FRAME_SRC = [
   "'self'",
   'https://www.google.com',    // reCAPTCHA iframe
   'https://www.recaptcha.net',
+  // Firebase RTDB JSONP fallback also injects an iframe pointing at the
+  // <project>-default-rtdb.<region>.firebasedatabase.app endpoint when the
+  // WebSocket can't connect. Mirrors the SCRIPT_SRC_EXTERNAL addition.
+  'https://*.firebasedatabase.app',
+  'https://*.firebaseio.com',
 ].join(' ');
 
 // Inline style="..." attribute count audited 2026-04-29: dashboard 604,
