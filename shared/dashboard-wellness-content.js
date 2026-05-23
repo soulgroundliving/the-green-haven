@@ -48,7 +48,7 @@ function ensureWellnessIconPicker() {
   if (!wrap || wrap.dataset.built === '1') return;
   wrap.dataset.built = '1';
   wrap.innerHTML = WELLNESS_ICONS.map(o => `
-    <button type="button" class="u-wellness-icon-btn" data-icon="${o.icon}" onclick="window.pickWellnessIcon('${o.icon}',this)">
+    <button type="button" class="u-wellness-icon-btn" data-action="pickWellnessIcon" data-icon="${o.icon}">
       <i class="fas ${o.icon}" style="color:var(--green);width:14px;text-align:center;"></i>${o.label}
     </button>`).join('');
   // Restore selection from hidden input

@@ -799,6 +799,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'saveCommunityDocument') { typeof saveCommunityDocument === 'function' && saveCommunityDocument(); return; }
     if (a === 'editWellness') { typeof editWellnessArticle === 'function' && editWellnessArticle(el.dataset.id); return; }
     if (a === 'deleteWellness') { typeof deleteWellnessArticle === 'function' && deleteWellnessArticle(el.dataset.wid, el.dataset.wtitle); return; }
+    if (a === 'pickWellnessIcon') { typeof window.pickWellnessIcon === 'function' && window.pickWellnessIcon(el.dataset.icon, el); return; }
     if (a === 'saveWellnessArticle') { typeof saveWellnessArticle === 'function' && saveWellnessArticle(); return; }
     if (a === 'resetWellnessForm') { typeof resetWellnessForm === 'function' && resetWellnessForm(); return; }
     if (a === 'seedWellnessStarters') { typeof seedWellnessStarters === 'function' && seedWellnessStarters(); return; }
