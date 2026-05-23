@@ -48,6 +48,16 @@
  *   Path 1   claim match (tok.room === roomId && tok.building === building)
  *   Path 1b  tenantId claim matches doc.tenantId
  *   Path 2a  linkedAuthUid matches auth.uid
+ *   Path 1c  lease-doc-sot — when caller provides leaseId + leaseBuildings,
+ *            iterate leases/{b}/list/{leaseId} across buildings and accept if
+ *            ANY lease doc has tenantId === tok.tenantId. Closes the
+ *            transferTenant-Storage-path-frozen bug: the Firestore lease moves
+ *            across buildings on variation transfer but the Storage file path
+ *            stays at the original building/room (e.g. leases/rooms/15/...),
+ *            so when LIFF tenant reads the contract via getLeaseDocUrl, the
+ *            path's building/room map to the OLD room (now vacant, cleared).
+ *            Path 1c lets the moved tenant access their own contract by
+ *            checking ownership at the LEASE level instead of the path level.
  *
  * @param {Object} opts
  * @param {string} opts.building   canonical building id ('rooms', 'nest', etc.)
@@ -55,12 +65,17 @@
  * @param {Object} opts.context    Firebase callable context (auth.uid + auth.token)
  * @param {Object} opts.firestore  admin.firestore() instance
  * @param {Function} opts.HttpsError  functions.https.HttpsError class
- * @returns {Promise<{tenantData: Object | null, viaPath: string}>}
+ * @param {string} [opts.leaseId]  optional — enables Path 1c lease-doc-sot lookup
+ * @param {string[]} [opts.leaseBuildings]  optional — buildings to scan for the
+ *   lease doc (caller resolves via buildingRegistry.getAllBuildings()).
+ *   Required for Path 1c. Ignored if leaseId is empty.
+ * @returns {Promise<{tenantData: Object | null, viaPath: string, leaseData?: Object}>}
  *   - tenantData is null for admin/manager paths (no Firestore read needed)
  *   - viaPath identifies which gate passed ('admin', 'manager', 'claim',
- *     'tenantId-sot', 'uid-sot') — useful for logging
+ *     'tenantId-sot', 'uid-sot', 'lease-doc-sot') — useful for logging
+ *   - leaseData is the matched lease doc when viaPath === 'lease-doc-sot'
  */
-async function assertTenantAccess({ building, roomId, context, firestore, HttpsError }) {
+async function assertTenantAccess({ building, roomId, context, firestore, HttpsError, leaseId, leaseBuildings }) {
   if (!context?.auth?.uid) {
     throw new HttpsError('unauthenticated', 'Sign-in required');
   }
@@ -109,6 +124,31 @@ async function assertTenantAccess({ building, roomId, context, firestore, HttpsE
 
   if (uidMatch)      return { tenantData, viaPath: 'uid-sot' };
   if (tenantIdMatch) return { tenantData, viaPath: 'tenantId-sot' };
+
+  // Path 1c — lease-doc-sot. See JSDoc above for the transferTenant-Storage-
+  // path-frozen story. Only fires when the caller (e.g. getLeaseDocUrl) opts
+  // in by passing both leaseId and leaseBuildings.
+  const lid = String(leaseId || '');
+  const lbList = Array.isArray(leaseBuildings) ? leaseBuildings.filter(Boolean) : [];
+  if (lid && tokTenantId && lbList.length) {
+    for (const b of lbList) {
+      try {
+        const leaseSnap = await firestore
+          .collection('leases').doc(b)
+          .collection('list').doc(lid)
+          .get();
+        if (!leaseSnap.exists) continue;
+        const leaseData = leaseSnap.data() || {};
+        const leaseTenantId = String(leaseData.tenantId || '');
+        if (leaseTenantId && leaseTenantId === tokTenantId) {
+          return { tenantData, viaPath: 'lease-doc-sot', leaseData };
+        }
+      } catch (e) {
+        console.warn('[_authSoT] lease doc lookup failed for',
+          `${b}/list/${lid}`, '—', e.message);
+      }
+    }
+  }
 
   // Diagnostic-only error — shape info, no full UID/tenantId leaked.
   const linkedShape = linkedAuthUid

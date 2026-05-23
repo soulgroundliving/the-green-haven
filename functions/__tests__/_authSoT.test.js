@@ -14,14 +14,18 @@ class HttpsError extends Error {
 
 let tenantDocs;   // keyed by `${building}/${roomId}`
 let peopleDocs;   // keyed by tenantId
+let leaseDocs;    // keyed by `${building}/${leaseId}` — Path 1c lookups
 let tenantReadThrows;
 let peopleReadThrows;
+let leaseReadThrows;
 
 function resetStubs() {
   tenantDocs = {};
   peopleDocs = {};
+  leaseDocs = {};
   tenantReadThrows = null;
   peopleReadThrows = null;
+  leaseReadThrows = null;
 }
 resetStubs();
 
@@ -40,6 +44,27 @@ const firestoreStub = {
                   return {
                     exists: key in tenantDocs,
                     data: () => tenantDocs[key],
+                  };
+                },
+              }),
+            };
+          },
+        }),
+      };
+    }
+    if (name === 'leases') {
+      return {
+        doc: (building) => ({
+          collection: (sub) => {
+            if (sub !== 'list') throw new Error('unexpected subcollection: ' + sub);
+            return {
+              doc: (leaseId) => ({
+                get: async () => {
+                  if (leaseReadThrows) throw leaseReadThrows;
+                  const key = `${building}/${leaseId}`;
+                  return {
+                    exists: key in leaseDocs,
+                    data: () => leaseDocs[key],
                   };
                 },
               }),
@@ -134,6 +159,126 @@ describe('assertTenantAccess', () => {
       firestore: firestoreStub, HttpsError,
     });
     assert.equal(r.viaPath, 'tenantId-sot');
+  });
+
+  // ─── Path 1c: lease-doc-sot ─────────────────────────────────────────────
+  // Closes transferTenant Storage-path-frozen bug. After variation-mode move
+  // rooms/15 → nest/N101: tenants/rooms/list/15 is cleared (Paths 1b/2a fail
+  // there), but the lease doc moved to leases/nest/list/{leaseId} with the
+  // same tenantId. Caller (getLeaseDocUrl) passes leaseId from the frozen
+  // path; we find the lease at its new home and accept on tenantId match.
+
+  it('Path 1c lease-doc-sot — lease moved to OTHER building, tenantId match → ok', async () => {
+    // tenants/rooms/list/15 cleared (post-transfer state)
+    tenantDocs['rooms/15'] = { linkedAuthUid: '', tenantId: '' };
+    // lease moved to leases/nest/list/CONTRACT_42
+    leaseDocs['nest/CONTRACT_42'] = { tenantId: 't-15', building: 'nest', roomId: 'N101' };
+    const r = await assertTenantAccess({
+      building: 'rooms', roomId: '15',
+      leaseId: 'CONTRACT_42', leaseBuildings: ['rooms', 'nest'],
+      context: ctx({ uid: 'line:Utenant15', tenantId: 't-15' }),
+      firestore: firestoreStub, HttpsError,
+    });
+    assert.equal(r.viaPath, 'lease-doc-sot');
+    assert.equal(r.leaseData.tenantId, 't-15');
+    assert.equal(r.leaseData.building, 'nest');
+  });
+
+  it('Path 1c — lease still at original building (no transfer) → also works', async () => {
+    tenantDocs['rooms/15'] = { linkedAuthUid: '', tenantId: '' }; // hypothetical cleared
+    leaseDocs['rooms/CONTRACT_42'] = { tenantId: 't-15', building: 'rooms', roomId: '15' };
+    const r = await assertTenantAccess({
+      building: 'rooms', roomId: '15',
+      leaseId: 'CONTRACT_42', leaseBuildings: ['rooms', 'nest'],
+      context: ctx({ uid: 'line:Utenant15', tenantId: 't-15' }),
+      firestore: firestoreStub, HttpsError,
+    });
+    assert.equal(r.viaPath, 'lease-doc-sot');
+  });
+
+  it('Path 1c — leaseId provided but no lease exists anywhere → falls through to throw', async () => {
+    tenantDocs['rooms/15'] = { linkedAuthUid: '', tenantId: '' };
+    await assert.rejects(
+      () => assertTenantAccess({
+        building: 'rooms', roomId: '15',
+        leaseId: 'CONTRACT_NOTFOUND', leaseBuildings: ['rooms', 'nest'],
+        context: ctx({ uid: 'line:Uattacker', tenantId: 't-attacker' }),
+        firestore: firestoreStub, HttpsError,
+      }),
+      (e) => e.code === 'permission-denied',
+    );
+  });
+
+  it('Path 1c — lease found but tenantId mismatch → falls through to throw', async () => {
+    tenantDocs['rooms/15'] = { linkedAuthUid: '', tenantId: '' };
+    leaseDocs['nest/CONTRACT_42'] = { tenantId: 't-OTHER', building: 'nest', roomId: 'N101' };
+    await assert.rejects(
+      () => assertTenantAccess({
+        building: 'rooms', roomId: '15',
+        leaseId: 'CONTRACT_42', leaseBuildings: ['rooms', 'nest'],
+        context: ctx({ uid: 'line:Uattacker', tenantId: 't-attacker' }),
+        firestore: firestoreStub, HttpsError,
+      }),
+      (e) => e.code === 'permission-denied',
+    );
+  });
+
+  it('Path 1c — no leaseId → skipped entirely (back-compat)', async () => {
+    // Pre-patch CFs that don't pass leaseId still get the original 5-path behaviour
+    tenantDocs['rooms/15'] = { linkedAuthUid: 'line:Ureal', tenantId: 't-real' };
+    leaseDocs['nest/CONTRACT_42'] = { tenantId: 't-attacker', building: 'nest' };
+    await assert.rejects(
+      () => assertTenantAccess({
+        building: 'rooms', roomId: '15',
+        // no leaseId / leaseBuildings — old call shape
+        context: ctx({ uid: 'line:Uattacker', tenantId: 't-attacker' }),
+        firestore: firestoreStub, HttpsError,
+      }),
+      (e) => e.code === 'permission-denied',
+    );
+  });
+
+  it('Path 1c — leaseId but empty leaseBuildings → skipped (caller config error, fail closed)', async () => {
+    tenantDocs['rooms/15'] = { linkedAuthUid: '', tenantId: '' };
+    leaseDocs['nest/CONTRACT_42'] = { tenantId: 't-15' };
+    await assert.rejects(
+      () => assertTenantAccess({
+        building: 'rooms', roomId: '15',
+        leaseId: 'CONTRACT_42', leaseBuildings: [],
+        context: ctx({ uid: 'line:Utenant15', tenantId: 't-15' }),
+        firestore: firestoreStub, HttpsError,
+      }),
+      (e) => e.code === 'permission-denied',
+    );
+  });
+
+  it('Path 1c — lease read throws → swallowed, continues iteration, falls through if no match', async () => {
+    tenantDocs['rooms/15'] = { linkedAuthUid: '', tenantId: '' };
+    leaseReadThrows = new Error('Firestore unavailable');
+    await assert.rejects(
+      () => assertTenantAccess({
+        building: 'rooms', roomId: '15',
+        leaseId: 'CONTRACT_42', leaseBuildings: ['rooms', 'nest'],
+        context: ctx({ uid: 'line:Utenant15', tenantId: 't-15' }),
+        firestore: firestoreStub, HttpsError,
+      }),
+      (e) => e.code === 'permission-denied',
+    );
+  });
+
+  it('Path 1c — no tokTenantId → skipped (can\'t verify ownership without claim)', async () => {
+    tenantDocs['rooms/15'] = { linkedAuthUid: '', tenantId: '' };
+    leaseDocs['nest/CONTRACT_42'] = { tenantId: 't-15' };
+    await assert.rejects(
+      () => assertTenantAccess({
+        building: 'rooms', roomId: '15',
+        leaseId: 'CONTRACT_42', leaseBuildings: ['rooms', 'nest'],
+        // no tenantId claim on caller — Path 1c gate requires it
+        context: ctx({ uid: 'line:Utenant15' }),
+        firestore: firestoreStub, HttpsError,
+      }),
+      (e) => e.code === 'permission-denied',
+    );
   });
 
   it('no match → permission-denied with diagnostic shape', async () => {

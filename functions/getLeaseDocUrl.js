@@ -23,6 +23,7 @@
 const functions = require('firebase-functions/v1');
 const admin     = require('firebase-admin');
 const { assertTenantAccess } = require('./_authSoT');
+const { getAllBuildings } = require('./buildingRegistry');
 
 if (!admin.apps.length) admin.initializeApp();
 
@@ -45,14 +46,21 @@ exports.getLeaseDocUrl = functions
         'path must be leases/{building}/{roomId}/{leaseId}/{fileName}',
       );
     }
-    const [, building, roomId] = m;
+    const [, building, roomId, leaseId] = m;
 
     // 6-path auth gate via _authSoT helper: admin / managedBuildings / claim /
-    // tenantId-sot / linkedAuthUid-sot. See _authSoT.js for the canonical
-    // template; this CF was the original inline implementation that the
-    // helper was extracted from (commit b917860 + 8f4b41b + a9aa52d).
+    // tenantId-sot / linkedAuthUid-sot / lease-doc-sot. See _authSoT.js for
+    // the canonical template; this CF was the original inline implementation
+    // that the helper was extracted from (commit b917860 + 8f4b41b + a9aa52d).
+    //
+    // Path 1c (lease-doc-sot) enabled by passing leaseId + leaseBuildings —
+    // catches the transferTenant-Storage-path-frozen case where the path
+    // points at the OLD room (now vacant) but the lease moved across
+    // buildings. Without this, transferred tenants get permission-denied on
+    // their own contract until the Storage file is moved manually.
+    const leaseBuildings = await getAllBuildings();
     await assertTenantAccess({
-      building, roomId,
+      building, roomId, leaseId, leaseBuildings,
       context, firestore: admin.firestore(),
       HttpsError: functions.https.HttpsError,
     });
