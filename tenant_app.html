@@ -1535,6 +1535,11 @@
             font-weight: bold;
         }
 
+        /* display:flex lives in CSS (not inline) so applyBuildingVisibility() can
+           toggle show/hide via `style.display = ''` (restores flex) vs `'none'`. */
+        #map-daily-btn { display: flex; }
+        #map-daily-btn:active { transform: scale(0.92); }
+
         /* ===== MISSING DEFINITIONS ===== */
 
         /* Used on profile points card and reward cards — pure Tailwind-driven,
@@ -2331,6 +2336,21 @@
                        align-items: center; justify-content: center; line-height: 1;">0</span>
         </button>
 
+        <!-- Daily-bonus quick-peek: round mirror of bell, lets Nest tenants reopen
+             the daily modal even after they've already claimed today.
+             Default display:none so Rooms tenants never see a flash; applyBuildingVisibility()
+             clears inline display for Nest → falls back to CSS rule (display:flex). -->
+        <button type="button" id="map-daily-btn" data-action="openDailyModal"
+            aria-label="ดูสถานะรับพ้อยท์รายวัน"
+            style="display: none; position: absolute; top: 70px; right: 20px; z-index: 20;
+                   align-items: center; justify-content: center;
+                   width: 44px; height: 44px; padding: 0;
+                   background: rgba(255,255,255,0.8); border: none; border-radius: 50%;
+                   backdrop-filter: blur(5px); cursor: pointer; font: inherit;
+                   transition: transform .12s ease;">
+            <span style="font-size: var(--fs-lg); line-height: 1;">💰</span>
+        </button>
+
         <div class="map-container" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10;
        background-image: linear-gradient(180deg, #cfe5d8 0%, #e8f5e9 50%, #f3ece0 100%);
        background-position: center;
@@ -2427,6 +2447,11 @@
         style="display: none; position: fixed; top: 0; left: 0; width: 100%; background: rgba(0,0,0,0.85); z-index: 1500; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;">
         <div class="animate-pop"
             style="background: white; width: 100%; max-width: 350px; border-radius: 35px; padding: 30px; position: relative; text-align: center;">
+
+            <button type="button" data-action="closeDailyModal" aria-label="ปิด"
+                style="position:absolute; top:14px; right:14px; width:32px; height:32px;
+                       padding:0; border:none; background:transparent; cursor:pointer;
+                       font-size:1.2rem; color:var(--text-muted); line-height:1;">✕</button>
 
             <div id="daily-modal-title" style="font-size: var(--fs-lg); font-weight: 800; color: var(--text-dark); margin-bottom: 5px;">DAILY BONUS
             </div>
@@ -5134,6 +5159,23 @@
                 day7.className = cls;
                 day7.innerHTML = badge + '7 Days ✨ Special Bonus +3 Pts';
             }
+            // Sync the claim button with the same isClaimableNow signal so peek-mode
+            // (openDailyModal after claim) shows "✓ รับแล้ววันนี้" disabled instead
+            // of a tap that the CF will reject with already-exists.
+            const btn = document.querySelector('[data-action="claimDailyPoints"]');
+            if (btn) {
+                if (isClaimableNow) {
+                    btn.disabled = false;
+                    btn.style.opacity = '';
+                    btn.style.cursor = 'pointer';
+                    btn.innerText = 'รับพ้อยท์วันนี้';
+                } else {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.6';
+                    btn.style.cursor = 'default';
+                    btn.innerText = '✓ รับแล้ววันนี้';
+                }
+            }
         }
 
         function _refreshDailyBonusIfOpen() {
@@ -7147,6 +7189,8 @@
             if (a === 'saveCompanyInfo' && _ta.saveCompanyInfo) { _ta.saveCompanyInfo(); return; }
             if (a === 'openBroadcastsPanel' && _ta.openBroadcastsPanel) { _ta.openBroadcastsPanel(); return; }
             if (a === 'closeBroadcastsPanel' && _ta.closeBroadcastsPanel) { _ta.closeBroadcastsPanel(); return; }
+            if (a === 'openDailyModal' && _ta.openDailyModal) { _ta.openDailyModal(); return; }
+            if (a === 'closeDailyModal' && _ta.closeDailyModal) { _ta.closeDailyModal(); return; }
             if (a === 'openRewardsShop' && _ta.openRewardsShop) { _ta.openRewardsShop(); return; }
             if (a === 'closeRewardsShop' && _ta.closeRewardsShop) { _ta.closeRewardsShop(); return; }
             if (a === 'saveNewPet' && _ta.saveNewPet) { _ta.saveNewPet(); return; }
@@ -7993,6 +8037,30 @@
         }
         window.openBroadcastsPanel  = openBroadcastsPanel;
         window.closeBroadcastsPanel = closeBroadcastsPanel;
+
+        // Peek-mode entry for the daily bonus modal. checkDailyLogin() is the
+        // automatic-on-load gate (returns early once today's claim is in localStorage);
+        // openDailyModal() is the tenant-initiated reopen that bypasses the gate so
+        // they can confirm streak state any time during the day.
+        function openDailyModal() {
+            const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+            if (!isPlayer && window._nestOnlyDisabled) return;
+            const modal = document.getElementById('daily-modal');
+            if (!modal) return;
+            if (typeof _renderDailyBonusCards === 'function') _renderDailyBonusCards();
+            const nav = document.getElementById('main-nav-bar');
+            if (nav) nav.style.display = 'none';
+            modal.style.height = (window.innerHeight || 600) + 'px';
+            modal.style.display = 'flex';
+        }
+        function closeDailyModal() {
+            const modal = document.getElementById('daily-modal');
+            if (modal) modal.style.display = 'none';
+            const nav = document.getElementById('main-nav-bar');
+            if (nav) nav.style.display = '';
+        }
+        window.openDailyModal  = openDailyModal;
+        window.closeDailyModal = closeDailyModal;
 
         // RTDB realtime subscribe — admin writes status/workNotes/afterPhoto to RTDB,
         // tenant sees updates live without having to be on the same device
@@ -9332,6 +9400,7 @@
         const NEST_ONLY_ELEMENT_IDS = [
             'profile-points-banner', 'profile-tab-nav', 'profile-rewards-card',
             'nav-smart-key-btn', 'pet-list-container', 'daily-modal',
+            'map-daily-btn',
             'contract-quiz-section', 'wellness-claim-area',
             'home-market-tile', 'marketplace-section',
             'home-quest-tile', 'home-petpark-tile',
