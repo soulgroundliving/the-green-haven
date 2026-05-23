@@ -802,9 +802,6 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'saveWellnessArticle') { typeof saveWellnessArticle === 'function' && saveWellnessArticle(); return; }
     if (a === 'resetWellnessForm') { typeof resetWellnessForm === 'function' && resetWellnessForm(); return; }
     if (a === 'seedWellnessStarters') { typeof seedWellnessStarters === 'function' && seedWellnessStarters(); return; }
-    // Wellness list row actions (CSP §7-II refactor: inline onclick → delegation).
-    if (a === 'editWellness') { typeof editWellnessArticle === 'function' && editWellnessArticle(el.dataset.id); return; }
-    if (a === 'deleteWellness') { typeof deleteWellnessArticle === 'function' && deleteWellnessArticle(el.dataset.wid, el.dataset.wtitle); return; }
     // Quiz editor (Session B) — admin authors per-article wellness quizzes.
     if (a === 'quizAddQuestion')    { typeof window.quizAddQuestion === 'function' && window.quizAddQuestion(); return; }
     if (a === 'quizRemoveQuestion') { typeof window.quizRemoveQuestion === 'function' && window.quizRemoveQuestion(el.dataset.qi); return; }
