@@ -440,8 +440,8 @@ async function renderWellnessArticlesList() {
           <div style="font-size:.75rem;color:var(--text-muted);">${a.category || 'Wellness'} • อ่าน ${a.readtime || 3} นาที • ${a.reward > 0 ? '+' + a.reward + ' pts' : 'ไม่ให้แต้ม'}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button onclick="editWellnessArticle('${d.id}')" style="padding:6px 10px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">✏️ แก้</button>
-          <button data-wid="${_escWC(d.id)}" data-wtitle="${title}" onclick="deleteWellnessArticle(this.dataset.wid,this.dataset.wtitle)" style="padding:6px 10px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">🗑️ ลบ</button>
+          <button data-action="editWellness" data-id="${_escWC(d.id)}" style="padding:6px 10px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">✏️ แก้</button>
+          <button data-action="deleteWellness" data-wid="${_escWC(d.id)}" data-wtitle="${title}" style="padding:6px 10px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">🗑️ ลบ</button>
         </div>
       </div>`;
     }).join('');
