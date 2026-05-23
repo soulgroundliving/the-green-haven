@@ -3191,6 +3191,17 @@
              Previous standalone banner element + Rooms-only empty state retired —
              bell is the single notification surface for all tenants. -->
 
+        <!-- Quiz Hub — Phase A2: aggregates all available quizzes (contract + per-article wellness) -->
+        <div id="community-quiz-hub">
+        <div class="section-title" role="heading" aria-level="2">
+            <span>Quiz Center 🎯</span>
+            <small style="color:var(--text-muted); font-weight:400;">รวม quiz ทั้งหมด — รับ pts รายเดือน</small>
+        </div>
+        <div id="quiz-hub-list" style="display:flex; flex-direction:column; gap:10px; padding:0 16px 16px;">
+            <!-- Cards rendered by renderQuizHub() — Contract Quiz first, then each wellness article with quiz -->
+        </div>
+        </div>
+
         <div id="marketplace-section">
         <div class="section-title" role="heading" aria-level="2">
             <span>Marketplace 🛒</span>
@@ -9466,6 +9477,7 @@
             'nav-smart-key-btn', 'pet-list-container', 'daily-modal',
             'map-daily-btn',
             'contract-quiz-section', 'wellness-claim-area',
+            'community-quiz-hub',
             'home-market-tile', 'marketplace-section',
             'home-quest-tile', 'home-petpark-tile',
             // Nav bar: Rooms has no marketplace/QUEST/PET PARK, so the only thing
@@ -11019,6 +11031,81 @@
             if (badge) badge.style.display = 'none';
             _setMarketSeenAt();
             _renderBellVisibility();
+            renderQuizHub();
+        }
+
+        // Quiz Hub (Phase A2) — list every quiz available to the tenant with status.
+        // Includes Contract Quiz (always) + each wellness article whose data carries a quiz field.
+        // localStorage markers determine status: ✅ done this month / 🟡 ready / ⏰ next month.
+        function renderQuizHub() {
+            const list = document.getElementById('quiz-hub-list');
+            if (!list) return;
+            const cards = [];
+            // 1. Contract Quiz card — only if there's a lease (otherwise no content to quiz on)
+            if (_taLease && (_taLease.endDate || _taLease.moveOutDate)) {
+                const done = !!localStorage.getItem(_quizMonthKey());
+                let scoreLine = '';
+                try {
+                    if (done) {
+                        const p = JSON.parse(localStorage.getItem(_quizMonthKey()));
+                        if (p && typeof p.score === 'number') scoreLine = `ตอบถูก ${p.score}/${p.total}`;
+                    }
+                } catch(e) {}
+                cards.push({
+                    title: 'Contract Quiz',
+                    subtitle: 'รู้จักสัญญาของคุณดีแค่ไหน',
+                    pts: _quizRewardContract || 20,
+                    done, scoreLine,
+                    action: 'startContractQuiz', arg: '',
+                    icon: '📜',
+                });
+            }
+            // 2. Wellness article quizzes
+            const src = _wellnessList.length ? _wellnessList : WELLNESS_ARTICLES;
+            for (const a of src) {
+                if (!Array.isArray(a.quiz) || a.quiz.length === 0) continue;
+                const monthKey = _wellnessQuizMonthKey(a.id);
+                const done = !!localStorage.getItem(monthKey);
+                let scoreLine = '';
+                try {
+                    if (done) {
+                        const p = JSON.parse(localStorage.getItem(monthKey));
+                        if (p && typeof p.score === 'number') scoreLine = `ตอบถูก ${p.score}/${p.total}`;
+                    }
+                } catch(e) {}
+                cards.push({
+                    title: a.title,
+                    subtitle: a.category || 'Wellness',
+                    pts: _quizRewardWellness,
+                    done, scoreLine,
+                    // Open the article (user reads, then starts quiz from there)
+                    action: 'openWellnessArticle', arg: a.id,
+                    icon: '🌿',
+                });
+            }
+            if (cards.length === 0) {
+                list.innerHTML = '<div class="gh-empty-state" style="padding:16px;text-align:center;color:var(--text-muted);">ยังไม่มี quiz พร้อมใช้งาน</div>';
+                return;
+            }
+            list.innerHTML = cards.map(c => {
+                const statusBadge = c.done
+                    ? `<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:700;">✅ ทำแล้ว</span>`
+                    : `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:700;">🟡 พร้อม</span>`;
+                const subline = c.done && c.scoreLine
+                    ? `<span style="color:var(--text-muted);">${c.scoreLine} • รออีกเดือนหน้า</span>`
+                    : `<span style="color:var(--accent-gold,#D4AF37);font-weight:700;">+${c.pts} pts</span>`;
+                const argAttr = c.arg ? ` data-arg="${c.arg}"` : '';
+                return `<button class="quiz-hub-card" data-action="${c.action}"${argAttr}
+                    style="display:flex;align-items:center;gap:12px;padding:14px;background:#fff;border:1px solid var(--border);border-radius:14px;cursor:pointer;text-align:left;font-family:inherit;width:100%;${c.done?'opacity:.72;':''}">
+                    <div style="font-size:1.6rem;flex:0 0 auto;">${c.icon}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:700;font-size:var(--fs-md);color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.title}</div>
+                        <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-top:2px;">${c.subtitle}</div>
+                        <div style="font-size:var(--fs-sm);margin-top:4px;">${subline}</div>
+                    </div>
+                    <div style="flex:0 0 auto;">${statusBadge}</div>
+                </button>`;
+            }).join('');
         }
 
         function renderAnnouncements() {
@@ -12004,6 +12091,10 @@
                 _setupWellnessQuizPrompt(_currentWellnessArticle);
             } else {
                 setupContractQuizGate();
+            }
+            // Also refresh the community Quiz Hub so its status badges update without page reload
+            if (typeof renderQuizHub === 'function' && document.getElementById('community-quiz-hub')) {
+                renderQuizHub();
             }
         }
 
