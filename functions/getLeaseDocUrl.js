@@ -59,11 +59,27 @@ exports.getLeaseDocUrl = functions
     // buildings. Without this, transferred tenants get permission-denied on
     // their own contract until the Storage file is moved manually.
     const leaseBuildings = await getAllBuildings();
-    await assertTenantAccess({
-      building, roomId, leaseId, leaseBuildings,
-      context, firestore: admin.firestore(),
-      HttpsError: functions.https.HttpsError,
-    });
+    console.log(`getLeaseDocUrl[in]: path=${path} parsed=${building}/${roomId} ` +
+      `leaseId=${leaseId} caller.uid=${String(context.auth.uid || '').slice(0, 20)} ` +
+      `tokRoom=${context.auth.token?.room || ''} tokBuilding=${context.auth.token?.building || ''} ` +
+      `tokTenantId=${context.auth.token?.tenantId ? 'present' : 'missing'} ` +
+      `leaseBuildings=[${leaseBuildings.join(',')}]`);
+    let viaPath;
+    try {
+      const r = await assertTenantAccess({
+        building, roomId, leaseId, leaseBuildings,
+        context, firestore: admin.firestore(),
+        HttpsError: functions.https.HttpsError,
+      });
+      viaPath = r.viaPath;
+      const matchedAt = r.leaseData
+        ? ` matchedAt=leases/${r.leaseData.building || '?'}/list/${leaseId}`
+        : '';
+      console.log(`getLeaseDocUrl[ok]: viaPath=${viaPath}${matchedAt}`);
+    } catch (authErr) {
+      console.log(`getLeaseDocUrl[deny]: ${authErr.message}`);
+      throw authErr;
+    }
 
     const expiresAt = Date.now() + SIGNED_URL_TTL_MS;
     let url;
