@@ -926,7 +926,7 @@ diff <(jq -S . tools/csp-hashes.json) <(jq -S . /tmp/new.json)
 # Non-empty diff = hashes drifted → run update-vercel-csp.js
 ```
 
-A pre-commit hook to fully automate this is a worthwhile follow-up (mirror of the `verify:memory` hook pattern). Until then: muscle memory + grep.
+**Pre-commit hook (landed 2026-05-23):** `tools/git-hooks/pre-commit` §G now detects this automatically — staging any of the 8 tracked HTMLs triggers a regen + drift compare against current `tools/csp-hashes.json` and `vercel.json`. Drift blocks the commit with the exact regen instructions. The hook backs up + restores both files so a blocked commit leaves no mutation behind. Re-installed via `npm run install:hooks` (also runs on `npm install` postinstall).
 
 **Debugging signature** (this bug class is sneaky because the symptom looks like a CSS file failure, not a CSP problem):
 

@@ -6,10 +6,12 @@
 # DO NOT EDIT .git/hooks/pre-commit directly — it will be overwritten on next
 # `npm install`. Edit THIS file instead, then re-run `npm install` (or `node tools/install-git-hooks.js`).
 #
-# The hook does three checks:
+# The hook does these checks:
 #   1. Credential leak detection (API keys, secrets in staged files)
 #   2. Memory doc drift detection (lifecycle_*.md verifier — see verify-via-grep doctrine)
-#   3. Anti-pattern detection (Firebase compat API, BillStore misuse, RTDB subscription gate)
+#   2b. CF unit tests (functions/__tests__/*.test.js when functions/ files staged)
+#   3. Anti-pattern detection (Firebase compat API, BillStore misuse, auth callbacks, file size, CSP hash drift §7-II)
+#   4. Memory fabricated-path scan (warn-only)
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -193,6 +195,44 @@ if command -v node &> /dev/null && [ -f tools/audit-file-sizes.js ]; then
     cat /tmp/audit-size.out
   fi
   echo -e "${GREEN}✅ File-size audit passed${NC}"
+fi
+
+# G. CSP hash drift detection (§7-II) — BLOCKING
+# If a tracked HTML file is staged, regen CSP hashes + the vercel.json CSP value.
+# Any drift means an inline <style>/<script> block changed without regenerating
+# the hashes in tools/csp-hashes.json AND vercel.json — would silently break
+# production styling/JS on the next CSP enforce render (recurring §7-II symptom).
+#
+# Backs up both files, regens, diffs, restores. Block-and-instruct on drift.
+TRACKED_CSP_HTMLS='^(index|login|dashboard|tenant_app|tax-filing|audit-log-viewer|payment|booking)\.html$'
+if command -v node &> /dev/null \
+  && [ -f tools/compute-csp-hashes.js ] \
+  && [ -f tools/update-vercel-csp.js ] \
+  && git diff --cached --name-only | grep -qE "$TRACKED_CSP_HTMLS"; then
+  echo -e "${YELLOW}🔐 Tracked HTML edited — checking CSP hash drift...${NC}"
+  cp tools/csp-hashes.json /tmp/csp-hashes-before.json 2>/dev/null
+  cp vercel.json /tmp/vercel-before.json 2>/dev/null
+  node tools/compute-csp-hashes.js > /tmp/csp-hash-regen.out 2>&1
+  node tools/update-vercel-csp.js > /tmp/csp-vercel-regen.out 2>&1
+  HASH_DRIFT=0
+  VERCEL_DRIFT=0
+  diff -q tools/csp-hashes.json /tmp/csp-hashes-before.json > /dev/null 2>&1 || HASH_DRIFT=1
+  diff -q vercel.json /tmp/vercel-before.json > /dev/null 2>&1 || VERCEL_DRIFT=1
+  if [ $HASH_DRIFT -eq 1 ] || [ $VERCEL_DRIFT -eq 1 ]; then
+    cp /tmp/csp-hashes-before.json tools/csp-hashes.json 2>/dev/null
+    cp /tmp/vercel-before.json vercel.json 2>/dev/null
+    echo -e "${RED}❌ BLOCKED: CSP hashes drifted from your HTML changes${NC}"
+    [ $HASH_DRIFT -eq 1 ] && echo -e "${YELLOW}   - tools/csp-hashes.json is stale${NC}"
+    [ $VERCEL_DRIFT -eq 1 ] && echo -e "${YELLOW}   - vercel.json CSP header is stale${NC}"
+    echo ""
+    echo -e "${YELLOW}   You edited an inline <style> or <script> block in a tracked HTML.${NC}"
+    echo -e "${YELLOW}   Required fix:${NC}"
+    echo -e "${YELLOW}     npm run csp:hash && node tools/update-vercel-csp.js${NC}"
+    echo -e "${YELLOW}     git add tools/csp-hashes.json vercel.json${NC}"
+    echo -e "${YELLOW}   Then re-commit. See CLAUDE.md §7-II for the full story.${NC}"
+    exit 1
+  fi
+  echo -e "${GREEN}✅ CSP hashes in sync${NC}"
 fi
 
 # ===== 4. Memory fabricated-path scan (warn-only) =====
