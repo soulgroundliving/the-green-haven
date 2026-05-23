@@ -2365,7 +2365,7 @@
                 <div class="map-icon-bounce animate-bounce">🏠</div>
             </button>
 
-            <button type="button" id="home-market-tile" data-action="showPage--updateNavActiveIndex" data-page="community" data-nav-index="2"
+            <button type="button" id="home-market-tile" data-action="showPage--updateNavActiveIndex" data-page="marketplace" data-nav-index="2"
                 aria-label="ไปหน้าชุมชน / ตลาด"
                 style="position:absolute;top:55%;left:65%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #E67E22;">MARKET</div>
@@ -3183,23 +3183,38 @@
 
     <div id="community" class="page">
         <div class="app-bar">
-            <h1 class="page-title-top">ชุมชน</h1>
-            <p>แบ่งปันและร่วมกันสร้างสังคมที่อบอุ่น 🤝</p>
+            <h1 class="page-title-top">Quiz Center 🎯</h1>
+            <p>ทบทวนความเข้าใจ — รับ pts รายเดือน</p>
         </div>
 
-        <!-- Lease-renewal alert moved to the 🔔 bell panel (see _leaseAlertItem).
-             Previous standalone banner element + Rooms-only empty state retired —
-             bell is the single notification surface for all tenants. -->
-
-        <!-- Quiz Hub — Phase A2: aggregates all available quizzes (contract + per-article wellness) -->
+        <!-- Quiz Hub: aggregates all available quizzes (contract + per-article wellness) -->
         <div id="community-quiz-hub">
         <div class="section-title" role="heading" aria-level="2">
-            <span>Quiz Center 🎯</span>
-            <small style="color:var(--text-muted); font-weight:400;">รวม quiz ทั้งหมด — รับ pts รายเดือน</small>
+            <span>Quiz พร้อมทำ</span>
+            <small style="color:var(--text-muted); font-weight:400;">รวม quiz ทั้งหมด</small>
         </div>
         <div id="quiz-hub-list" style="display:flex; flex-direction:column; gap:10px; padding:0 16px 16px;">
             <!-- Cards rendered by renderQuizHub() — Contract Quiz first, then each wellness article with quiz -->
         </div>
+        </div>
+
+        <!-- Quiz History: past attempts (passed + not passed) sorted newest first -->
+        <div id="quiz-history-section">
+        <div class="section-title" role="heading" aria-level="2">
+            <span>📜 ประวัติการทำ Quiz</span>
+        </div>
+        <div id="quiz-history-list" style="display:flex; flex-direction:column; gap:8px; padding:0 16px 24px;">
+            <!-- Cards rendered by renderQuizHistory() -->
+        </div>
+        </div>
+    </div>
+
+    <!-- Marketplace page — moved out of community 2026-05-23 (10) per user redesign.
+         Reached via home-market-tile in worldmap; nav-community-btn now goes to Quiz. -->
+    <div id="marketplace" class="page">
+        <div class="app-bar">
+            <h1 class="page-title-top">ชุมชน 🛒</h1>
+            <p>ตลาดของชุมชน — ของมือสอง บริการ และของแจกฟรี</p>
         </div>
 
         <div id="marketplace-section">
@@ -4899,8 +4914,8 @@
             <i class="fas fa-leaf" aria-hidden="true"></i>บริการ
             <span id="nav-badge-services" aria-live="polite" style="display:none; position:absolute; top:4px; right:8px; background:var(--alert); color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
         </button>
-        <button type="button" id="nav-community-btn" class="nav-item" aria-label="ชุมชน" data-action="showPage--markCommunityRead" data-page="community" style="position:relative;">
-            <i class="fas fa-comments" aria-hidden="true"></i>ชุมชน
+        <button type="button" id="nav-community-btn" class="nav-item" aria-label="Quiz" data-action="showPage--markCommunityRead" data-page="community" style="position:relative;">
+            <i class="fas fa-question-circle" aria-hidden="true"></i>Quiz
             <span id="nav-badge-community" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:var(--alert); border-radius:50%;"></span>
         </button>
         <button type="button" class="nav-item" aria-label="บิล" data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3" style="position:relative;">
@@ -9477,7 +9492,7 @@
             'nav-smart-key-btn', 'pet-list-container', 'daily-modal',
             'map-daily-btn',
             'contract-quiz-section', 'wellness-claim-area',
-            'community-quiz-hub',
+            'community-quiz-hub', 'quiz-history-section',
             'home-market-tile', 'marketplace-section',
             'home-quest-tile', 'home-petpark-tile',
             // Nav bar: Rooms has no marketplace/QUEST/PET PARK, so the only thing
@@ -11032,6 +11047,63 @@
             _setMarketSeenAt();
             _renderBellVisibility();
             renderQuizHub();
+            renderQuizHistory();
+        }
+
+        // Quiz History — past attempts (passed + not passed) from localStorage markers.
+        // Source: quiz_contract_* and quiz_wellness_* keys. Each value parsed as
+        // {score, total, passed, at}. Sorted newest first, capped at 10.
+        // Title resolution: contract → "Contract Quiz"; wellness → article title by id.
+        function renderQuizHistory() {
+            const list = document.getElementById('quiz-history-list');
+            if (!list) return;
+            const entries = [];
+            const wellnessSrc = _wellnessList.length ? _wellnessList : WELLNESS_ARTICLES;
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (!k) continue;
+                if (!/^quiz_(contract|wellness)_/.test(k)) continue;
+                let p;
+                try { p = JSON.parse(localStorage.getItem(k) || '{}'); } catch(e) { continue; }
+                if (!p || typeof p.at !== 'number') continue;
+                // Parse month from key suffix YYYYMM (last 6 digits)
+                const m = k.match(/_(\d{6})$/);
+                const monthLabel = m ? `${m[1].slice(4,6)}/${m[1].slice(0,4)}` : '';
+                // Resolve title
+                let title = 'Contract Quiz';
+                let icon = '📜';
+                if (k.startsWith('quiz_wellness_')) {
+                    // Strip prefix + bld + room + trailing _YYYYMM to get articleId
+                    // Pattern: quiz_wellness_{b}_{r}_{articleId}_{YYYYMM}
+                    const parts = k.replace(/_(\d{6})$/, '').split('_');
+                    // parts[0]='quiz', [1]='wellness', [2]=b, [3]=r, [4..]=articleId (may contain '_')
+                    const articleId = parts.slice(4).join('_');
+                    const art = wellnessSrc.find(x => x.id === articleId);
+                    title = art ? art.title : (articleId || 'Wellness Quiz');
+                    icon = '🌿';
+                }
+                entries.push({ at: p.at, title, icon, monthLabel, score: p.score, total: p.total, passed: p.passed });
+            }
+            entries.sort((a, b) => b.at - a.at);
+            const top = entries.slice(0, 10);
+            if (top.length === 0) {
+                list.innerHTML = `<div style="text-align:center;padding:14px;color:var(--text-muted);font-size:var(--fs-sm);background:#fff;border:1px dashed var(--border);border-radius:12px;">ยังไม่มีประวัติการทำ Quiz</div>`;
+                return;
+            }
+            list.innerHTML = top.map(e => {
+                const pillBg = e.passed ? '#dcfce7' : '#fef3c7';
+                const pillColor = e.passed ? '#15803d' : '#92400e';
+                const pillText = e.passed ? `✓ ผ่าน +${(e.title === 'Contract Quiz' ? _quizRewardContract : _quizRewardWellness)} pts` : 'ไม่ผ่าน';
+                const dateStr = new Date(e.at).toLocaleDateString('th-TH', {day:'numeric', month:'short', year:'numeric'});
+                return `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:12px;">
+                    <div style="font-size:1.4rem;flex:0 0 auto;">${e.icon}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;font-size:var(--fs-md);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.title}</div>
+                        <div style="font-size:var(--fs-sm);color:var(--text-muted);">${dateStr} • ตอบถูก ${e.score}/${e.total}</div>
+                    </div>
+                    <span style="background:${pillBg};color:${pillColor};padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;flex:0 0 auto;">${pillText}</span>
+                </div>`;
+            }).join('');
         }
 
         // Quiz Hub (Phase A2) — list every quiz available to the tenant with status.
@@ -12092,9 +12164,12 @@
             } else {
                 setupContractQuizGate();
             }
-            // Also refresh the community Quiz Hub so its status badges update without page reload
+            // Also refresh the community Quiz Hub + Quiz History so badges/history update without page reload
             if (typeof renderQuizHub === 'function' && document.getElementById('community-quiz-hub')) {
                 renderQuizHub();
+            }
+            if (typeof renderQuizHistory === 'function' && document.getElementById('quiz-history-list')) {
+                renderQuizHistory();
             }
         }
 
