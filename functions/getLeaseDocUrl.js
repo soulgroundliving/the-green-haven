@@ -77,8 +77,57 @@ exports.getLeaseDocUrl = functions
         : '';
       console.log(`getLeaseDocUrl[ok]: viaPath=${viaPath}${matchedAt}`);
     } catch (authErr) {
-      console.log(`getLeaseDocUrl[deny]: ${authErr.message}`);
-      throw authErr;
+      // Path 1d — current-tenant-contract fallback (lease-file-specific).
+      //
+      // After all 6 generic paths in _authSoT fail, check ONE more thing: does
+      // the caller's CURRENT tenant doc (per their claims) actually have this
+      // exact file as their lease contract? If yes, the file IS the tenant's
+      // current contract — regardless of how the path's building/room/leaseId
+      // ended up frozen (renewal, transfer, renewal-after-transfer cascade).
+      //
+      // Why this is safe:
+      //   - Caller's identity is verified via claims (Firebase Auth signed token)
+      //   - We only allow the EXACT path stored as their contractPath; can't
+      //     access arbitrary files
+      //   - tenantId double-check defends against UID rotation drift
+      //
+      // Why _authSoT generic paths fail this case:
+      //   - Path 1/1b: claims have new building/room, but path's building/room
+      //     point at old/cleared tenant doc → no match
+      //   - Path 1c: lease doc lookup by path's leaseId fails when the lease was
+      //     replaced by renewal AND the old renewed lease was later deleted
+      //     (cleanup, transferTenant in some edge cases, manual ops)
+      //   - Path 2a: linkedAuthUid at old room is empty (post-transfer state)
+      const tok = context.auth.token || {};
+      const tokTenantId = String(tok.tenantId || '');
+      const tokBuilding = String(tok.building || '');
+      const tokRoom     = String(tok.room     || '');
+      if (tokTenantId && tokBuilding && tokRoom) {
+        try {
+          const currTenantSnap = await admin.firestore()
+            .collection('tenants').doc(tokBuilding)
+            .collection('list').doc(tokRoom)
+            .get();
+          if (currTenantSnap.exists) {
+            const td = currTenantSnap.data() || {};
+            const ownerOk = String(td.tenantId || '') === tokTenantId;
+            const docMatch = path === String(td.contractDocument || '');
+            const leasePathMatch = path === String(td.lease?.contractPath || '');
+            if (ownerOk && (docMatch || leasePathMatch)) {
+              viaPath = 'current-tenant-contract';
+              console.log(`getLeaseDocUrl[ok]: viaPath=${viaPath} ` +
+                `at=tenants/${tokBuilding}/list/${tokRoom} ` +
+                `matched=${docMatch ? 'contractDocument' : 'lease.contractPath'}`);
+            }
+          }
+        } catch (e) {
+          console.warn(`getLeaseDocUrl: Path 1d lookup failed (${tokBuilding}/${tokRoom}):`, e.message);
+        }
+      }
+      if (!viaPath) {
+        console.log(`getLeaseDocUrl[deny]: ${authErr.message}`);
+        throw authErr;
+      }
     }
 
     const expiresAt = Date.now() + SIGNED_URL_TTL_MS;
