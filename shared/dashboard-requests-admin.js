@@ -1657,7 +1657,8 @@ async function exportDepositReceipt(building, roomId) {
 
   document.body.appendChild(wrap);
   try {
-    const html2canvas = window.html2canvas || (await import('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.esm.js').then(m => m.default));
+    if (typeof window.ensureHtml2Canvas === 'function') await window.ensureHtml2Canvas();
+    const html2canvas = window.html2canvas;
     const canvas = await html2canvas(wrap, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
     const link = document.createElement('a');
     link.download = `deposit_receipt_${building}_${roomId}.png`;
