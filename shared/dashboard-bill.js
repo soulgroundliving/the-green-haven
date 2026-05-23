@@ -615,7 +615,7 @@ async function verifySlip(file){
     const _escBill = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
     resultEl.innerHTML = `<div class="slip-result-err">⚠️ เชื่อมต่อ Cloud Function ไม่ได้<br>
       <small>${_escBill(err.message || 'Network error')}</small><br>
-      <button onclick="skipSlipVerify()" style="margin-top:6px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:.8rem;background:#fff;">ออกใบเสร็จโดยไม่ตรวจสลิป</button>
+      <button data-action="skipSlipVerify" style="margin-top:6px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:.8rem;background:#fff;">ออกใบเสร็จโดยไม่ตรวจสลิป</button>
     </div>`;
   }
 }
@@ -1106,7 +1106,7 @@ function buildDocHTML(d,type,dueDate,payDate){
     </div>
   </div>
   <div style="text-align:center;margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-    <button class="btn-doc-action ${isInvoice?'blue':'green'}" onclick="printDoc('${docId}')">🖨️ พิมพ์ / บันทึก PDF</button>
+    <button class="btn-doc-action ${isInvoice?'blue':'green'}" data-action="printDoc" data-id="${docId}">🖨️ พิมพ์ / บันทึก PDF</button>
   </div>`;
 }
 
@@ -1579,8 +1579,8 @@ function renderPaymentStatus(){
     <div style="display:flex;flex-wrap:wrap;gap:5px;">
     ${rooms.map(r=>{
       const p=paid[r.id];
-      if(p) return`<span onclick="showPayDetail('${r.id}')" title="คลิกดูรายละเอียด" class="u-bill-paid-badge">✅ ${r.id}</span>`;
-      return`<span onclick="selectRoomForBill('${r.id}')" title="คลิกเพื่อออกบิล" class="u-bill-pending-badge">⏳ ${r.id}</span>`;
+      if(p) return`<span data-action="showPayDetail" data-id="${r.id}" title="คลิกดูรายละเอียด" class="u-bill-paid-badge">✅ ${r.id}</span>`;
+      return`<span data-action="selectRoomForBill" data-id="${r.id}" title="คลิกเพื่อออกบิล" class="u-bill-pending-badge">⏳ ${r.id}</span>`;
     }).join('')}
     </div>`;
   }
@@ -1693,10 +1693,10 @@ function renderRoomGrid(){
     const amount   = entry?.amount ? '฿'+parseInt(entry.amount).toLocaleString() : '';
     const stCls    = isActive ? 'bc-active' : (isPaid ? 'bc-paid' : 'bc-unpaid');
     const icon     = isPaid ? '✅' : '⏳';
-    const click    = isPaid
-      ? `onclick="showPayDetail('${r.id}',${year},${month})"`
-      : `onclick="selectRoomForBill('${r.id}')"`;
-    return `<div class="bill-room-card ${stCls}" data-room="${r.id}" tabindex="0" ${click} title="${isPaid?'ดูรายละเอียด':'คลิกเพื่อออกบิล'}">
+    const clickAttrs = isPaid
+      ? `data-action="showPayDetail" data-id="${r.id}" data-year="${year}" data-month="${month}"`
+      : `data-action="selectRoomForBill" data-id="${r.id}"`;
+    return `<div class="bill-room-card ${stCls}" data-room="${r.id}" tabindex="0" ${clickAttrs} title="${isPaid?'ดูรายละเอียด':'คลิกเพื่อออกบิล'}">
       <span class="bc-icon">${icon}</span>
       <span class="bc-num">${r.id}</span>
       ${tenant?`<span class="bc-tenant">${tenant}</span>`:''}
@@ -1787,9 +1787,9 @@ function showPayDetail(roomId, year, month){
       <div class="pm-row"><span class="pm-label">💧 มิเตอร์น้ำ เดิม (wOld)</span><input class="pm-input" id="pm-wOld" type="number" value="${wOld}"></div>
       <div class="pm-row"><span class="pm-label">💰 ยอดรวม</span><strong style="color:var(--green-dark);font-size:.95rem;">฿${amount.toLocaleString()}</strong></div>`;
     footer.innerHTML=`
-      <button class="pm-btn green" onclick="savePayEdit()">💾 บันทึกมิเตอร์</button>
-      <button class="pm-btn red" onclick="resetRoomPayment()">🔄 รีเซ็ตกลับ "ยังไม่จ่าย"</button>
-      <button class="pm-btn gray" onclick="closePayModal()">ปิด</button>`;
+      <button class="pm-btn green" data-action="savePayEdit">💾 บันทึกมิเตอร์</button>
+      <button class="pm-btn red" data-action="resetRoomPayment">🔄 รีเซ็ตกลับ "ยังไม่จ่าย"</button>
+      <button class="pm-btn gray" data-action="closePayModal">ปิด</button>`;
   } else {
     body.innerHTML=`
       <div style="background:#fff3e0;border-radius:8px;padding:.75rem;font-size:.84rem;color:#e65100;margin-bottom:.5rem;">
@@ -1799,8 +1799,8 @@ function showPayDetail(roomId, year, month){
         คลิก "ออกบิล" เพื่อเปิดฟอร์มออกใบวางบิลห้องนี้
       </div>`;
     footer.innerHTML=`
-      <button class="pm-btn blue" onclick="closePayModal();goBillFromTable('${roomId}',${year2},${month2})">📄 ออกบิลห้อง ${roomId}</button>
-      <button class="pm-btn gray" onclick="closePayModal()">ปิด</button>`;
+      <button class="pm-btn blue" data-action="goBillFromTable" data-id="${roomId}" data-year="${year2}" data-month="${month2}">📄 ออกบิลห้อง ${roomId}</button>
+      <button class="pm-btn gray" data-action="closePayModal">ปิด</button>`;
   }
   document.getElementById('payModalOverlay').classList.add('show');
 }

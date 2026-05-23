@@ -426,6 +426,7 @@ function showBillingModal(roomId) {
   const modal = document.createElement('div');
   modal.id = 'billingPayModal';
   modal.className = 'u-modal-overlay';
+  modal.dataset.modal = 'true';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:var(--radius);max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
       <div style="background:linear-gradient(135deg,#388e3c,#1b5e20);color:#fff;padding:1.2rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
@@ -433,7 +434,7 @@ function showBillingModal(roomId) {
           <div style="font-weight:700;font-size:1.05rem;">💰 บันทึกการชำระ</div>
           <div style="font-size:.8rem;opacity:.85;">${roomId} · ${tenantName}</div>
         </div>
-        <button onclick="document.getElementById('billingPayModal').remove()" style="background:rgba(255,255,255,.2);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.1rem;">✕</button>
+        <button data-action="closeNearestDataModal" style="background:rgba(255,255,255,.2);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.1rem;">✕</button>
       </div>
       <div style="padding:1.5rem;">
         <div style="background:#f9fafb;border-radius:8px;padding:1rem;margin-bottom:1rem;font-size:.9rem;line-height:2;">
@@ -453,14 +454,14 @@ function showBillingModal(roomId) {
           <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">หมายเหตุการชำระ</label>
           <input type="text" id="billingPayNote" placeholder="เช่น โอนผ่าน PromptPay" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.9rem;">
         </div>
-        <button onclick="markBillPaid('${roomId}',${existingBill.month},${existingBill.year},'${existingBill.billId}')" style="width:100%;padding:12px;background:linear-gradient(135deg,#388e3c,#1b5e20);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;">✅ บันทึกว่าชำระแล้ว</button>
+        <button data-action="markBillPaid" data-room="${roomId}" data-month="${existingBill.month}" data-year="${existingBill.year}" data-billid="${existingBill.billId}" style="width:100%;padding:12px;background:linear-gradient(135deg,#388e3c,#1b5e20);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;">✅ บันทึกว่าชำระแล้ว</button>
         ` : existingBill?.status === 'paid' ? `
         <div style="text-align:center;padding:1rem;color:#388e3c;font-weight:700;">✅ ชำระเรียบร้อยแล้ว</div>
         ` : `
         <div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:.85rem;">ยังไม่มีบิลสำหรับเดือนนี้<br>กรุณาสร้างบิลจากหน้า "บิล" ก่อน</div>
         `}
         <div style="border-top:1px solid var(--border);margin-top:.8rem;padding-top:.8rem;text-align:center;">
-          <button onclick="document.getElementById('billingPayModal')?.remove();goToRoomPayHistory('${roomId}');" style="background:none;border:none;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.82rem;color:var(--green-dark);font-weight:700;text-decoration:underline;padding:4px 0;">📜 ดูประวัติการชำระทั้งหมด →</button>
+          <button data-action="closeBillingAndGoHistory" data-id="${roomId}" style="background:none;border:none;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.82rem;color:var(--green-dark);font-weight:700;text-decoration:underline;padding:4px 0;">📜 ดูประวัติการชำระทั้งหมด →</button>
         </div>
       </div>
     </div>`;

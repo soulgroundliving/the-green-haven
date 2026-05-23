@@ -43,7 +43,7 @@ function renderOwnerInfoPage() {
           <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">โลโก้บริษัท (ใช้บนบิลที่ลูกบ้านเลือก "นิติบุคคล" + รายงานภาษี)</label>
           <input type="file" id="ownerLogoInput" accept="image/png,image/jpeg" onchange="uploadOwnerLogo(event)" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: PNG โปร่งแสง, สี่เหลี่ยมจัตุรัส, ≤ 512px</div>
-          ${safeLogoUrl ? `<button type="button" onclick="removeOwnerLogo()" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้</button>` : ''}
+          ${safeLogoUrl ? `<button type="button" data-action="removeOwnerLogo" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้</button>` : ''}
         </div>
       </div>
 
@@ -56,7 +56,7 @@ function renderOwnerInfoPage() {
           <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">โลโก้อพาร์ทเม้น (ใช้บนบิลที่ลูกบ้านเลือก "บุคคลธรรมดา" — default)</label>
           <input type="file" id="ownerApartmentLogoInput" accept="image/png,image/jpeg" onchange="uploadApartmentLogo(event)" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: โลโก้แบรนด์ Nature Haven — PNG โปร่งแสง, สี่เหลี่ยมจัตุรัส, ≤ 512px. ถ้าไม่อัพ → fallback เป็น "🌿 Nature Haven"</div>
-          ${safeApartmentLogoUrl ? `<button type="button" onclick="removeApartmentLogo()" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้อพาร์ทเม้น</button>` : ''}
+          ${safeApartmentLogoUrl ? `<button type="button" data-action="removeApartmentLogo" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้อพาร์ทเม้น</button>` : ''}
         </div>
       </div>
 
@@ -69,7 +69,7 @@ function renderOwnerInfoPage() {
           <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">ไอคอนแท็บเบราว์เซอร์ (Favicon)</label>
           <input type="file" id="ownerFaviconInput" accept="image/png,image/jpeg,image/x-icon" onchange="uploadOwnerFavicon(event)" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: PNG สี่เหลี่ยมจัตุรัส — จะย่อเป็น 64×64 อัตโนมัติ</div>
-          ${safeFaviconUrl ? `<button type="button" onclick="removeOwnerFavicon()" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบ favicon</button>` : ''}
+          ${safeFaviconUrl ? `<button type="button" data-action="removeOwnerFavicon" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบ favicon</button>` : ''}
         </div>
       </div>
 
@@ -181,10 +181,10 @@ function renderOwnerInfoPage() {
 
     <!-- Action buttons — Save primary, Delete subtle outlined -->
     <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
-      <button onclick="saveOwnerInfo()" style="padding: 0.9rem 2.2rem; background: var(--green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 1.05rem; box-shadow: 0 2px 8px rgba(76,175,80,.25);">
+      <button data-action="saveOwnerInfo" style="padding: 0.9rem 2.2rem; background: var(--green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 1.05rem; box-shadow: 0 2px 8px rgba(76,175,80,.25);">
         💾 บันทึกข้อมูล
       </button>
-      <button onclick="clearOwnerInfo()" style="padding: 0.9rem 1.5rem; background: transparent; color: #d32f2f; border: 1.5px solid #ef9a9a; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: .95rem;">
+      <button data-action="clearOwnerInfo" style="padding: 0.9rem 1.5rem; background: transparent; color: #d32f2f; border: 1.5px solid #ef9a9a; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: .95rem;">
         🗑️ ลบข้อมูล
       </button>
       <small style="color:var(--text-muted); font-size:.85rem; margin-left:auto;">* คือฟิลด์ที่จำเป็นสำหรับรายงานภาษี</small>
@@ -255,7 +255,7 @@ async function renderBuildingInternetConfig() {
           <input type="text" id="bi-${fsId}-upload" value="${esc(data.uploadSpeed)}" placeholder="500 Mbps" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;">
         </div>
       </div>
-      <button onclick="saveBuildingInternetConfig('${fsId}')" style="width:100%;padding:.65rem;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun,sans-serif;">💾 บันทึก ${label}</button>
+      <button data-action="saveBuildingInternetConfig" data-id="${fsId}" style="width:100%;padding:.65rem;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun,sans-serif;">💾 บันทึก ${label}</button>
     </div>
   `;
   container.innerHTML = cardHtml('🏠 ห้องแถว', 'rooms', rr) + cardHtml('🏢 Nest', 'nest', nest);
@@ -604,7 +604,7 @@ function loadAndRenderCommunityDocs() {
             </div>
             <div style="display: flex; gap: 0.5rem;">
               <a href="${d.fileUrl}" target="_blank" class="compact-btn compact-btn-view">📥 View</a>
-              <button onclick="deleteDocument('${d.id}')" class="compact-btn compact-btn-delete">🗑️</button>
+              <button data-action="deleteDocument" data-id="${d.id}" class="compact-btn compact-btn-delete">🗑️</button>
             </div>
           </div>
         </div>

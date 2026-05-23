@@ -244,8 +244,8 @@ function renderLeaseRequestsList() {
       ${r.adminNote ? `<div style="margin-top:.75rem;padding:.5rem;background:#fff8e1;border-radius:4px;font-size:.82rem;"><strong>บันทึกแอดมิน:</strong> ${_esc(r.adminNote)}</div>` : ''}
       ${r.status === 'pending' ? `
         <div style="margin-top:1rem;display:flex;gap:.5rem;">
-          <button onclick="actLeaseRequest('${r.id}','approve')" style="flex:1;padding:8px;background:#388e3c;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun;">✅ อนุมัติ</button>
-          <button onclick="actLeaseRequest('${r.id}','reject')" style="flex:1;padding:8px;background:#c62828;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun;">❌ ปฏิเสธ</button>
+          <button data-action="actLeaseRequest" data-id="${r.id}" data-arg="approve" style="flex:1;padding:8px;background:#388e3c;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun;">✅ อนุมัติ</button>
+          <button data-action="actLeaseRequest" data-id="${r.id}" data-arg="reject" style="flex:1;padding:8px;background:#c62828;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun;">❌ ปฏิเสธ</button>
         </div>
       ` : ''}
     `;
@@ -342,7 +342,7 @@ function renderTenantMasterPage() {
           </div>
         </div>
 
-        <button onclick="addNewTenant()" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+        <button data-action="addNewTenant" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
           ➕ เพิ่มผู้เช่า
         </button>
       </div>
@@ -369,8 +369,8 @@ function renderTenantMasterPage() {
                 <td class="dx-td-plain">${tenant.phone || '-'}</td>
                 <td class="dx-td-plain">${tenant.email || '-'}</td>
                 <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">
-                  <button onclick="editTenant('${tenant.id}')" style="padding: 0.4rem 0.8rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">📝</button>
-                  <button onclick="deleteTenant('${tenant.id}')" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
+                  <button data-action="editTenant" data-id="${tenant.id}" style="padding: 0.4rem 0.8rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">📝</button>
+                  <button data-action="deleteTenant" data-id="${tenant.id}" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
                 </td>
               </tr>
             `).join('')}
@@ -604,7 +604,7 @@ function renderLeaseAgreementsPage() {
           <small style="color: #666; margin-top: 0.5rem; display: block;">📁 สนับสนุน: PDF, JPG, PNG · ขนาดสูงสุด: 5MB</small>
         </div>
 
-        <button onclick="createNewLease()" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+        <button data-action="createNewLease" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
           💾 บันทึกสัญญา & แนบเอกสาร
         </button>
       </div>
@@ -648,9 +648,9 @@ function renderLeaseAgreementsPage() {
                   </span>
                 </td>
                 <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: center; white-space: nowrap;">
-                  <button onclick="viewLeaseDocuments('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;" title="ดูเอกสาร">📁</button>
-                  ${lease.status === 'active' ? `<button onclick="endLease('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;" title="สิ้นสุดสัญญา">🚪</button>` : ''}
-                  <button onclick="deleteLease('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;" title="ลบ">🗑️</button>
+                  <button data-action="viewLeaseDocuments" data-id="${lease.id}" style="padding: 0.4rem 0.8rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;" title="ดูเอกสาร">📁</button>
+                  ${lease.status === 'active' ? `<button data-action="endLease" data-id="${lease.id}" style="padding: 0.4rem 0.8rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;" title="สิ้นสุดสัญญา">🚪</button>` : ''}
+                  <button data-action="deleteLease" data-id="${lease.id}" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;" title="ลบ">🗑️</button>
                 </td>
               </tr>
             `).join('')}
@@ -979,13 +979,13 @@ async function viewLeaseDocuments(leaseId) {
   const buildingLabel = lease.building === 'rooms' ? 'ห้องแถว' : 'Nest';
 
   modal.innerHTML = `
-    <div style="background:white;border-radius:12px;max-width:720px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div data-modal style="background:white;border-radius:12px;max-width:720px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
       <div style="padding:20px 24px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
         <div>
           <h2 id="leaseDocumentsTitle" style="font-size:1.3rem;margin:0;color:#1b5e20;">📁 เอกสารสัญญา — ${buildingLabel} ห้อง ${lease.roomId}</h2>
           <div style="font-size:.85rem;color:#666;margin-top:4px;">${lease.tenantName || lease.tenantId} · เข้า ${moveIn} · ฿${lease.rentAmount?.toLocaleString() || '-'}</div>
         </div>
-        <button onclick="document.getElementById('leaseDocumentsModal').remove()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;">✕</button>
+        <button data-action="closeNearestDataModal" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;">✕</button>
       </div>
       <div id="leaseDocumentsBody" style="padding:20px 24px;">
         <div style="text-align:center;padding:30px;color:#999;">⏳ กำลังโหลดเอกสาร...</div>
@@ -1304,11 +1304,11 @@ function loadAndRenderPetApprovals() {
         ${vaccineBookBtn ? `<div style="margin-bottom:0.8rem;">${vaccineBookBtn}</div>` : ''}
         ${p.status === 'pending' ? `
           <div style="display: flex; gap: 0.5rem;">
-            <button onclick="approvePet('${p.building}','${p.room}','${p.id}')" class="compact-btn compact-btn-view">✅ Approve</button>
-            <button onclick="rejectPet('${p.building}','${p.room}','${p.id}')" class="compact-btn compact-btn-delete">❌ Reject</button>
+            <button data-action="approvePet" data-id="${p.building}" data-arg="${p.room}" data-arg2="${p.id}" class="compact-btn compact-btn-view">✅ Approve</button>
+            <button data-action="rejectPet" data-id="${p.building}" data-arg="${p.room}" data-arg2="${p.id}" class="compact-btn compact-btn-delete">❌ Reject</button>
           </div>
         ` : `
-          <button onclick="removePetApproval('${p.building}','${p.room}','${p.id}')" class="compact-btn compact-btn-delete">🗑️ Remove</button>
+          <button data-action="removePetApproval" data-id="${p.building}" data-arg="${p.room}" data-arg2="${p.id}" class="compact-btn compact-btn-delete">🗑️ Remove</button>
         `}
       </div>
     `;
