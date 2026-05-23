@@ -5278,10 +5278,15 @@
                 ? `lastDailyClaim_player_${window._playerProfile.tenantId}`
                 : `lastDailyClaim_${_taBuilding}_${_taRoom}`;
 
-            // Optimistic close: dismiss the modal IMMEDIATELY on click — user shouldn't
-            // wait ~1-3s for the CF round-trip to see the popup go away. Success/error
-            // toast still surfaces after the await. Network slowness in LIFF webview
-            // (§7-R) would otherwise leave the modal looking frozen.
+            // Optimistic close + marker write — both happen IMMEDIATELY on click.
+            // Why marker-write here (not after the await): user can close LIFF before
+            // the 1-3s CF round-trip completes (especially with LIFF-webview TLS
+            // slowness §7-R). If marker were only set on resolve, reopen would
+            // show the modal again — exactly the bug the user reported. Server still
+            // gets the request; if it rejects, we rollback below.
+            const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+            localStorage.setItem(claimKey, _bkkToday);
+            _lastDailyClaim = _bkkToday;
             closeModal();
 
             try {
@@ -5303,23 +5308,19 @@
                     : `รับ +${r.reward} Pt แล้ว (สตรีค ${r.streak} วัน)`;
                 toast(streakMsg, 'success');
                 window.GhHaptic?.success();
-                const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-                localStorage.setItem(claimKey, _bkkToday);
-                // Update in-memory streak state immediately so openDailyModal (peek)
-                // shows the "✓ รับแล้ววันนี้" disabled button without waiting for the
-                // Firestore snapshot to round-trip (~500ms window where user could tap 💰).
-                _lastDailyClaim = _bkkToday;
+                // streak update from server (in-memory mirror; localStorage marker already set above)
                 if (typeof r.streak === 'number') _dailyStreak = r.streak;
             } catch (e) {
                 const code = e?.code || e?.details?.code || '';
                 if (code === 'functions/already-exists' || /already/i.test(String(e?.message))) {
+                    // Server confirms today's claim already exists — optimistic marker correct
                     toast('รับพ้อยท์ของวันนี้ไปแล้วครับ 🌿', 'warning');
                     window.GhHaptic?.warning();
-                    const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-                    localStorage.setItem(claimKey, _bkkToday);
-                    _lastDailyClaim = _bkkToday;  // mirror localStorage
                 } else {
+                    // ROLLBACK: server rejected (network/auth/etc) — clear marker so user can retry
                     console.error('claimDailyPoints failed:', e);
+                    localStorage.removeItem(claimKey);
+                    _lastDailyClaim = null;
                     toast('บันทึกไม่สำเร็จ — ลองใหม่ครับ', 'error');
                     window.GhHaptic?.error();
                     // Modal already closed (optimistic). Re-enable button so a subsequent
