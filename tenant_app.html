@@ -5243,6 +5243,11 @@
                 window.GhHaptic?.success();
                 const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
                 localStorage.setItem(claimKey, _bkkToday);
+                // Update in-memory streak state immediately so openDailyModal (peek)
+                // shows the "✓ รับแล้ววันนี้" disabled button without waiting for the
+                // Firestore snapshot to round-trip (~500ms window where user could tap 💰).
+                _lastDailyClaim = _bkkToday;
+                if (typeof r.streak === 'number') _dailyStreak = r.streak;
                 closeModal();
             } catch (e) {
                 const code = e?.code || e?.details?.code || '';
@@ -5251,6 +5256,7 @@
                     window.GhHaptic?.warning();
                     const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
                     localStorage.setItem(claimKey, _bkkToday);
+                    _lastDailyClaim = _bkkToday;  // mirror localStorage
                     closeModal();
                 } else {
                     console.error('claimDailyPoints failed:', e);
