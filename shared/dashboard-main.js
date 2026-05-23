@@ -349,16 +349,16 @@ function renderLiffRequestsList(docs){
       ? `<div style="font-size:.72rem;color:#c62828;margin-top:2px;">เหตุผล: ${esc(d.rejectionReason)}</div>` : '';
     const actions = d.status === 'pending' ? `
       <div style="display:flex;gap:6px;margin-top:8px;">
-        <button onclick="approveLiffLink('${esc(d.id)}')" style="padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">✅ อนุมัติ</button>
-        <button onclick="rejectLiffLink('${esc(d.id)}')" style="padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">❌ ปฏิเสธ</button>
+        <button data-action="approveLiffLink" data-id="${esc(d.id)}" style="padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">✅ อนุมัติ</button>
+        <button data-action="rejectLiffLink" data-id="${esc(d.id)}" style="padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">❌ ปฏิเสธ</button>
       </div>` : (d.status === 'approved'
         ? `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
             <div style="font-size:.72rem;color:var(--text-muted);">โดย ${esc(d.approvedBy||'Admin')} · ${d.approvedAt?new Date(d.approvedAt).toLocaleDateString('th-TH'):''}</div>
-            <button onclick="unlinkLiffLink('${esc(d.id)}','${esc(d.lineDisplayName||'-')}')" style="padding:4px 10px;background:transparent;color:#c62828;border:1px solid #ef9a9a;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.72rem;font-weight:600;" title="ยกเลิกการเชื่อมต่อ LINE ของลูกบ้านนี้">🔌 ยกเลิกการเชื่อม</button>
+            <button data-action="unlinkLiffLink" data-id="${esc(d.id)}" data-arg="${esc(d.lineDisplayName||'-')}" style="padding:4px 10px;background:transparent;color:#c62828;border:1px solid #ef9a9a;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.72rem;font-weight:600;" title="ยกเลิกการเชื่อมต่อ LINE ของลูกบ้านนี้">🔌 ยกเลิกการเชื่อม</button>
           </div>`
         : d.status === 'unlinked'
           ? `<div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">🔌 ยกเลิกการเชื่อมแล้ว${d.unlinkedAt?' · '+new Date(d.unlinkedAt.toDate?d.unlinkedAt.toDate():d.unlinkedAt).toLocaleDateString('th-TH'):''}</div>`
-          : `<button onclick="approveLiffLink('${esc(d.id)}')" style="padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.75rem;margin-top:4px;">↩️ อนุมัติย้อนหลัง</button>`);
+          : `<button data-action="approveLiffLink" data-id="${esc(d.id)}" style="padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.75rem;margin-top:4px;">↩️ อนุมัติย้อนหลัง</button>`);
     return `<div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
       ${pic}
       <div style="flex:1;min-width:0;">
@@ -766,11 +766,11 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'openTenantModal') { if (typeof openTenantModal === 'function') openTenantModal(building, el.dataset.room); return; }
     if (a === 'editRoom') { if (typeof editRoom === 'function') editRoom(el.dataset.room); return; }
     if (a === 'recordPayment') { if (typeof recordPayment === 'function') recordPayment(el.dataset.room); return; }
-    if (a === 'goBillFromTable') { if (typeof goBillFromTable === 'function') goBillFromTable(el.dataset.room, el.dataset.year, el.dataset.month); return; }
+    if (a === 'goBillFromTable') { if (typeof goBillFromTable === 'function') { if (typeof closePayModal === 'function') closePayModal(); goBillFromTable(el.dataset.id || el.dataset.room, el.dataset.year, el.dataset.month); } return; }
     if (a === 'showBillingModal') { if (typeof showBillingModal === 'function') showBillingModal(el.dataset.room); return; }
     if (a === 'showBillingHistoryModal') { if (typeof showBillingHistoryModal === 'function') showBillingHistoryModal(el.dataset.room); return; }
     if (a === 'saveTenant') { if (typeof saveTenant === 'function') saveTenant(); return; }
-    if (a === 'deleteTenant') { if (typeof deleteTenant === 'function') deleteTenant(el.dataset.room); return; }
+    if (a === 'deleteTenant') { if (typeof deleteTenant === 'function') deleteTenant(el.dataset.id || el.dataset.room); return; }
     if (a === 'toggleBatchRoomSelection') { if (typeof toggleBatchRoomSelection === 'function') toggleBatchRoomSelection(el.dataset.room); return; }
     // PDPA §32 admin erasure (modal flow in shared/dashboard-pdpa-erasure.js)
     if (a === 'confirmAdminDataDeletion') { typeof window.confirmAdminDataDeletion === 'function' && window.confirmAdminDataDeletion(); return; }
@@ -848,7 +848,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
     // Facility booking admin tab (Tier 3G)
     if (a === 'facilityAdminFilter')  { typeof window.facilityAdminFilter  === 'function' && window.facilityAdminFilter(); return; }
-    if (a === 'facilityOpenConfig')   { typeof window.facilityOpenConfig   === 'function' && window.facilityOpenConfig(); return; }
+    if (a === 'facilityOpenConfig')   { typeof window.facilityOpenConfig   === 'function' && window.facilityOpenConfig(el.dataset.id); return; }
     if (a === 'facilityCloseConfig')  { typeof window.facilityCloseConfig  === 'function' && window.facilityCloseConfig(); return; }
     if (a === 'facilitySaveConfig')   { typeof window.facilitySaveConfig   === 'function' && window.facilitySaveConfig(); return; }
 
@@ -866,6 +866,129 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'exportChecklistPng')            { typeof window.exportChecklistPng            === 'function' && window.exportChecklistPng(); return; }
     if (a === 'deleteChecklistInstanceFromRow')    { typeof window.deleteChecklistInstanceFromRow    === 'function' && window.deleteChecklistInstanceFromRow(el.dataset.id); return; }
     if (a === 'deleteChecklistInstanceFromViewer') { typeof window.deleteChecklistInstanceFromViewer === 'function' && window.deleteChecklistInstanceFromViewer(); return; }
+
+    // Notification bell — navigate to a requests tab + close the panel
+    if (a === 'goToRequestsTab') {
+      const pg = el.dataset.page; const tb = el.dataset.tab;
+      window.showPage(pg);
+      if (tb) setTimeout(() => { const btn = document.getElementById(`tab-${tb}-btn`); typeof switchRequestsTab === 'function' && switchRequestsTab(tb, btn); }, 80);
+      typeof toggleNotifPanel === 'function' && toggleNotifPanel();
+      return;
+    }
+
+    // LIFF tenant link approvals (People Mgmt page)
+    if (a === 'approveLiffLink') { typeof approveLiffLink === 'function' && approveLiffLink(el.dataset.id); return; }
+    if (a === 'rejectLiffLink')  { typeof rejectLiffLink  === 'function' && rejectLiffLink(el.dataset.id); return; }
+    if (a === 'unlinkLiffLink')  { typeof unlinkLiffLink  === 'function' && unlinkLiffLink(el.dataset.id, el.dataset.arg); return; }
+
+    // Lease + tenant master list (Tenant page secondary tables)
+    if (a === 'actLeaseRequest')    { typeof actLeaseRequest    === 'function' && actLeaseRequest(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'addNewTenant')       { typeof addNewTenant       === 'function' && addNewTenant(); return; }
+    if (a === 'editTenant')         { typeof editTenant         === 'function' && editTenant(el.dataset.id); return; }
+    if (a === 'createNewLease')     { typeof createNewLease     === 'function' && createNewLease(); return; }
+    if (a === 'viewLeaseDocuments') { typeof viewLeaseDocuments === 'function' && viewLeaseDocuments(el.dataset.id); return; }
+    if (a === 'endLease')           { typeof endLease           === 'function' && endLease(el.dataset.id); return; }
+    if (a === 'deleteLease')        { typeof deleteLease        === 'function' && deleteLease(el.dataset.id); return; }
+    if (a === 'approvePet')         { typeof approvePet         === 'function' && approvePet(el.dataset.id, el.dataset.arg, el.dataset.arg2); return; }
+    if (a === 'rejectPet')          { typeof rejectPet          === 'function' && rejectPet(el.dataset.id, el.dataset.arg, el.dataset.arg2); return; }
+    if (a === 'removePetApproval')  { typeof removePetApproval  === 'function' && removePetApproval(el.dataset.id, el.dataset.arg, el.dataset.arg2); return; }
+
+    // Generic data-modal close (any modal rendered with data-modal attribute)
+    if (a === 'closeNearestDataModal') { el.closest('[data-modal]')?.remove(); return; }
+
+    // Billing modal actions
+    if (a === 'printDoc')          { typeof printDoc          === 'function' && printDoc(el.dataset.id); return; }
+    if (a === 'selectRoomForBill') { typeof selectRoomForBill === 'function' && selectRoomForBill(el.dataset.id); return; }
+    if (a === 'showPayDetail')     { typeof showPayDetail     === 'function' && showPayDetail(el.dataset.id, el.dataset.year ? parseInt(el.dataset.year) : undefined, el.dataset.month ? parseInt(el.dataset.month) : undefined); return; }
+    if (a === 'savePayEdit')       { typeof savePayEdit       === 'function' && savePayEdit(); return; }
+    if (a === 'resetRoomPayment')  { typeof resetRoomPayment  === 'function' && resetRoomPayment(); return; }
+    if (a === 'markBillPaid')      { typeof markBillPaid      === 'function' && markBillPaid(el.dataset.room, el.dataset.month, el.dataset.year, el.dataset.billid); return; }
+    if (a === 'closeBillingAndGoHistory') {
+      const r = el.dataset.id;
+      el.closest('[data-modal]')?.remove();
+      if (r && typeof showBillingHistoryModal === 'function') showBillingHistoryModal(r);
+      return;
+    }
+
+    // Maintenance requests
+    if (a === 'addMaintenanceRequestFromModal') { typeof addMaintenanceRequestFromModal === 'function' && addMaintenanceRequestFromModal(); return; }
+    if (a === 'closeAddMaintenanceModal')       { typeof closeAddMaintenanceModal       === 'function' && closeAddMaintenanceModal(); return; }
+    if (a === 'assignMaintenanceWorker')        { typeof assignMaintenanceWorker        === 'function' && assignMaintenanceWorker(el.dataset.id); return; }
+    if (a === 'closeAssignModal')               { typeof closeAssignModal               === 'function' && closeAssignModal(); return; }
+    if (a === 'saveWorkNotes')                  { typeof saveWorkNotes                  === 'function' && saveWorkNotes(el.dataset.id); return; }
+    if (a === 'closeNotesModal')                { typeof closeNotesModal                === 'function' && closeNotesModal(); return; }
+    if (a === 'closePhotosModal')               { typeof closePhotosModal               === 'function' && closePhotosModal(); return; }
+    if (a === 'saveProviderAssignment')         { typeof saveProviderAssignment         === 'function' && saveProviderAssignment(el.dataset.id); return; }
+    if (a === 'closeProviderModal')             { typeof closeProviderModal             === 'function' && closeProviderModal(); return; }
+    if (a === 'openPhotoModal')                 { typeof openPhotoModal                 === 'function' && openPhotoModal(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'updateMaintenanceStatus')        { typeof updateMaintenanceStatus        === 'function' && updateMaintenanceStatus(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'editMaintenance')                { typeof editMaintenance                === 'function' && editMaintenance(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'deleteMaintenanceRequest')       { typeof deleteMaintenanceRequest       === 'function' && deleteMaintenanceRequest(el.dataset.id); return; }
+
+    // Housekeeping requests
+    if (a === 'addHousekeepingRequestFromModal') { typeof addHousekeepingRequestFromModal === 'function' && addHousekeepingRequestFromModal(); return; }
+    if (a === 'closeAddHousekeepingModal')       { typeof closeAddHousekeepingModal       === 'function' && closeAddHousekeepingModal(); return; }
+    if (a === 'viewHousekeepingSlip')            { typeof viewHousekeepingSlip            === 'function' && viewHousekeepingSlip(el.dataset.id); return; }
+    if (a === 'updateHousekeepingStatus')        { typeof updateHousekeepingStatus        === 'function' && updateHousekeepingStatus(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'deleteHousekeepingRequest')       { typeof deleteHousekeepingRequest       === 'function' && deleteHousekeepingRequest(el.dataset.id); return; }
+
+    // Deposit return modal
+    if (a === 'addDepDeduction') {
+      const reason = (document.getElementById('dep-deduction-reason')?.value || '').trim();
+      const amount = parseFloat(document.getElementById('dep-deduction-amount')?.value) || 0;
+      if (!reason || !amount) return;
+      (window._depPendingDeductions = window._depPendingDeductions || []).push({ reason, amount });
+      const rEl = document.getElementById('dep-deduction-reason'); if (rEl) rEl.value = '';
+      const aEl = document.getElementById('dep-deduction-amount'); if (aEl) aEl.value = '';
+      typeof window._renderDepDeductions === 'function' && window._renderDepDeductions();
+      return;
+    }
+    if (a === 'closeReturnDepositModal') { document.getElementById('returnDepositModal')?.remove(); return; }
+    if (a === 'saveDepositReturn')       { typeof window._saveDepositReturn === 'function' && window._saveDepositReturn(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'removeDepDeduction') {
+      const idx = parseInt(el.dataset.index);
+      if (!isNaN(idx) && window._depPendingDeductions) {
+        window._depPendingDeductions.splice(idx, 1);
+        typeof window._renderDepDeductions === 'function' && window._renderDepDeductions();
+      }
+      return;
+    }
+
+    // Facility booking admin
+    if (a === 'facilityAdminCancel') { typeof window.facilityAdminCancel === 'function' && window.facilityAdminCancel(el.dataset.id); return; }
+
+    // Owner config
+    if (a === 'removeOwnerLogo')           { typeof window.removeOwnerLogo           === 'function' && window.removeOwnerLogo(); return; }
+    if (a === 'removeApartmentLogo')       { typeof window.removeApartmentLogo       === 'function' && window.removeApartmentLogo(); return; }
+    if (a === 'removeOwnerFavicon')        { typeof window.removeOwnerFavicon        === 'function' && window.removeOwnerFavicon(); return; }
+    if (a === 'saveOwnerInfo')             { typeof saveOwnerInfo             === 'function' && saveOwnerInfo(); return; }
+    if (a === 'clearOwnerInfo')            { typeof clearOwnerInfo            === 'function' && clearOwnerInfo(); return; }
+    if (a === 'saveBuildingInternetConfig'){ typeof saveBuildingInternetConfig === 'function' && saveBuildingInternetConfig(el.dataset.id); return; }
+    if (a === 'deleteDocument')            { typeof deleteDocument            === 'function' && deleteDocument(el.dataset.id); return; }
+
+    // Service providers + events + complaints (domain stores)
+    if (a === 'editServiceProvider')   { typeof editServiceProvider   === 'function' && editServiceProvider(el.dataset.id); return; }
+    if (a === 'deleteServiceProvider') { typeof deleteServiceProvider === 'function' && deleteServiceProvider(el.dataset.id); return; }
+    if (a === 'editEvent')             { typeof editEvent             === 'function' && editEvent(el.dataset.id); return; }
+    if (a === 'deleteEvent')           { typeof deleteEvent           === 'function' && deleteEvent(el.dataset.id); return; }
+    if (a === 'updateComplaintStatus') { typeof updateComplaintStatus === 'function' && updateComplaintStatus(el.dataset.id, el.dataset.arg); return; }
+
+    // Announcements + contracts (content features)
+    if (a === 'deleteAnnouncement') { typeof deleteAnnouncement === 'function' && deleteAnnouncement(el.dataset.id); return; }
+    if (a === 'showTenantModal')    { typeof showTenantModal    === 'function' && showTenantModal(el.dataset.id); return; }
+    if (a === 'printContract')      { typeof printContract      === 'function' && printContract(el.dataset.id); return; }
+    if (a === 'renewContract')      { typeof renewContract      === 'function' && renewContract(el.dataset.id); return; }
+
+    // Payment verify
+    if (a === 'submitManualVerify') { typeof window.submitManualVerify === 'function' && window.submitManualVerify(); return; }
+    if (a === 'copyToClipboard')    { typeof copyToClipboard    === 'function' && copyToClipboard(el.dataset.id); return; }
+    if (a === 'downloadQRCode')     { typeof downloadQRCode     === 'function' && downloadQRCode(el.dataset.id, el.dataset.arg); return; }
+
+    // Room config
+    if (a === 'deleteRoom') { typeof deleteRoom === 'function' && deleteRoom(el.dataset.building, el.dataset.id); return; }
+
+    // Checklist editor shortcut from Buildings page
+    if (a === 'openChecklistEditor') { typeof window.openChecklistEditor === 'function' && window.openChecklistEditor(el.dataset.id); return; }
   });
 
   // ===== CHANGE / INPUT EVENT DELEGATION =====

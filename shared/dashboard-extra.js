@@ -423,7 +423,7 @@ function showContractDocument(roomId, tenant) {
   header.className = 'u-modal-doc-head';
   header.innerHTML = `
     <h2 style="margin:0;color:#333;">📄 สัญญาเช่า - ห้อง ${_esc(roomId)} (${_esc(tenant.name)})</h2>
-    <button onclick="this.closest('[data-modal]').remove()" style="background:#f0f0f0;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:600;">✕ ปิด</button>
+    <button data-action="closeNearestDataModal" style="background:#f0f0f0;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:600;">✕ ปิด</button>
   `;
 
   // Content

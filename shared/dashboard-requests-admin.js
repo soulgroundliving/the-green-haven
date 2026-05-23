@@ -206,11 +206,8 @@ function updateNotificationBell() {
   content.innerHTML = groups
     .filter(g => counts[g.key] > 0)
     .map(g => {
-      const nav = g.tab
-        ? `window.showPage('${g.page}');setTimeout(()=>switchRequestsTab('${g.tab}',document.getElementById('tab-${g.tab}-btn')),80);toggleNotifPanel();`
-        : `window.showPage('${g.page}',document.querySelector('[onclick*="${g.page}"]'));toggleNotifPanel();`;
       return `<div class="notif-group-title">${g.icon} ${g.label}</div>
-<div class="notif-item" onclick="${nav}">
+<div class="notif-item" data-action="goToRequestsTab" data-page="${g.page}" data-tab="${g.tab||''}">
   <span>${g.icon} ${counts[g.key]} รายการรอดำเนินการ</span>
   <span class="notif-item-count">${counts[g.key]}</span>
 </div>`;
@@ -387,8 +384,8 @@ function showAddMaintenanceModal(){
         <input type="number" id="mx-cost-modal" placeholder="เช่น 500" min="0" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
     </div>
     <div style="display:flex;gap:10px;">
-      <button onclick="addMaintenanceRequestFromModal()" style="flex:1;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกงานซ่อม</button>
-      <button onclick="closeAddMaintenanceModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">ยกเลิก</button>
+      <button data-action="addMaintenanceRequestFromModal" style="flex:1;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกงานซ่อม</button>
+      <button data-action="closeAddMaintenanceModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">ยกเลิก</button>
     </div>
   </div>`;
   document.body.appendChild(modal);
@@ -566,8 +563,8 @@ function showAssignModal(id){
       <input type="text" id="assigned-name" placeholder="เช่น สมชาย, นายช่างสมบูรณ์" value="${_escReq(item.assignedTo||'')}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
     </div>
     <div style="display:flex;gap:10px;">
-      <button onclick="assignMaintenanceWorker('${id}')" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ ยืนยัน</button>
-      <button onclick="closeAssignModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
+      <button data-action="assignMaintenanceWorker" data-id="${id}" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ ยืนยัน</button>
+      <button data-action="closeAssignModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
     </div>
   `;
 
@@ -596,8 +593,8 @@ function showNotesModal(id){
       <textarea id="work-notes" placeholder="อธิบายสิ่งที่ทำแล้ว เช่น ซ่อมแซมไฟฟ้า เปลี่ยนสวิตช์..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;resize:vertical;min-height:100px;">${_escReq(item.workNotes||'')}</textarea>
     </div>
     <div style="display:flex;gap:10px;">
-      <button onclick="saveWorkNotes('${id}')" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
-      <button onclick="closeNotesModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
+      <button data-action="saveWorkNotes" data-id="${id}" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
+      <button data-action="closeNotesModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
     </div>
   `;
 
@@ -632,7 +629,7 @@ function showPhotosModal(id){
       ${(item.afterPhoto && (item.afterPhoto.startsWith('data:') || item.afterPhoto.startsWith('https://')))?'<div style="margin-top:8px;">\x3cimg src="'+item.afterPhoto+'" style="max-width:100%;height:120px;object-fit:cover;border-radius:6px;"></div>':''}
     </div>
     <div style="display:flex;gap:10px;">
-      <button onclick="closePhotosModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ เสร็จ</button>
+      <button data-action="closePhotosModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ เสร็จ</button>
     </div>
   `;
 
@@ -754,8 +751,8 @@ function showProviderModal(id){
       <input type="number" id="pv-cost" placeholder="เช่น 500" min="0" value="${item.costThb||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
     </div>
     <div style="display:flex;gap:10px;">
-      <button onclick="saveProviderAssignment('${id}')" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
-      <button onclick="closeProviderModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
+      <button data-action="saveProviderAssignment" data-id="${id}" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
+      <button data-action="closeProviderModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
     </div>
   `;
   modal.appendChild(content);
@@ -937,7 +934,7 @@ function renderMaintenancePage(){
             ${x.assignedProviderId?'<span style="font-size:.75rem;color:#e65100;background:#fff3e0;padding:4px 10px;border-radius:20px;">🏗️ '+_escReq(_provMap[x.assignedProviderId]||x.assignedProviderId)+'</span>':''}
             ${x.costThb?'<span style="font-size:.75rem;color:#1565c0;background:#e3f2fd;padding:4px 10px;border-radius:20px;">💰 ฿'+x.costThb.toLocaleString()+'</span>':''}
           </div>
-          ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?`<div style="margin-top:8px;"><button class="photo-viewer-btn" onclick="openPhotoModal('${x.beforePhoto||x.photoUrl||x.photo||''}', '${x.afterPhoto||''}')">📸 รูปภาพ</button></div>`:''}
+          ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?`<div style="margin-top:8px;"><button class="photo-viewer-btn" data-action="openPhotoModal" data-id="${x.beforePhoto||x.photoUrl||x.photo||''}" data-arg="${x.afterPhoto||''}">📸 รูปภาพ</button></div>`:''}
 
           <div class="mx-row-meta">
             <div><strong>หมวด:</strong> ${MX_CAT_LABEL[x.category]||x.category}</div>
@@ -949,10 +946,10 @@ function renderMaintenancePage(){
             })()}</div>
           </div>
           <div class="mx-row-actions">
-            ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus('${x.id}','inprogress')">🔨 รับงาน</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','provider')">🏗️ ผู้รับเหมา</button>`:''}
-            ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateMaintenanceStatus('${x.id}','done')">✅ เสร็จ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','assign')">📝 ผู้รับผิดชอบ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','notes')">📋 หมายเหตุ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','photos')">📷 รูปภาพ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','provider')">🏗️ ผู้รับเหมา</button>`:''}
-            ${x.status==='done'?`<button class="mx-btn mx-btn-reopen" onclick="updateMaintenanceStatus('${x.id}','pending')">↩ เปิดใหม่</button>`:''}
-            <button class="mx-btn mx-btn-del" onclick="deleteMaintenanceRequest('${x.id}')">🗑️ ลบ</button>
+            ${x.status==='pending'?`<button class="mx-btn mx-btn-next" data-action="updateMaintenanceStatus" data-id="${x.id}" data-arg="inprogress">🔨 รับงาน</button><button class="mx-btn mx-btn-next" data-action="editMaintenance" data-id="${x.id}" data-arg="provider">🏗️ ผู้รับเหมา</button>`:''}
+            ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" data-action="updateMaintenanceStatus" data-id="${x.id}" data-arg="done">✅ เสร็จ</button><button class="mx-btn mx-btn-next" data-action="editMaintenance" data-id="${x.id}" data-arg="assign">📝 ผู้รับผิดชอบ</button><button class="mx-btn mx-btn-next" data-action="editMaintenance" data-id="${x.id}" data-arg="notes">📋 หมายเหตุ</button><button class="mx-btn mx-btn-next" data-action="editMaintenance" data-id="${x.id}" data-arg="photos">📷 รูปภาพ</button><button class="mx-btn mx-btn-next" data-action="editMaintenance" data-id="${x.id}" data-arg="provider">🏗️ ผู้รับเหมา</button>`:''}
+            ${x.status==='done'?`<button class="mx-btn mx-btn-reopen" data-action="updateMaintenanceStatus" data-id="${x.id}" data-arg="pending">↩ เปิดใหม่</button>`:''}
+            <button class="mx-btn mx-btn-del" data-action="deleteMaintenanceRequest" data-id="${x.id}">🗑️ ลบ</button>
           </div>
         </div>
       </div>
@@ -1172,8 +1169,8 @@ function showAddHousekeepingModal(){
       </div>
     </div>
     <div style="display:flex;gap:10px;">
-      <button onclick="addHousekeepingRequestFromModal()" style="flex:1;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกการขอบริการ</button>
-      <button onclick="closeAddHousekeepingModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">ยกเลิก</button>
+      <button data-action="addHousekeepingRequestFromModal" style="flex:1;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกการขอบริการ</button>
+      <button data-action="closeAddHousekeepingModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">ยกเลิก</button>
     </div>
   </div>`;
   document.body.appendChild(modal);
@@ -1347,7 +1344,7 @@ function renderHousekeepingList(){
       💰 ชำระแล้ว ฿${Number(x.paymentAmount).toLocaleString()}
       ${x.paymentVerified?'<span style="color:var(--green-dark);font-weight:700;">· ✅ SlipOK ยืนยัน</span>':'<span style="color:#b45309;font-weight:700;">· ⏳ รอตรวจ</span>'}
       ${x.paymentTransRef?'<span style="color:var(--text-muted);"> · '+_escReq(x.paymentTransRef)+'</span>':''}
-      ${x.paymentSlip?` <button onclick="viewHousekeepingSlip('${_escReq(x.id)}')" style="margin-left:6px;padding:2px 8px;background:#eff6ff;color:#2563eb;border:1px solid #93c5fd;border-radius:10px;cursor:pointer;font-size:.72rem;font-family:inherit;">📎 ดูสลิป</button>`:''}
+      ${x.paymentSlip?` <button data-action="viewHousekeepingSlip" data-id="${_escReq(x.id)}" style="margin-left:6px;padding:2px 8px;background:#eff6ff;color:#2563eb;border:1px solid #93c5fd;border-radius:10px;cursor:pointer;font-size:.72rem;font-family:inherit;">📎 ดูสลิป</button>`:''}
     </div>` : '';
     return `
     <div class="mx-row" style="${x.status==='done'?'opacity:.7;':''}">
@@ -1370,10 +1367,10 @@ function renderHousekeepingList(){
             <div><strong>สถานะ:</strong> ${HK_STATUS_LABEL[x.status]||_escReq(x.status)}</div>
           </div>
           <div class="mx-row-actions">
-            ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus('${_escReq(x.id)}','inprogress')">🔨 เริ่มทำความสะอาด</button>`:''}
-            ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateHousekeepingStatus('${_escReq(x.id)}','done')">✅ เสร็จสิ้น</button>`:''}
-            ${x.status==='done'?`<button class="mx-btn mx-btn-reopen" onclick="updateHousekeepingStatus('${_escReq(x.id)}','pending')">↩ เปิดใหม่</button>`:''}
-            <button class="mx-btn mx-btn-del" onclick="deleteHousekeepingRequest('${_escReq(x.id)}')">🗑️ ลบ</button>
+            ${x.status==='pending'?`<button class="mx-btn mx-btn-next" data-action="updateHousekeepingStatus" data-id="${_escReq(x.id)}" data-arg="inprogress">🔨 เริ่มทำความสะอาด</button>`:''}
+            ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" data-action="updateHousekeepingStatus" data-id="${_escReq(x.id)}" data-arg="done">✅ เสร็จสิ้น</button>`:''}
+            ${x.status==='done'?`<button class="mx-btn mx-btn-reopen" data-action="updateHousekeepingStatus" data-id="${_escReq(x.id)}" data-arg="pending">↩ เปิดใหม่</button>`:''}
+            <button class="mx-btn mx-btn-del" data-action="deleteHousekeepingRequest" data-id="${_escReq(x.id)}">🗑️ ลบ</button>
           </div>
         </div>
       </div>
@@ -1538,14 +1535,7 @@ function showReturnDepositModal(building, roomId) {
         <input id="dep-ret-date" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;box-sizing:border-box;">
       </div>
       <div id="dep-deductions-list" style="margin-bottom:8px;"></div>
-      <button onclick="(function(){
-        var r=document.getElementById('dep-deduction-reason');
-        var a=document.getElementById('dep-deduction-amount');
-        if(!r||!a||!r.value.trim()||!Number(a.value))return;
-        _depPendingDeductions.push({reason:r.value.trim(),amount:Number(a.value)});
-        r.value='';a.value='';
-        _renderDepDeductions();
-      })()" style="font-size:11px;color:#3b82f6;background:none;border:none;cursor:pointer;padding:0;margin-bottom:8px;font-family:inherit;">+ เพิ่มรายการหัก</button>
+      <button data-action="addDepDeduction" style="font-size:11px;color:#3b82f6;background:none;border:none;cursor:pointer;padding:0;margin-bottom:8px;font-family:inherit;">+ เพิ่มรายการหัก</button>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <input id="dep-deduction-reason" placeholder="เหตุผล (เช่น ค่าเสียหาย)" style="flex:1;padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
         <input id="dep-deduction-amount" type="number" placeholder="จำนวนเงิน" style="width:110px;padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
@@ -1555,8 +1545,8 @@ function showReturnDepositModal(building, roomId) {
         <input id="dep-ret-notes" type="text" placeholder="(ไม่บังคับ)" value="${dep.notes||''}" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;box-sizing:border-box;">
       </div>
       <div style="display:flex;gap:10px;margin-top:18px;">
-        <button onclick="document.getElementById('returnDepositModal').remove()" style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">ยกเลิก</button>
-        <button onclick="_saveDepositReturn('${building}','${roomId}')" style="flex:2;padding:10px;background:#334435;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">✅ ยืนยันคืนมัดจำ</button>
+        <button data-action="closeReturnDepositModal" style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">ยกเลิก</button>
+        <button data-action="saveDepositReturn" data-id="${building}" data-arg="${roomId}" style="flex:2;padding:10px;background:#334435;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">✅ ยืนยันคืนมัดจำ</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -1574,7 +1564,7 @@ function _renderDepDeductions() {
     ${deductions.map((d, i) => `<div style="display:flex;justify-content:space-between;align-items:center;font-size:var(--fs-sm);padding:3px 0;">
       <span>${d.reason}</span>
       <span style="display:flex;align-items:center;gap:8px;"><strong>฿${(Number(d.amount)||0).toLocaleString()}</strong>
-        <button onclick="_depPendingDeductions.splice(${i},1);_renderDepDeductions();" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:14px;padding:0;font-family:inherit;">✕</button>
+        <button data-action="removeDepDeduction" data-index="${i}" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:14px;padding:0;font-family:inherit;">✕</button>
       </span>
     </div>`).join('')}
   </div>`;
@@ -1777,7 +1767,7 @@ function renderFacilityBookings() {
                   </td>
                   <td style="padding:8px 10px;">
                     ${b.status === 'confirmed'
-                      ? `<button onclick="facilityAdminCancel('${b.id}')" style="padding:4px 10px;background:#fee2e2;color:#991b1b;border:none;border-radius:6px;font-size:.8rem;cursor:pointer;font-weight:600;">ยกเลิก</button>`
+                      ? `<button data-action="facilityAdminCancel" data-id="${b.id}" style="padding:4px 10px;background:#fee2e2;color:#991b1b;border:none;border-radius:6px;font-size:.8rem;cursor:pointer;font-weight:600;">ยกเลิก</button>`
                       : ''}
                   </td>
                 </tr>
@@ -1821,7 +1811,7 @@ async function renderFacilityConfigList() {
           <span style="font-weight:700;">${window.FacilityBookingManager.getFacilityEmoji(cfg.facilityType)} ${cfg.displayName || window.FacilityBookingManager.getFacilityLabel(cfg.facilityType)}</span>
           <span style="color:var(--text-muted);margin-left:.5rem;">${(cfg.slots||[]).length} slots · ${cfg.active ? '✅ เปิด' : '❌ ปิด'}</span>
         </div>
-        <button onclick="facilityOpenConfig('${cfg.facilityType}')" style="padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green-dark);border-radius:6px;font-size:.8rem;cursor:pointer;font-weight:600;">แก้ไข</button>
+        <button data-action="facilityOpenConfig" data-id="${cfg.facilityType}" style="padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green-dark);border-radius:6px;font-size:.8rem;cursor:pointer;font-weight:600;">แก้ไข</button>
       </div>
     `).join('');
   } catch (err) {
