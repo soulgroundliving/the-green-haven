@@ -2704,6 +2704,17 @@
                 </div>
             </div>
             <div id="wellness-article-body" style="font-size:var(--fs-md); line-height:1.75; color:var(--text-dark);"></div>
+            <!-- Wellness Quiz Prompt — shown only when article.quiz exists. Bonus pts via Path C decision. -->
+            <div id="wellness-quiz-prompt" style="display:none; margin-top:24px; padding:16px; background:var(--soft-green, #e8f5e9); border-radius:14px; text-align:center;">
+                <div style="font-size:var(--fs-md); font-weight:700; margin-bottom:6px;">🎯 ทดสอบความเข้าใจ</div>
+                <div id="wellness-quiz-prompt-desc" style="font-size:var(--fs-sm); color:var(--text-muted); margin-bottom:12px;">
+                    ตอบถูก 2/3 รับ <strong style="color:var(--accent-gold,#D4AF37);">+10 bonus pts</strong> (1 ครั้ง/เดือน/บทความ)
+                </div>
+                <button id="wellness-quiz-start-btn" class="btn-main" data-action="startWellnessQuiz" style="width:100%; padding:12px; background:linear-gradient(135deg, var(--accent-gold,#D4AF37) 0%, #b8941f 100%);">
+                    📝 เริ่มทำ Quiz
+                </button>
+                <div id="wellness-quiz-status" style="margin-top:10px; color:var(--text-muted); font-size:var(--fs-sm);"></div>
+            </div>
             <div id="wellness-claim-area" style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;">
                 <button id="wellness-claim-btn" class="btn-main" data-action="claimWellnessReward" style="width:100%; padding:14px;">
                     🎁 อ่านจบ — รับ <span id="wellness-claim-pts">0</span> pts
@@ -7191,6 +7202,7 @@
             if (a === 'viewLeaseAgreement' && _ta.viewLeaseAgreement) { _ta.viewLeaseAgreement(); return; }
             if (a === 'downloadLeaseAgreement' && _ta.downloadLeaseAgreement) { _ta.downloadLeaseAgreement(); return; }
             if (a === 'startContractQuiz' && _ta.startContractQuiz) { _ta.startContractQuiz(); return; }
+            if (a === 'startWellnessQuiz' && _ta.startWellnessQuiz) { _ta.startWellnessQuiz(); return; }
             if (a === 'goBackToService' && _ta.goBackToService) { _ta.goBackToService(); return; }
             if (a === 'goBackToProfile' && _ta.goBackToProfile) { _ta.goBackToProfile(); return; }
             if (a === 'goBackToCommunity' && _ta.goBackToCommunity) { _ta.goBackToCommunity(); return; }
@@ -11529,13 +11541,23 @@
         // ---- Wellness Articles ----
         const WELLNESS_ARTICLES = [
             { id:'sleep-bedroom', icon:'fa-spa',        title:'3 เคล็ดลับจัดห้องนอนหลับลึก', excerpt:'ลองปรับแสงไฟโทนอุ่น และวางต้นไม้เล็กๆ ช่วยให้เช้าวันใหม่สดชื่น...',
-              body:'<p><strong>1. ปรับแสงให้อุ่นก่อนนอน 1 ชั่วโมง</strong> — หลอดไฟโทนเหลือง 2700K ช่วยให้ร่างกายหลั่งเมลาโทนิน เข้าสู่โหมดพักผ่อนเร็วขึ้น</p><p><strong>2. ต้นไม้ฟอกอากาศหัวเตียง</strong> — พลูด่าง หรือลิ้นมังกร ดูดซับ CO₂ ตอนกลางคืน ช่วยให้อากาศสดชื่น หลับสนิทขึ้น</p><p><strong>3. อุณหภูมิ 24-26°C</strong> — ร่างกายหลับลึกที่สุดในช่วงนี้ ตั้งแอร์ไว้และห่มผ้าบางๆ ดีกว่าห้องเย็นจัดแล้วห่มหนา</p><p>ลองปรับแค่ 1-2 ข้อแล้วสังเกตคุณภาพการนอนในสัปดาห์นี้</p>' },
+              body:'<p><strong>1. ปรับแสงให้อุ่นก่อนนอน 1 ชั่วโมง</strong> — หลอดไฟโทนเหลือง 2700K ช่วยให้ร่างกายหลั่งเมลาโทนิน เข้าสู่โหมดพักผ่อนเร็วขึ้น</p><p><strong>2. ต้นไม้ฟอกอากาศหัวเตียง</strong> — พลูด่าง หรือลิ้นมังกร ดูดซับ CO₂ ตอนกลางคืน ช่วยให้อากาศสดชื่น หลับสนิทขึ้น</p><p><strong>3. อุณหภูมิ 24-26°C</strong> — ร่างกายหลับลึกที่สุดในช่วงนี้ ตั้งแอร์ไว้และห่มผ้าบางๆ ดีกว่าห้องเย็นจัดแล้วห่มหนา</p><p>ลองปรับแค่ 1-2 ข้อแล้วสังเกตคุณภาพการนอนในสัปดาห์นี้</p>',
+              quiz: [
+                { q:'แสงไฟโทนใดช่วยให้หลั่งเมลาโทนินก่อนนอน?', options:['ขาว 6500K','เหลือง 2700K','ฟ้า LED','แดง'], correctIdx:1 },
+                { q:'ต้นไม้ชนิดใดดูดซับ CO₂ ตอนกลางคืน เหมาะวางหัวเตียง?', options:['ดอกทานตะวัน','พลูด่าง / ลิ้นมังกร','กระบองเพชร','กล้วยไม้'], correctIdx:1 },
+                { q:'อุณหภูมิห้องที่ทำให้หลับลึกที่สุดคือเท่าไร?', options:['18-20°C','24-26°C','28-30°C','32°C+'], correctIdx:1 },
+              ] },
             { id:'amethyst-power', icon:'fa-gem',       title:'พลังของ \'หินนำโชค\' อเมทิสต์', excerpt:'ทำความรู้จักกับอเมทิสต์ที่จะช่วยให้ใจคุณสงบ และดึงดูดสิ่งดีๆ...',
               body:'<p>อเมทิสต์เป็นหินในตระกูลควอตซ์สีม่วง ที่โบราณเชื่อว่าช่วย <strong>สงบจิตใจ</strong> และ <strong>ปัดเป่าพลังลบ</strong></p><p><strong>วิธีวางในห้อง:</strong> วางบนโต๊ะทำงาน (ด้านซ้ายสุด ใกล้ประตู) หรือหัวเตียง สะท้อนแสงอ่อนๆ ทำให้บรรยากาศสงบ</p><p><strong>การดูแล:</strong> ล้างด้วยน้ำเปล่าเดือนละครั้ง ตากแดดอ่อนๆ ช่วงเช้า 30 นาที เป็นการ "ชาร์จพลัง" ให้หิน</p><p>นอกจากความเชื่อ การมี object สวยๆ อยู่ในสายตาก็ช่วยลดความเครียดได้จริง</p>' },
             { id:'balcony-charge', icon:'fa-mug-hot',   title:'มุมระเบียงชาร์จพลัง', excerpt:'เปลี่ยนพื้นที่เล็กๆ ให้เป็นที่นั่งดูพระอาทิตย์ตกดินสุดพิเศษสำหรับคุณ...',
               body:'<p>ระเบียง 2×1 เมตร ก็สร้างมุมพักใจได้ ลองทำตามนี้</p><p><strong>เบาะนั่งพื้น</strong> — ซื้อเบาะผ้า waterproof ขนาด 60×60 ซม. + หมอนอิงใบใหญ่ จะได้มุมนั่งทันที</p><p><strong>ต้นไม้แนวตั้ง</strong> — แขวนกระถางพลูบนราวกันตก ประหยัดพื้นที่ + ช่วยกรองฝุ่น PM2.5</p><p><strong>โคมไฟ solar</strong> — ไม่ต้องเดินสายไฟ เก็บแสงกลางวัน กลางคืนให้แสงอุ่นธรรมชาติ</p><p>เวลาที่ดีที่สุดคือ 17:00-18:30 น. ดูแสงส้มกับดื่มชาร้อน</p>' },
             { id:'morning-ritual', icon:'fa-sun',       title:'Morning Ritual 10 นาที เริ่มวันดีทั้งวัน', excerpt:'ลองสร้างนิสัยเล็กๆ ที่ทำให้สมองพร้อมก่อนเช็คโทรศัพท์ครั้งแรก...',
-              body:'<p>อย่าเพิ่งหยิบมือถือทันทีที่ตื่น เปลี่ยนเป็น 10 นาทีนี้แทน</p><p><strong>นาทีที่ 1-3:</strong> ดื่มน้ำเปล่า 1 แก้ว เปิดม่าน รับแสงแดด (รีเซ็ต circadian rhythm)</p><p><strong>นาทีที่ 4-7:</strong> ยืดกล้ามเนื้อง่ายๆ คอ ไหล่ หลัง หายใจลึกๆ 5 ครั้ง</p><p><strong>นาทีที่ 8-10:</strong> เขียน 3 สิ่งที่รู้สึกขอบคุณในสมุด (gratitude journaling)</p><p>ทำแค่ 7 วันจะเห็นความต่าง พลังงานเช้าขึ้นและอารมณ์ดีตลอดวัน</p>' },
+              body:'<p>อย่าเพิ่งหยิบมือถือทันทีที่ตื่น เปลี่ยนเป็น 10 นาทีนี้แทน</p><p><strong>นาทีที่ 1-3:</strong> ดื่มน้ำเปล่า 1 แก้ว เปิดม่าน รับแสงแดด (รีเซ็ต circadian rhythm)</p><p><strong>นาทีที่ 4-7:</strong> ยืดกล้ามเนื้อง่ายๆ คอ ไหล่ หลัง หายใจลึกๆ 5 ครั้ง</p><p><strong>นาทีที่ 8-10:</strong> เขียน 3 สิ่งที่รู้สึกขอบคุณในสมุด (gratitude journaling)</p><p>ทำแค่ 7 วันจะเห็นความต่าง พลังงานเช้าขึ้นและอารมณ์ดีตลอดวัน</p>',
+              quiz: [
+                { q:'นาทีแรก 1-3 ของ Morning Ritual ทำอะไร?', options:['เช็คอีเมล','ดื่มน้ำ + รับแสงแดด','ออกกำลังกายหนัก','ทานอาหารเช้า'], correctIdx:1 },
+                { q:'การเขียน gratitude journaling อยู่ในนาทีไหน?', options:['1-3','4-7','8-10','หลังอาหารเช้า'], correctIdx:2 },
+                { q:'แสงแดดเช้าทำหน้าที่อะไรกับร่างกาย?', options:['ทำให้ผิวคล้ำ','รีเซ็ต circadian rhythm','ลดน้ำหนัก','เพิ่มน้ำตาลในเลือด'], correctIdx:1 },
+              ] },
             { id:'aromatherapy',    icon:'fa-wind',      title:'กลิ่นที่ช่วยคลายเครียดในห้องคอนโด', excerpt:'Lavender, Bergamot, Eucalyptus — 3 กลิ่นที่ควรมีติดห้องไว้...',
               body:'<p>Aromatherapy ไม่ใช่แค่ของสวย — มีงานวิจัยยืนยันผลจริง</p><p><strong>Lavender (ลาเวนเดอร์)</strong> — ใช้ก่อนนอน 30 นาที ลดคลื่นสมองให้ผ่อนคลาย งานวิจัยพบว่าช่วยปรับปรุงคุณภาพการนอน 20%</p><p><strong>Bergamot (เบอร์กามอท)</strong> — ใช้ช่วงบ่าย ลดความวิตกกังวล ให้อารมณ์สดชื่นขึ้น</p><p><strong>Eucalyptus (ยูคาลิปตัส)</strong> — ใช้เช้า ปลุกสมองให้ตื่นตัว เหมาะช่วง WFH</p><p>ใช้ diffuser ดีกว่าเทียนหอม (ปลอดภัยในห้องเล็ก)</p>' },
             { id:'indoor-plants',   icon:'fa-leaf',      title:'5 ต้นไม้ในร่มที่เลี้ยงง่ายสุดๆ', excerpt:'ไม่ต้องรดน้ำบ่อย ไม่ต้องแดดเยอะ แต่ฟอกอากาศได้...',
@@ -11564,6 +11586,15 @@
                         const m = (a.body || '').match(/<img[^>]*src="([^"]+)"/i);
                         if (m) coverImage = m[1];
                     }
+                    // Quiz: Firestore-provided field wins; else fall back to hardcoded
+                    // by ID match. Lets the dogfood quizzes on `sleep-bedroom` /
+                    // `morning-ritual` work even when admin has populated Firestore.
+                    // Will be replaced by admin UI editor in Session B.
+                    let quiz = Array.isArray(a.quiz) ? a.quiz : null;
+                    if (!quiz) {
+                        const fallback = WELLNESS_ARTICLES.find(x => x.id === d.id);
+                        if (fallback && Array.isArray(fallback.quiz)) quiz = fallback.quiz;
+                    }
                     return {
                         id: d.id,
                         icon: (a.icon || 'fa-leaf').startsWith('fa-') ? a.icon : 'fa-' + a.icon,
@@ -11574,6 +11605,7 @@
                         readtime: a.readtime || 3,
                         reward: a.reward || 0,
                         coverImage,
+                        quiz: quiz || null,
                     };
                 });
                 renderWellness();
@@ -11634,6 +11666,8 @@
             if (catEl) catEl.textContent = a.category || 'Wellness';
             // Setup claim button
             await _setupWellnessClaimUI(a);
+            // Setup quiz prompt (only renders if article has a `quiz` field)
+            _setupWellnessQuizPrompt(a);
             showPage('wellness-article');
         }
 
@@ -11741,6 +11775,7 @@
         }
         if (typeof window !== 'undefined') {
             window.openWellnessArticle = openWellnessArticle;
+            window.startWellnessQuiz = startWellnessQuiz;
             window.claimWellnessReward = claimWellnessReward;
         }
 
@@ -11877,9 +11912,13 @@
             if (localStorage.getItem(_quizMonthKey())) { toast('ทำ quiz เดือนนี้แล้ว เดือนหน้าค่อยทำอีก', 'info'); return; }
             const questions = buildContractQuiz();
             if (!questions.length) { toast('ยังไม่มีข้อมูลสัญญา ลองรีเฟรชหน้า', 'warning'); return; }
-            _quizState = { questions, answers: {}, current: 0 };
+            _quizState = { questions, answers: {}, current: 0, source: { type: 'contract' } };
+            // Reset title — wellness quiz may have changed it
+            const titleEl = document.getElementById('quiz-title');
+            if (titleEl) titleEl.textContent = 'Contract Quiz';
             document.getElementById('quiz-modal').style.display = 'flex';
             document.getElementById('quiz-result').style.display = 'none';
+            document.getElementById('quiz-submit-btn').onclick = submitContractQuiz;
             document.getElementById('quiz-submit-btn').textContent = 'ถัดไป';
             renderQuizQuestion();
         }
@@ -11917,6 +11956,9 @@
             submit.textContent = (st.current === st.questions.length - 1) ? 'ส่งคำตอบ' : 'ถัดไป';
         }
 
+        // Submit + close handle BOTH contract quiz and wellness-article quiz —
+        // dispatch on _quizState.source ('contract' default | {type:'wellness', articleId}).
+        // Per-source: monthKey, reward amount, post-close UI refresh hook.
         function submitContractQuiz() {
             const st = _quizState; if (!st) return;
             if (st.current < st.questions.length - 1) {
@@ -11928,10 +11970,16 @@
             let correct = 0;
             st.questions.forEach((q, i) => { if (st.answers[i] === q.correctIdx) correct++; });
             const total = st.questions.length;
-            const passed = correct >= 2;
-            // save attempt + points
-            localStorage.setItem(_quizMonthKey(), JSON.stringify({ score: correct, total, passed, at: Date.now() }));
-            const reward = _quizRewardContract || 20;
+            // Pass threshold: 2/3 for 3-question, otherwise 100% (single-question = must be right)
+            const passThreshold = total >= 3 ? 2 : total;
+            const passed = correct >= passThreshold;
+            // Resolve marker key + reward by source
+            const isWellness = st.source && st.source.type === 'wellness';
+            const monthKey = isWellness
+                ? _wellnessQuizMonthKey(st.source.articleId)
+                : _quizMonthKey();
+            const reward = isWellness ? (st.reward || _quizRewardWellness) : (_quizRewardContract || 20);
+            localStorage.setItem(monthKey, JSON.stringify({ score: correct, total, passed, at: Date.now() }));
             if (passed) awardQuizPoints(reward);
             // show result
             document.getElementById('quiz-question').textContent = '';
@@ -11940,7 +11988,7 @@
             resEl.style.display = 'block';
             resEl.innerHTML = passed
                 ? `<div style="font-size:3rem;">🎉</div><strong style="color:var(--primary-green);">ตอบถูก ${correct}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ได้รับ <strong style="color:var(--accent-gold,#D4AF37);">+${reward} pts</strong></p>`
-                : `<div style="font-size:3rem;">📖</div><strong>ตอบถูก ${correct}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ต้องตอบถูก 2/3 ถึงได้แต้ม<br>ลองเดือนหน้านะครับ</p>`;
+                : `<div style="font-size:3rem;">📖</div><strong>ตอบถูก ${correct}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ต้องตอบถูก ${passThreshold}/${total} ถึงได้แต้ม<br>ลองเดือนหน้านะครับ</p>`;
             document.getElementById('quiz-submit-btn').textContent = 'ปิด';
             document.getElementById('quiz-submit-btn').disabled = false;
             document.getElementById('quiz-submit-btn').onclick = closeContractQuiz;
@@ -11949,8 +11997,85 @@
         function closeContractQuiz() {
             document.getElementById('quiz-modal').style.display = 'none';
             document.getElementById('quiz-submit-btn').onclick = submitContractQuiz;
+            const prevSource = _quizState && _quizState.source;
             _quizState = null;
-            setupContractQuizGate();
+            // Refresh whichever gate UI was the entry point so the locked/unlocked state updates
+            if (prevSource && prevSource.type === 'wellness' && _currentWellnessArticle) {
+                _setupWellnessQuizPrompt(_currentWellnessArticle);
+            } else {
+                setupContractQuizGate();
+            }
+        }
+
+        // ---- Wellness-article quiz (Phase A1: dogfood on hardcoded articles) ----
+        const _quizRewardWellness = 10; // bonus pts per article quiz pass
+
+        function _wellnessQuizMonthKey(articleId) {
+            const d = new Date();
+            return `quiz_wellness_${_taBuilding||'x'}_${_taRoom||'x'}_${articleId}_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`;
+        }
+
+        function _setupWellnessQuizPrompt(article) {
+            const prompt = document.getElementById('wellness-quiz-prompt');
+            const btn    = document.getElementById('wellness-quiz-start-btn');
+            const desc   = document.getElementById('wellness-quiz-prompt-desc');
+            const status = document.getElementById('wellness-quiz-status');
+            if (!prompt) return;
+            if (!article || !Array.isArray(article.quiz) || article.quiz.length === 0) {
+                prompt.style.display = 'none';
+                return;
+            }
+            prompt.style.display = 'block';
+            const total = article.quiz.length;
+            const passThreshold = total >= 3 ? 2 : total;
+            if (desc) desc.innerHTML = `ตอบถูก ${passThreshold}/${total} รับ <strong style="color:var(--accent-gold,#D4AF37);">+${_quizRewardWellness} bonus pts</strong> (1 ครั้ง/เดือน/บทความ)`;
+            // Check if already done this month
+            try {
+                const prior = localStorage.getItem(_wellnessQuizMonthKey(article.id));
+                if (prior) {
+                    const parsed = JSON.parse(prior);
+                    btn.disabled = true;
+                    btn.style.opacity = '.55';
+                    btn.textContent = parsed.passed ? '✅ ทำแล้วเดือนนี้' : '📖 ทำแล้วเดือนนี้ (ไม่ผ่าน)';
+                    if (status) status.textContent = `ลองอีกครั้งเดือนหน้า • ตอบถูก ${parsed.score}/${parsed.total}`;
+                    return;
+                }
+            } catch(e) { /* fall through to enabled */ }
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.textContent = '📝 เริ่มทำ Quiz';
+            if (status) status.textContent = '';
+        }
+
+        function startWellnessQuiz() {
+            const article = _currentWellnessArticle;
+            if (!article || !Array.isArray(article.quiz) || article.quiz.length === 0) {
+                toast('บทความนี้ยังไม่มี quiz', 'info');
+                return;
+            }
+            if (localStorage.getItem(_wellnessQuizMonthKey(article.id))) {
+                toast('ทำ quiz บทความนี้แล้วเดือนนี้ เดือนหน้าค่อยทำอีก', 'info');
+                return;
+            }
+            // Each question's options stay in given order — author already designed them
+            const questions = article.quiz.map(q => ({
+                q: q.q,
+                options: q.options.slice(),
+                correctIdx: q.correctIdx,
+            }));
+            _quizState = {
+                questions, answers: {}, current: 0,
+                source: { type: 'wellness', articleId: article.id },
+                reward: _quizRewardWellness,
+            };
+            // Reuse the SAME contract-quiz modal — just retitle for context
+            const titleEl = document.getElementById('quiz-title');
+            if (titleEl) titleEl.textContent = `Quiz: ${article.title || 'Wellness'}`;
+            document.getElementById('quiz-modal').style.display = 'flex';
+            document.getElementById('quiz-result').style.display = 'none';
+            document.getElementById('quiz-submit-btn').onclick = submitContractQuiz; // reset in case prior close swapped
+            document.getElementById('quiz-submit-btn').textContent = 'ถัดไป';
+            renderQuizQuestion();
         }
 
         function awardQuizPoints(n) {
