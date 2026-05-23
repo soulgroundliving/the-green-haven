@@ -5278,6 +5278,12 @@
                 ? `lastDailyClaim_player_${window._playerProfile.tenantId}`
                 : `lastDailyClaim_${_taBuilding}_${_taRoom}`;
 
+            // Optimistic close: dismiss the modal IMMEDIATELY on click — user shouldn't
+            // wait ~1-3s for the CF round-trip to see the popup go away. Success/error
+            // toast still surfaces after the await. Network slowness in LIFF webview
+            // (§7-R) would otherwise leave the modal looking frozen.
+            closeModal();
+
             try {
                 const fns = window.firebase?.functions;
                 if (!fns) throw new Error('Firebase Functions SDK not loaded');
@@ -5304,7 +5310,6 @@
                 // Firestore snapshot to round-trip (~500ms window where user could tap 💰).
                 _lastDailyClaim = _bkkToday;
                 if (typeof r.streak === 'number') _dailyStreak = r.streak;
-                closeModal();
             } catch (e) {
                 const code = e?.code || e?.details?.code || '';
                 if (code === 'functions/already-exists' || /already/i.test(String(e?.message))) {
@@ -5313,11 +5318,12 @@
                     const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
                     localStorage.setItem(claimKey, _bkkToday);
                     _lastDailyClaim = _bkkToday;  // mirror localStorage
-                    closeModal();
                 } else {
                     console.error('claimDailyPoints failed:', e);
                     toast('บันทึกไม่สำเร็จ — ลองใหม่ครับ', 'error');
                     window.GhHaptic?.error();
+                    // Modal already closed (optimistic). Re-enable button so a subsequent
+                    // reopen via 💰 peek lets the user retry without a stale disabled state.
                     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
                 }
             }
