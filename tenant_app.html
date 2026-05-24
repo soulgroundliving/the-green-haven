@@ -114,7 +114,7 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
       import { getDatabase, ref, get, set, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
       import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, onIdTokenChanged, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-      import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+      import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
       import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
       import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
       // Phase 4D App Check disabled 2026-04-25 — Firebase backend returns 403 on token
@@ -153,7 +153,7 @@
           window.firebaseDB = database;
           window.firebase = {
             firestore: () => firestore,
-            firestoreFunctions: { collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp },
+            firestoreFunctions: { collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp, increment },
             functions: { httpsCallable: (name) => httpsCallable(fns, name) },
             storage: () => storage,
             storageFunctions: { ref: storageRef, uploadBytes, getDownloadURL, deleteObject }
@@ -3223,6 +3223,12 @@
                 <h1 style="margin:0; font-size:var(--fs-lg);">ชุมชน 🛒</h1>
                 <p style="margin:4px 0 0; font-size:var(--fs-sm); color:var(--text-muted);">ตลาดของชุมชน — ของมือสอง บริการ และของแจกฟรี</p>
             </div>
+            <button type="button" data-action="showSubPage" data-page="market-chat-list-page" aria-label="ข้อความ"
+                style="position:relative; width:36px; height:36px; background:var(--soft-green); border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; touch-action:manipulation;">
+                <i class="fas fa-comment-dots" style="color:var(--primary-green);"></i>
+                <span id="market-chat-unread-badge"
+                    style="display:none; position:absolute; top:-3px; right:-3px; min-width:18px; height:18px; padding:0 5px; background:#dc2626; color:#fff; font-size:10px; font-weight:700; border-radius:9px; line-height:18px; text-align:center;"></span>
+            </button>
         </div>
 
         <div id="marketplace-section">
@@ -4120,6 +4126,63 @@
             </button>
             <button class="btn-main" style="background:transparent; color:#888; border:1px solid #ddd; margin-top:10px; touch-action:manipulation;"
                 data-action="goBackToCommunity">ยกเลิก</button>
+        </div>
+    </div>
+
+    <!-- Sprint 1 — Privacy-First Chat: list of 1:1 conversations the
+         current user is a participant in. Populated by _subscribeChatList. -->
+    <div id="market-chat-list-page" class="page" style="background: var(--bg-color);">
+        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 18px;">
+            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; touch-action:manipulation;"
+                data-action="goBackToCommunity">
+                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+            </div>
+            <h1 style="margin:0; font-size: var(--fs-lg);">💬 ข้อความ</h1>
+        </div>
+        <div id="market-chat-list-container">
+            <div id="market-chat-list-empty" class="gh-empty-state">
+                <div class="gh-empty-state__illust">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                        <path d="M22 32 h76 v52 h-30 l-12 12 v-12 h-34z"/>
+                        <path d="M38 50 h44 M38 62 h28"/>
+                    </svg>
+                </div>
+                <p class="gh-empty-state__title">ยังไม่มีข้อความ</p>
+                <p class="gh-empty-state__text">เมื่อคุณกด "ติดต่อผู้ขาย" หรือมีคนติดต่อประกาศของคุณ การสนทนาจะแสดงที่นี่</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sprint 1 — Active 1:1 conversation. Context header is frozen at
+         chat-creation (postTitle/postImageUrl/postPrice) so it survives the
+         post being closed or deleted. cleanupMarketplaceChat CF deletes the
+         chat doc + messages subcollection when the post transitions to
+         status=COMPLETED. -->
+    <div id="market-chat-page" class="page" style="background: var(--bg-color);">
+        <div class="app-bar" style="display:flex; align-items:center; gap:12px; padding-bottom: 12px;">
+            <button type="button" data-action="showSubPage" data-page="market-chat-list-page" aria-label="กลับไปรายการแชท"
+                style="width:36px; height:36px; background:var(--soft-green); border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; touch-action:manipulation;">
+                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+            </button>
+            <div id="market-chat-header" style="flex:1; min-width:0; display:flex; align-items:center; gap:10px;">
+                <div id="market-chat-header-img" style="width:42px; height:42px; border-radius:10px; background:#f3f4f6; flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center;"></div>
+                <div style="flex:1; min-width:0;">
+                    <div id="market-chat-header-title" style="font-weight:700; font-size:var(--fs-md); overflow:hidden; white-space:nowrap; text-overflow:ellipsis;"></div>
+                    <div id="market-chat-header-sub" style="font-size:var(--fs-xs); color:#888;"></div>
+                </div>
+            </div>
+        </div>
+        <div id="market-chat-messages" style="padding:8px 12px 100px; display:flex; flex-direction:column; gap:8px; min-height:50vh;">
+            <div style="text-align:center; color:#aaa; padding:40px 20px; font-size:var(--fs-sm);">กำลังโหลด...</div>
+        </div>
+        <div id="market-chat-composer"
+            style="position:fixed; left:0; right:0; bottom:0; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:#fff; border-top:1px solid #eee; display:none; gap:8px; z-index:30;">
+            <input id="market-chat-input" type="text" placeholder="พิมพ์ข้อความ..." maxlength="2000"
+                style="flex:1; padding:10px 14px; border-radius:18px; border:1px solid #eee; font-family:inherit; font-size:var(--fs-md);">
+            <button type="button" data-action="sendChatMessage" aria-label="ส่งข้อความ"
+                style="width:42px; height:42px; border-radius:50%; border:none; background:var(--primary-green); color:#fff; cursor:pointer; touch-action:manipulation;">
+                <i class="fas fa-paper-plane"></i>
+            </button>
         </div>
     </div>
 
@@ -6661,7 +6724,33 @@
             });
         }
 
+        // Sprint 1 rewire — privacy-first chat replaces the personal-LINE link.
+        // The line.me/ti/p/<lineUserId> path leaked the seller's personal LINE
+        // identity to every interested buyer; the new in-LIFF chat keeps the
+        // 1:1 conversation inside marketplace_chats and self-destructs when
+        // the post is marked COMPLETED (cleanupMarketplaceChat CF).
+        //
+        // Fallback paths (in order):
+        //   1. ownerUid present  → in-LIFF chat (canonical path post-S0)
+        //   2. lineUserId only   → legacy line.me link (very old posts)
+        //   3. showRoom + room   → "go knock on the door" hint
+        //   4. nothing           → unhelpful but honest
         function contactSeller(item) {
+            if (!item) return;
+            const myUid = window._authUid;
+            if (item.ownerUid && myUid && item.ownerUid !== myUid) {
+                _openOrCreateChat(item);
+                return;
+            }
+            // Self-contact (shouldn't happen — detail-modal action is hidden
+            // for own posts — but guard regardless).
+            if (item.ownerUid && item.ownerUid === myUid) {
+                if (typeof toast === 'function') toast('นี่คือประกาศของคุณเอง', 'info');
+                return;
+            }
+            // Legacy: pre-S0 posts that lack ownerUid still have lineUserId.
+            // These naturally age out within ~30d (expiresAt) — leave the
+            // legacy path so the post stays useful in the meantime.
             if (item.lineUserId) {
                 const url = 'https://line.me/ti/p/' + item.lineUserId;
                 if (typeof liff !== 'undefined' && liff.isInClient?.()) {
@@ -6669,12 +6758,15 @@
                 } else {
                     window.open(url, '_blank');
                 }
-            } else if (item.showRoom && item.room) {
-                toast('ติดต่อผู้ขายได้ที่ ห้อง ' + item.room + ' ครับ', 'info');
-            } else {
+                return;
+            }
+            if (item.showRoom && item.room) {
+                if (typeof toast === 'function') toast('ติดต่อผู้ขายได้ที่ ห้อง ' + item.room + ' ครับ', 'info');
+            } else if (typeof toast === 'function') {
                 toast('ผู้ขายไม่ได้ระบุช่องทางติดต่อครับ', 'warning');
             }
         }
+        window.contactSeller = contactSeller;
 
         async function markMarketClosed(id) {
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
@@ -6802,6 +6894,362 @@
         // Wrap via helper so liffLinked re-fires after _taBuilding becomes available.
         // The `if (!_taBuilding) return;` guard inside (§7-U) keeps early calls idempotent.
         _onLiffClaimsReady(_subscribeMarketplace);
+
+        // ============================================================
+        // Sprint 1 — Privacy-First Marketplace Chat
+        // ============================================================
+        // Replaces the line.me/ti/p/<lineUserId> personal-LINE leak in
+        // contactSeller(). Two surfaces:
+        //   - #market-chat-list-page : list of all my conversations
+        //   - #market-chat-page      : active 1:1 conversation
+        // Self-destruct: cleanupMarketplaceChat CF deletes chat + messages
+        // when the parent marketplace post transitions to status=COMPLETED.
+        //
+        // §7-CC: all chat state vars use window.X for cross-script visibility.
+        // §7-A : subscribe is gated through _onLiffClaimsReady.
+        // §7-U : claim-first guard (!window._authUid) inside subscriber.
+        // §7-N : every onSnapshot has an error callback that resets unsub
+        //        on permission-denied so liffLinked retry can resubscribe.
+        // §7-V : prior unsub torn down before rebinding (chat-messages).
+        // §7-KK: cached-snapshot reconciliation does not clear local state.
+        // ============================================================
+        window._chatList = [];
+        window._chatListUnsub = null;
+        window._activeChatId = null;
+        window._activeChat = null;
+        window._chatMessages = [];
+        window._chatMessagesUnsub = null;
+
+        function _subscribeChatList() {
+            if (window._chatListUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            if (!window._authUid) return; // §7-U claim-first guard
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                const q = fs.query(
+                    fs.collection(db, 'marketplace_chats'),
+                    fs.where('participants', 'array-contains', window._authUid),
+                    fs.orderBy('lastMessageTime', 'desc')
+                );
+                window._chatListUnsub = fs.onSnapshot(q, snap => {
+                    window._chatList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    renderChatList();
+                    _renderMarketChatUnreadBadge();
+                }, err => {
+                    console.warn('[market-chat-list] subscribe failed:', err?.message || err);
+                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                        window._chatListUnsub = null;
+                    }
+                });
+            } catch (e) { console.warn('subscribeChatList:', e); }
+        }
+        window._subscribeChatList = _subscribeChatList;
+
+        function _formatChatTime(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return '';
+            const now = new Date();
+            const sameDay = d.toDateString() === now.toDateString();
+            if (sameDay) return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+        }
+
+        function renderChatList() {
+            const cont = document.getElementById('market-chat-list-container');
+            if (!cont) return;
+            const empty = document.getElementById('market-chat-list-empty');
+            // Remove any existing chat rows (preserve empty state element).
+            cont.querySelectorAll('.market-chat-row').forEach(n => n.remove());
+            if (!window._chatList.length) {
+                if (empty) empty.style.display = '';
+                return;
+            }
+            if (empty) empty.style.display = 'none';
+
+            const myUid = window._authUid;
+            const cards = window._chatList.map(chat => {
+                const unread = (chat.unreadCount && chat.unreadCount[myUid]) || 0;
+                const lastMsg = chat.lastMessage || 'เริ่มการสนทนา';
+                const lastTime = chat.lastMessageTime ? _formatChatTime(chat.lastMessageTime) : '';
+                const imgSrc = chat.postImageUrl || '';
+                const imgHtml = imgSrc
+                    ? `<img src="${_esc(imgSrc)}" alt="" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`
+                    : `<span style="font-size:1.4rem; display:flex; align-items:center; justify-content:center; height:100%;">🛒</span>`;
+                const unreadBadge = unread > 0
+                    ? `<span style="background:#dc2626; color:#fff; font-size:var(--fs-xs); padding:1px 8px; border-radius:10px; font-weight:700; flex-shrink:0;">${unread > 9 ? '9+' : unread}</span>`
+                    : '';
+                const safeId = _esc(chat.id);
+                return `<div class="market-chat-row" data-mkt-chat-id="${safeId}" style="display:flex; gap:12px; padding:14px 16px; border-bottom:1px solid #f0f0f0; cursor:pointer; touch-action:manipulation; align-items:center;">
+                    <div style="width:48px; height:48px; border-radius:10px; background:#f3f4f6; flex-shrink:0; overflow:hidden;">${imgHtml}</div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:2px;">
+                            <span style="font-weight:700; font-size:var(--fs-sm); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#222;">${_esc(chat.postTitle || 'สินค้า')}</span>
+                            <span style="font-size:var(--fs-xs); color:#888; flex-shrink:0;">${_esc(lastTime)}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                            <span style="font-size:var(--fs-xs); color:#666; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${_esc(lastMsg)}</span>
+                            ${unreadBadge}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+            cont.insertAdjacentHTML('beforeend', cards);
+
+            // Single delegated listener — survives subsequent renderChatList calls.
+            if (!cont._chatDelegated) {
+                cont.addEventListener('click', e => {
+                    const row = e.target.closest('[data-mkt-chat-id]');
+                    if (!row) return;
+                    const id = row.dataset.mktChatId;
+                    const chat = window._chatList.find(c => c.id === id);
+                    if (chat) openChat(chat);
+                });
+                cont._chatDelegated = true;
+            }
+        }
+        window.renderChatList = renderChatList;
+
+        function _renderMarketChatUnreadBadge() {
+            const badge = document.getElementById('market-chat-unread-badge');
+            if (!badge) return;
+            const myUid = window._authUid;
+            const total = (window._chatList || []).reduce(
+                (sum, c) => sum + ((c.unreadCount && c.unreadCount[myUid]) || 0), 0
+            );
+            if (total > 0) {
+                badge.textContent = total > 9 ? '9+' : String(total);
+                badge.style.display = '';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        window._renderMarketChatUnreadBadge = _renderMarketChatUnreadBadge;
+
+        function openChat(chat) {
+            if (!chat || !chat.id) return;
+            window._activeChatId = chat.id;
+            window._activeChat = chat;
+
+            // Render header from frozen snapshot — survives the post being closed/deleted.
+            const titleEl = document.getElementById('market-chat-header-title');
+            const subEl = document.getElementById('market-chat-header-sub');
+            const imgEl = document.getElementById('market-chat-header-img');
+            if (titleEl) titleEl.textContent = chat.postTitle || 'สินค้า';
+            if (subEl) {
+                const price = Number(chat.postPrice);
+                subEl.textContent = price === 0 ? '🎁 ฟรี' : (price > 0 ? '฿' + price : '');
+            }
+            if (imgEl) {
+                imgEl.textContent = '';
+                if (chat.postImageUrl) {
+                    const img = document.createElement('img');
+                    img.src = chat.postImageUrl;
+                    img.alt = '';
+                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                    imgEl.appendChild(img);
+                } else {
+                    imgEl.textContent = '🛒';
+                    imgEl.style.fontSize = '1.4rem';
+                }
+            }
+
+            // Render an initial loading state then subscribe.
+            const msgs = document.getElementById('market-chat-messages');
+            if (msgs) {
+                msgs.innerHTML = '<div style="text-align:center; color:#aaa; padding:40px 20px; font-size:var(--fs-sm);">กำลังโหลด...</div>';
+            }
+            const comp = document.getElementById('market-chat-composer');
+            if (comp) comp.style.display = 'flex';
+            const inp = document.getElementById('market-chat-input');
+            if (inp) inp.value = '';
+
+            showSubPage('market-chat-page');
+            _subscribeChatMessages(chat.id);
+            _markChatRead(chat.id);
+        }
+        window.openChat = openChat;
+
+        function _subscribeChatMessages(chatId) {
+            // §7-V: tear down prior listener before re-attaching.
+            if (typeof window._chatMessagesUnsub === 'function') {
+                try { window._chatMessagesUnsub(); } catch (_) { /* noop */ }
+                window._chatMessagesUnsub = null;
+            }
+            window._chatMessages = [];
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions || !chatId) return;
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                const q = fs.query(
+                    fs.collection(db, 'marketplace_chats', chatId, 'messages'),
+                    fs.orderBy('timestamp', 'asc')
+                );
+                window._chatMessagesUnsub = fs.onSnapshot(q, snap => {
+                    window._chatMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    renderChatMessages();
+                    // Mark-read after each fresh snapshot when this chat is the
+                    // active one. Idempotent if counter is already 0.
+                    if (window._activeChatId === chatId
+                        && !snap.metadata?.fromCache
+                        && !snap.metadata?.hasPendingWrites) {
+                        _markChatRead(chatId);
+                    }
+                }, err => {
+                    console.warn('[market-chat-messages] subscribe failed:', err?.message || err);
+                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                        window._chatMessagesUnsub = null;
+                    }
+                });
+            } catch (e) { console.warn('subscribeChatMessages:', e); }
+        }
+        window._subscribeChatMessages = _subscribeChatMessages;
+
+        function renderChatMessages() {
+            const cont = document.getElementById('market-chat-messages');
+            if (!cont) return;
+            const myUid = window._authUid;
+            if (!window._chatMessages.length) {
+                cont.innerHTML = '<div style="text-align:center; color:#aaa; padding:40px 20px; font-size:var(--fs-sm);">เริ่มการสนทนาด้านล่าง...</div>';
+                return;
+            }
+            cont.innerHTML = window._chatMessages.map(m => {
+                const mine = m.senderId === myUid;
+                const txt = _esc(m.text || '');
+                const time = m.timestamp ? _formatChatTime(m.timestamp) : '';
+                const bubbleStyle = mine
+                    ? 'background:var(--primary-green); color:#fff; border-bottom-right-radius:4px;'
+                    : 'background:#f3f4f6; color:#222; border-bottom-left-radius:4px;';
+                return `<div style="display:flex; ${mine ? 'justify-content:flex-end' : 'justify-content:flex-start'};">
+                    <div style="max-width:78%;">
+                        <div style="padding:8px 12px; border-radius:14px; ${bubbleStyle} font-size:var(--fs-sm); word-break:break-word; white-space:pre-wrap;">${txt}</div>
+                        <div style="font-size:10px; color:#999; margin-top:2px; text-align:${mine ? 'right' : 'left'}; padding:0 4px;">${_esc(time)}</div>
+                    </div>
+                </div>`;
+            }).join('');
+            requestAnimationFrame(() => { cont.scrollTop = cont.scrollHeight; });
+        }
+        window.renderChatMessages = renderChatMessages;
+
+        async function sendChatMessage() {
+            const inp = document.getElementById('market-chat-input');
+            if (!inp) return;
+            const text = (inp.value || '').trim();
+            if (!text) return;
+            if (text.length > 2000) {
+                if (typeof toast === 'function') toast('ข้อความยาวเกินไป (≤ 2000 ตัวอักษร)', 'warning');
+                return;
+            }
+            if (!window._activeChatId || !window._authUid) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            const chatId = window._activeChatId;
+            // Optimistic clear so user can keep typing while the round-trip resolves.
+            inp.value = '';
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                const now = new Date().toISOString();
+                const counterpart = (window._activeChat?.participants || [])
+                    .find(p => p !== window._authUid);
+                await fs.addDoc(
+                    fs.collection(db, 'marketplace_chats', chatId, 'messages'),
+                    { senderId: window._authUid, text, timestamp: now, isRead: false }
+                );
+                const patch = { lastMessage: text, lastMessageTime: now };
+                if (counterpart) {
+                    patch[`unreadCount.${counterpart}`] = fs.increment(1);
+                }
+                await fs.setDoc(fs.doc(db, 'marketplace_chats', chatId), patch, { merge: true });
+            } catch (e) {
+                console.warn('sendChatMessage:', e);
+                if (typeof toast === 'function') toast('ส่งไม่สำเร็จ ลองใหม่ครับ', 'error');
+                // Restore so the user doesn't lose their text.
+                inp.value = text;
+            }
+        }
+        window.sendChatMessage = sendChatMessage;
+
+        async function _markChatRead(chatId) {
+            if (!chatId || !window._authUid) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                await fs.setDoc(
+                    fs.doc(db, 'marketplace_chats', chatId),
+                    { [`unreadCount.${window._authUid}`]: 0 },
+                    { merge: true }
+                );
+            } catch (e) {
+                // Non-fatal — next focus / snapshot retries.
+                console.warn('markChatRead:', e?.message || e);
+            }
+        }
+        window._markChatRead = _markChatRead;
+
+        // S1.4 — open-or-create chat from a marketplace post detail.
+        // Replaces line.me/ti/p/<lineUserId> personal-LINE link.
+        async function _openOrCreateChat(item) {
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions || !window._authUid) {
+                if (typeof toast === 'function') toast('ระบบยังไม่พร้อม ลองใหม่ครับ', 'error');
+                return;
+            }
+            const ownerUid = item?.ownerUid;
+            if (!ownerUid) {
+                if (typeof toast === 'function') toast('ประกาศนี้ยังไม่รองรับการแชท', 'warning');
+                return;
+            }
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                // Find existing chat: (postId == X) ∩ (participants array-contains me).
+                const q = fs.query(
+                    fs.collection(db, 'marketplace_chats'),
+                    fs.where('postId', '==', item.id),
+                    fs.where('participants', 'array-contains', window._authUid)
+                );
+                const snap = await fs.getDocs(q);
+                let chatId = null;
+                let chatData = null;
+                snap.forEach(d => {
+                    if (!chatId) {
+                        chatId = d.id;
+                        chatData = { id: d.id, ...d.data() };
+                    }
+                });
+                if (!chatId) {
+                    // First contact — create chat with frozen post-context snapshot.
+                    const now = new Date().toISOString();
+                    const postImage = item.imageUrl || item.imageData || '';
+                    const postPrice = item.category === 'free' ? 0 : Number(item.price || 0);
+                    const newChat = {
+                        participants: [ownerUid, window._authUid],
+                        postId: item.id,
+                        postTitle: item.title || '',
+                        postImageUrl: postImage,
+                        postPrice,
+                        lastMessage: '',
+                        lastMessageTime: now,
+                        unreadCount: { [ownerUid]: 0, [window._authUid]: 0 },
+                        createdAt: now,
+                    };
+                    const docRef = await fs.addDoc(fs.collection(db, 'marketplace_chats'), newChat);
+                    chatId = docRef.id;
+                    chatData = { id: chatId, ...newChat };
+                }
+                openChat(chatData);
+            } catch (e) {
+                console.warn('_openOrCreateChat:', e);
+                if (typeof toast === 'function') toast('เปิดการสนทนาไม่สำเร็จ ลองใหม่ครับ', 'error');
+            }
+        }
+        window._openOrCreateChat = _openOrCreateChat;
+
+        // Subscribe is auth-gated on window._authUid which is set after
+        // _callLiffSignIn resolves. _onLiffClaimsReady runs the callback once
+        // claims are present (and also on every authReady/liffLinked refire).
+        _onLiffClaimsReady(_subscribeChatList);
 
         // เก็บข้อมูลสัตว์เลี้ยง (Global Scope)
         let petDataList = [];

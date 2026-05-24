@@ -121,6 +121,67 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerUid);
     }
 
+    // ===== MARKETPLACE CHATS (Sprint 1 — Privacy-First Temporary Chat) =====
+    // 1:1 chat between marketplace post owner and an interested party.
+    // Replaces the line.me/ti/p/{lineUserId} personal-LINE leak in contactSeller().
+    //
+    // Schema marketplace_chats/{chatId}:
+    //   - participants: [ownerUid, interestedUid]  (size==2; both LIFF uids
+    //     i.e. 'line:<userId>'; current caller MUST be one of them on create)
+    //   - postId, postTitle, postImageUrl, postPrice   — frozen snapshot at
+    //     chat-creation time so context survives post mutation
+    //   - lastMessage, lastMessageTime, unreadCount{<uid>: N}, createdAt
+    //
+    // Chat-list subscribe: where 'participants' array-contains <uid>
+    //                      order by lastMessageTime desc.
+    // Self-destruct: cleanupMarketplaceChat CF on marketplace status → COMPLETED.
+    //                Admin SDK bypass — direct client delete is blocked so a
+    //                tenant cannot orphan messages for the counterparty.
+    //
+    // §7-T avoidance: participants array is frozen on update (request == resource);
+    // only lastMessage/lastMessageTime/unreadCount may drift after create.
+    match /marketplace_chats/{chatId} {
+      allow read:   if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn()
+                  && request.resource.data.participants is list
+                  && request.resource.data.participants.size() == 2
+                  && request.auth.uid in request.resource.data.participants
+                  && request.resource.data.keys().hasAll(['participants', 'postId', 'createdAt'])
+                  && request.resource.data.postId is string
+                  && request.resource.data.postId.size() <= 64;
+      // Update: any participant may update; the participants array itself is
+      // frozen (can't drop the counterparty mid-conversation).
+      allow update: if isSignedIn()
+                  && request.auth.uid in resource.data.participants
+                  && request.resource.data.participants == resource.data.participants;
+      // Delete: admin/CF only. Tenants cannot delete their own chats — that
+      // would orphan messages from the counterparty's view. cleanupMarketplaceChat
+      // CF is the canonical removal path.
+      allow delete: if isAdmin();
+
+      // Messages — only participants of the parent chat can read/write/send.
+      // get() on parent chat doc costs +1 read per op; acceptable trade for
+      // the cross-participant gate. Same pattern as tenants/.../pets above.
+      match /messages/{messageId} {
+        allow read:   if isSignedIn()
+                    && request.auth.uid in get(/databases/$(database)/documents/marketplace_chats/$(chatId)).data.participants;
+        allow create: if isSignedIn()
+                    && request.auth.uid in get(/databases/$(database)/documents/marketplace_chats/$(chatId)).data.participants
+                    && request.resource.data.senderId == request.auth.uid
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() <= 2000
+                    && request.resource.data.keys().hasOnly(['senderId', 'text', 'timestamp', 'isRead']);
+        // Update: only the isRead flag (mark-read flow). Sender CANNOT edit
+        // their own text — chat history is immutable.
+        allow update: if isSignedIn()
+                    && request.auth.uid in get(/databases/$(database)/documents/marketplace_chats/$(chatId)).data.participants
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+        // Delete: cleanupMarketplaceChat CF only (admin SDK bypass).
+        allow delete: if isAdmin();
+      }
+    }
+
     // ===== COMPLAINTS =====
     // Tenant reads = admin OR linkedAuthUid match OR (legacy docs without
     // linkedAuthUid) room+building match the tenant's custom claims set by
