@@ -198,6 +198,20 @@ exports.cleanupMarketplaceChat = require('./cleanupMarketplaceChat').cleanupMark
 // throttle + retry-queue handoff on transient failure.
 exports.notifyMarketplaceChat = require('./notifyMarketplaceChat').notifyMarketplaceChat;
 
+// Marketplace chat sender-only "recall" (Sprint 3 — LINE-parity UX). Replaces
+// the message text with an empty string + unsent:true tombstone, within a
+// 24h window after send. CF-only because the existing message-update rule
+// allows only isRead toggles — text edits would otherwise be a self-edit
+// integrity hole.
+exports.unsendMarketplaceMessage = require('./unsendMarketplaceMessage').unsendMarketplaceMessage;
+
+// Marketplace chat one-sided "delete" (Sprint 3 — LINE-parity UX). Writes
+// hiddenBy.{callerUid} on the chat doc; the client list-query filters out
+// hidden rows. Counterparty's view is untouched. notifyMarketplaceChat clears
+// the recipient's hiddenBy on new messages so the thread reappears on
+// fresh activity.
+exports.hideMarketplaceChat = require('./hideMarketplaceChat').hideMarketplaceChat;
+
 // LINE Flex notification to tenant when new bill appears in RTDB
 // (secondary path — manual admin bill creation)
 exports.notifyBillOnCreate = require('./notifyBillOnCreate').notifyBillOnCreate;

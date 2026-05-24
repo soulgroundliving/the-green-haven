@@ -153,9 +153,14 @@ service cloud.firestore {
       // frozen (can't drop the counterparty mid-conversation). Permitted field
       // writes include: lastMessage, lastMessageTime, unreadCount.{uid},
       // and (S3 PR 2) lastReadAt.{uid} for read-receipt rendering.
+      //
+      // S3 PR 3: hiddenBy is CF-only (hideMarketplaceChat + notifyMarketplaceChat
+      // use the admin SDK to bypass rules). Otherwise a participant could write
+      // hiddenBy[other-uid] and hide the chat from the counterparty.
       allow update: if isSignedIn()
                   && request.auth.uid in resource.data.participants
-                  && request.resource.data.participants == resource.data.participants;
+                  && request.resource.data.participants == resource.data.participants
+                  && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['hiddenBy']);
       // Delete: admin/CF only. Tenants cannot delete their own chats — that
       // would orphan messages from the counterparty's view. cleanupMarketplaceChat
       // CF is the canonical removal path.
@@ -173,9 +178,13 @@ service cloud.firestore {
                     && request.resource.data.text is string
                     && request.resource.data.text.size() > 0
                     && request.resource.data.text.size() <= 2000
-                    && request.resource.data.keys().hasOnly(['senderId', 'text', 'timestamp', 'isRead']);
+                    // S3 PR 3: replyTo is an optional nested map { messageId,
+                    // senderId, textSnippet } stamped at send-time so the
+                    // bubble can render a quote card above the message text.
+                    && request.resource.data.keys().hasOnly(['senderId', 'text', 'timestamp', 'isRead', 'replyTo']);
         // Update: only the isRead flag (mark-read flow). Sender CANNOT edit
-        // their own text — chat history is immutable.
+        // their own text — chat history is immutable. Unsend is handled by
+        // unsendMarketplaceMessage CF via admin SDK (bypasses rules).
         allow update: if isSignedIn()
                     && request.auth.uid in get(/databases/$(database)/documents/marketplace_chats/$(chatId)).data.participants
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);

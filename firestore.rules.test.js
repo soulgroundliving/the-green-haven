@@ -615,6 +615,45 @@ describe('marketplace_chats — participant-only chat (Sprint 1)', () => {
     }));
   });
 
+  // S3 PR 3 — hiddenBy is CF-only (hideMarketplaceChat). Clients cannot
+  // write it from their own session even for themselves.
+  it('participant CANNOT write hiddenBy from client (CF-only)', async () => {
+    await seedChat();
+    await assertFails(updateDoc(doc(ANON(BUYER).firestore(), 'marketplace_chats/c1'), {
+      [`hiddenBy.${BUYER}`]: new Date().toISOString(),
+    }));
+  });
+
+  it('participant CANNOT write hiddenBy for counterparty (CF-only)', async () => {
+    await seedChat();
+    await assertFails(updateDoc(doc(ANON(BUYER).firestore(), 'marketplace_chats/c1'), {
+      [`hiddenBy.${OWNER}`]: new Date().toISOString(),
+    }));
+  });
+
+  // S3 PR 3 — replyTo is allowed on message create
+  it('participant CAN send a message with replyTo quote', async () => {
+    await seedChat();
+    await assertSucceeds(addDoc(collection(ANON(BUYER).firestore(), 'marketplace_chats/c1/messages'), {
+      senderId: BUYER,
+      text: 'replying to your earlier',
+      timestamp: new Date().toISOString(),
+      isRead: false,
+      replyTo: { messageId: 'm0', senderId: OWNER, textSnippet: 'hi there' },
+    }));
+  });
+
+  // S3 PR 3 — text-edit attempt via update still blocked (chat history is
+  // immutable; unsend handled by unsendMarketplaceMessage CF via admin SDK)
+  it('sender CANNOT edit text of own message via client (unsend is CF-only)', async () => {
+    await seedChat();
+    const msgRef = doc(ANON(BUYER).firestore(), 'marketplace_chats/c1/messages/m1');
+    await assertSucceeds(setDoc(msgRef, {
+      senderId: BUYER, text: 'original', timestamp: new Date().toISOString(), isRead: false,
+    }));
+    await assertFails(updateDoc(msgRef, { text: 'edited!' }));
+  });
+
   it('participant CANNOT mutate participants array', async () => {
     await seedChat();
     await assertFails(updateDoc(doc(ANON(BUYER).firestore(), 'marketplace_chats/c1'), {

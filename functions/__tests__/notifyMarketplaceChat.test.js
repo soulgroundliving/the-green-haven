@@ -84,6 +84,14 @@ Module._load = function (id, parent, ...rest) {
         throw new Error('unexpected collection: ' + col);
       },
     });
+    // S3 PR 3: real firebase-admin exposes both admin.firestore() (callable)
+    // AND admin.firestore.FieldValue (namespace). The stub mirrors that so
+    // CFs calling FieldValue.delete() / .increment() don't crash.
+    firestoreFn.FieldValue = {
+      delete: () => ({ _sentinel: 'delete' }),
+      increment: (n) => ({ _sentinel: 'increment', n }),
+      serverTimestamp: () => ({ _sentinel: 'serverTimestamp' }),
+    };
     return {
       apps: [{}],
       initializeApp: () => {},
