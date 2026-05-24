@@ -187,6 +187,17 @@ exports.claimContractQuizPoints = require('./claimContractQuizPoints').claimCont
 // Auto-bill generation (Phase 1 automation — fires on meter_data Firestore write)
 exports.generateBillsOnMeterUpdate = require('./generateBillsOnMeterUpdate').generateBillsOnMeterUpdate;
 
+// Marketplace chat self-destruct (Sprint 1 — Privacy-First Chat). Fires on
+// marketplace/{postId} write; clears every chat + messages sub-collection when
+// the post is deleted or its status transitions to COMPLETED.
+exports.cleanupMarketplaceChat = require('./cleanupMarketplaceChat').cleanupMarketplaceChat;
+
+// Marketplace chat notification broker (Sprint 2 — LINE OA push on new message).
+// Fires on marketplace_chats/{chatId}/messages/{messageId} create; pushes flex
+// bubble to the non-sender participant via LINE Messaging API with anti-spam
+// throttle + retry-queue handoff on transient failure.
+exports.notifyMarketplaceChat = require('./notifyMarketplaceChat').notifyMarketplaceChat;
+
 // LINE Flex notification to tenant when new bill appears in RTDB
 // (secondary path — manual admin bill creation)
 exports.notifyBillOnCreate = require('./notifyBillOnCreate').notifyBillOnCreate;

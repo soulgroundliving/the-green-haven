@@ -531,6 +531,158 @@ describe('marketplace — owner-only mutations', () => {
   });
 });
 
+describe('marketplace_chats — participant-only chat (Sprint 1)', () => {
+  const OWNER = 'line:U00000000000000000000000000000010';
+  const BUYER = 'line:U00000000000000000000000000000020';
+  const STRANGER = 'line:U00000000000000000000000000000099';
+
+  async function seedChat(extra = {}) {
+    await seedDoc('marketplace_chats/c1', {
+      participants: [OWNER, BUYER],
+      postId: 'post-001',
+      postTitle: 'Lamp',
+      postImageUrl: '',
+      postPrice: 150,
+      lastMessage: '',
+      lastMessageTime: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      unreadCount: { [OWNER]: 0, [BUYER]: 0 },
+      ...extra,
+    });
+  }
+
+  it('participant can read own chat', async () => {
+    await seedChat();
+    await assertSucceeds(getDoc(doc(ANON(OWNER).firestore(), 'marketplace_chats/c1')));
+    await assertSucceeds(getDoc(doc(ANON(BUYER).firestore(), 'marketplace_chats/c1')));
+  });
+
+  it('non-participant CANNOT read', async () => {
+    await seedChat();
+    await assertFails(getDoc(doc(ANON(STRANGER).firestore(), 'marketplace_chats/c1')));
+  });
+
+  it('participant CAN create chat with self in participants', async () => {
+    await assertSucceeds(addDoc(collection(ANON(BUYER).firestore(), 'marketplace_chats'), {
+      participants: [OWNER, BUYER],
+      postId: 'post-001',
+      createdAt: new Date().toISOString(),
+    }));
+  });
+
+  it('caller CANNOT create chat without including self in participants', async () => {
+    await assertFails(addDoc(collection(ANON(STRANGER).firestore(), 'marketplace_chats'), {
+      participants: [OWNER, BUYER],
+      postId: 'post-001',
+      createdAt: new Date().toISOString(),
+    }));
+  });
+
+  it('CANNOT create chat with participants.size != 2', async () => {
+    await assertFails(addDoc(collection(ANON(OWNER).firestore(), 'marketplace_chats'), {
+      participants: [OWNER],
+      postId: 'post-001',
+      createdAt: new Date().toISOString(),
+    }));
+    await assertFails(addDoc(collection(ANON(OWNER).firestore(), 'marketplace_chats'), {
+      participants: [OWNER, BUYER, STRANGER],
+      postId: 'post-001',
+      createdAt: new Date().toISOString(),
+    }));
+  });
+
+  it('participant CAN update lastMessage / unreadCount', async () => {
+    await seedChat();
+    await assertSucceeds(updateDoc(doc(ANON(BUYER).firestore(), 'marketplace_chats/c1'), {
+      lastMessage: 'hello',
+      lastMessageTime: new Date().toISOString(),
+    }));
+  });
+
+  it('participant CANNOT mutate participants array', async () => {
+    await seedChat();
+    await assertFails(updateDoc(doc(ANON(BUYER).firestore(), 'marketplace_chats/c1'), {
+      participants: [BUYER, STRANGER],
+    }));
+  });
+
+  it('tenant CANNOT delete chat (CF/admin only)', async () => {
+    await seedChat();
+    await assertFails(deleteDoc(doc(ANON(OWNER).firestore(), 'marketplace_chats/c1')));
+    await assertFails(deleteDoc(doc(ANON(BUYER).firestore(), 'marketplace_chats/c1')));
+  });
+
+  it('admin CAN delete chat', async () => {
+    await seedChat();
+    await assertSucceeds(deleteDoc(doc(EMAIL_ADMIN().firestore(), 'marketplace_chats/c1')));
+  });
+
+  it('participant CAN send a message with senderId == self', async () => {
+    await seedChat();
+    await assertSucceeds(addDoc(collection(ANON(BUYER).firestore(), 'marketplace_chats/c1/messages'), {
+      senderId: BUYER,
+      text: 'hi',
+      timestamp: new Date().toISOString(),
+      isRead: false,
+    }));
+  });
+
+  it('participant CANNOT send a message with senderId spoofed as other participant', async () => {
+    await seedChat();
+    await assertFails(addDoc(collection(ANON(BUYER).firestore(), 'marketplace_chats/c1/messages'), {
+      senderId: OWNER,
+      text: 'impersonate',
+      timestamp: new Date().toISOString(),
+      isRead: false,
+    }));
+  });
+
+  it('non-participant CANNOT send a message', async () => {
+    await seedChat();
+    await assertFails(addDoc(collection(ANON(STRANGER).firestore(), 'marketplace_chats/c1/messages'), {
+      senderId: STRANGER,
+      text: 'sneak',
+      timestamp: new Date().toISOString(),
+      isRead: false,
+    }));
+  });
+
+  it('non-participant CANNOT read messages', async () => {
+    await seedChat();
+    await seedDoc('marketplace_chats/c1/messages/m1', {
+      senderId: OWNER, text: 'hi', timestamp: new Date().toISOString(), isRead: false,
+    });
+    await assertFails(getDoc(doc(ANON(STRANGER).firestore(), 'marketplace_chats/c1/messages/m1')));
+  });
+
+  it('participant CAN mark message isRead but CANNOT edit text', async () => {
+    await seedChat();
+    await seedDoc('marketplace_chats/c1/messages/m1', {
+      senderId: OWNER, text: 'hi', timestamp: new Date().toISOString(), isRead: false,
+    });
+    await assertSucceeds(updateDoc(doc(ANON(BUYER).firestore(), 'marketplace_chats/c1/messages/m1'), { isRead: true }));
+    await assertFails(updateDoc(doc(ANON(BUYER).firestore(), 'marketplace_chats/c1/messages/m1'), { text: 'edited' }));
+  });
+
+  it('participant CANNOT send empty or oversized message', async () => {
+    await seedChat();
+    await assertFails(addDoc(collection(ANON(BUYER).firestore(), 'marketplace_chats/c1/messages'), {
+      senderId: BUYER, text: '', timestamp: new Date().toISOString(), isRead: false,
+    }));
+    await assertFails(addDoc(collection(ANON(BUYER).firestore(), 'marketplace_chats/c1/messages'), {
+      senderId: BUYER, text: 'x'.repeat(2001), timestamp: new Date().toISOString(), isRead: false,
+    }));
+  });
+
+  it('tenant CANNOT delete a message (CF only)', async () => {
+    await seedChat();
+    await seedDoc('marketplace_chats/c1/messages/m1', {
+      senderId: OWNER, text: 'hi', timestamp: new Date().toISOString(), isRead: false,
+    });
+    await assertFails(deleteDoc(doc(ANON(OWNER).firestore(), 'marketplace_chats/c1/messages/m1')));
+  });
+});
+
 describe('auth_events — failed-login audit log (Phase 4B)', () => {
   it('unauthenticated user can create an auth_event (login failed, no uid yet)', async () => {
     await assertSucceeds(addDoc(
