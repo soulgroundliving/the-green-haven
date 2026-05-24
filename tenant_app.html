@@ -4176,10 +4176,8 @@
                 data-action="goBackToMarketplace">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg); display:flex; align-items:center; gap:8px;">
+            <h1 style="margin:0; font-size: var(--fs-lg);">
                 💬 ข้อความ
-                <span id="market-chat-list-unread-pill"
-                    style="display:none; background:#dc2626; color:#fff; font-size:var(--fs-xs); font-weight:700; padding:2px 8px; border-radius:10px; line-height:1.4;">0</span>
             </h1>
         </div>
         <div id="market-chat-list-container">
@@ -4215,11 +4213,11 @@
                 </div>
             </div>
         </div>
-        <div id="market-chat-messages" style="padding:8px 12px 100px; display:flex; flex-direction:column; gap:8px; min-height:50vh;">
+        <div id="market-chat-messages" style="padding:8px 12px 80px; display:flex; flex-direction:column; gap:8px;">
             <div style="text-align:center; color:#aaa; padding:40px 20px; font-size:var(--fs-sm);">กำลังโหลด...</div>
         </div>
         <div id="market-chat-composer"
-            style="position:fixed; left:0; right:0; bottom:0; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:#fff; border-top:1px solid #eee; display:none; flex-direction:column; gap:6px; z-index:30;">
+            style="position:fixed; left:0; right:0; bottom:0; padding:6px 12px calc(2px + env(safe-area-inset-bottom)); background:#fff; border-top:1px solid #eee; display:none; flex-direction:column; gap:6px; z-index:30;">
             <!-- S3 PR 3: reply preview — shown when _activeChatReplyTarget is set -->
             <div id="market-chat-reply-preview" style="display:none; padding:6px 10px; background:#f3f4f6; border-left:3px solid var(--primary-green); border-radius:6px; align-items:center; gap:8px;">
                 <div style="flex:1; min-width:0; overflow:hidden;">
@@ -7235,17 +7233,6 @@
                     badge.style.display = '';
                 } else {
                     badge.style.display = 'none';
-                }
-            }
-            // Chat-list page header pill — visible while the user IS on the
-            // chat list, so they can see total unread without leaving the page.
-            const pill = document.getElementById('market-chat-list-unread-pill');
-            if (pill) {
-                if (total > 0) {
-                    pill.textContent = total > 99 ? '99+' : String(total);
-                    pill.style.display = '';
-                } else {
-                    pill.style.display = 'none';
                 }
             }
         }
