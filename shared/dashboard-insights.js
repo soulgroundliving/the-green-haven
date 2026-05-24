@@ -1053,8 +1053,8 @@
         ? `<div style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:.85rem;grid-column:1/-1;">ไม่มีห้องในกลุ่มนี้</div>`
         : rows.map(r => `
           <div data-action="${r.isVacant ? '' : 'showHealthDetail'}" data-key="${esc(r.building)}:${esc(r.roomId)}"
-               style="cursor:${r.isVacant ? 'default' : 'pointer'};background:${r.isVacant ? 'var(--mist,#f7f6f3)' : '#fff'};border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;opacity:${r.isVacant ? '.7' : '1'};"
-               ${r.isVacant ? '' : 'onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 2px 8px rgba(31,31,28,.08)\';" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\';"'}>
+               class="health-tile${r.isVacant ? '' : ' health-tile--interactive'}"
+               style="cursor:${r.isVacant ? 'default' : 'pointer'};background:${r.isVacant ? 'var(--mist,#f7f6f3)' : '#fff'};border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;opacity:${r.isVacant ? '.7' : '1'};">
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.2rem;">
               <span style="font-weight:700;font-size:.92rem;">${esc(r.roomName || r.roomId)} <span style="color:var(--text-muted);font-size:.7rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
               ${r.isVacant
