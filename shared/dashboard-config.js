@@ -1157,6 +1157,7 @@ async function saveReward() {
       await fs.setDoc(fs.doc(db, 'rewards', newId), { ...data, createdAt: now });
     }
     closeRewardEdit();
+    showToast(id ? '✅ บันทึกแล้ว' : '✅ เพิ่มของรางวัลแล้ว', 'success');
   } catch (e) {
     window.ghAlert('บันทึกไม่สำเร็จ: ' + e.message, { title: 'ขัดข้อง' });
   }
