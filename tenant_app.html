@@ -4097,7 +4097,7 @@
                 data-action="goBackToMarketplace">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">ลงประกาศ 📢</h1>
+            <h1 id="add-market-page-title" style="margin:0; font-size: var(--fs-lg);">ลงประกาศ 📢</h1>
         </div>
 
         <div class="card">
@@ -5266,7 +5266,14 @@
 
         // ฟังก์ชันปุ่มย้อนกลับ
         function goBackToProfile() { showPage('profile'); updateNavActiveIndex(4); }
-        function goBackToMarketplace() { showPage('marketplace'); updateNavActiveIndex(2); }
+        function goBackToMarketplace() {
+            // Clear edit-mode state so next visit to add-market-page starts fresh.
+            // Safe no-op when not currently editing. _resetMarketFormToCreateMode
+            // restores labels/buttons and nulls _marketEditingId.
+            if (typeof _resetMarketFormToCreateMode === 'function') _resetMarketFormToCreateMode();
+            showPage('marketplace');
+            updateNavActiveIndex(2);
+        }
         function goBackToUsage() { showPage('usage'); updateNavActiveIndex(3); }
         function goBackToService() { showPage('services'); updateNavActiveIndex(1); }
         function goBackToHome() { showPage('home'); }
@@ -6501,7 +6508,11 @@
         // Reader-tolerant transition per CLAUDE.md §7-T: subscribe queries both old + new;
         // _normalizeMarketStatus() collapses to canonical enum for all UI logic. Backfill via
         // tools/migrate-marketplace-status.js (dry-run default per §7-I).
-        const MARKET_STATUS_VISIBLE = ['AVAILABLE', 'RESERVED', 'active'];
+        // Subscribe pulls active AND closed posts. Public feed filters COMPLETED out
+        // (renderMarketFeed below), but "ประกาศของฉัน" needs closed entries so the
+        // owner can re-open or edit them (2026-05-25). Composite index unchanged
+        // because Firestore `in` query just widens accepted values.
+        const MARKET_STATUS_VISIBLE = ['AVAILABLE', 'RESERVED', 'COMPLETED', 'active', 'closed'];
         function _normalizeMarketStatus(s) {
             if (s === 'active') return 'AVAILABLE';
             if (s === 'closed') return 'COMPLETED';
@@ -6533,6 +6544,10 @@
         let _marketItems = [];
         let _marketFilter = 'all';
         let _marketImageData = null;
+        // Set by editMarketItem(); cleared by saveNewMarketItem() success path,
+        // _resetMarketForm(), and goBackToMarketplace(). When truthy, form-submit
+        // takes the setDoc(merge:true) branch instead of addDoc.
+        let _marketEditingId = null;
 
         function _marketSeenKey() {
             return 'gh_market_seen_at_' + (_taBuilding || '') + '_' + (_taRoom || '');
@@ -6578,15 +6593,18 @@
             // OR boolean-flag pills ('skyhook' → skyHookReady===true, 'pet' → isPetCategory===true).
             // Single-select per spec §4.2/§4.4 — selecting a flag pill replaces the category
             // filter. Future could add multi-dimensional (category × flag); not in MVP.
+            // Closed posts come into _marketItems so owners can re-open / edit them
+            // in "ประกาศของฉัน" — but the public feed below must NOT show them.
+            const publicItems = _marketItems.filter(i => _normalizeMarketStatus(i.status) !== 'COMPLETED');
             let filtered;
             if (_marketFilter === 'all') {
-                filtered = _marketItems;
+                filtered = publicItems;
             } else if (_marketFilter === 'skyhook') {
-                filtered = _marketItems.filter(i => i.skyHookReady === true);
+                filtered = publicItems.filter(i => i.skyHookReady === true);
             } else if (_marketFilter === 'pet') {
-                filtered = _marketItems.filter(i => i.isPetCategory === true);
+                filtered = publicItems.filter(i => i.isPetCategory === true);
             } else {
-                filtered = _marketItems.filter(i => i.category === _marketFilter);
+                filtered = publicItems.filter(i => i.category === _marketFilter);
             }
 
             container.textContent = '';
@@ -6707,13 +6725,24 @@
                 info.appendChild(statusBadge);
                 const btns = document.createElement('div');
                 btns.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
-                if (_normStatus !== 'COMPLETED') {
+                if (_normStatus === 'COMPLETED') {
+                    const reopenBtn = document.createElement('button');
+                    reopenBtn.style.cssText = 'padding:4px 10px;background:#dcfce7;color:#166534;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
+                    reopenBtn.textContent = 'เปิดใหม่';
+                    reopenBtn.onclick = () => _reopenMarketItem(item.id);
+                    btns.appendChild(reopenBtn);
+                } else {
                     const closeBtn = document.createElement('button');
                     closeBtn.style.cssText = 'padding:4px 10px;background:#fef9c3;color:#92400e;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
                     closeBtn.textContent = 'ปิด';
                     closeBtn.onclick = () => markMarketClosed(item.id);
                     btns.appendChild(closeBtn);
                 }
+                const editBtn = document.createElement('button');
+                editBtn.style.cssText = 'padding:4px 10px;background:#e0f2fe;color:#075985;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
+                editBtn.textContent = 'แก้ไข';
+                editBtn.onclick = () => editMarketItem(item);
+                btns.appendChild(editBtn);
                 const delBtn = document.createElement('button');
                 delBtn.style.cssText = 'padding:4px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
                 delBtn.textContent = 'ลบ';
@@ -6808,10 +6837,16 @@
             const actions = [];
             if (isOwn) {
                 // Owner: destructive actions (matches firestore.rules:77 — only owner/admin can update/delete)
+                const _detailNormStatus = _normalizeMarketStatus(item.status);
                 actions.push(
                     { label: '🗑️ ลบประกาศ', variant: 'danger', onClick: m => { m.close(); deleteMarketItem(item.id); } },
-                    { label: '✅ ปิดประกาศ', variant: 'ghost',  onClick: m => { m.close(); markMarketClosed(item.id); } }
+                    { label: '✏️ แก้ไขประกาศ', variant: 'ghost', onClick: m => { m.close(); editMarketItem(item); } }
                 );
+                if (_detailNormStatus === 'COMPLETED') {
+                    actions.push({ label: '🔄 เปิดประกาศอีกครั้ง', variant: 'primary', onClick: m => { m.close(); _reopenMarketItem(item.id); } });
+                } else {
+                    actions.push({ label: '✅ ปิดประกาศ', variant: 'ghost',  onClick: m => { m.close(); markMarketClosed(item.id); } });
+                }
             } else {
                 actions.push({ label: actionLabel, variant: 'primary', onClick: m => { m.close(); contactSeller(item); } });
             }
@@ -6900,6 +6935,85 @@
             }
         }
 
+        // Re-open a previously closed post. Old chats stay deleted —
+        // cleanupMarketplaceChat ran at close-time and that is irreversible by
+        // design. The listing itself reappears in the public feed with a fresh
+        // 30-day expiresAt window (matches addDoc default).
+        async function _reopenMarketItem(id) {
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                const now = new Date();
+                await fs.setDoc(fs.doc(db, 'marketplace', id), {
+                    status: 'AVAILABLE',
+                    expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                }, { merge: true });
+                toast('เปิดประกาศอีกครั้งแล้วครับ 🎉', 'success');
+            } catch(e) {
+                console.warn('_reopenMarketItem:', e);
+                toast('เปิดประกาศไม่สำเร็จ ลองใหม่ครับ', 'error');
+            }
+        }
+
+        // Open the add-market form pre-populated from an existing item; submit
+        // path takes the setDoc(merge:true) branch via _marketEditingId flag.
+        // Image is intentionally NOT editable in MVP (would need Storage swap +
+        // old-file cleanup); existing imageUrl/imageData stays as-is on save.
+        // Chat frozen-snapshot fields (postTitle/postPrice/postImageUrl) do NOT
+        // auto-refresh — that's by design per lifecycle_marketplace_chat.md.
+        function editMarketItem(item) {
+            if (!item) return;
+            _marketEditingId = item.id;
+            // Pre-populate fields
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+            set('market-title', item.title);
+            set('market-price', item.category === 'free' ? '' : (item.price ?? ''));
+            set('market-desc', item.desc);
+            document.querySelectorAll('input[name="mcat"]').forEach(r => { r.checked = r.value === (item.category || 'item'); });
+            const showRoomEl = document.getElementById('market-show-room');
+            if (showRoomEl) showRoomEl.checked = item.showRoom === true;
+            const skyEl = document.getElementById('market-skyhook');
+            if (skyEl) skyEl.checked = item.skyHookReady === true;
+            const petEl = document.getElementById('market-pet');
+            if (petEl) petEl.checked = item.isPetCategory === true;
+            _onMarketCatChange();
+            // Swap page title + submit button labels
+            const titleEl = document.getElementById('add-market-page-title');
+            if (titleEl) titleEl.textContent = 'แก้ไขประกาศ ✏️';
+            const submitBtn = document.getElementById('market-submit-btn');
+            if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-save"></i> บันทึกการแก้ไข';
+            // Image stays as-is in MVP — clear the preview to make that visually
+            // obvious (user knows the form starts from a clean slate for image).
+            // The actual image on the post is not touched on save.
+            _marketImageData = null;
+            const prev = document.getElementById('market-image-preview');
+            const ph   = document.getElementById('market-image-placeholder');
+            if (prev) { prev.style.display = 'none'; prev.src = ''; }
+            if (ph) { ph.style.display = ''; ph.querySelector('div')?.replaceChildren(); }
+            // Navigate to the form
+            if (typeof showSubPage === 'function') showSubPage('add-market-page');
+            else if (typeof showPage === 'function') showPage('add-market-page');
+        }
+
+        // Restore add-mode labels and clear edit state. Called by
+        // goBackToMarketplace (cancel) AND saveNewMarketItem success (after
+        // both create and edit paths) so the next visit starts clean.
+        function _resetMarketFormToCreateMode() {
+            _marketEditingId = null;
+            const titleEl = document.getElementById('add-market-page-title');
+            if (titleEl) titleEl.textContent = 'ลงประกาศ 📢';
+            const submitBtn = document.getElementById('market-submit-btn');
+            if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> โพสต์ลงตลาดนัด';
+            const ph = document.getElementById('market-image-placeholder');
+            if (ph && !ph.querySelector('i')) {
+                // Restore placeholder content if we cleared it on entry to edit-mode
+                ph.innerHTML = '<i class="fas fa-camera" style="color:var(--primary-green); font-size:var(--fs-lg); display:block; margin-bottom:8px;"></i>'
+                    + '<div style="font-size:var(--fs-md); font-weight:600; color:var(--text-dark);">เพิ่มรูปภาพ</div>'
+                    + '<div style="font-size:var(--fs-sm); color:#888; margin-top:4px;">กดเพื่อเลือกรูปจากคลัง</div>';
+            }
+        }
+
         async function deleteMarketItem(id) {
             if (!confirm('ลบประกาศนี้ถาวรเลยไหมครับ? ไม่สามารถกู้คืนได้')) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
@@ -6964,45 +7078,60 @@
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions || !window._authUid) { toast('ระบบยังไม่พร้อม ลองใหม่ครับ', 'error'); return; }
 
             const btn = document.getElementById('market-submit-btn');
-            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ กำลังโพสต์...'; }
+            const isEdit = !!_marketEditingId;
+            if (btn) { btn.disabled = true; btn.innerHTML = isEdit ? '⏳ กำลังบันทึก...' : '⏳ กำลังโพสต์...'; }
 
             try {
                 const db  = window.firebase.firestore();
                 const fs  = window.firebase.firestoreFunctions;
                 const now = new Date();
-                // Step 1: addDoc with empty image fields — need postId for Storage path
-                const docRef = await fs.addDoc(fs.collection(db, 'marketplace'), {
-                    title, category: cat, price,
-                    desc, showRoom,
-                    room: showRoom ? String(_taRoom || '') : '',
-                    building: _taBuilding || '',
-                    tenantId: _taTenant?.tenantId || '',
-                    imageData: '',
-                    imageUrl: '',
-                    status: 'AVAILABLE',
-                    skyHookReady,    // Sprint 3 — boolean tag (no rules change; existing owner-write covers it)
-                    isPetCategory,   // Sprint 4 — boolean tag (foundation for Sprint 6 Pet Whisperer badge)
-                    lineUserId: window._lineUserId || '',
-                    lineDisplayName: window._lineProfile?.displayName || '',
-                    ownerUid: window._authUid,
-                    createdAt: now.toISOString(),
-                    expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
-                });
-                // Step 2: if image attached, upload to Storage then setDoc merge imageUrl.
-                // Failure here leaves post with no image (acceptable — reader handles
-                // missing-image fallback). Storage rule firestore.get checks ownerUid
-                // on the existing doc, so order matters: addDoc MUST come first.
-                if (_marketImageData) {
-                    try {
-                        const blob = _marketDataUrlToBlob(_marketImageData);
-                        const url  = await _uploadMarketImage(docRef.id, blob);
-                        await fs.setDoc(docRef, { imageUrl: url }, { merge: true });
-                    } catch (upErr) {
-                        console.warn('marketplace image upload failed (post saved without image):', upErr?.message || upErr);
+                if (isEdit) {
+                    // Edit mode: setDoc(merge:true) on the existing doc. Only fields the
+                    // user can actually change in the form are written. ownerUid, createdAt,
+                    // expiresAt, status, image* are intentionally NOT touched. Rule
+                    // firestore.rules:77 enforces owner/admin gate server-side.
+                    await fs.setDoc(fs.doc(db, 'marketplace', _marketEditingId), {
+                        title, category: cat, price,
+                        desc, showRoom,
+                        room: showRoom ? String(_taRoom || '') : '',
+                        skyHookReady, isPetCategory
+                    }, { merge: true });
+                    toast('แก้ไขประกาศแล้วครับ ✨', 'success');
+                } else {
+                    // Step 1: addDoc with empty image fields — need postId for Storage path
+                    const docRef = await fs.addDoc(fs.collection(db, 'marketplace'), {
+                        title, category: cat, price,
+                        desc, showRoom,
+                        room: showRoom ? String(_taRoom || '') : '',
+                        building: _taBuilding || '',
+                        tenantId: _taTenant?.tenantId || '',
+                        imageData: '',
+                        imageUrl: '',
+                        status: 'AVAILABLE',
+                        skyHookReady,    // Sprint 3 — boolean tag (no rules change; existing owner-write covers it)
+                        isPetCategory,   // Sprint 4 — boolean tag (foundation for Sprint 6 Pet Whisperer badge)
+                        lineUserId: window._lineUserId || '',
+                        lineDisplayName: window._lineProfile?.displayName || '',
+                        ownerUid: window._authUid,
+                        createdAt: now.toISOString(),
+                        expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                    });
+                    // Step 2: if image attached, upload to Storage then setDoc merge imageUrl.
+                    // Failure here leaves post with no image (acceptable — reader handles
+                    // missing-image fallback). Storage rule firestore.get checks ownerUid
+                    // on the existing doc, so order matters: addDoc MUST come first.
+                    if (_marketImageData) {
+                        try {
+                            const blob = _marketDataUrlToBlob(_marketImageData);
+                            const url  = await _uploadMarketImage(docRef.id, blob);
+                            await fs.setDoc(docRef, { imageUrl: url }, { merge: true });
+                        } catch (upErr) {
+                            console.warn('marketplace image upload failed (post saved without image):', upErr?.message || upErr);
+                        }
                     }
+                    toast('ลงประกาศแล้วครับ! 🎉', 'success');
                 }
-                toast('ลงประกาศแล้วครับ! 🎉', 'success');
-                // reset form
+                // reset form (shared between create + edit)
                 ['market-title','market-price','market-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
                 _marketImageData = null;
                 const prev = document.getElementById('market-image-preview');
@@ -7012,12 +7141,18 @@
                 document.querySelectorAll('input[name="mcat"]').forEach(r => { r.checked = r.value === 'item'; });
                 ['market-skyhook','market-pet'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
                 _onMarketCatChange();
+                _resetMarketFormToCreateMode();
                 goBackToMarketplace();
             } catch(e) {
                 console.warn('saveNewMarketItem:', e);
-                toast('โพสต์ไม่สำเร็จ ลองใหม่ครับ', 'error');
+                toast(isEdit ? 'แก้ไขไม่สำเร็จ ลองใหม่ครับ' : 'โพสต์ไม่สำเร็จ ลองใหม่ครับ', 'error');
             } finally {
-                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> โพสต์ลงตลาดนัด'; }
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = isEdit
+                        ? '<i class="fas fa-save"></i> บันทึกการแก้ไข'
+                        : '<i class="fas fa-paper-plane"></i> โพสต์ลงตลาดนัด';
+                }
             }
         }
 
