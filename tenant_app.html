@@ -1644,6 +1644,15 @@
         #world-map-page .app-bar {
             padding: 28px 20px 20px !important;
         }
+        /* S3 PR 4 — marketplace chat headers stay pinned while scrolling.
+           Sticky needs a solid background (.app-bar already has var(--white))
+           and a z-index above message bubbles + swipe-revealed delete panels. */
+        #market-chat-list-page .app-bar,
+        #market-chat-page .app-bar {
+            position: sticky !important;
+            top: 0;
+            z-index: 50;
+        }
 
         /* Breathing room: vertical rhythm 16px ระหว่างทุก block-level section ในหน้า
            ใช้ !important ชนะ .card { margin: 0 16px 16px !important } ของ unified layer */
