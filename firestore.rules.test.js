@@ -599,6 +599,22 @@ describe('marketplace_chats — participant-only chat (Sprint 1)', () => {
     }));
   });
 
+  // S3 PR 2 — read-receipt write
+  it('participant CAN stamp lastReadAt for self', async () => {
+    await seedChat();
+    await assertSucceeds(updateDoc(doc(ANON(BUYER).firestore(), 'marketplace_chats/c1'), {
+      [`lastReadAt.${BUYER}`]: new Date().toISOString(),
+      [`unreadCount.${BUYER}`]: 0,
+    }));
+  });
+
+  it('non-participant CANNOT write lastReadAt', async () => {
+    await seedChat();
+    await assertFails(updateDoc(doc(ANON(STRANGER).firestore(), 'marketplace_chats/c1'), {
+      [`lastReadAt.${STRANGER}`]: new Date().toISOString(),
+    }));
+  });
+
   it('participant CANNOT mutate participants array', async () => {
     await seedChat();
     await assertFails(updateDoc(doc(ANON(BUYER).firestore(), 'marketplace_chats/c1'), {
