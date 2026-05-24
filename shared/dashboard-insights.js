@@ -699,6 +699,15 @@
     const r = window._insightsCache?.healthRecords?.[key];
     if (!r) { openModal('Health Detail', emptyHTML('ไม่พบข้อมูลห้องนี้')); return; }
     const sub = (label, value, max, color) => {
+      if (value == null) {
+        return `<div style="margin-bottom:.6rem;">
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.2rem;">
+            <span>${label}</span>
+            <span style="color:var(--text-muted);font-style:italic;">— ไม่มีข้อมูล</span>
+          </div>
+          <div style="height:8px;background:var(--mist,#f2f1ec);border-radius:4px;overflow:hidden;opacity:.35;"></div>
+        </div>`;
+      }
       const pct = max ? Math.round(value / max * 100) : 0;
       return `<div style="margin-bottom:.6rem;">
         <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.2rem;">
@@ -755,9 +764,9 @@
   // Compute composite 0-100 health score for a single tenant
   // Inputs: paymentDelta (avg days from due, null if no history), gamification, complaintCount90d, monthsTenure
   function computeHealthScore({ paymentDelta, streak, complaintCount90d, monthsTenure }) {
-    // Payment sub-score (25 pts max)
+    // Payment sub-score (25 pts max) — null = no paid bills yet; excluded from total
     let payment;
-    if (paymentDelta == null) payment = 15;       // neutral when no data
+    if (paymentDelta == null) payment = null;
     else if (paymentDelta < -2) payment = 25;
     else if (paymentDelta <= 2) payment = 20;
     else if (paymentDelta <= 7) payment = 12;
@@ -786,7 +795,13 @@
     else if (monthsTenure <= 12) tenure = 20;
     else tenure = 25;
 
-    const total = payment + engagement + issues + tenure;
+    // Total scaled to /100 over only the sub-scores we have data for —
+    // a new tenant with no paid bills scores from 3 sub-scores × 25 = 75 max,
+    // re-scaled to /100 so tier thresholds (80/60/40) still apply uniformly.
+    const subs = [payment, engagement, issues, tenure].filter(s => s != null);
+    const sum = subs.reduce((a, b) => a + b, 0);
+    const max = subs.length * 25;
+    const total = max > 0 ? Math.round(sum / max * 100) : 0;
     return { total, payment, engagement, issues, tenure };
   }
 

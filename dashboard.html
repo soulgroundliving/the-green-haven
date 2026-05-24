@@ -88,7 +88,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getDatabase, ref, set, get, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
   import { getAuth, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-  import { getFirestore, collection, collectionGroup, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+  import { getFirestore, collection, collectionGroup, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, updateDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
   import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
   import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
   // Phase 4D App Check disabled 2026-04-25 — see next_session_handoff.md
@@ -154,6 +154,7 @@
           orderBy: orderBy,
           limit: limit,
           deleteDoc: deleteDoc,
+          updateDoc: updateDoc,
           onSnapshot: onSnapshot,
           addDoc: addDoc,
           serverTimestamp: serverTimestamp
@@ -2348,6 +2349,7 @@
   /* ── Drop zones (background:var(--accent-light) doesn't flip) ── */
   html[data-theme="dark"] .import-drop-zone { background: rgba(45,134,83,.10) !important; border-color: var(--stone) !important; }
   html[data-theme="dark"] #importMonthSelect { background: var(--surface-card); color: var(--ink); }
+  .import-drop-zone.dragging { background: var(--border); }
 
   /* ── Rich-text policy editor (CSS injected by rich-text-policy.js) ── */
   html[data-theme="dark"] .rt-wrap { background: var(--surface-card) !important; color: var(--ink) !important; border-color: var(--stone) !important; }
@@ -3843,9 +3845,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📤 อัพโหลดไฟล์ Excel:</label>
         <div class="import-drop-zone" id="importDropZone"
              style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
-             ondragover="event.preventDefault();this.style.background='var(--border)';"
-             ondragleave="this.style.background='var(--accent-light)';"
-             ondrop="handleImportDrop(event);">
+             data-drop-handler="handleImportDrop">
           <div style="font-size:2rem;margin-bottom:0.5rem;">📊</div>
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์มาวางที่นี่ หรือคลิก</div>
           <div class="text-xs-muted">ไฟล์ Excel (.xlsx, .xls)</div>
@@ -3990,9 +3990,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📤 อัพโหลดไฟล์บิล Excel:</label>
         <div class="import-drop-zone" id="billingDropZone"
              style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
-             ondragover="event.preventDefault();this.style.background='var(--border)';"
-             ondragleave="this.style.background='var(--accent-light)';"
-             ondrop="handleBillingImportDrop(event);"
+             data-drop-handler="handleBillingImportDrop"
              data-action="clickInput" data-target="billingFileInput">
           <div style="font-size:2rem;margin-bottom:0.5rem;">💳</div>
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์บิล Excel มาวางที่นี่ หรือคลิก</div>
@@ -4580,9 +4578,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <div style="font-size:.83rem;font-weight:700;color:var(--accent-dark);margin-bottom:.7rem;">📲 ขั้นตอน 2 — ตรวจสลิปโอนเงิน</div>
             <div class="slip-drop-area" id="slipDropArea"
                  data-action="clickInput" data-target="slipFileInput"
-                 ondragover="event.preventDefault();this.classList.add('dragging')"
-                 ondragleave="this.classList.remove('dragging')"
-                 ondrop="handleSlipDrop(event)">
+                 data-drop-handler="handleSlipDrop">
               <input type="file" id="slipFileInput" accept="image/*" style="display:none" data-action="verifySlipFromInput">
               <div id="slipDropText" style="font-size:.86rem;color:var(--text-muted);line-height:1.8;">
                 🖼️ แตะเพื่ออัปโหลดสลิป หรือลากมาวางที่นี่<br>
@@ -5490,7 +5486,15 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-checklist-admin.js"></script>
 <script src="./shared/dashboard-pdpa-erasure.js"></script>
 
-<!-- html2canvas: lazy-loaded on first PNG export from checklist viewer (~150KB) -->
+<!-- html2canvas: lazy-loaded on first PNG export from checklist viewer (~150KB).
+     KNOWN: html2canvas injects a runtime <style> element during render, which
+     triggers a `style-src-elem` CSP warning in console. PNG export still
+     succeeds because inherited document styles paint the canvas; only the
+     library's last-mile inline-style fixups are dropped. Do NOT add
+     'unsafe-inline' to style-src-elem to "fix" the warning — that weakens
+     CSP across the entire surface. Long-term fix: swap to a CSP-friendly
+     library (dom-to-image-more / modern-screenshot) or render server-side.
+     Same wrapper exists in tenant_app.html for tenant receipt exports. -->
 <script>
   window.ensureHtml2Canvas = (function () {
     let pending = null;
