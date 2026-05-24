@@ -2,39 +2,57 @@
  * notifyMarketplaceChat — LINE push to the counterparty when a new chat
  * message lands in marketplace_chats/{chatId}/messages.
  *
- * Trigger: Firestore onCreate on `marketplace_chats/{chatId}/messages/{messageId}`.
+ * Why HTTPS callable (not Firestore trigger):
+ *   Firestore lives in asia-southeast3 (Jakarta). Eventarc — the trigger
+ *   backbone for both Gen1 and Gen2 Firestore triggers — does NOT support
+ *   asia-southeast3 (see cleanupMarketplaceChat.js + notifyTenantOnMeterUpload.js
+ *   for the full context). The project pattern is HTTPS callable invoked
+ *   from client after the Firestore write — same shape as notifyTenantOnMeterUpload.
  *
- * Why: without this, the privacy-first chat from Sprint 1 (which replaced
- * the line.me/ti/p personal-LINE link) is silent — recipients never know a
- * new message arrived unless their LIFF tab is open. Per
- * Nest_Marketplace_Specification.pdf v1.0 §3.3, the spec calls this CF out
- * as required for chat usefulness.
+ * Why it exists:
+ *   Without this, the privacy-first chat from Sprint 1 (which replaced the
+ *   line.me/ti/p personal-LINE link) is silent — recipients never know a
+ *   new message arrived unless their LIFF tab is open. Per
+ *   Nest_Marketplace_Specification.pdf v1.0 §3.3 this CF is required for
+ *   chat usefulness.
+ *
+ * Auth: signed-in user; caller must be:
+ *   - a participant of the parent chat doc, AND
+ *   - the senderId of the message they're notifying about (can't trigger
+ *     pushes for a counterparty's messages)
+ *
+ * Call signature:
+ *   Client → httpsCallable('notifyMarketplaceChat')({ chatId, messageId })
+ *
+ * Invocation point (tenant_app.html):
+ *   - sendChatMessage() — fire-and-forget after addDoc(messages) + setDoc(parent)
  *
  * Flow:
- *   1. Read parent chat doc → get participants, postTitle, postImageUrl
- *   2. Recipient = the participant who is NOT senderId
- *   3. Convert recipientUid `line:<userId>` → lineUserId (strip 'line:')
- *   4. Anti-spam throttle (§S2.2): skip if last-notify to this recipient on
- *      this chat was less than NOTIFY_THROTTLE_MS ago
- *   5. Resolve sender displayName from liffUsers/{senderLineUserId}
- *   6. Build flex bubble with post context + sender + preview + deep-link
- *      button → LIFF ?chat=<chatId> (client handles via §7-GG localStorage)
- *   7. Push via LINE Messaging API push
+ *   1. Auth + participant + senderId check
+ *   2. Recipient = participants.find(p => p !== senderUid); skip if uid
+ *      doesn't start with `line:` (legacy / prospect uids cannot receive
+ *      LINE pushes)
+ *   3. Anti-spam throttle (§S2.2): skip if last-notify to this recipient
+ *      on this chat was within NOTIFY_THROTTLE_MS (30s)
+ *   4. Resolve sender displayName from liffUsers/{senderLineUserId}
+ *   5. Build flex bubble with post context + sender + preview + deep-link
+ *      to LIFF ?chat=<chatId> (client handles via §7-GG localStorage)
+ *   6. Push via LINE Messaging API
  *      - 4xx (blocked OA, invalid user) → log permanent, no retry
  *      - 5xx / network → enqueueLineRetry with idempotencyKey messageId
- *   8. On success: update chat doc lastNotifyAt.{recipientUid} = now
- *
- * §7-AA: grep'd functions/ for existing notify CFs — modeled on
- * notifyMaintenanceTenant.js (region, runWith, fetch pattern, retry hook).
+ *   7. On success: update chat doc lastNotifyAt.{recipientUid} = now
  *
  * Deploy: firebase deploy --only functions:notifyMarketplaceChat
  *
  * Sprint 2 — LINE OA Notification Broker (Nest Marketplace Spec v1.0 §3.3).
  */
-const functions = require('firebase-functions/v1');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();
+
+const LINE_TOKEN = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
 
 // LINE Login Channel — must match LIFF_ID used by tenant_app LIFF entry.
 // Source of truth: functions/_billFlex.js L25 + functions/liffSignIn.js L29.
@@ -110,56 +128,64 @@ function buildMessage({ chatId, postTitle, senderName, text }) {
   };
 }
 
-exports._buildMessage = buildMessage;          // for tests
-exports._stripLinePrefix = stripLinePrefix;    // for tests
+exports._buildMessage = buildMessage;
+exports._stripLinePrefix = stripLinePrefix;
 exports._NOTIFY_THROTTLE_MS = NOTIFY_THROTTLE_MS;
 
-exports.notifyMarketplaceChat = functions
-  .region('asia-southeast1')
-  .runWith({ secrets: ['LINE_CHANNEL_ACCESS_TOKEN'] })
-  .firestore.document('marketplace_chats/{chatId}/messages/{messageId}')
-  .onCreate(async (snap, context) => {
-    const message = snap.data() || {};
-    const chatId = context.params.chatId;
-    const messageId = context.params.messageId;
-
-    const senderUid = message.senderId;
-    const text = message.text;
-    if (!senderUid || !text) {
-      console.log(`[notifyMarketplaceChat] skip — missing senderId/text on ${chatId}/${messageId}`);
-      return null;
+exports.notifyMarketplaceChat = onCall(
+  { region: 'asia-southeast1', secrets: [LINE_TOKEN] },
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError('unauthenticated', 'Sign-in required');
     }
-
-    const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-    if (!token) {
-      console.warn('[notifyMarketplaceChat] LINE_CHANNEL_ACCESS_TOKEN not set — skip');
-      return null;
+    const { chatId, messageId } = request.data || {};
+    if (!chatId || !messageId) {
+      throw new HttpsError('invalid-argument', 'chatId + messageId required');
     }
 
     const firestore = admin.firestore();
+    const senderUid = request.auth.uid;
+
+    // Load + authorize against the parent chat doc.
     const chatRef = firestore.collection('marketplace_chats').doc(chatId);
     const chatSnap = await chatRef.get();
     if (!chatSnap.exists) {
-      console.warn(`[notifyMarketplaceChat] chat ${chatId} not found — skip`);
-      return null;
+      throw new HttpsError('not-found', 'Chat not found');
     }
     const chat = chatSnap.data() || {};
     const participants = Array.isArray(chat.participants) ? chat.participants : [];
+    if (!participants.includes(senderUid)) {
+      throw new HttpsError('permission-denied', 'Not a participant');
+    }
     if (participants.length !== 2) {
-      console.warn(`[notifyMarketplaceChat] chat ${chatId} has unexpected participants:`, participants);
-      return null;
+      throw new HttpsError('failed-precondition', 'Chat has unexpected participants count');
+    }
+
+    // Verify the message exists AND was sent by the caller (can't trigger
+    // pushes attributed to the counterparty).
+    const msgRef = chatRef.collection('messages').doc(messageId);
+    const msgSnap = await msgRef.get();
+    if (!msgSnap.exists) {
+      throw new HttpsError('not-found', 'Message not found');
+    }
+    const message = msgSnap.data() || {};
+    if (message.senderId !== senderUid) {
+      throw new HttpsError('permission-denied', 'Can only notify for own messages');
+    }
+    const text = message.text;
+    if (!text) return { sent: 0, skip: 'no_text' };
+
+    const token = LINE_TOKEN.value();
+    if (!token) {
+      console.warn('[notifyMarketplaceChat] LINE_CHANNEL_ACCESS_TOKEN not set — skip');
+      return { sent: 0, skip: 'no_token' };
     }
 
     const recipientUid = participants.find(p => p !== senderUid);
-    if (!recipientUid || recipientUid === senderUid) {
-      console.log(`[notifyMarketplaceChat] no counterparty on ${chatId} — skip`);
-      return null;
-    }
+    if (!recipientUid) return { sent: 0, skip: 'no_counterparty' };
     const recipientLineUserId = stripLinePrefix(recipientUid);
     if (!recipientLineUserId) {
-      // Pre-LIFF or non-LINE participant uids cannot receive LINE pushes.
-      console.log(`[notifyMarketplaceChat] recipient ${recipientUid} is not line:* — skip`);
-      return null;
+      return { sent: 0, skip: 'non_line_recipient' };
     }
 
     // Anti-spam throttle — per (chat, recipient).
@@ -170,8 +196,7 @@ exports.notifyMarketplaceChat = functions
     if (lastIso) {
       const lastMs = Date.parse(lastIso);
       if (!isNaN(lastMs) && Date.now() - lastMs < NOTIFY_THROTTLE_MS) {
-        console.log(`[notifyMarketplaceChat] throttled — last push to ${recipientUid} on ${chatId} was ${Date.now() - lastMs}ms ago`);
-        return null;
+        return { sent: 0, skip: 'throttled', ageMs: Date.now() - lastMs };
       }
     }
 
@@ -227,7 +252,6 @@ exports.notifyMarketplaceChat = functions
           lastNotifyAt: { [recipientUid]: new Date().toISOString() },
         }, { merge: true });
       } catch (e) {
-        // Non-fatal — push succeeded, throttle just won't apply for the next round.
         console.warn(`[notifyMarketplaceChat] lastNotifyAt update failed:`, e.message);
       }
       console.log(`[notifyMarketplaceChat] pushed to ${recipientLineUserId} for ${chatId}/${messageId}`);
@@ -251,4 +275,5 @@ exports.notifyMarketplaceChat = functions
     });
     console.warn(`[notifyMarketplaceChat] transient failure ${pushStatus} for ${recipientLineUserId} — enqueued retry`);
     return { sent: 0, retryEnqueued: true };
-  });
+  }
+);

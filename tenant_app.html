@@ -6818,6 +6818,22 @@
         }
         window.contactSeller = contactSeller;
 
+        // Sprint 1 — invoke cleanupMarketplaceChat callable (replaces the
+        // previously-attempted Firestore trigger which can't fire from SE3-
+        // hosted Firestore). Non-blocking on failure: chats persist until
+        // admin manual cleanup, but the user-facing close/delete still goes
+        // through. See lifecycle_marketplace_chat.md for the region-split
+        // rationale (region_split_southeast1_3.md).
+        async function _invokeCleanupMarketplaceChat(postId) {
+            if (!window.firebase?.functions?.httpsCallable) return;
+            try {
+                const fn = window.firebase.functions.httpsCallable('cleanupMarketplaceChat');
+                await fn({ postId });
+            } catch (e) {
+                console.warn('cleanupMarketplaceChat invoke failed:', e?.message || e);
+            }
+        }
+
         async function markMarketClosed(id) {
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
             try {
@@ -6825,6 +6841,8 @@
                 const fs = window.firebase.firestoreFunctions;
                 await fs.setDoc(fs.doc(db, 'marketplace', id), { status: 'COMPLETED' }, { merge: true });
                 toast('ปิดประกาศแล้วครับ', 'success');
+                // Post still exists (status=COMPLETED) → ownerUid check passes server-side.
+                _invokeCleanupMarketplaceChat(id);
             } catch(e) {
                 console.warn('markMarketClosed:', e);
                 toast('เกิดข้อผิดพลาด ลองใหม่ครับ', 'error');
@@ -6835,6 +6853,10 @@
             if (!confirm('ลบประกาศนี้ถาวรเลยไหมครับ? ไม่สามารถกู้คืนได้')) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
             try {
+                // Clean chats FIRST while post still exists — auth requires
+                // post.ownerUid to match caller. After delete, only admin
+                // could clean orphan chats (deliberate guard).
+                await _invokeCleanupMarketplaceChat(id);
                 const db = window.firebase.firestore();
                 const fs = window.firebase.firestoreFunctions;
                 await fs.deleteDoc(fs.doc(db, 'marketplace', id));
@@ -7255,7 +7277,7 @@
                 const now = new Date().toISOString();
                 const counterpart = (window._activeChat?.participants || [])
                     .find(p => p !== window._authUid);
-                await fs.addDoc(
+                const msgRef = await fs.addDoc(
                     fs.collection(db, 'marketplace_chats', chatId, 'messages'),
                     { senderId: window._authUid, text, timestamp: now, isRead: false }
                 );
@@ -7264,6 +7286,23 @@
                     patch[`unreadCount.${counterpart}`] = fs.increment(1);
                 }
                 await fs.setDoc(fs.doc(db, 'marketplace_chats', chatId), patch, { merge: true });
+                // Sprint 2 — fire LINE notification callable (replaces previously-
+                // attempted Firestore trigger which can't fire from SE3-hosted
+                // Firestore). Fire-and-forget: any failure is logged but the
+                // already-sent message stays. Server enforces 30s throttle, so
+                // rapid typing is safe to call repeatedly here.
+                if (msgRef?.id && window.firebase?.functions?.httpsCallable) {
+                    try {
+                        const notify = window.firebase.functions.httpsCallable('notifyMarketplaceChat');
+                        // Intentionally not awaited — the message is already saved;
+                        // notification is a best-effort follow-up.
+                        notify({ chatId, messageId: msgRef.id }).catch(err => {
+                            console.warn('notifyMarketplaceChat invoke failed:', err?.message || err);
+                        });
+                    } catch (e) {
+                        console.warn('notifyMarketplaceChat sync error:', e);
+                    }
+                }
             } catch (e) {
                 console.warn('sendChatMessage:', e);
                 if (typeof toast === 'function') toast('ส่งไม่สำเร็จ ลองใหม่ครับ', 'error');
