@@ -4163,7 +4163,11 @@
                 data-action="goBackToMarketplace">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">💬 ข้อความ</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg); display:flex; align-items:center; gap:8px;">
+                💬 ข้อความ
+                <span id="market-chat-list-unread-pill"
+                    style="display:none; background:#dc2626; color:#fff; font-size:var(--fs-xs); font-weight:700; padding:2px 8px; border-radius:10px; line-height:1.4;">0</span>
+            </h1>
         </div>
         <div id="market-chat-list-container">
             <div id="market-chat-list-empty" class="gh-empty-state">
@@ -4202,11 +4206,11 @@
             <div style="text-align:center; color:#aaa; padding:40px 20px; font-size:var(--fs-sm);">กำลังโหลด...</div>
         </div>
         <div id="market-chat-composer"
-            style="position:fixed; left:0; right:0; bottom:0; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:#fff; border-top:1px solid #eee; display:none; gap:8px; z-index:30;">
+            style="position:fixed; left:0; right:0; bottom:0; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:#fff; border-top:1px solid #eee; display:none; align-items:center; gap:8px; z-index:30;">
             <input id="market-chat-input" type="text" placeholder="พิมพ์ข้อความ..." maxlength="2000"
-                style="flex:1; padding:10px 14px; border-radius:18px; border:1px solid #eee; font-family:inherit; font-size:var(--fs-md);">
+                style="flex:1; min-width:0; padding:10px 14px; border-radius:18px; border:1px solid #eee; font-family:inherit; font-size:16px;">
             <button type="button" data-action="sendChatMessage" aria-label="ส่งข้อความ"
-                style="width:42px; height:42px; border-radius:50%; border:none; background:var(--primary-green); color:#fff; cursor:pointer; touch-action:manipulation;">
+                style="flex-shrink:0; width:42px; height:42px; border-radius:50%; border:none; background:var(--primary-green); color:#fff; cursor:pointer; touch-action:manipulation; display:flex; align-items:center; justify-content:center;">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </div>
@@ -7145,17 +7149,30 @@
         window.renderChatList = renderChatList;
 
         function _renderMarketChatUnreadBadge() {
-            const badge = document.getElementById('market-chat-unread-badge');
-            if (!badge) return;
             const myUid = window._authUid;
             const total = (window._chatList || []).reduce(
                 (sum, c) => sum + ((c.unreadCount && c.unreadCount[myUid]) || 0), 0
             );
-            if (total > 0) {
-                badge.textContent = total > 9 ? '9+' : String(total);
-                badge.style.display = '';
-            } else {
-                badge.style.display = 'none';
+            // Marketplace app-bar chip (corner dot-style)
+            const badge = document.getElementById('market-chat-unread-badge');
+            if (badge) {
+                if (total > 0) {
+                    badge.textContent = total > 9 ? '9+' : String(total);
+                    badge.style.display = '';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+            // Chat-list page header pill — visible while the user IS on the
+            // chat list, so they can see total unread without leaving the page.
+            const pill = document.getElementById('market-chat-list-unread-pill');
+            if (pill) {
+                if (total > 0) {
+                    pill.textContent = total > 99 ? '99+' : String(total);
+                    pill.style.display = '';
+                } else {
+                    pill.style.display = 'none';
+                }
             }
         }
         window._renderMarketChatUnreadBadge = _renderMarketChatUnreadBadge;
