@@ -42,23 +42,23 @@ function loadRoomConfigUI() {
       return `
       <tr style="border-bottom:1px solid var(--border);">
         <td class="table-th">
-          <input type="text" value="${_escRC(room.name)}" onchange="updateRoomField('${building}', '${room.id}', 'name', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="text" value="${_escRC(room.name)}" data-action="updateRoomField" data-building="${building}" data-room="${room.id}" data-field="name" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
           <div style="font-size:.7rem;color:#bbb;margin-top:3px;">ID: ${room.id}</div>
         </td>
         <td class="table-th">
-          <input type="number" value="${rent}" onchange="updateRentAndDeposit('${building}', '${room.id}', parseInt(this.value), '${depositId}')" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="number" value="${rent}" data-action="updateRentAndDeposit" data-building="${building}" data-room="${room.id}" data-deposit-id="${depositId}" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td class="table-th">
           <input type="number" id="${depositId}" value="${rent * 2}" readonly style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;background:#f5f5f5;color:#666;">
         </td>
         <td class="table-th">
-          <input type="number" value="${room.waterRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'water', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="number" value="${room.waterRate}" step="0.01" data-action="updateRoomRate" data-building="${building}" data-room="${room.id}" data-rate="water" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td class="table-th">
-          <input type="number" value="${room.electricRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'electric', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="number" value="${room.electricRate}" step="0.01" data-action="updateRoomRate" data-building="${building}" data-room="${room.id}" data-rate="electric" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td class="table-th">
-          <input type="number" value="${room.trashRate || 20}" step="1" onchange="updateTrashRate('${building}', '${room.id}', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="number" value="${room.trashRate || 20}" step="1" data-action="updateTrashRate" data-building="${building}" data-room="${room.id}" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td class="table-th" style="text-align:center;">
           <button data-action="deleteRoom" data-building="${building}" data-id="${room.id}" style="padding:0.4rem 0.8rem;background:#f44336;color:white;border:none;border-radius:4px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:0.85rem;">ลบ</button>

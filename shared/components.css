@@ -571,3 +571,7 @@ body.gh-tour-open {
   white-space: nowrap;
   border: 0;
 }
+
+/* ─── Dashboard hover effects (CSP: replaces inline onmouseover/onmouseout) ─── */
+.dash-kyc-doc-link:hover { box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+.dash-room-chip:hover { background: #ffe0b2; }

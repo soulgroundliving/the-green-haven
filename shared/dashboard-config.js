@@ -41,7 +41,7 @@ function renderOwnerInfoPage() {
         </div>
         <div style="flex:1;">
           <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">โลโก้บริษัท (ใช้บนบิลที่ลูกบ้านเลือก "นิติบุคคล" + รายงานภาษี)</label>
-          <input type="file" id="ownerLogoInput" accept="image/png,image/jpeg" onchange="uploadOwnerLogo(event)" style="font-size:.85rem;">
+          <input type="file" id="ownerLogoInput" accept="image/png,image/jpeg" data-action="uploadOwnerLogo" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: PNG โปร่งแสง, สี่เหลี่ยมจัตุรัส, ≤ 512px</div>
           ${safeLogoUrl ? `<button type="button" data-action="removeOwnerLogo" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้</button>` : ''}
         </div>
@@ -54,7 +54,7 @@ function renderOwnerInfoPage() {
         </div>
         <div style="flex:1;">
           <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">โลโก้อพาร์ทเม้น (ใช้บนบิลที่ลูกบ้านเลือก "บุคคลธรรมดา" — default)</label>
-          <input type="file" id="ownerApartmentLogoInput" accept="image/png,image/jpeg" onchange="uploadApartmentLogo(event)" style="font-size:.85rem;">
+          <input type="file" id="ownerApartmentLogoInput" accept="image/png,image/jpeg" data-action="uploadApartmentLogo" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: โลโก้แบรนด์ Nature Haven — PNG โปร่งแสง, สี่เหลี่ยมจัตุรัส, ≤ 512px. ถ้าไม่อัพ → fallback เป็น "🌿 Nature Haven"</div>
           ${safeApartmentLogoUrl ? `<button type="button" data-action="removeApartmentLogo" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้อพาร์ทเม้น</button>` : ''}
         </div>
@@ -67,7 +67,7 @@ function renderOwnerInfoPage() {
         </div>
         <div style="flex:1;">
           <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">ไอคอนแท็บเบราว์เซอร์ (Favicon)</label>
-          <input type="file" id="ownerFaviconInput" accept="image/png,image/jpeg,image/x-icon" onchange="uploadOwnerFavicon(event)" style="font-size:.85rem;">
+          <input type="file" id="ownerFaviconInput" accept="image/png,image/jpeg,image/x-icon" data-action="uploadOwnerFavicon" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: PNG สี่เหลี่ยมจัตุรัส — จะย่อเป็น 64×64 อัตโนมัติ</div>
           ${safeFaviconUrl ? `<button type="button" data-action="removeOwnerFavicon" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบ favicon</button>` : ''}
         </div>

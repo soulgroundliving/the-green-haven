@@ -42,7 +42,7 @@
     }
     const chips = rooms.map(r => {
       const rid = _esc(r.id);
-      return `<button data-action="openRoomFromBuilding" data-building="${_esc(buildingId)}" data-room="${rid}" title="จัดการข้อมูลห้อง ${rid}" style="background:#fff8e1;color:#ef6c00;border:1px solid #ffe0b2;border-radius:8px;padding:.25rem .55rem;font-size:.78rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;display:inline-flex;align-items:center;gap:.25rem;transition:all .15s;" onmouseover="this.style.background='#ffe0b2'" onmouseout="this.style.background='#fff8e1'">📄 ${rid}</button>`;
+      return `<button data-action="openRoomFromBuilding" data-building="${_esc(buildingId)}" data-room="${rid}" title="จัดการข้อมูลห้อง ${rid}" class="dash-room-chip" style="background:#fff8e1;color:#ef6c00;border:1px solid #ffe0b2;border-radius:8px;padding:.25rem .55rem;font-size:.78rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;display:inline-flex;align-items:center;gap:.25rem;transition:all .15s;">📄 ${rid}</button>`;
     }).join('');
     return `
       <div style="margin-top:.5rem;">

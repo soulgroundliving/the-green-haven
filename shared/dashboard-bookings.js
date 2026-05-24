@@ -446,12 +446,12 @@
       body.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.8rem;width:100%;padding:.5rem 0;">
         ${items.map(it => `
           <a href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer"
-             style="display:block;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;text-decoration:none;color:inherit;transition:box-shadow .15s;"
-             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.15)'" onmouseout="this.style.boxShadow=''">
+             class="dash-kyc-doc-link"
+             style="display:block;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;text-decoration:none;color:inherit;transition:box-shadow .15s;">
             ${it.isImage
               ? `<img src="${escapeHtml(it.url)}" alt="${escapeHtml(it.label)}"
-                     style="width:100%;height:120px;object-fit:cover;display:block;"
-                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                     class="js-img-fallback"
+                     style="width:100%;height:120px;object-fit:cover;display:block;">
                  <div style="display:none;height:120px;align-items:center;justify-content:center;font-size:2.5rem;background:var(--surface-sunken);">📄</div>`
               : `<div style="height:120px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;background:var(--surface-sunken);">📄</div>`
             }
