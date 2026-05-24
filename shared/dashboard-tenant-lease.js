@@ -298,7 +298,7 @@ function renderTenantMasterPage() {
       <!-- Building Selector -->
       <div style="margin-bottom: 1.5rem;">
         <label class="dx-label">เลือกอาคาร</label>
-        <select id="tenantMasterBuilding" onchange="window.currentTenantMasterBuilding = this.value; renderTenantMasterPage();" style="padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px;">
+        <select id="tenantMasterBuilding" data-action="setTenantMasterBuilding" style="padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px;">
           <option value="rooms" ${(window.currentTenantMasterBuilding || 'rooms') === 'rooms' ? 'selected' : ''}>ห้องแถว (Rooms)</option>
           <option value="nest" ${(window.currentTenantMasterBuilding || 'rooms') === 'nest' ? 'selected' : ''}>Nest</option>
         </select>
@@ -585,7 +585,7 @@ function renderLeaseAgreementsPage() {
 
         <div style="margin-bottom: 1rem;">
           <label class="dx-label">เลือกผู้เช่า *</label>
-          <select id="leaseTenant" onchange="_updateLeasePreview()" class="dx-field">
+          <select id="leaseTenant" data-action="updateLeasePreview" class="dx-field">
             <option value="">-- เลือกผู้เช่า --</option>
             ${tenantOptions}
           </select>

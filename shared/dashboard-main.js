@@ -1032,6 +1032,22 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'autoFillMeters') { typeof autoFillMeters === 'function' && autoFillMeters(); return; }
     if (a === 'onRentTypeChange') { typeof onRentTypeChange === 'function' && onRentTypeChange(); return; }
     if (a === 'verifySlipFromInput') { typeof verifySlip === 'function' && verifySlip(el.files && el.files[0]); return; }
+    // Gated to change events only — the hub also listens on 'input' which
+    // fires per-keystroke and would re-write Firestore on every character.
+    if (e.type !== 'change') return;
+    // Room-config inline-edit table
+    if (a === 'updateRoomField') { typeof updateRoomField === 'function' && updateRoomField(el.dataset.building, el.dataset.room, el.dataset.field, el.value); return; }
+    if (a === 'updateRentAndDeposit') { typeof updateRentAndDeposit === 'function' && updateRentAndDeposit(el.dataset.building, el.dataset.room, parseInt(el.value, 10), el.dataset.depositId); return; }
+    if (a === 'updateRoomRate') { typeof updateRoomRate === 'function' && updateRoomRate(el.dataset.building, el.dataset.room, el.dataset.rate, el.value); return; }
+    if (a === 'updateTrashRate') { typeof updateTrashRate === 'function' && updateTrashRate(el.dataset.building, el.dataset.room, el.value); return; }
+    if (a === 'updateBatchRoomCount') { typeof updateBatchRoomCount === 'function' && updateBatchRoomCount(); return; }
+    // Owner config file uploads
+    if (a === 'uploadOwnerLogo') { typeof window.uploadOwnerLogo === 'function' && window.uploadOwnerLogo(e); return; }
+    if (a === 'uploadApartmentLogo') { typeof window.uploadApartmentLogo === 'function' && window.uploadApartmentLogo(e); return; }
+    if (a === 'uploadOwnerFavicon') { typeof window.uploadOwnerFavicon === 'function' && window.uploadOwnerFavicon(e); return; }
+    // Tenant-lease page selects
+    if (a === 'setTenantMasterBuilding') { window.currentTenantMasterBuilding = el.value; typeof renderTenantMasterPage === 'function' && renderTenantMasterPage(); return; }
+    if (a === 'updateLeasePreview') { typeof _updateLeasePreview === 'function' && _updateLeasePreview(); return; }
   }
   document.addEventListener('change', _handleFormAction);
   document.addEventListener('input', _handleFormAction);
@@ -1066,6 +1082,20 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.addEventListener('dragover', _handleDragEvent);
   document.addEventListener('dragleave', _handleDragEvent);
   document.addEventListener('drop', _handleDragEvent);
+
+  // ===== IMG ERROR DELEGATION =====
+  // Replaces inline img error handlers (CSP inline-event-handler violation).
+  // `error` events do NOT bubble, so we register on the capture phase.
+  // Opt-in via class="js-img-fallback" — on broken-image load, hides the img
+  // and unhides the next sibling (typically a fallback emoji/icon block).
+  document.addEventListener('error', function(e) {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement)) return;
+    if (!img.classList.contains('js-img-fallback')) return;
+    img.style.display = 'none';
+    const next = img.nextElementSibling;
+    if (next) next.style.display = 'flex';
+  }, true);
 });
 
 

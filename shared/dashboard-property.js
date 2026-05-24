@@ -295,7 +295,7 @@ function renderRoomSelectionCheckboxes() {
     const currentRent = room.rentPrice || 0;
     return `
       <label style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;background:white;" data-action="toggleBatchRoomSelection" data-room="${room.id}">
-        <input type="checkbox" id="batchRoom_${room.id}" onchange="updateBatchRoomCount()" style="cursor:pointer;">
+        <input type="checkbox" id="batchRoom_${room.id}" data-action="updateBatchRoomCount" style="cursor:pointer;">
         <span style="font-size:0.85rem;font-weight:600;color:#333;">${room.id}</span>
         <span style="font-size:0.75rem;color:#666;">฿${currentRent}</span>
       </label>
