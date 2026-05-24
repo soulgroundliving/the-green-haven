@@ -6978,6 +6978,48 @@
         window._chatMessages = [];
         window._chatMessagesUnsub = null;
 
+        // Sprint 2 — Deep-link handler. notifyMarketplaceChat CF builds links
+        // of the form https://liff.line.me/<LIFF_ID>?chat=<chatId>. LIFF can
+        // strip the query string on redirect (§7-GG), so we sticky-persist to
+        // localStorage on first detection and read it back from BOTH the URL
+        // AND storage thereafter. Use ?chat=0 to explicitly clear a stuck marker.
+        const _LS_PENDING_CHAT_KEY = 'gh_pending_chat_id';
+        function _captureDeepLinkChat() {
+            try {
+                const params = new URLSearchParams(location.search || '');
+                const fromUrl = params.get('chat') || '';
+                if (fromUrl === '0') {
+                    localStorage.removeItem(_LS_PENDING_CHAT_KEY);
+                    return null;
+                }
+                if (fromUrl) {
+                    localStorage.setItem(_LS_PENDING_CHAT_KEY, fromUrl);
+                    return fromUrl;
+                }
+                return localStorage.getItem(_LS_PENDING_CHAT_KEY) || null;
+            } catch (_) { return null; }
+        }
+        window._captureDeepLinkChat = _captureDeepLinkChat;
+        // Capture immediately at script load so LIFF redirect-strip doesn't
+        // race the first onSnapshot (which can fire several seconds later).
+        _captureDeepLinkChat();
+
+        function _tryOpenPendingChat() {
+            const pending = _captureDeepLinkChat();
+            if (!pending) return;
+            // Don't re-open the chat we're already inside (re-entry race after
+            // openChat → subscribe re-fires with fresh snapshot).
+            if (window._activeChatId === pending) {
+                try { localStorage.removeItem(_LS_PENDING_CHAT_KEY); } catch (_) {}
+                return;
+            }
+            const chat = (window._chatList || []).find(c => c.id === pending);
+            if (!chat) return;  // not yet in list — try again next snapshot
+            try { localStorage.removeItem(_LS_PENDING_CHAT_KEY); } catch (_) {}
+            openChat(chat);
+        }
+        window._tryOpenPendingChat = _tryOpenPendingChat;
+
         function _subscribeChatList() {
             if (window._chatListUnsub) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
@@ -6994,6 +7036,9 @@
                     window._chatList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     renderChatList();
                     _renderMarketChatUnreadBadge();
+                    // After each fresh chat-list snapshot, see if a deep-link
+                    // is waiting on this chat being visible to the user.
+                    _tryOpenPendingChat();
                 }, err => {
                     console.warn('[market-chat-list] subscribe failed:', err?.message || err);
                     if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {

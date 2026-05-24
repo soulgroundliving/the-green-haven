@@ -192,6 +192,12 @@ exports.generateBillsOnMeterUpdate = require('./generateBillsOnMeterUpdate').gen
 // the post is deleted or its status transitions to COMPLETED.
 exports.cleanupMarketplaceChat = require('./cleanupMarketplaceChat').cleanupMarketplaceChat;
 
+// Marketplace chat notification broker (Sprint 2 — LINE OA push on new message).
+// Fires on marketplace_chats/{chatId}/messages/{messageId} create; pushes flex
+// bubble to the non-sender participant via LINE Messaging API with anti-spam
+// throttle + retry-queue handoff on transient failure.
+exports.notifyMarketplaceChat = require('./notifyMarketplaceChat').notifyMarketplaceChat;
+
 // LINE Flex notification to tenant when new bill appears in RTDB
 // (secondary path — manual admin bill creation)
 exports.notifyBillOnCreate = require('./notifyBillOnCreate').notifyBillOnCreate;
