@@ -1060,6 +1060,34 @@ grep -oE "frame-src [^;]+"       vercel.json | grep -c "firebasedatabase\|fireba
 
 **Family with §7-II (CSP hash drift bombs on enforce flip)** — both are "CSP directive doesn't include something the runtime actually needs, only visible on the deployed page under specific conditions." II is about hashes drifting; LL is about origins being silently missing despite `connect-src` looking permissive. Always test CSP changes on a deploy where the actual SDK runs — static review can't see this class of bug.
 
+### MM. Service worker cache serves stale `function X()` even after deploy — clear SW + caches before in-browser verification
+
+When verifying a JS-level fix on Vercel via Chrome MCP, the page can load fresh HTML but the service worker (`shared/service-worker.js`) keeps the OLD `shared/*.js` in cache. The trap is that `fetch('/shared/X.js?cb=' + Date.now())` returns the NEW file content correctly — yet `(window.X || X).toString()` shows the OLD function body. The function reference in memory was bound at original parse time and isn't refreshed by a plain reload.
+
+**Symptom signature** (recognise this fast — easy to lose 20+ min):
+1. Deploy SHA matches latest (`gh api /repos/.../deployments?per_page=1` confirms)
+2. `fetch('/shared/X.js?cb=...')` returns NEW source (with your fix)
+3. `(window.X || X).toString()` returns OLD source (without your fix)
+4. Live UI behaves like OLD code — toast doesn't show, fix appears not deployed
+5. You start patching `window.X`, adding MutationObservers, inspecting CSS specificity — chasing the wrong layer
+
+**Recovery (run BEFORE the verification flow):**
+```js
+navigator.serviceWorker.getRegistrations()
+  .then(rs => Promise.all(rs.map(r => r.unregister())))
+  .then(() => caches.keys())
+  .then(ks => Promise.all(ks.map(k => caches.delete(k))))
+  .then(() => location.reload());
+```
+
+Plain `location.reload(true)` is NOT enough — the SW intercepts the request and may still serve stale. For Chrome MCP verification specifically, run the snippet above first, then wait for the reload to complete, THEN trigger your test flow.
+
+End users don't hit this — `CACHE_VERSION` in `service-worker.js` auto-bumps from `VERCEL_GIT_COMMIT_SHA` per build.js, so the SW invalidates itself on next user visit. The trap is exclusive to the DEBUGGER who has a tab open across deploys.
+
+**Detection during debugging**: when "the patch shows in the fetched file but the behavior doesn't match," check `window.functionName.toString()` first — if it's not what you shipped, it's the SW cache. Don't keep chasing other layers.
+
+Related: §7-J (static deploy ≠ live-data verified) is the dependency-direction sibling — deploy success ≠ feature works because of real data. This MM is "deploy success ≠ in-memory code matches deploy" because of SW cache.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
