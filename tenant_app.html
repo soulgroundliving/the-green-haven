@@ -1644,11 +1644,15 @@
         #world-map-page .app-bar {
             padding: 28px 20px 20px !important;
         }
-        /* S3 PR 4 — marketplace chat headers stay pinned while scrolling.
-           Sticky needs a solid background (.app-bar already has var(--white))
-           and a z-index above message bubbles + swipe-revealed delete panels. */
+        /* S3 PR 4 — sub-page headers stay pinned while scrolling so the back
+           chevron stays reachable on long pages. Sticky needs a solid background
+           (.app-bar already has var(--white)) + z-index above page content.
+           Extend this list when adding new long sub-pages. */
         #market-chat-list-page .app-bar,
-        #market-chat-page .app-bar {
+        #market-chat-page .app-bar,
+        #community .app-bar,
+        #quest-page .app-bar,
+        #add-pet-page .app-bar {
             position: sticky !important;
             top: 0;
             z-index: 50;
