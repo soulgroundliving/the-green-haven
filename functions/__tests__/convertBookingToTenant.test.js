@@ -129,17 +129,20 @@ Module._load = function (id, parent, ...rest) {
       auth: () => ({ setCustomUserClaims: async () => {} }),
     };
   }
-  if (id === 'firebase-functions') {
+  if (id === 'firebase-functions' || id === 'firebase-functions/v1') {
     const HttpsError = class HttpsError extends Error {
       constructor(code, msg) { super(msg); this.code = code; }
     };
+    const wrapOnCall = (handler) => {
+      const fn = (data, ctx) => handler(data, ctx);
+      fn.run = (data, ctx) => handler(data, ctx);
+      return fn;
+    };
     return {
       region: () => ({
-        https: {
-          onCall: (fn) => fn,
-        },
+        https: { onCall: wrapOnCall, HttpsError },
       }),
-      https: { HttpsError },
+      https: { HttpsError, onCall: wrapOnCall },
     };
   }
   return _origLoad.call(this, id, parent, ...rest);

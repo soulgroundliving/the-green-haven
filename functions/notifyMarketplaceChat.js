@@ -248,8 +248,16 @@ exports.notifyMarketplaceChat = onCall(
 
     if (pushOk) {
       try {
+        // S3 PR 3: also clear hiddenBy[recipient] so a chat the recipient
+        // previously swiped-deleted reappears in their list on new activity
+        // (LINE-parity un-hide on incoming message). FieldValue.delete()
+        // inside a nested map removes JUST that key, leaving the rest of
+        // hiddenBy untouched (so the sender's own hidden state, if any,
+        // survives).
+        const admin = require('firebase-admin');
         await chatRef.set({
           lastNotifyAt: { [recipientUid]: new Date().toISOString() },
+          hiddenBy: { [recipientUid]: admin.firestore.FieldValue.delete() },
         }, { merge: true });
       } catch (e) {
         console.warn(`[notifyMarketplaceChat] lastNotifyAt update failed:`, e.message);

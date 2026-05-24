@@ -95,6 +95,20 @@ const Module = require('node:module');
 const originalLoad = Module._load;
 Module._load = function (request) {
   if (request === 'firebase-admin') return adminStub;
+  if (request === 'firebase-functions/v1') {
+    class HttpsError extends Error {
+      constructor(code, message) { super(message); this.code = code; }
+    }
+    const wrapOnCall = (handler) => {
+      const fn = (data, ctx) => handler(data, ctx);
+      fn.run = (data, ctx) => handler(data, ctx);
+      return fn;
+    };
+    return {
+      https: { HttpsError, onCall: wrapOnCall },
+      region: () => ({ https: { HttpsError, onCall: wrapOnCall } }),
+    };
+  }
   return originalLoad.apply(this, arguments);
 };
 

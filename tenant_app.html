@@ -4206,12 +4206,40 @@
             <div style="text-align:center; color:#aaa; padding:40px 20px; font-size:var(--fs-sm);">กำลังโหลด...</div>
         </div>
         <div id="market-chat-composer"
-            style="position:fixed; left:0; right:0; bottom:0; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:#fff; border-top:1px solid #eee; display:none; align-items:center; gap:8px; z-index:30;">
-            <input id="market-chat-input" type="text" placeholder="พิมพ์ข้อความ..." maxlength="2000"
-                style="flex:1; min-width:0; padding:10px 14px; border-radius:18px; border:1px solid #eee; font-family:inherit; font-size:16px;">
-            <button type="button" data-action="sendChatMessage" aria-label="ส่งข้อความ"
-                style="flex-shrink:0; width:42px; height:42px; border-radius:50%; border:none; background:var(--primary-green); color:#fff; cursor:pointer; touch-action:manipulation; display:flex; align-items:center; justify-content:center;">
-                <i class="fas fa-paper-plane"></i>
+            style="position:fixed; left:0; right:0; bottom:0; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:#fff; border-top:1px solid #eee; display:none; flex-direction:column; gap:6px; z-index:30;">
+            <!-- S3 PR 3: reply preview — shown when _activeChatReplyTarget is set -->
+            <div id="market-chat-reply-preview" style="display:none; padding:6px 10px; background:#f3f4f6; border-left:3px solid var(--primary-green); border-radius:6px; align-items:center; gap:8px;">
+                <div style="flex:1; min-width:0; overflow:hidden;">
+                    <div style="font-size:11px; color:var(--primary-green); font-weight:700;">↩ ตอบกลับ <span id="market-chat-reply-name"></span></div>
+                    <div id="market-chat-reply-snippet" style="font-size:12px; color:#666; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;"></div>
+                </div>
+                <button type="button" data-action="cancelChatReply" aria-label="ยกเลิกการตอบกลับ"
+                    style="flex-shrink:0; width:24px; height:24px; border-radius:50%; border:none; background:#dc2626; color:#fff; cursor:pointer; font-size:14px; line-height:1; touch-action:manipulation;">×</button>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <input id="market-chat-input" type="text" placeholder="พิมพ์ข้อความ..." maxlength="2000"
+                    style="flex:1; min-width:0; padding:10px 14px; border-radius:18px; border:1px solid #eee; font-family:inherit; font-size:16px;">
+                <button type="button" data-action="sendChatMessage" aria-label="ส่งข้อความ"
+                    style="flex-shrink:0; width:42px; height:42px; border-radius:50%; border:none; background:var(--primary-green); color:#fff; cursor:pointer; touch-action:manipulation; display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- S3 PR 3: chat message action sheet — appears on long-press over a bubble. -->
+    <div id="market-chat-action-sheet" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:120; align-items:flex-end; justify-content:center;" data-action="closeChatActionSheetIfOverlay">
+        <div style="background:#fff; border-radius:16px 16px 0 0; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); width:100%; max-width:480px;">
+            <div style="width:36px; height:4px; background:#ddd; border-radius:2px; margin:0 auto 12px;"></div>
+            <button type="button" id="market-chat-act-reply" data-action="chatActReply"
+                style="width:100%; padding:14px; border:none; background:transparent; text-align:left; font-size:16px; font-family:inherit; cursor:pointer; border-radius:8px; display:flex; align-items:center; gap:12px; touch-action:manipulation;">
+                <i class="fas fa-reply" style="color:var(--primary-green); width:20px;"></i>
+                <span>ตอบกลับ</span>
+            </button>
+            <button type="button" id="market-chat-act-unsend" data-action="chatActUnsend"
+                style="display:none; width:100%; padding:14px; border:none; background:transparent; text-align:left; font-size:16px; font-family:inherit; cursor:pointer; border-radius:8px; color:#dc2626; align-items:center; gap:12px; touch-action:manipulation;">
+                <i class="fas fa-times-circle" style="color:#dc2626; width:20px;"></i>
+                <span>ยกเลิกข้อความ</span>
             </button>
         </div>
     </div>
@@ -7109,15 +7137,19 @@
             if (!cont) return;
             const empty = document.getElementById('market-chat-list-empty');
             // Remove any existing chat rows (preserve empty state element).
-            cont.querySelectorAll('.market-chat-row').forEach(n => n.remove());
-            if (!window._chatList.length) {
+            cont.querySelectorAll('.market-chat-row-wrap').forEach(n => n.remove());
+            const myUid = window._authUid;
+            // S3 PR 3: filter out chats the user has soft-deleted via swipe.
+            // notifyMarketplaceChat CF clears hiddenBy[recipient] on incoming
+            // messages, so the row reappears automatically on new activity.
+            const visible = (window._chatList || []).filter(c => !(c.hiddenBy && c.hiddenBy[myUid]));
+            if (!visible.length) {
                 if (empty) empty.style.display = '';
                 return;
             }
             if (empty) empty.style.display = 'none';
 
-            const myUid = window._authUid;
-            const cards = window._chatList.map(chat => {
+            const cards = visible.map(chat => {
                 const unread = (chat.unreadCount && chat.unreadCount[myUid]) || 0;
                 const lastMsg = chat.lastMessage || 'เริ่มการสนทนา';
                 const lastTime = chat.lastMessageTime ? _formatChatTime(chat.lastMessageTime) : '';
@@ -7129,16 +7161,23 @@
                     ? `<span style="background:#dc2626; color:#fff; font-size:var(--fs-xs); padding:1px 8px; border-radius:10px; font-weight:700; flex-shrink:0;">${unread > 9 ? '9+' : unread}</span>`
                     : '';
                 const safeId = _esc(chat.id);
-                return `<div class="market-chat-row" data-mkt-chat-id="${safeId}" style="display:flex; gap:12px; padding:14px 16px; border-bottom:1px solid #f0f0f0; cursor:pointer; touch-action:manipulation; align-items:center;">
-                    <div style="width:48px; height:48px; border-radius:10px; background:#f3f4f6; flex-shrink:0; overflow:hidden;">${imgHtml}</div>
-                    <div style="flex:1; min-width:0;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:2px;">
-                            <span style="font-weight:700; font-size:var(--fs-sm); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#222;">${_esc(chat.postTitle || 'สินค้า')}</span>
-                            <span style="font-size:var(--fs-xs); color:#888; flex-shrink:0;">${_esc(lastTime)}</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-                            <span style="font-size:var(--fs-xs); color:#666; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${_esc(lastMsg)}</span>
-                            ${unreadBadge}
+                // S3 PR 3: each row is wrapped in a swipe container so the
+                // red "ลบ" panel sits underneath. _attachChatListSwipe
+                // translateX's the inner row to reveal the panel on left-swipe.
+                return `<div class="market-chat-row-wrap" style="position:relative; overflow:hidden; border-bottom:1px solid #f0f0f0;">
+                    <button type="button" data-chat-row-delete data-chat-id="${safeId}"
+                        style="position:absolute; right:0; top:0; bottom:0; width:80px; background:#dc2626; color:#fff; border:none; font-weight:700; font-size:var(--fs-sm); cursor:pointer; touch-action:manipulation;">ลบ</button>
+                    <div class="market-chat-row" data-mkt-chat-id="${safeId}" style="position:relative; background:#fff; display:flex; gap:12px; padding:14px 16px; cursor:pointer; touch-action:pan-y; align-items:center; will-change:transform;">
+                        <div style="width:48px; height:48px; border-radius:10px; background:#f3f4f6; flex-shrink:0; overflow:hidden;">${imgHtml}</div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:2px;">
+                                <span style="font-weight:700; font-size:var(--fs-sm); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#222;">${_esc(chat.postTitle || 'สินค้า')}</span>
+                                <span style="font-size:var(--fs-xs); color:#888; flex-shrink:0;">${_esc(lastTime)}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                                <span style="font-size:var(--fs-xs); color:#666; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${_esc(lastMsg)}</span>
+                                ${unreadBadge}
+                            </div>
                         </div>
                     </div>
                 </div>`;
@@ -7148,14 +7187,25 @@
             // Single delegated listener — survives subsequent renderChatList calls.
             if (!cont._chatDelegated) {
                 cont.addEventListener('click', e => {
+                    if (e.target.closest('[data-chat-row-delete]')) return; // swipe handler owns this
                     const row = e.target.closest('[data-mkt-chat-id]');
                     if (!row) return;
+                    // Don't open the chat if the row is in "swipe-open" state — let
+                    // the first tap close the swipe instead.
+                    if (row.dataset.swipeOpen === '1') {
+                        row.style.transition = 'transform 180ms ease-out';
+                        row.style.transform = '';
+                        row.dataset.swipeOpen = '';
+                        return;
+                    }
                     const id = row.dataset.mktChatId;
                     const chat = window._chatList.find(c => c.id === id);
                     if (chat) openChat(chat);
                 });
                 cont._chatDelegated = true;
             }
+            // S3 PR 3: wire swipe-to-delete (idempotent — internal guard).
+            if (typeof _attachChatListSwipe === 'function') _attachChatListSwipe();
         }
         window.renderChatList = renderChatList;
 
@@ -7229,6 +7279,10 @@
             showSubPage('market-chat-page');
             _subscribeChatMessages(chat.id);
             _markChatRead(chat.id);
+            // S3 PR 3: clear any leftover reply context from prior chat, and
+            // wire the long-press handler (idempotent — internal guard).
+            if (typeof _cancelChatReply === 'function') _cancelChatReply();
+            if (typeof _attachChatLongPress === 'function') _attachChatLongPress();
         }
         window.openChat = openChat;
 
@@ -7290,21 +7344,42 @@
             }
             cont.innerHTML = window._chatMessages.map((m, idx) => {
                 const mine = m.senderId === myUid;
-                const txt = _esc(m.text || '');
                 const time = m.timestamp ? _formatChatTime(m.timestamp) : '';
-                const bubbleStyle = mine
-                    ? 'background:var(--primary-green); color:#fff; border-bottom-right-radius:4px;'
-                    : 'background:#f3f4f6; color:#222; border-bottom-left-radius:4px;';
+                // S3 PR 3: unsent message renders a dim italic tombstone in
+                // place of the original text; the bubble stays so layout
+                // doesn't jump.
+                const unsent = !!m.unsent;
+                const txtRaw = unsent ? 'ข้อความถูกยกเลิก' : (m.text || '');
+                const txt = _esc(txtRaw);
+                const bubbleStyle = unsent
+                    ? `background:${mine ? 'var(--primary-green)' : '#f3f4f6'}; color:${mine ? '#fff' : '#666'}; opacity:0.55; font-style:italic; ${mine ? 'border-bottom-right-radius:4px;' : 'border-bottom-left-radius:4px;'}`
+                    : (mine
+                        ? 'background:var(--primary-green); color:#fff; border-bottom-right-radius:4px;'
+                        : 'background:#f3f4f6; color:#222; border-bottom-left-radius:4px;');
                 let statusTag = '';
-                if (idx === lastOwnIdx) {
+                if (idx === lastOwnIdx && !unsent) {
                     const wasRead = counterpartReadAt && m.timestamp && m.timestamp <= counterpartReadAt;
                     statusTag = wasRead
                         ? `<div style="font-size:10px; color:var(--primary-green); margin-top:2px; text-align:right; padding:0 4px; font-weight:600;">✓ อ่านแล้ว ${_esc(_formatChatTime(counterpartReadAt))}</div>`
                         : `<div style="font-size:10px; color:#9aa1a9; margin-top:2px; text-align:right; padding:0 4px;">ส่งแล้ว</div>`;
                 }
+                // S3 PR 3: reply-quote card above the message text when m.replyTo set
+                let replyCard = '';
+                if (!unsent && m.replyTo && m.replyTo.textSnippet) {
+                    const repliedToMine = m.replyTo.senderId === myUid;
+                    const senderLabel = repliedToMine ? 'คุณ' : 'อีกฝ่าย';
+                    replyCard = `<div style="background:rgba(255,255,255,0.18); border-left:3px solid ${mine ? 'rgba(255,255,255,0.6)' : 'var(--primary-green)'}; padding:4px 8px; border-radius:6px; margin-bottom:6px; font-size:11px; ${mine ? 'color:rgba(255,255,255,0.85)' : 'color:#555'}; overflow:hidden;">
+                        <div style="font-weight:700; opacity:0.85;">↩ ${_esc(senderLabel)}</div>
+                        <div style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${_esc(m.replyTo.textSnippet)}</div>
+                    </div>`;
+                }
+                // data-msg-id powers the long-press handler (action sheet).
+                // Skip data-msg-id on already-unsent messages so they can't be
+                // long-pressed for further actions (Unsend disabled anyway).
+                const tapAttr = unsent ? '' : ` data-msg-id="${_esc(m.id)}"`;
                 return `<div style="display:flex; ${mine ? 'justify-content:flex-end' : 'justify-content:flex-start'};">
                     <div style="max-width:78%;">
-                        <div style="padding:8px 12px; border-radius:14px; ${bubbleStyle} font-size:var(--fs-sm); word-break:break-word; white-space:pre-wrap;">${txt}</div>
+                        <div${tapAttr} style="padding:8px 12px; border-radius:14px; ${bubbleStyle} font-size:var(--fs-sm); word-break:break-word; white-space:pre-wrap; cursor:${unsent ? 'default' : 'pointer'};">${replyCard}${txt}</div>
                         <div style="font-size:10px; color:#999; margin-top:2px; text-align:${mine ? 'right' : 'left'}; padding:0 4px;">${_esc(time)}</div>
                         ${statusTag}
                     </div>
@@ -7326,17 +7401,23 @@
             if (!window._activeChatId || !window._authUid) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
             const chatId = window._activeChatId;
+            // S3 PR 3: capture + clear reply target BEFORE the await so a
+            // rapid second send doesn't re-attach the same quote.
+            const replyTo = window._activeChatReplyTarget || null;
             // Optimistic clear so user can keep typing while the round-trip resolves.
             inp.value = '';
+            if (typeof _cancelChatReply === 'function') _cancelChatReply();
             try {
                 const db = window.firebase.firestore();
                 const fs = window.firebase.firestoreFunctions;
                 const now = new Date().toISOString();
                 const counterpart = (window._activeChat?.participants || [])
                     .find(p => p !== window._authUid);
+                const msgPayload = { senderId: window._authUid, text, timestamp: now, isRead: false };
+                if (replyTo) msgPayload.replyTo = replyTo;
                 const msgRef = await fs.addDoc(
                     fs.collection(db, 'marketplace_chats', chatId, 'messages'),
-                    { senderId: window._authUid, text, timestamp: now, isRead: false }
+                    msgPayload
                 );
                 // S3 PR 2.2: nested object literal (NOT dot-notation key) so
                 // setDoc(merge:true) properly merges into the unreadCount map
@@ -7367,8 +7448,11 @@
             } catch (e) {
                 console.warn('sendChatMessage:', e);
                 if (typeof toast === 'function') toast('ส่งไม่สำเร็จ ลองใหม่ครับ', 'error');
-                // Restore so the user doesn't lose their text.
+                // Restore so the user doesn't lose their text + reply context.
                 inp.value = text;
+                if (replyTo && typeof _setChatReplyTarget === 'function') {
+                    _setChatReplyTarget(replyTo);
+                }
             }
         }
         window.sendChatMessage = sendChatMessage;
@@ -7398,6 +7482,228 @@
             }
         }
         window._markChatRead = _markChatRead;
+
+        // ===================================================================
+        // S3 PR 3 — LINE-parity chat UX: reply, unsend, long-press, swipe.
+        // ===================================================================
+
+        // Reply target — populated by _setChatReplyTarget on Reply action,
+        // consumed by sendChatMessage (writes to messages[].replyTo), cleared
+        // by _cancelChatReply after send or × dismiss.
+        window._activeChatReplyTarget = null;
+
+        function _setChatReplyTarget(target) {
+            // target shape: { messageId, senderId, textSnippet } (≤80 chars snippet)
+            window._activeChatReplyTarget = target;
+            const preview = document.getElementById('market-chat-reply-preview');
+            const nameEl  = document.getElementById('market-chat-reply-name');
+            const snipEl  = document.getElementById('market-chat-reply-snippet');
+            if (!preview || !nameEl || !snipEl) return;
+            const repliedToMine = target.senderId === window._authUid;
+            nameEl.textContent = repliedToMine ? 'คุณ' : 'อีกฝ่าย';
+            snipEl.textContent = target.textSnippet || '';
+            preview.style.display = 'flex';
+            document.getElementById('market-chat-input')?.focus();
+        }
+        window._setChatReplyTarget = _setChatReplyTarget;
+
+        function _cancelChatReply() {
+            window._activeChatReplyTarget = null;
+            const preview = document.getElementById('market-chat-reply-preview');
+            if (preview) preview.style.display = 'none';
+        }
+        window._cancelChatReply = _cancelChatReply;
+
+        // Long-press action sheet — opened on 400ms touch-hold over a bubble.
+        // _actionSheetMsgId holds the target message id between open and the
+        // action button tap.
+        window._actionSheetMsgId = null;
+        const _UNSEND_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+        function _openChatActionSheet(msgId) {
+            const sheet = document.getElementById('market-chat-action-sheet');
+            if (!sheet || !msgId) return;
+            const msg = (window._chatMessages || []).find(m => m.id === msgId);
+            if (!msg) return;
+            window._actionSheetMsgId = msgId;
+            // Unsend only on own bubble + within 24h
+            const myUid = window._authUid;
+            const mine = msg.senderId === myUid;
+            const ageMs = msg.timestamp ? (Date.now() - Date.parse(msg.timestamp)) : Infinity;
+            const canUnsend = mine && Number.isFinite(ageMs) && ageMs <= _UNSEND_WINDOW_MS;
+            const unsendBtn = document.getElementById('market-chat-act-unsend');
+            if (unsendBtn) unsendBtn.style.display = canUnsend ? 'flex' : 'none';
+            sheet.style.display = 'flex';
+            // Light haptic for known patterns; harmless if unsupported.
+            if (navigator.vibrate) { try { navigator.vibrate(8); } catch(_) {} }
+        }
+
+        function _closeChatActionSheet() {
+            const sheet = document.getElementById('market-chat-action-sheet');
+            if (sheet) sheet.style.display = 'none';
+            window._actionSheetMsgId = null;
+        }
+        window._closeChatActionSheet = _closeChatActionSheet;
+
+        function _chatActReply() {
+            const msgId = window._actionSheetMsgId;
+            _closeChatActionSheet();
+            if (!msgId) return;
+            const msg = (window._chatMessages || []).find(m => m.id === msgId);
+            if (!msg) return;
+            const text = String(msg.text || '');
+            const snippet = text.length > 80 ? text.slice(0, 79) + '…' : text;
+            _setChatReplyTarget({
+                messageId: msg.id,
+                senderId: msg.senderId,
+                textSnippet: snippet,
+            });
+        }
+        window._chatActReply = _chatActReply;
+
+        async function _chatActUnsend() {
+            const msgId = window._actionSheetMsgId;
+            _closeChatActionSheet();
+            if (!msgId || !window._activeChatId) return;
+            if (!window.firebase?.functions?.httpsCallable) {
+                if (typeof toast === 'function') toast('ระบบยังไม่พร้อม', 'error');
+                return;
+            }
+            const confirmFn = window.ghConfirm || ((m) => Promise.resolve(window.confirm(m)));
+            const ok = await confirmFn('ยกเลิกข้อความนี้? อีกฝ่ายจะเห็นเป็น "ข้อความถูกยกเลิก"', {
+                title: 'ยืนยันการยกเลิก', confirmLabel: 'ยกเลิกข้อความ', danger: true,
+            });
+            if (!ok) return;
+            try {
+                const fn = window.firebase.functions.httpsCallable('unsendMarketplaceMessage');
+                await fn({ chatId: window._activeChatId, messageId: msgId });
+                // onSnapshot will refresh the bubble to the tombstone state.
+            } catch (e) {
+                console.warn('unsendMarketplaceMessage:', e);
+                const msg = e?.code === 'functions/failed-precondition'
+                    ? 'ยกเลิกไม่ได้ — เกิน 24 ชั่วโมง'
+                    : (e?.message || 'ยกเลิกไม่สำเร็จ');
+                if (typeof toast === 'function') toast(msg, 'error');
+            }
+        }
+        window._chatActUnsend = _chatActUnsend;
+
+        // Long-press detection on the chat messages container. Single
+        // delegated handler survives every renderChatMessages rerun.
+        function _attachChatLongPress() {
+            const cont = document.getElementById('market-chat-messages');
+            if (!cont || cont._lpAttached) return;
+            cont._lpAttached = true;
+            let pressTimer = null;
+            let pressX = 0, pressY = 0;
+            const MOVE_THRESHOLD = 10; // px before press is cancelled
+            const reset = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+            cont.addEventListener('pointerdown', (e) => {
+                const bubble = e.target.closest('[data-msg-id]');
+                if (!bubble) return;
+                pressX = e.clientX; pressY = e.clientY;
+                const msgId = bubble.dataset.msgId;
+                pressTimer = setTimeout(() => {
+                    pressTimer = null;
+                    _openChatActionSheet(msgId);
+                }, 400);
+            }, { passive: true });
+            cont.addEventListener('pointermove', (e) => {
+                if (!pressTimer) return;
+                if (Math.abs(e.clientX - pressX) > MOVE_THRESHOLD ||
+                    Math.abs(e.clientY - pressY) > MOVE_THRESHOLD) reset();
+            }, { passive: true });
+            cont.addEventListener('pointerup', reset, { passive: true });
+            cont.addEventListener('pointercancel', reset, { passive: true });
+            cont.addEventListener('pointerleave', reset, { passive: true });
+        }
+        window._attachChatLongPress = _attachChatLongPress;
+
+        // Swipe-left on chat-list rows — reveals a 80px red "ลบ" panel.
+        // Tap on panel → confirm → hideMarketplaceChat CF.
+        function _attachChatListSwipe() {
+            const cont = document.getElementById('market-chat-list-container');
+            if (!cont || cont._swipeAttached) return;
+            cont._swipeAttached = true;
+            let activeRow = null;
+            let startX = 0, startY = 0, dx = 0;
+            let horizontal = false;
+            const THRESHOLD = 50; // px to commit to open state
+            const OPEN_PX = -80;  // translateX value for open state
+
+            function _setOpen(row, open) {
+                row.style.transform = open ? `translateX(${OPEN_PX}px)` : '';
+                row.dataset.swipeOpen = open ? '1' : '';
+            }
+
+            cont.addEventListener('pointerdown', (e) => {
+                // Ignore presses on the delete panel itself.
+                if (e.target.closest('[data-chat-row-delete]')) return;
+                const row = e.target.closest('[data-mkt-chat-id]');
+                if (!row) return;
+                // Close any other open row first.
+                cont.querySelectorAll('[data-swipe-open="1"]').forEach(r => {
+                    if (r !== row) _setOpen(r, false);
+                });
+                activeRow = row;
+                startX = e.clientX; startY = e.clientY; dx = 0;
+                horizontal = false;
+                row.style.transition = '';
+            }, { passive: true });
+
+            cont.addEventListener('pointermove', (e) => {
+                if (!activeRow) return;
+                dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                if (!horizontal) {
+                    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+                        horizontal = Math.abs(dx) > Math.abs(dy);
+                        if (!horizontal) { activeRow = null; return; }
+                    }
+                }
+                if (!horizontal) return;
+                // Allow left swipe only (negative dx); cap at OPEN_PX
+                const tx = Math.max(OPEN_PX, Math.min(0, dx));
+                activeRow.style.transform = `translateX(${tx}px)`;
+            }, { passive: true });
+
+            function _onEnd() {
+                if (!activeRow || !horizontal) { activeRow = null; horizontal = false; return; }
+                activeRow.style.transition = 'transform 180ms ease-out';
+                _setOpen(activeRow, dx < -THRESHOLD);
+                activeRow = null; horizontal = false;
+            }
+            cont.addEventListener('pointerup', _onEnd, { passive: true });
+            cont.addEventListener('pointercancel', _onEnd, { passive: true });
+
+            // Tap on delete panel → confirm + hide CF
+            cont.addEventListener('click', async (e) => {
+                const del = e.target.closest('[data-chat-row-delete]');
+                if (!del) return;
+                e.stopPropagation();
+                const chatId = del.dataset.chatId;
+                if (!chatId || !window.firebase?.functions?.httpsCallable) return;
+                const confirmFn = window.ghConfirm || ((m) => Promise.resolve(window.confirm(m)));
+                const ok = await confirmFn('ลบแชทนี้ออกจากรายการของคุณ?', {
+                    title: 'ลบแชท', confirmLabel: 'ลบ', danger: true,
+                });
+                if (!ok) {
+                    const row = del.closest('[data-mkt-chat-id]');
+                    if (row) _setOpen(row, false);
+                    return;
+                }
+                try {
+                    const fn = window.firebase.functions.httpsCallable('hideMarketplaceChat');
+                    await fn({ chatId });
+                    // chat-list onSnapshot will re-render and the filter
+                    // below will drop this row from view.
+                } catch (err) {
+                    console.warn('hideMarketplaceChat:', err);
+                    if (typeof toast === 'function') toast(err?.message || 'ลบไม่สำเร็จ', 'error');
+                }
+            });
+        }
+        window._attachChatListSwipe = _attachChatListSwipe;
 
         // S1.4 — open-or-create chat from a marketplace post detail.
         // Replaces line.me/ti/p/<lineUserId> personal-LINE link.
@@ -7968,6 +8274,15 @@
             if (a === 'goBackToUsage' && _ta.goBackToUsage) { _ta.goBackToUsage(); return; }
             if (a === 'loadMoreWellness' && _ta.loadMoreWellness) { _ta.loadMoreWellness(); return; }
             if (a === 'reloadPage') { window.location.reload(); return; }
+            // S3 PR 3 — marketplace chat reply/unsend/action-sheet dispatches
+            if (a === 'cancelChatReply' && _ta._cancelChatReply) { _ta._cancelChatReply(); return; }
+            if (a === 'chatActReply' && _ta._chatActReply) { _ta._chatActReply(); return; }
+            if (a === 'chatActUnsend' && _ta._chatActUnsend) { _ta._chatActUnsend(); return; }
+            if (a === 'closeChatActionSheetIfOverlay') {
+                // Only close when the click was on the overlay itself, not bubbled from the sheet card.
+                if (e.target === el && _ta._closeChatActionSheet) _ta._closeChatActionSheet();
+                return;
+            }
             if (a === 'submitMaintenance' && _ta.submitMaintenance) { e.preventDefault(); _ta.submitMaintenance(); return; }
             if (a === 'submitComplaint' && _ta.submitComplaint) { e.preventDefault(); _ta.submitComplaint(); return; }
             if (a === 'dismissDailyModal' && _ta.dismissDailyModal) { _ta.dismissDailyModal(); return; }

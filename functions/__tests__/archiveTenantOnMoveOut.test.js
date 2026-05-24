@@ -106,6 +106,25 @@ const Module = require('node:module');
 const originalLoad = Module._load;
 Module._load = function (request, parent, isMain) {
   if (request === 'firebase-admin') return adminStub;
+  // Stub firebase-functions/v1 (Gen1 callable wrapper) so tests run without
+  // the package installed locally. Mirrors the firebase-functions/v2/https
+  // stub pattern used in cleanupMarketplaceChat.test.js etc.
+  if (request === 'firebase-functions/v1') {
+    class HttpsError extends Error {
+      constructor(code, message) { super(message); this.code = code; }
+    }
+    // Gen1 onCall returns a wrapped function with a .run(data, context) test
+    // hook; replicate that surface so existing .run(input, ctx) tests work.
+    const wrapOnCall = (handler) => {
+      const fn = (data, ctx) => handler(data, ctx);
+      fn.run = (data, ctx) => handler(data, ctx);
+      return fn;
+    };
+    return {
+      https: { HttpsError, onCall: wrapOnCall },
+      region: () => ({ https: { HttpsError, onCall: wrapOnCall } }),
+    };
+  }
   return originalLoad.apply(this, arguments);
 };
 
