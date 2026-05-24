@@ -825,8 +825,14 @@ function switchGamificationTab(tabName, btn) {
     sel.classList.remove('u-hidden');
     if (sel.style.display) sel.style.display = '';
   }
-  document.querySelectorAll('#page-gamification button').forEach(b => b.classList.remove('u-gamification-tab-active'));
-  document.querySelectorAll('#page-gamification button').forEach(b => b.classList.add('u-gamification-tab'));
+  // Scope to the 3 tab buttons only (Leaderboard/Badges/Rewards) — not every
+  // button under #page-gamification. The earlier broad selector applied the
+  // .u-gamification-tab `!important` color override to + Add Reward / Save /
+  // Cancel / Edit / Delete buttons too, dimming their inline color:white.
+  document.querySelectorAll('#page-gamification button[data-action="switchGamificationTab"]').forEach(b => {
+    b.classList.remove('u-gamification-tab-active');
+    b.classList.add('u-gamification-tab');
+  });
   btn.classList.add('u-gamification-tab-active');
   if (tabName === 'rewards' && typeof loadRewardsAdmin === 'function') loadRewardsAdmin();
   if (tabName === 'badges') loadBadgesAdmin();
