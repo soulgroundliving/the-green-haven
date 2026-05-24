@@ -878,4 +878,6 @@ function initGenericBuildingPage(building) {
 
 window._getRoomsList = _getRoomsList;
 window.initGenericBuildingPage = initGenericBuildingPage;
+window.openBatchRentAdjustmentModal = openBatchRentAdjustmentModal;
+window.closeBatchRentAdjustmentModal = closeBatchRentAdjustmentModal;
 

@@ -557,7 +557,7 @@ document.addEventListener('click',function(e){
   if (batchModal && !batchModal.classList.contains('u-hidden')) {
     const modalContent = batchModal.querySelector('div[style*="background:white"]');
     if (modalContent && !modalContent.contains(e.target)) {
-      closeBatchRentAdjustmentModal();
+      if (typeof closeBatchRentAdjustmentModal === 'function') closeBatchRentAdjustmentModal();
     }
   }
 });
@@ -714,7 +714,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     // Modals — open/close
     if (a === 'closeTenantModal') { closeTenantModal(); return; }
     if (a === 'closeChangePasswordModal') { closeChangePasswordModal(); return; }
-    if (a === 'closeBatchRentAdjustmentModal') { closeBatchRentAdjustmentModal(); return; }
+    if (a === 'closeBatchRentAdjustmentModal') { typeof closeBatchRentAdjustmentModal === 'function' && closeBatchRentAdjustmentModal(); return; }
     if (a === 'closePhotoModal') { typeof closePhotoModal === 'function' && closePhotoModal(); return; }
     if (a === 'closePayModal') { typeof closePayModal === 'function' && closePayModal(); return; }
     if (a === 'closeEmergencyEdit') { typeof closeEmergencyEdit === 'function' && closeEmergencyEdit(); return; }
@@ -1044,6 +1044,28 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     const a = el.dataset.action;
     if (a === 'changePassword') { e.preventDefault(); typeof changePassword === 'function' && changePassword(); return; }
   });
+
+  // ===== DRAG-DROP EVENT DELEGATION =====
+  // Replaces inline ondragover/ondragleave/ondrop (CSP inline-event-handler violations).
+  // Zone marks itself with data-drop-handler="handleX"; dispatcher toggles .dragging class
+  // and routes drop event to window[handleX] when fired.
+  function _handleDragEvent(e) {
+    const el = e.target.closest('[data-drop-handler]');
+    if (!el) return;
+    if (e.type === 'dragover') {
+      e.preventDefault();
+      el.classList.add('dragging');
+    } else if (e.type === 'dragleave') {
+      el.classList.remove('dragging');
+    } else if (e.type === 'drop') {
+      el.classList.remove('dragging');
+      const fn = window[el.dataset.dropHandler];
+      if (typeof fn === 'function') fn(e);
+    }
+  }
+  document.addEventListener('dragover', _handleDragEvent);
+  document.addEventListener('dragleave', _handleDragEvent);
+  document.addEventListener('drop', _handleDragEvent);
 });
 
 
