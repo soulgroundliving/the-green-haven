@@ -2292,7 +2292,9 @@
                     <option value="nest">🏢 Nest</option>
                 </select>
                 <label style="display:block;font-weight:700;font-size:var(--fs-sm);margin-bottom:5px;">หมายเลขห้อง</label>
-                <input type="text" id="liff-link-room" placeholder="เช่น 15, N101" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:1.2rem;box-sizing:border-box;">
+                <select id="liff-link-room" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:1.2rem;background:#fff;">
+                    <option value="">— เลือกห้อง —</option>
+                </select>
                 <button id="liff-link-submit-btn" data-action="submitLiffLinkRequest" style="width:100%;padding:12px;background:var(--primary-green,#2d8653);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:var(--fs-md);cursor:pointer;">🔗 ส่งคำขอเชื่อมบัญชี</button>
             </div>
 
@@ -11095,6 +11097,49 @@
             }
         }
 
+        // Rebuilds the room <select> options for the currently-selected building.
+        // Idempotent — safe to call on overlay show, on building change, and on
+        // late RoomConfigManager RTDB sync via the 'roomconfig-updated' event.
+        // Preserves a still-valid prior selection across rebuilds so a sync
+        // arriving after the user picked doesn't reset their choice.
+        function _taPopulateLiffRoomSelect() {
+            const sel = document.getElementById('liff-link-room');
+            const bldSel = document.getElementById('liff-link-building');
+            if (!sel || !bldSel) return;
+            const building = bldSel.value;
+            let rooms = [];
+            try {
+                if (typeof RoomConfigManager !== 'undefined') {
+                    const cfg = RoomConfigManager.getRoomsConfig(building);
+                    rooms = (cfg?.rooms || []).filter(r => !r.deleted && r.id);
+                }
+            } catch (e) {
+                console.warn('[liff-link] populate room select failed:', e?.message || e);
+            }
+            const prev = sel.value;
+            const opts = ['<option value="">— เลือกห้อง —</option>'];
+            rooms.forEach(r => {
+                const id = String(r.id);
+                const label = r.name || (building === 'nest' ? `Nest ${id}` : `ห้อง ${id}`);
+                const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                opts.push(`<option value="${esc(id)}">${esc(label)}</option>`);
+            });
+            sel.innerHTML = opts.join('');
+            if (prev && rooms.some(r => String(r.id) === prev)) sel.value = prev;
+        }
+
+        // One-time wiring: building change repaints the room list; late RTDB
+        // sync from RoomConfigManager refreshes both buildings, so we refresh
+        // whichever is currently selected.
+        function _taWireLiffRoomSelect() {
+            if (_taWireLiffRoomSelect._wired) return;
+            _taWireLiffRoomSelect._wired = true;
+            document.getElementById('liff-link-building')
+                ?.addEventListener('change', _taPopulateLiffRoomSelect);
+            document.addEventListener('roomconfig-updated', _taPopulateLiffRoomSelect);
+        }
+
         function showLiffLinkForm() {
             const host = document.getElementById('liff-link-overlay');
             if (!host) return;
@@ -11112,6 +11157,8 @@
                 btn.textContent = '🔗 ส่งคำขอเชื่อมบัญชี';
                 btn.disabled = false;
             }
+            _taWireLiffRoomSelect();
+            _taPopulateLiffRoomSelect();
         }
 
         // Re-link path — same overlay/form as showLiffLinkForm, but the submit
@@ -11139,6 +11186,8 @@
                 btn.textContent = '🔄 ส่งคำขอเชื่อมห้อง';
                 btn.disabled = false;
             }
+            _taWireLiffRoomSelect();
+            _taPopulateLiffRoomSelect();
         }
         window.showRelinkForm = showRelinkForm;
 
