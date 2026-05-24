@@ -2308,6 +2308,12 @@
   html[data-theme="dark"] [style*="background: var(--accent-pale)"] { background: rgba(217,119,6,.18) !important; }
   html[data-theme="dark"] [style*="background:var(--blue-pale)"],
   html[data-theme="dark"] [style*="background: var(--blue-pale)"] { background: rgba(3,105,161,.2) !important; }
+  /* Same tokens used via CSS classes (.insight-card.amber/.blue on the
+     dashboard cost-summary trio) — class selectors don't match the
+     inline-style attribute selectors above. Mirror the rgba tints so
+     amber/blue cost cards stay readable on dark surfaces. */
+  html[data-theme="dark"] .insight-card.amber { background: rgba(217,119,6,.12); }
+  html[data-theme="dark"] .insight-card.blue  { background: rgba(3,105,161,.2); }
   html[data-theme="dark"] [style*="background:var(--bg-secondary)"],
   html[data-theme="dark"] [style*="background: var(--bg-secondary)"] { background: var(--surface-card) !important; }
   /* Owner section backgrounds */
