@@ -4081,7 +4081,7 @@
     <div id="add-market-page" class="page" style="background: var(--bg-color);">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; touch-action:manipulation;"
-                data-action="goBackToCommunity">
+                data-action="goBackToMarketplace">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">ลงประกาศ 📢</h1>
@@ -4151,7 +4151,7 @@
                 <i class="fas fa-paper-plane"></i> โพสต์ลงตลาดนัด
             </button>
             <button class="btn-main" style="background:transparent; color:#888; border:1px solid #ddd; margin-top:10px; touch-action:manipulation;"
-                data-action="goBackToCommunity">ยกเลิก</button>
+                data-action="goBackToMarketplace">ยกเลิก</button>
         </div>
     </div>
 
@@ -4160,7 +4160,7 @@
     <div id="market-chat-list-page" class="page" style="background: var(--bg-color);">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 18px;">
             <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; touch-action:manipulation;"
-                data-action="goBackToCommunity">
+                data-action="goBackToMarketplace">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">💬 ข้อความ</h1>
@@ -5223,7 +5223,7 @@
 
         // ฟังก์ชันปุ่มย้อนกลับ
         function goBackToProfile() { showPage('profile'); updateNavActiveIndex(4); }
-        function goBackToCommunity() { showPage('community'); updateNavActiveIndex(2); }
+        function goBackToMarketplace() { showPage('marketplace'); updateNavActiveIndex(2); }
         function goBackToUsage() { showPage('usage'); updateNavActiveIndex(3); }
         function goBackToService() { showPage('services'); updateNavActiveIndex(1); }
         function goBackToHome() { showPage('home'); }
@@ -6969,7 +6969,7 @@
                 document.querySelectorAll('input[name="mcat"]').forEach(r => { r.checked = r.value === 'item'; });
                 ['market-skyhook','market-pet'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
                 _onMarketCatChange();
-                goBackToCommunity();
+                goBackToMarketplace();
             } catch(e) {
                 console.warn('saveNewMarketItem:', e);
                 toast('โพสต์ไม่สำเร็จ ลองใหม่ครับ', 'error');
@@ -7901,7 +7901,7 @@
             if (a === 'startWellnessQuiz' && _ta.startWellnessQuiz) { _ta.startWellnessQuiz(); return; }
             if (a === 'goBackToService' && _ta.goBackToService) { _ta.goBackToService(); return; }
             if (a === 'goBackToProfile' && _ta.goBackToProfile) { _ta.goBackToProfile(); return; }
-            if (a === 'goBackToCommunity' && _ta.goBackToCommunity) { _ta.goBackToCommunity(); return; }
+            if (a === 'goBackToMarketplace' && _ta.goBackToMarketplace) { _ta.goBackToMarketplace(); return; }
             if (a === 'goBackFromPayment' && _ta.goBackFromPayment) { _ta.goBackFromPayment(); return; }
             if (a === 'goBackToHome' && _ta.goBackToHome) { _ta.goBackToHome(); return; }
             if (a === 'goBackToUsage' && _ta.goBackToUsage) { _ta.goBackToUsage(); return; }
