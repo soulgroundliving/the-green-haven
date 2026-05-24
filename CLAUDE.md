@@ -1088,6 +1088,42 @@ End users don't hit this — `CACHE_VERSION` in `service-worker.js` auto-bumps f
 
 Related: §7-J (static deploy ≠ live-data verified) is the dependency-direction sibling — deploy success ≠ feature works because of real data. This MM is "deploy success ≠ in-memory code matches deploy" because of SW cache.
 
+### NN. Firestore triggers (any Gen, any region) cannot watch SE3-hosted Firestore — use HTTPS callable + client invocation
+
+Eventarc — the trigger backbone for BOTH Gen1 `firebase-functions/v1` AND Gen2 `firebase-functions/v2/firestore` Firestore triggers — does NOT support `asia-southeast3` (Jakarta), which is where this project's Firestore lives. Any new CF that needs to react to a Firestore write WILL fail at deploy time with:
+
+```
+Resource projects/the-green-haven/databases/(default)/documents/<path> is in region asia-southeast3 which is not supported.
+```
+
+The project pattern is **HTTPS callable invoked from client AFTER the Firestore write** — modeled on `functions/notifyTenantOnMeterUpload.js` (see its 13-line comment block at the top explaining the same constraint). The callable lives in SE1 (no Eventarc requirement); the client calls it as a follow-up step. Auth gates inside the CF verify the caller has permission to trigger the work (e.g. participant of the chat, owner of the post).
+
+Incident 2026-05-24: Sprint 1 + Sprint 2 marketplace-chat CFs (`cleanupMarketplaceChat` Firestore.onWrite + `notifyMarketplaceChat` Firestore.onCreate) BOTH shipped in PR #36 as triggers. Deploy after merge failed on the first attempt; full refactor to v2 `onCall` in PR #37 + 7 new client invocation sites in tenant_app.html. ~30 min lost, plus a forced `firebase functions:delete cleanupMarketplaceChat --region asia-southeast1 --force` to clear the stale "background-triggered" registration (which Firebase recorded even though the deploy itself errored — re-deploy as callable was then blocked by "Changing from a background triggered function to a callable function is not allowed").
+
+**Rule:** before writing ANY new Firestore-triggered CF in this project, stop and use a callable instead. Detection:
+
+```bash
+# Find every Firestore-trigger CF in the repo. Each is either FROZEN
+# (predates the SE3 migration — see lifecycle_marketplace.md and
+# generate_bills_cf_frozen.md) OR needs to be refactored to callable.
+grep -rn "\.firestore\.document(\|firebase-functions/v2/firestore" functions/
+```
+
+The only Firestore-trigger CF that's allowed to exist (and shouldn't be touched) is `generateBillsOnMeterUpdate` — it was deployed pre-migration and is now FROZEN per [generate_bills_cf_frozen.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\generate_bills_cf_frozen.md). Any new trigger fails at deploy.
+
+**When client invocation isn't enough (rare):** scheduled CF sweeping the Firestore collection on a cron is the only Eventarc-free fallback. Adds latency (1-15 min) but works cross-region. Used by `cleanupChecklistsScheduled.js`, `cleanupOldDocs.js`, etc.
+
+**Hotfix recipe when you discover a trigger CF in your in-flight PR:**
+
+1. Refactor the CF: `firebase-functions/v1` → `firebase-functions/v2/https`; `functions.region().firestore.document(path).onWrite/onCreate(...)` → `onCall({ region: 'asia-southeast1', secrets: [...] }, async (request) => ...)`.
+2. Move the trigger's auth gate INTO the callable body (`request.auth.uid` required; participant / owner / admin check; sender == auth.uid for spoofing protection).
+3. Wire client to invoke after the Firestore write that USED to trigger it. Order matters for cleanup-style CFs where the auth check needs the source doc to still exist (e.g. `deleteMarketItem` must call `cleanupMarketplaceChat` BEFORE `deleteDoc`, not after).
+4. Rewrite the unit test to mock `firebase-functions/v2/https.onCall` + `firebase-functions/params.defineSecret` (intercept via `Module._load`); call the handler directly with `{ auth, data }` shape.
+5. **If the trigger version already attempted to deploy** (even if it errored): run `firebase functions:delete <name> --region asia-southeast1 --force` BEFORE the new deploy. Otherwise Firebase blocks the deploy with "Changing from a background triggered function to a callable function is not allowed." The CLI lets the function exist as a stale shadow registration even after a failed deploy.
+6. Lifecycle doc must explicitly state "HTTPS callable, NOT a Firestore trigger" with a link to this anti-pattern, so future sessions don't undo the refactor.
+
+**Family with §7-K (defined ≠ wired)** — both are about discovering invariants the code suggests but reality violates. K is "X is defined doesn't mean X runs"; NN is "X.onWrite exists in the v1 SDK doesn't mean X.onWrite works in your project's region." Same instinct: don't trust the API surface — grep for project precedent first.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
