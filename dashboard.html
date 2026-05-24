@@ -2301,6 +2301,13 @@
   html[data-theme="dark"] [style*="color:#2d3748"],
   html[data-theme="dark"] [style*="color:#374151"] { color: var(--ink) !important; }
 
+  /* Tenant Health tile hover (CSS-only — replaces inline onmouseover/onmouseout
+     that previously violated CSP script-src on every render of the Tenant page). */
+  .health-tile--interactive:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(31,31,28,.08);
+  }
+
   /* CSS-variable backgrounds that don't flip in dark mode */
   html[data-theme="dark"] [style*="background:var(--accent-light)"],
   html[data-theme="dark"] [style*="background: var(--accent-light)"] { background: rgba(217,119,6,.12) !important; }
