@@ -1,31 +1,41 @@
 /**
- * cleanupMarketplaceChat — self-destruct chats when their parent marketplace
- * post is closed or deleted.
+ * cleanupMarketplaceChat — clears every chat + messages sub-collection
+ * for a marketplace post.
  *
- * Trigger: Firestore onWrite on `marketplace/{postId}`.
+ * Why HTTPS callable (not Firestore trigger):
+ *   Firestore lives in asia-southeast3 (Jakarta). Eventarc — the trigger
+ *   backbone for both Gen1 and Gen2 Firestore triggers — does NOT support
+ *   asia-southeast3 (verified by `notifyTenantOnMeterUpload` comment + the
+ *   2026-05-24 PR #36 deploy attempt which failed with "Resource ...
+ *   marketplace/{postId} is in region asia-southeast3 which is not
+ *   supported"). The project pattern is HTTPS callable invoked from
+ *   client after the Firestore write — same shape as notifyTenantOnMeterUpload.
  *
- * Fires cleanup when:
- *   - the post is DELETED entirely (admin/owner deleted), OR
- *   - the post's `status` field is `COMPLETED` after the write.
+ * Auth: signed-in user; caller must be EITHER:
+ *   - admin (custom claim admin:true), OR
+ *   - the post's ownerUid (matches request.auth.uid)
+ *   - if the post no longer exists (already deleted), admin-only
+ *     (otherwise an attacker could call this on any postId and try to
+ *     delete chats they're not party to)
  *
- * Why we re-check on every status=COMPLETED write (instead of only the
- * transition INTO COMPLETED): the trigger fires once, and if cleanup throws
- * (transient network error, rate limit, etc.) the chats would be orphaned
- * because the next update would have `before.status === 'COMPLETED'` and
- * any "transition only" gate would skip. Re-running on every write is
- * idempotent (collection query returns empty after first success) and cheap.
+ * Call signature:
+ *   Client → httpsCallable('cleanupMarketplaceChat')({ postId: '<id>' })
+ *   Returns { chatsDeleted: N, messagesDeleted: M }
  *
- * What gets cleared:
- *   - every doc in `marketplace_chats` where `postId == {postId}` AND
- *   - every doc in each such chat's `messages` sub-collection
+ * Invocation points (tenant_app.html):
+ *   - markMarketClosed(id) — after setDoc({ status: 'COMPLETED' })
+ *   - deleteMarketItem(id) — BEFORE deleteDoc (post must still exist for
+ *     ownership check)
+ *
+ * §7-DD: deletes BOTH chat doc AND messages sub-collection — orphan
+ * messages would persist forever otherwise (default-deny rules don't
+ * allow tenant cleanup of someone else's chats).
  *
  * Deploy: firebase deploy --only functions:cleanupMarketplaceChat
  *
  * Sprint 1 — Privacy-First Marketplace Chat (Nest Marketplace Spec v1.0 §3.2).
- * Related: §7-DD (sibling-collection cleanup must include the messages
- * sub-collection, not just the chat doc).
  */
-const functions = require('firebase-functions/v1');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();
@@ -36,7 +46,7 @@ const BATCH_FLUSH_AT = 450;
 
 /**
  * Pure cleanup logic — extracted so unit tests can exercise it without
- * spinning up the trigger wrapper. Treats `firestore` as an injected
+ * spinning up the callable wrapper. Treats `firestore` as an injected
  * dependency that exposes the standard Admin Firestore surface.
  *
  * @param {object} firestore — admin Firestore instance (or compatible mock).
@@ -80,29 +90,46 @@ async function cleanupChatsForPost(firestore, postId) {
 
 exports._cleanupChatsForPost = cleanupChatsForPost;
 
-exports.cleanupMarketplaceChat = functions
-  .region('asia-southeast1')
-  .firestore.document('marketplace/{postId}')
-  .onWrite(async (change, context) => {
-    const after = change.after.exists ? change.after.data() : null;
-    const postId = context.params.postId;
+exports.cleanupMarketplaceChat = onCall(
+  { region: 'asia-southeast1' },
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError('unauthenticated', 'Sign-in required');
+    }
+    const postId = request.data?.postId;
+    if (!postId || typeof postId !== 'string') {
+      throw new HttpsError('invalid-argument', 'postId (string) required');
+    }
 
-    // Skip unless the post was deleted OR is now in the COMPLETED end-state.
-    const shouldClean = !after || after.status === 'COMPLETED';
-    if (!shouldClean) return null;
+    const firestore = admin.firestore();
+    const isAdmin = request.auth.token?.admin === true;
+
+    // Authorize against the parent post.
+    const postSnap = await firestore.collection('marketplace').doc(postId).get();
+    if (!postSnap.exists) {
+      // Orphan-cleanup path: post is gone; only admin can sweep.
+      if (!isAdmin) {
+        throw new HttpsError('permission-denied', 'Post not found; only admin can clean orphan chats');
+      }
+    } else {
+      const post = postSnap.data() || {};
+      const isOwner = post.ownerUid === request.auth.uid;
+      if (!isAdmin && !isOwner) {
+        throw new HttpsError('permission-denied', 'Only the post owner or admin can clean chats');
+      }
+    }
 
     try {
-      const result = await cleanupChatsForPost(admin.firestore(), postId);
+      const result = await cleanupChatsForPost(firestore, postId);
       if (result.chatsDeleted > 0 || result.messagesDeleted > 0) {
         console.log(
-          `[cleanupMarketplaceChat] post=${postId} cleared chats=${result.chatsDeleted} messages=${result.messagesDeleted}`
+          `[cleanupMarketplaceChat] post=${postId} caller=${request.auth.uid} cleared chats=${result.chatsDeleted} messages=${result.messagesDeleted}`
         );
       }
       return result;
     } catch (e) {
       console.error(`[cleanupMarketplaceChat] post=${postId} failed:`, e.message);
-      // Re-throw so Cloud Functions records the failure. The next write to
-      // this post (status remains COMPLETED) will re-trigger and retry.
-      throw e;
+      throw new HttpsError('internal', `cleanup failed: ${e.message}`);
     }
-  });
+  }
+);

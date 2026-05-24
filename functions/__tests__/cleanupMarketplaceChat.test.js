@@ -1,18 +1,20 @@
 /**
  * Unit tests for cleanupMarketplaceChat — Sprint 1 privacy-first chat
- * self-destruct.
+ * self-destruct. Callable shape (post-SE3-region-split refactor).
  *
  * Coverage:
  *   - cleanupChatsForPost (pure inner): zero/one/many chats, message batching,
  *     no-message chats, idempotency on second call.
- *   - trigger wrapper (onWrite handler): fires on COMPLETED, fires on delete,
- *     skips on intermediate writes, surfaces errors.
+ *   - callable wrapper: auth (unauth, owner, admin, non-owner non-admin,
+ *     orphan-post + admin allow, orphan-post + non-admin deny),
+ *     invalid-argument on missing postId.
  */
 const { describe, it, beforeEach, after } = require('node:test');
 const assert = require('node:assert/strict');
 
 let chatsState;       // [{ id, postId, ...data }]
 let messagesState;    // { chatId: [{ id }] }
+let postsState;       // { postId: { ownerUid, ... } }
 let deletedChats;     // [chatId]
 let deletedMessages;  // [chatId/messageId]
 let batchCount;
@@ -20,6 +22,7 @@ let batchCount;
 function resetStubs() {
   chatsState = [];
   messagesState = {};
+  postsState = {};
   deletedChats = [];
   deletedMessages = [];
   batchCount = 0;
@@ -52,23 +55,36 @@ function chatRef(chatId) {
 function mockFirestore() {
   return {
     collection: (name) => {
-      if (name !== 'marketplace_chats') throw new Error('unexpected collection: ' + name);
-      return {
-        where: (field, op, val) => {
-          if (field !== 'postId' || op !== '==') throw new Error('unexpected where: ' + field + ' ' + op);
-          return {
+      if (name === 'marketplace_chats') {
+        return {
+          doc: (chatId) => chatRef(chatId),
+          where: (field, op, val) => {
+            if (field !== 'postId' || op !== '==') throw new Error('unexpected where: ' + field + ' ' + op);
+            return {
+              get: async () => ({
+                docs: chatsState
+                  .filter(c => c.postId === val)
+                  .map(c => ({
+                    id: c.id,
+                    data: () => c,
+                    ref: chatRef(c.id),
+                  })),
+              }),
+            };
+          },
+        };
+      }
+      if (name === 'marketplace') {
+        return {
+          doc: (postId) => ({
             get: async () => ({
-              docs: chatsState
-                .filter(c => c.postId === val)
-                .map(c => ({
-                  id: c.id,
-                  data: () => c,
-                  ref: chatRef(c.id),
-                })),
+              exists: postId in postsState,
+              data: () => postsState[postId],
             }),
-          };
-        },
-      };
+          }),
+        };
+      }
+      throw new Error('unexpected collection: ' + name);
     },
     batch: () => {
       const ops = [];
@@ -82,7 +98,6 @@ function mockFirestore() {
           ops.forEach(ref => {
             if (ref._kind === 'message') {
               deletedMessages.push(ref._key);
-              // Remove from in-memory state so re-running is idempotent.
               const [chatId, messageId] = ref._key.split('/');
               if (messagesState[chatId]) {
                 messagesState[chatId] = messagesState[chatId].filter(m => m.id !== messageId);
@@ -95,8 +110,8 @@ function mockFirestore() {
   };
 }
 
-// Trigger handler capture --------------------------------------------------
-let onWriteHandler = null;
+// Callable handler capture --------------------------------------------------
+let callableHandler = null;
 
 const Module = require('module');
 const _origLoad = Module._load;
@@ -108,15 +123,22 @@ Module._load = function (id, parent, ...rest) {
       firestore: () => mockFirestore(),
     };
   }
-  if (id === 'firebase-functions/v1') {
-    const region = () => ({
-      firestore: {
-        document: () => ({
-          onWrite: (h) => { onWriteHandler = h; return h; },
-        }),
+  if (id === 'firebase-functions/v2/https') {
+    class HttpsError extends Error {
+      constructor(code, message) {
+        super(message);
+        this.code = code;
+      }
+    }
+    return {
+      HttpsError,
+      onCall: (opts, h) => {
+        // Signature is onCall(opts, handler) OR onCall(handler).
+        const handler = typeof opts === 'function' ? opts : h;
+        callableHandler = handler;
+        return handler;
       },
-    });
-    return { region };
+    };
   }
   return _origLoad.call(this, id, parent, ...rest);
 };
@@ -125,7 +147,17 @@ after(() => { Module._load = _origLoad; });
 
 // Force fresh module load now that mocks are in place.
 delete require.cache[require.resolve('../cleanupMarketplaceChat.js')];
-const { _cleanupChatsForPost, cleanupMarketplaceChat } = require('../cleanupMarketplaceChat.js');
+const { _cleanupChatsForPost } = require('../cleanupMarketplaceChat.js');
+
+function callerAdmin(uid = 'admin-1') {
+  return { auth: { uid, token: { admin: true } } };
+}
+function callerOwner(uid) {
+  return { auth: { uid, token: {} } };
+}
+function callerUnauth() {
+  return { auth: null };
+}
 
 // ---- Pure cleanup logic --------------------------------------------------
 
@@ -191,7 +223,6 @@ describe('cleanupChatsForPost — pure cleanup', () => {
   });
 
   it('returns zeros for falsy postId without scanning collection', async () => {
-    // Seed something — should NOT be touched.
     chatsState = [{ id: 'c1', postId: '' }];
     const r = await _cleanupChatsForPost(mockFirestore(), '');
     assert.equal(r.chatsDeleted, 0);
@@ -200,89 +231,81 @@ describe('cleanupChatsForPost — pure cleanup', () => {
   });
 });
 
-// ---- Trigger wrapper ------------------------------------------------------
+// ---- Callable wrapper ---------------------------------------------------
 
-describe('cleanupMarketplaceChat — onWrite trigger', () => {
+describe('cleanupMarketplaceChat — onCall wrapper', () => {
   beforeEach(() => {
     resetStubs();
-    // Ensure the handler was captured at module load.
-    assert.equal(typeof onWriteHandler, 'function', 'onWrite handler was not captured');
+    assert.equal(typeof callableHandler, 'function', 'onCall handler was captured');
   });
 
-  function change(beforeData, afterData) {
-    return {
-      before: {
-        exists: !!beforeData,
-        data: () => beforeData,
-      },
-      after: {
-        exists: !!afterData,
-        data: () => afterData,
-      },
-    };
-  }
+  it('rejects unauthenticated callers', async () => {
+    postsState['p1'] = { ownerUid: 'line:UOWNER' };
+    chatsState = [{ id: 'c1', postId: 'p1' }];
+    await assert.rejects(
+      callableHandler({ ...callerUnauth(), data: { postId: 'p1' } }),
+      err => err.code === 'unauthenticated'
+    );
+    assert.equal(deletedChats.length, 0);
+  });
 
-  it('cleans when status transitions to COMPLETED with chats present', async () => {
+  it('rejects missing/empty postId', async () => {
+    await assert.rejects(
+      callableHandler({ ...callerOwner('line:UX'), data: {} }),
+      err => err.code === 'invalid-argument'
+    );
+    await assert.rejects(
+      callableHandler({ ...callerOwner('line:UX'), data: { postId: '' } }),
+      err => err.code === 'invalid-argument'
+    );
+  });
+
+  it('owner can clean their own post chats', async () => {
+    postsState['p1'] = { ownerUid: 'line:UOWNER' };
     chatsState = [{ id: 'c1', postId: 'p1' }];
     messagesState = { c1: [{ id: 'm1' }] };
-    const out = await onWriteHandler(
-      change({ status: 'AVAILABLE' }, { status: 'COMPLETED' }),
-      { params: { postId: 'p1' } }
-    );
-    assert.deepEqual(out, { chatsDeleted: 1, messagesDeleted: 1 });
+    const r = await callableHandler({ ...callerOwner('line:UOWNER'), data: { postId: 'p1' } });
+    assert.deepEqual(r, { chatsDeleted: 1, messagesDeleted: 1 });
     assert.deepEqual(deletedChats, ['c1']);
   });
 
-  it('cleans when the post is fully deleted (after=null)', async () => {
-    chatsState = [{ id: 'cX', postId: 'pZ' }];
-    messagesState = { cX: [{ id: 'm1' }, { id: 'm2' }] };
-    const out = await onWriteHandler(
-      change({ status: 'AVAILABLE' }, null),
-      { params: { postId: 'pZ' } }
-    );
-    assert.deepEqual(out, { chatsDeleted: 1, messagesDeleted: 2 });
+  it('admin can clean any post chats', async () => {
+    postsState['p1'] = { ownerUid: 'line:USOMEONEELSE' };
+    chatsState = [{ id: 'c1', postId: 'p1' }];
+    const r = await callableHandler({ ...callerAdmin(), data: { postId: 'p1' } });
+    assert.deepEqual(r, { chatsDeleted: 1, messagesDeleted: 0 });
   });
 
-  it('skips when the post is updated but status is not COMPLETED', async () => {
+  it('non-owner non-admin is denied even if post exists', async () => {
+    postsState['p1'] = { ownerUid: 'line:UOWNER' };
     chatsState = [{ id: 'c1', postId: 'p1' }];
-    messagesState = { c1: [{ id: 'm1' }] };
-    const out = await onWriteHandler(
-      change({ status: 'AVAILABLE', title: 'old' }, { status: 'AVAILABLE', title: 'new' }),
-      { params: { postId: 'p1' } }
+    await assert.rejects(
+      callableHandler({ ...callerOwner('line:UATTACKER'), data: { postId: 'p1' } }),
+      err => err.code === 'permission-denied'
     );
-    assert.equal(out, null);
     assert.equal(deletedChats.length, 0);
   });
 
-  it('skips when status changes between non-COMPLETED states', async () => {
-    chatsState = [{ id: 'c1', postId: 'p1' }];
-    const out = await onWriteHandler(
-      change({ status: 'AVAILABLE' }, { status: 'RESERVED' }),
-      { params: { postId: 'p1' } }
+  it('orphan-post (post deleted) + admin → allowed', async () => {
+    // post not in postsState
+    chatsState = [{ id: 'c1', postId: 'pX' }];
+    const r = await callableHandler({ ...callerAdmin(), data: { postId: 'pX' } });
+    assert.deepEqual(r, { chatsDeleted: 1, messagesDeleted: 0 });
+  });
+
+  it('orphan-post + non-admin → denied (prevents arbitrary-postId attack)', async () => {
+    chatsState = [{ id: 'c1', postId: 'pX' }];
+    await assert.rejects(
+      callableHandler({ ...callerOwner('line:UANY'), data: { postId: 'pX' } }),
+      err => err.code === 'permission-denied'
     );
-    assert.equal(out, null);
     assert.equal(deletedChats.length, 0);
   });
 
-  it('re-runs idempotently when a subsequent write keeps status COMPLETED', async () => {
-    chatsState = [{ id: 'c1', postId: 'p1' }];
-    messagesState = { c1: [{ id: 'm1' }] };
-    // First write — transition into COMPLETED.
-    await onWriteHandler(
-      change({ status: 'AVAILABLE' }, { status: 'COMPLETED' }),
-      { params: { postId: 'p1' } }
-    );
-    assert.equal(deletedChats.length, 1);
-    // Reset capture state but keep the now-cleaned chatsState empty.
-    chatsState = [];
-    deletedChats = [];
-    deletedMessages = [];
-    // Second write — admin edits something else on the COMPLETED post.
-    const out2 = await onWriteHandler(
-      change({ status: 'COMPLETED', adminNote: 'x' }, { status: 'COMPLETED', adminNote: 'y' }),
-      { params: { postId: 'p1' } }
-    );
-    assert.deepEqual(out2, { chatsDeleted: 0, messagesDeleted: 0 });
-    assert.equal(deletedChats.length, 0);
+  it('owner with no matching chats returns zeros', async () => {
+    postsState['p1'] = { ownerUid: 'line:UOWNER' };
+    // No chats
+    const r = await callableHandler({ ...callerOwner('line:UOWNER'), data: { postId: 'p1' } });
+    assert.deepEqual(r, { chatsDeleted: 0, messagesDeleted: 0 });
   });
 });
