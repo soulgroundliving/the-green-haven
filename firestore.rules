@@ -150,7 +150,9 @@ service cloud.firestore {
                   && request.resource.data.postId is string
                   && request.resource.data.postId.size() <= 64;
       // Update: any participant may update; the participants array itself is
-      // frozen (can't drop the counterparty mid-conversation).
+      // frozen (can't drop the counterparty mid-conversation). Permitted field
+      // writes include: lastMessage, lastMessageTime, unreadCount.{uid},
+      // and (S3 PR 2) lastReadAt.{uid} for read-receipt rendering.
       allow update: if isSignedIn()
                   && request.auth.uid in resource.data.participants
                   && request.resource.data.participants == resource.data.participants;

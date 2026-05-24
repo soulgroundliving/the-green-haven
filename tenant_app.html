@@ -7070,6 +7070,17 @@
                     window._chatList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     renderChatList();
                     _renderMarketChatUnreadBadge();
+                    // S3 PR 2: refresh the frozen _activeChat snapshot so the
+                    // counterparty's lastReadAt updates show up live while the
+                    // user is viewing the conversation. Re-render messages so
+                    // the "อ่านแล้ว HH:mm" tag moves to the latest read bubble.
+                    if (window._activeChatId) {
+                        const fresh = window._chatList.find(c => c.id === window._activeChatId);
+                        if (fresh) {
+                            window._activeChat = fresh;
+                            if (typeof renderChatMessages === 'function') renderChatMessages();
+                        }
+                    }
                     // After each fresh chat-list snapshot, see if a deep-link
                     // is waiting on this chat being visible to the user.
                     _tryOpenPendingChat();
@@ -7264,17 +7275,39 @@
                 cont.innerHTML = '<div style="text-align:center; color:#aaa; padding:40px 20px; font-size:var(--fs-sm);">เริ่มการสนทนาด้านล่าง...</div>';
                 return;
             }
-            cont.innerHTML = window._chatMessages.map(m => {
+            // S3 PR 2: "อ่านแล้ว HH:mm" tag under the LAST own-message that the
+            // counterparty has seen (timestamp <= lastReadAt[counterpartUid]).
+            // Stays absent until both sides exist + counterparty has opened.
+            const counterpart = (window._activeChat?.participants || [])
+                .find(p => p !== myUid);
+            const counterpartReadAt = counterpart
+                ? (window._activeChat?.lastReadAt?.[counterpart] || null)
+                : null;
+            let lastReadOwnIdx = -1;
+            if (counterpartReadAt) {
+                for (let i = window._chatMessages.length - 1; i >= 0; i--) {
+                    const m = window._chatMessages[i];
+                    if (m.senderId === myUid && m.timestamp && m.timestamp <= counterpartReadAt) {
+                        lastReadOwnIdx = i;
+                        break;
+                    }
+                }
+            }
+            cont.innerHTML = window._chatMessages.map((m, idx) => {
                 const mine = m.senderId === myUid;
                 const txt = _esc(m.text || '');
                 const time = m.timestamp ? _formatChatTime(m.timestamp) : '';
                 const bubbleStyle = mine
                     ? 'background:var(--primary-green); color:#fff; border-bottom-right-radius:4px;'
                     : 'background:#f3f4f6; color:#222; border-bottom-left-radius:4px;';
+                const readReceipt = (idx === lastReadOwnIdx)
+                    ? `<div style="font-size:10px; color:var(--primary-green); margin-top:2px; text-align:right; padding:0 4px; font-weight:600;">✓ อ่านแล้ว ${_esc(_formatChatTime(counterpartReadAt))}</div>`
+                    : '';
                 return `<div style="display:flex; ${mine ? 'justify-content:flex-end' : 'justify-content:flex-start'};">
                     <div style="max-width:78%;">
                         <div style="padding:8px 12px; border-radius:14px; ${bubbleStyle} font-size:var(--fs-sm); word-break:break-word; white-space:pre-wrap;">${txt}</div>
                         <div style="font-size:10px; color:#999; margin-top:2px; text-align:${mine ? 'right' : 'left'}; padding:0 4px;">${_esc(time)}</div>
+                        ${readReceipt}
                     </div>
                 </div>`;
             }).join('');
@@ -7343,9 +7376,14 @@
             try {
                 const db = window.firebase.firestore();
                 const fs = window.firebase.firestoreFunctions;
+                // S3 PR 2: also stamp lastReadAt so the counterparty can render
+                // "อ่านแล้ว HH:mm" under the last message we've now seen.
                 await fs.setDoc(
                     fs.doc(db, 'marketplace_chats', chatId),
-                    { [`unreadCount.${window._authUid}`]: 0 },
+                    {
+                        [`unreadCount.${window._authUid}`]: 0,
+                        [`lastReadAt.${window._authUid}`]: new Date().toISOString()
+                    },
                     { merge: true }
                 );
             } catch (e) {
