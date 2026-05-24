@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +10,10 @@
   <script>try{const _oi=JSON.parse(localStorage.getItem('owner_info')||'{}');if(_oi.faviconDataUrl)document.getElementById('dynamic-favicon').href=_oi.faviconDataUrl;}catch(_){}</script>
   <link rel="stylesheet" href="shared/brand.css">
   <link rel="stylesheet" href="shared/components.css">
-  <script src="shared/theme-toggle.js"></script>
+  <!-- Intentionally NOT loading shared/theme-toggle.js — login page is locked to
+       light mode via the data-theme="light" attribute on <html>. The script would
+       overwrite that with the user's saved gh_theme localStorage preference,
+       reintroducing dark mode for users who toggled it on the dashboard. -->
   <script src="shared/modal.js"></script>
   <script src="shared/modal-a11y-bridge.js"></script>
   <script src="shared/security.js"></script>
