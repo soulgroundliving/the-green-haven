@@ -7338,9 +7338,13 @@
                     fs.collection(db, 'marketplace_chats', chatId, 'messages'),
                     { senderId: window._authUid, text, timestamp: now, isRead: false }
                 );
+                // S3 PR 2.2: nested object literal (NOT dot-notation key) so
+                // setDoc(merge:true) properly merges into the unreadCount map
+                // instead of creating a literal top-level "unreadCount.UID"
+                // field. Same fix as in _markChatRead above.
                 const patch = { lastMessage: text, lastMessageTime: now };
                 if (counterpart) {
-                    patch[`unreadCount.${counterpart}`] = fs.increment(1);
+                    patch.unreadCount = { [counterpart]: fs.increment(1) };
                 }
                 await fs.setDoc(fs.doc(db, 'marketplace_chats', chatId), patch, { merge: true });
                 // Sprint 2 — fire LINE notification callable (replaces previously-
@@ -7375,13 +7379,16 @@
             try {
                 const db = window.firebase.firestore();
                 const fs = window.firebase.firestoreFunctions;
-                // S3 PR 2: also stamp lastReadAt so the counterparty can render
-                // "อ่านแล้ว HH:mm" under the last message we've now seen.
+                // S3 PR 2.2: setDoc(merge:true) does NOT interpret dot-notation
+                // keys as nested field paths — that's updateDoc-only. Use a
+                // nested object literal so the maps merge correctly. Writing
+                // `{[`lastReadAt.${uid}`]: now}` was creating a LITERAL top-
+                // level field "lastReadAt.UID" that no reader ever queried.
                 await fs.setDoc(
                     fs.doc(db, 'marketplace_chats', chatId),
                     {
-                        [`unreadCount.${window._authUid}`]: 0,
-                        [`lastReadAt.${window._authUid}`]: new Date().toISOString()
+                        unreadCount: { [window._authUid]: 0 },
+                        lastReadAt: { [window._authUid]: new Date().toISOString() }
                     },
                     { merge: true }
                 );
