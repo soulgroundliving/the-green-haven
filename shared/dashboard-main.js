@@ -348,9 +348,10 @@ function renderLiffRequestsList(docs){
     const rejectionReasonHtml = (d.status === 'rejected' && d.rejectionReason)
       ? `<div style="font-size:.72rem;color:#c62828;margin-top:2px;">เหตุผล: ${esc(d.rejectionReason)}</div>` : '';
     const actions = d.status === 'pending' ? `
-      <div style="display:flex;gap:6px;margin-top:8px;">
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
         <button data-action="approveLiffLink" data-id="${esc(d.id)}" style="padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">✅ อนุมัติ</button>
         <button data-action="rejectLiffLink" data-id="${esc(d.id)}" style="padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">❌ ปฏิเสธ</button>
+        <button data-action="adminDirectLinkLiff" data-id="${esc(d.id)}" data-building="${esc(d.building||'')}" data-room="${esc(d.room||'')}" title="F2: ลูกบ้านเปลี่ยน LINE account ใหม่ — บันทึกหลักฐานและอนุมัติโดยตรง" style="padding:6px 12px;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;">🆔 LINE ใหม่</button>
       </div>` : (d.status === 'approved'
         ? `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
             <div style="font-size:.72rem;color:var(--text-muted);">โดย ${esc(d.approvedBy||'Admin')} · ${d.approvedAt?new Date(d.approvedAt).toLocaleDateString('th-TH'):''}</div>
@@ -414,6 +415,36 @@ async function _tenantRecordExists(building, roomId) {
   } catch (e) {
     console.warn('_tenantRecordExists check failed:', e.message);
     return null;
+  }
+}
+
+// F2 direct link — admin pre-approves a new LINE account for a tenant who lost
+// LINE access entirely. Requires mandatory evidence note + calls server CF so the
+// action is audit-logged (unlike the client-side approveLiffLink below).
+// See lifecycle_tenant_transitions.md §F2 and functions/adminApprovedLink.js.
+async function adminDirectLinkLiff(lineUserId, building, room) {
+  if (!window.firebase?.firestore) return;
+  const evidence = prompt(
+    'บันทึกหลักฐานการยืนยันตัวตน (ต้องกรอก — เก็บไว้ใน audit log)\n' +
+    'ตัวอย่าง: "ยืนยันบัตร ID ตัวต่อตัว 2026-05-26", "วิดีโอคอล ยืนยันหน้า+บัตร"',
+    ''
+  );
+  if (evidence === null) return;               // admin cancelled
+  if (!evidence || evidence.trim().length < 10) {
+    window.ghAlert('หลักฐานต้องมีอย่างน้อย 10 ตัวอักษร', { title: '⚠️ กรุณากรอกหลักฐาน' });
+    return;
+  }
+  try {
+    if (!window.firebase?.functions?.httpsCallable) throw new Error('Firebase Functions not ready');
+    const call = window.firebase.functions.httpsCallable('adminApprovedLink');
+    await call({ lineUserId, building, room, evidenceNote: evidence.trim() });
+    window.ghAlert(
+      `เชื่อม LINE ของ ${lineUserId} สำเร็จ\n` +
+      `ห้อง ${room} (${building}) — ลูกบ้านสามารถเปิด LIFF ด้วย LINE account ใหม่ได้เลย`,
+      { title: '✅ อนุมัติลิงก์โดยตรง' }
+    );
+  } catch (e) {
+    window.ghAlert(e?.message || String(e), { title: '❌ ไม่สำเร็จ' });
   }
 }
 
@@ -880,6 +911,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'approveLiffLink') { typeof approveLiffLink === 'function' && approveLiffLink(el.dataset.id); return; }
     if (a === 'rejectLiffLink')  { typeof rejectLiffLink  === 'function' && rejectLiffLink(el.dataset.id); return; }
     if (a === 'unlinkLiffLink')  { typeof unlinkLiffLink  === 'function' && unlinkLiffLink(el.dataset.id, el.dataset.arg); return; }
+    // F2 direct link — admin verifies identity + pre-approves new LINE account
+    if (a === 'adminDirectLinkLiff') { typeof adminDirectLinkLiff === 'function' && adminDirectLinkLiff(el.dataset.id, el.dataset.building, el.dataset.room); return; }
 
     // Lease + tenant master list (Tenant page secondary tables)
     if (a === 'actLeaseRequest')    { typeof actLeaseRequest    === 'function' && actLeaseRequest(el.dataset.id, el.dataset.arg); return; }
