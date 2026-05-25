@@ -1759,7 +1759,7 @@ function displayTaxFilingChecklist(checklist, year) {
             </div>
           </td>
           <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">
-            <button class="btn btn-sm" style="padding: 5px 10px; font-size: 0.85rem;" onclick="updateChecklistStatus('${item.id}', 'COMPLETED')">
+            <button class="btn btn-sm" style="padding: 5px 10px; font-size: 0.85rem;" data-action="update-checklist-status" data-item-id="${item.id}">
               ✓ ทำเสร็จ
             </button>
           </td>
