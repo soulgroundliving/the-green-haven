@@ -529,6 +529,66 @@ function templatePathReport(docPath, lifecycleBlobStripped) {
   return fabricated;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Computed assertions: verify numerical claims in lifecycle docs against live
+// code counts. Unlike grep-based verifiers ("does this identifier exist?"),
+// these check "doc claims N" === "actual code has N" — catching count drift
+// without requiring the lifecycle doc to contain a self-referential bash cmd.
+//
+// Root cause: cleanupChecklistsScheduled.js added 2026-05-14 without updating
+// lifecycle_scheduled_jobs.md — count stayed at 10 for months until the
+// 2026-05-26 audit. The pre-commit hook (§2c) blocks NEW drift at commit time;
+// computed assertions catch EXISTING drift on every `npm run verify:memory`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function runComputedAssertions() {
+  const results = [];
+
+  // 1. lifecycle_scheduled_jobs.md — "**N scheduled jobs total**"
+  //    Counts pubsub.schedule() calls in functions/*.js, excluding:
+  //      - keepLiffWarm (every 5 minutes)
+  //      - lineRetryQueue (*/15 * * * *)
+  //    These two interval CFs are documented separately and not in the total.
+  const scheduledJobsDoc = path.join(MEMORY_DIR, 'lifecycle_scheduled_jobs.md');
+  if (fs.existsSync(scheduledJobsDoc)) {
+    try {
+      const content = fs.readFileSync(scheduledJobsDoc, 'utf8');
+      const m = content.match(/\*\*(\d+) scheduled jobs total\*\*/);
+      if (m) {
+        const docCount = parseInt(m[1], 10);
+        const functionsDir = path.join(REPO_ROOT, 'functions');
+        let actual = 0;
+        if (fs.existsSync(functionsDir)) {
+          for (const f of fs.readdirSync(functionsDir)) {
+            if (!f.endsWith('.js')) continue;
+            const src = fs.readFileSync(path.join(functionsDir, f), 'utf8');
+            for (const line of src.split('\n')) {
+              if (line.includes('pubsub.schedule(') &&
+                  !line.includes('every 5 minutes') &&
+                  !line.includes('*/15')) {
+                actual++;
+              }
+            }
+          }
+        }
+        const ok = actual === docCount;
+        results.push({
+          comment: `lifecycle_scheduled_jobs: doc says ${docCount} total, code has ${actual} (excl. keepLiffWarm+lineRetryQueue)`,
+          command: '[computed: count pubsub.schedule() in functions/*.js excl. every-5min/every-15min]',
+          ok,
+          stdout: ok
+            ? `${actual} scheduled CF job(s) — count matches lifecycle doc`
+            : `MISMATCH: doc=${docCount} actual=${actual} — update **${actual} scheduled jobs total** in lifecycle_scheduled_jobs.md`,
+        });
+      }
+    } catch (e) {
+      // Non-fatal: fresh clone may not have the user-scoped memory dir.
+    }
+  }
+
+  return results;
+}
+
 function main() {
   const args = process.argv.slice(2);
   const flags = new Set(args.filter(a => a.startsWith('--')));
@@ -576,6 +636,22 @@ function main() {
         totalUncovered += cov.uncovered.length;
       }
     }
+  }
+
+  // Computed assertions: verify numerical claims against live code counts.
+  const computedResults = runComputedAssertions();
+  if (computedResults.length > 0) {
+    console.log('\n=== Computed assertions ===');
+    for (const r of computedResults) {
+      const label = r.ok ? '✅' : '❌';
+      console.log(`  ${label} ${r.comment}`);
+      if (!r.ok) {
+        console.log(`     ${r.stdout}`);
+        allGreen = false;
+      }
+    }
+    totalRows += computedResults.length;
+    totalRed += computedResults.filter(r => !r.ok).length;
   }
 
   // All-memory mode: scan handoff/journal/feedback for fabricated template paths.
