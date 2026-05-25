@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Check HTML Syntax
       run: |
@@ -40,13 +40,15 @@ jobs:
         echo "Scanning for security issues..."
 
         # Check for hardcoded secrets
-        if grep -r "password.*=" *.html *.js 2>/dev/null | grep -v "type=" | grep -v "placeholder="; then
-          echo "WARNING: Possible hardcoded password found"
+        if grep -r "password\s*=\s*['\"][^'\"]\+['\"]" *.html *.js 2>/dev/null | grep -v "type=" | grep -v "placeholder=" | grep -v "//"; then
+          echo "ERROR: Possible hardcoded password found"
+          exit 1
         fi
 
         # Check for API keys in code
-        if grep -r "firebase.*key\|api_key\|secret" *.html *.js 2>/dev/null | grep -v "config\|//"; then
-          echo "WARNING: Possible API key exposure"
+        if grep -r "api_key\s*=\s*['\"][^'\"]\+['\"]" *.html *.js 2>/dev/null | grep -v "config\|//"; then
+          echo "ERROR: Possible API key exposure"
+          exit 1
         fi
 
         # Check for .env files
@@ -61,7 +63,7 @@ jobs:
       run: |
         echo "Checking responsive media queries..."
 
-        files=("login.html" "dashboard.html" "meter.html" "accounting.html" "tenant-payment.html")
+        files=("login.html" "dashboard.html" "tenant_app.html" "booking.html" "tax-filing.html")
         for file in "${files[@]}"; do
           if [ -f "$file" ]; then
             media_count=$(grep -c "@media" "$file" || echo 0)
@@ -88,7 +90,7 @@ jobs:
     - name: Check CSS Syntax
       run: |
         echo "Checking CSS closing tags..."
-        files=("login.html" "dashboard.html" "meter.html" "accounting.html" "tenant-payment.html")
+        files=("login.html" "dashboard.html" "tenant_app.html" "booking.html" "tax-filing.html")
         for file in "${files[@]}"; do
           if [ -f "$file" ]; then
             # Check for matching style tags

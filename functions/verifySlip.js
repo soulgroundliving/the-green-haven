@@ -525,7 +525,7 @@ exports.verifySlip = functions
   .https.onRequest(async (req, res) => {
   try {
     // CORS headers
-    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Origin', 'https://the-green-haven.vercel.app');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
