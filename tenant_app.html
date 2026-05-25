@@ -11686,6 +11686,8 @@
             if (!list) return;
             const entries = [];
             const wellnessSrc = _wellnessList.length ? _wellnessList : WELLNESS_ARTICLES;
+            // Players have no lease → skip contract entries (Firestore + localStorage).
+            const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
             // Helper: turn Firestore timestamp/Date/number → millis
             const _toMillis = (v) => {
                 if (v == null) return 0;
@@ -11714,24 +11716,31 @@
                     reward: m.reward,
                 });
             }
-            // 2. Firestore contract markers
-            for (const ym of Object.keys(_contractQuizMarkers || {})) {
-                const m = _contractQuizMarkers[ym];
-                if (!m) continue;
-                seenKeys.add(`c:${ym}`);
-                entries.push({
-                    at: _toMillis(m.at),
-                    title: 'Contract Quiz',
-                    icon: '📜',
-                    score: m.score, total: m.total, passed: m.passed,
-                    reward: m.reward,
-                });
+            // 2. Firestore contract markers (tenant-only — players have no lease)
+            if (!isPlayer) {
+                for (const ym of Object.keys(_contractQuizMarkers || {})) {
+                    const m = _contractQuizMarkers[ym];
+                    if (!m) continue;
+                    seenKeys.add(`c:${ym}`);
+                    entries.push({
+                        at: _toMillis(m.at),
+                        title: 'Contract Quiz',
+                        icon: '📜',
+                        score: m.score, total: m.total, passed: m.passed,
+                        reward: m.reward,
+                    });
+                }
             }
-            // 3. localStorage fallback — only for entries Firestore doesn't already have
+            // 3. localStorage fallback — only for entries Firestore doesn't already have.
+            // Players: Firestore markers are SoT (subscription arrives within 1-3s of
+            // any claim); skip LS fallback to avoid decoding tenantId-with-underscores.
+            // Tenants: skip player-namespaced keys (belongs to a different account).
             for (let i = 0; i < localStorage.length; i++) {
                 const k = localStorage.key(i);
                 if (!k) continue;
                 if (!/^quiz_(contract|wellness)_/.test(k)) continue;
+                if (isPlayer) continue;
+                if (k.startsWith('quiz_wellness_player_')) continue;
                 let p;
                 try { p = JSON.parse(localStorage.getItem(k) || '{}'); } catch(e) { continue; }
                 if (!p || typeof p.at !== 'number') continue;
@@ -12653,14 +12662,18 @@
 
         function _subscribeQuizMarkers() {
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-            if (!_taBuilding || !_taRoom) return; // §7-U: wait for claims
+            const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+            // §7-U: wait for claims — tenant needs building/room, player needs tenantId
+            if (!isPlayer && (!_taBuilding || !_taRoom)) return;
             // §7-V: tear down prior listeners before re-attaching
             if (typeof _wellnessQuizUnsub === 'function') { try { _wellnessQuizUnsub(); } catch (_) {} _wellnessQuizUnsub = null; }
             if (typeof _contractQuizUnsub === 'function') { try { _contractQuizUnsub(); } catch (_) {} _contractQuizUnsub = null; }
             try {
                 const fs = window.firebase.firestoreFunctions;
                 const db = window.firebase.firestore();
-                const wellnessRef = fs.collection(db, `tenants/${_taBuilding}/list/${_taRoom}/wellnessQuizPassed`);
+                const wellnessRef = isPlayer
+                    ? fs.collection(db, `people/${window._playerProfile.tenantId}/wellnessQuizPassed`)
+                    : fs.collection(db, `tenants/${_taBuilding}/list/${_taRoom}/wellnessQuizPassed`);
                 _wellnessQuizUnsub = fs.onSnapshot(wellnessRef, snap => {
                     // Wipe + repopulate the markers map. We don't reconcile localStorage
                     // hints here for absent keys — only refresh when server explicitly
@@ -12682,21 +12695,23 @@
                         _wellnessQuizUnsub = null;
                     }
                 });
-                const contractRef = fs.collection(db, `tenants/${_taBuilding}/list/${_taRoom}/contractQuizPassed`);
-                _contractQuizUnsub = fs.onSnapshot(contractRef, snap => {
-                    Object.keys(_contractQuizMarkers).forEach(k => delete _contractQuizMarkers[k]);
-                    snap.forEach(d => { _contractQuizMarkers[d.id] = d.data() || {}; });
-                    try {
-                        if (typeof setupContractQuizGate === 'function') setupContractQuizGate();
-                        if (typeof renderQuizHub === 'function' && document.getElementById('community-quiz-hub')) renderQuizHub();
-                        if (typeof renderQuizHistory === 'function' && document.getElementById('quiz-history-list')) renderQuizHistory();
-                    } catch (uiErr) { console.warn('contract quiz UI refresh failed:', uiErr?.message); }
-                }, err => {
-                    console.warn('[contractQuizPassed] subscribe failed:', err?.message || err);
-                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                        _contractQuizUnsub = null;
-                    }
-                });
+                if (!isPlayer) {
+                    const contractRef = fs.collection(db, `tenants/${_taBuilding}/list/${_taRoom}/contractQuizPassed`);
+                    _contractQuizUnsub = fs.onSnapshot(contractRef, snap => {
+                        Object.keys(_contractQuizMarkers).forEach(k => delete _contractQuizMarkers[k]);
+                        snap.forEach(d => { _contractQuizMarkers[d.id] = d.data() || {}; });
+                        try {
+                            if (typeof setupContractQuizGate === 'function') setupContractQuizGate();
+                            if (typeof renderQuizHub === 'function' && document.getElementById('community-quiz-hub')) renderQuizHub();
+                            if (typeof renderQuizHistory === 'function' && document.getElementById('quiz-history-list')) renderQuizHistory();
+                        } catch (uiErr) { console.warn('contract quiz UI refresh failed:', uiErr?.message); }
+                    }, err => {
+                        console.warn('[contractQuizPassed] subscribe failed:', err?.message || err);
+                        if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                            _contractQuizUnsub = null;
+                        }
+                    });
+                }
             } catch (e) {
                 console.warn('quiz markers subscribe init failed:', e?.message || e);
             }
@@ -12920,15 +12935,14 @@
                 if (!fns) throw new Error('Firebase Functions SDK not loaded');
                 let resp;
                 if (isWellness) {
-                    if (!_taBuilding || !_taRoom) throw new Error('ยังไม่พบข้อมูลห้อง');
+                    const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+                    if (!isPlayer && (!_taBuilding || !_taRoom)) throw new Error('ยังไม่พบข้อมูลห้อง');
                     const callable = fns.httpsCallable('claimWellnessQuizPoints');
                     const answers = st.questions.map((_, i) => st.answers[i] != null ? Number(st.answers[i]) : -1);
-                    resp = await callable({
-                        building: _taBuilding,
-                        roomId: String(_taRoom),
-                        articleId: st.source.articleId,
-                        answers,
-                    });
+                    const payload = isPlayer
+                        ? { tenantId: window._playerProfile.tenantId, articleId: st.source.articleId, answers }
+                        : { building: _taBuilding, roomId: String(_taRoom), articleId: st.source.articleId, answers };
+                    resp = await callable(payload);
                 } else {
                     if (!_taBuilding || !_taRoom) throw new Error('ยังไม่พบข้อมูลห้อง');
                     // Map client question state to server answer shape. Q1 = leaseEndDate,
@@ -12999,7 +13013,10 @@
 
         function _wellnessQuizMonthKey(articleId) {
             const d = new Date();
-            return `quiz_wellness_${_taBuilding||'x'}_${_taRoom||'x'}_${articleId}_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`;
+            const ym = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`;
+            const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+            if (isPlayer) return `quiz_wellness_player_${window._playerProfile.tenantId}_${articleId}_${ym}`;
+            return `quiz_wellness_${_taBuilding||'x'}_${_taRoom||'x'}_${articleId}_${ym}`;
         }
 
         function _setupWellnessQuizPrompt(article) {
