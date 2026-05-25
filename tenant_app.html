@@ -15075,6 +15075,51 @@
         _fbUid      = window._authUid || '';
       });
     })();
+
+    // ── Sprint 7 follow-up — presence heartbeat ────────────────────────────
+    // Tenant writes `presence/{lineUserId}.lastActiveAt = serverTimestamp()`
+    // while the tab is visible. notifyMarketplaceChat reads this and skips
+    // the LINE OA push when the recipient is active in-app (within 90s) —
+    // the in-app toast already covers them. When the user backgrounds the
+    // tab or closes the app, the heartbeat stops, presence goes stale, and
+    // LINE push fires as the fallback.
+    //
+    // Rate: every 60s + on visibility-change (visible). Skipped silently
+    // when auth.uid doesn't start with 'line:' (admin preview / web).
+    (function _setupPresenceHeartbeat() {
+      function _writePresence() {
+        if (document.visibilityState !== 'visible') return;
+        const uid = window._authUid;
+        if (!uid || !uid.startsWith('line:')) return;
+        if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+        const lineUserId = uid.slice(5);
+        try {
+          const fs = window.firebase.firestoreFunctions;
+          const db = window.firebase.firestore();
+          fs.setDoc(
+            fs.doc(db, 'presence', lineUserId),
+            { lastActiveAt: fs.serverTimestamp() },
+            { merge: true }
+          ).catch(function (e) {
+            // Non-fatal — push fallback covers the recipient when presence
+            // is stale or write failed.
+            console.warn('[presence] write failed:', e?.message || e);
+          });
+        } catch (_) { /* noop */ }
+      }
+      // Initial write once claims are ready (so auth.uid is set).
+      if (typeof window._onLiffClaimsReady === 'function') {
+        window._onLiffClaimsReady(_writePresence);
+      }
+      // Heartbeat: tightly-bounded interval so a single missed beat
+      // doesn't immediately drop the recipient off the "active" window.
+      setInterval(_writePresence, 60 * 1000);
+      // Re-write immediately when the tab becomes visible again
+      // (returning from background → resume push suppression promptly).
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') _writePresence();
+      });
+    })();
     </script>
 
     <!-- ===== CHECKLIST (Tier 3I) — Move-In/Out ===== -->

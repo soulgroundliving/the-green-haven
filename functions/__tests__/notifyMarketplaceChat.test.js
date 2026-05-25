@@ -16,6 +16,7 @@ const assert = require('node:assert/strict');
 let chatState;        // { [chatId]: data }
 let messagesState;    // { [chatId]: { [messageId]: data } }
 let liffUsersState;   // { [lineUserId]: data }
+let presenceState;    // { [lineUserId]: { lastActiveAt: number ms | string ISO } }
 let lastSetCall;      // { chatId, patch, opts }
 let pushCalls;        // [{ url, body }]
 let pushReply;        // { ok, status, text } per call
@@ -26,6 +27,7 @@ function resetStubs() {
   chatState = {};
   messagesState = {};
   liffUsersState = {};
+  presenceState = {};
   lastSetCall = null;
   pushCalls = [];
   pushReply = { ok: true, status: 200, text: '' };
@@ -78,6 +80,26 @@ Module._load = function (id, parent, ...rest) {
                 exists: userId in liffUsersState,
                 data: () => liffUsersState[userId],
               }),
+            }),
+          };
+        }
+        if (col === 'presence') {
+          return {
+            doc: (userId) => ({
+              get: async () => {
+                if (!(userId in presenceState)) return { exists: false, data: () => null };
+                const raw = presenceState[userId];
+                // Mirror Firestore Admin: stored value is a Timestamp with
+                // toMillis(); accept both Timestamp-like and string ISO so
+                // tests can pass either form.
+                const ts = raw.lastActiveAt;
+                const value = (ts && typeof ts === 'object' && typeof ts.toMillis === 'function')
+                  ? ts
+                  : (typeof ts === 'number'
+                      ? { toMillis: () => ts }
+                      : ts);
+                return { exists: true, data: () => ({ lastActiveAt: value }) };
+              },
             }),
           };
         }
@@ -323,6 +345,32 @@ describe('notifyMarketplaceChat — onCall wrapper', () => {
     seedHappyPath();
     const old = new Date(Date.now() - _NOTIFY_THROTTLE_MS - 1000).toISOString();
     chatState['c1'].lastNotifyAt = { 'line:UOWNER': old };
+    const result = await callableHandler({
+      ...callerLine('line:UBUYER'),
+      data: { chatId: 'c1', messageId: 'm1' },
+    });
+    assert.deepEqual(result, { sent: 1 });
+    assert.equal(pushCalls.length, 1);
+  });
+
+  // Sprint 7 follow-up — presence-aware push suppression
+  it('skips push when recipient is in-app within 90s window', async () => {
+    seedHappyPath();
+    // Recipient UOWNER wrote a presence heartbeat 30s ago — still active.
+    presenceState['UOWNER'] = { lastActiveAt: Date.now() - 30 * 1000 };
+    const result = await callableHandler({
+      ...callerLine('line:UBUYER'),
+      data: { chatId: 'c1', messageId: 'm1' },
+    });
+    assert.equal(result.skip, 'recipient_active');
+    assert.ok(result.ageMs < 90 * 1000, 'ageMs reflects how recent the heartbeat was');
+    assert.equal(pushCalls.length, 0, 'no LINE push when recipient is in-app');
+  });
+
+  it('allows push when recipient presence is stale (> 90s old)', async () => {
+    seedHappyPath();
+    // Recipient backgrounded the app 5 min ago — push should fire.
+    presenceState['UOWNER'] = { lastActiveAt: Date.now() - 5 * 60 * 1000 };
     const result = await callableHandler({
       ...callerLine('line:UBUYER'),
       data: { chatId: 'c1', messageId: 'm1' },

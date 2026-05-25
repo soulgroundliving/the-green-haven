@@ -188,6 +188,32 @@ exports.notifyMarketplaceChat = onCall(
       return { sent: 0, skip: 'non_line_recipient' };
     }
 
+    // Sprint 7 follow-up — presence-aware push suppression.
+    // tenant_app heartbeat writes presence/{lineUserId}.lastActiveAt every
+    // 60s while document.visibilityState === 'visible'. If the recipient
+    // wrote a heartbeat within the last 90s (60s interval + 30s grace),
+    // they're in-app and already covered by the in-app toast that
+    // subscribeChatList emits — skip the LINE push entirely to avoid the
+    // dual-notification noise the user flagged. Read failure is non-fatal:
+    // fall through to push (better to over-notify than miss). Window is
+    // intentionally tight; backgrounded tabs go stale → push fires.
+    try {
+      const presSnap = await firestore.collection('presence').doc(recipientLineUserId).get();
+      if (presSnap.exists) {
+        const presData = presSnap.data() || {};
+        const lastActive = presData.lastActiveAt;
+        // serverTimestamp() lands as a Firestore Timestamp object.
+        const lastActiveMs = lastActive && typeof lastActive.toMillis === 'function'
+          ? lastActive.toMillis()
+          : Date.parse(String(lastActive || ''));
+        if (!isNaN(lastActiveMs) && Date.now() - lastActiveMs < 90 * 1000) {
+          return { sent: 0, skip: 'recipient_active', ageMs: Date.now() - lastActiveMs };
+        }
+      }
+    } catch (e) {
+      console.warn('[notifyMarketplaceChat] presence check failed (non-fatal):', e?.message || e);
+    }
+
     // Anti-spam throttle — per (chat, recipient).
     const lastNotifyMap = (chat.lastNotifyAt && typeof chat.lastNotifyAt === 'object')
       ? chat.lastNotifyAt
