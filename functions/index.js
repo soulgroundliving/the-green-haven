@@ -63,6 +63,14 @@ exports.unlinkLiffUser = require('./unlinkLiffUser').unlinkLiffUser;
 // Fires notifyLiffRequest so admin gets the same LINE push as a new request.
 exports.requestRoomRelink = require('./requestRoomRelink').requestRoomRelink;
 
+// Admin-only direct LINE link for F2 scenario: tenant lost LINE access entirely
+// (new phone / new LINE account). Admin verifies identity out-of-band, then
+// pre-creates liffUsers/{newLineUserId} status='approved' so the next liffSignIn
+// from the new account proceeds without LIFF-flow verification.
+// Mandatory: evidenceNote ≥10 chars + RTDB audit log every call.
+// See lifecycle_tenant_transitions.md §F2.
+exports.adminApprovedLink = require('./adminApprovedLink').adminApprovedLink;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOKING FLOW (LIFF prospect → deposit-paid booking → admin convert to tenant)
 // Separate auth namespace from liffSignIn (uid prefix "book:" vs "line:") so
