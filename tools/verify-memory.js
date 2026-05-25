@@ -586,6 +586,46 @@ function runComputedAssertions() {
     }
   }
 
+  // 2. feature_state_canonical.md — "**N CFs use BuildingRegistry helpers**"
+  //    Counts functions/*.js files that CALL getAllBuildings(/getValidBuildings(,
+  //    excluding functions/buildingRegistry.js itself (which DEFINES them).
+  //    Drift signal: doc says 9 (2026-05-13 batch) but reality is 20 as of
+  //    2026-05-26 — every new CF written for facility bookings / PDPA / lease
+  //    transitions etc. used the registry from day 1.
+  const featureStateDoc = path.join(MEMORY_DIR, 'feature_state_canonical.md');
+  if (fs.existsSync(featureStateDoc)) {
+    try {
+      const content = fs.readFileSync(featureStateDoc, 'utf8');
+      const m = content.match(/\*\*(\d+) CFs use BuildingRegistry helpers\*\*/);
+      if (m) {
+        const docCount = parseInt(m[1], 10);
+        const functionsDir = path.join(REPO_ROOT, 'functions');
+        let actual = 0;
+        if (fs.existsSync(functionsDir)) {
+          for (const f of fs.readdirSync(functionsDir)) {
+            if (!f.endsWith('.js')) continue;
+            if (f === 'buildingRegistry.js') continue; // helper, not consumer
+            const src = fs.readFileSync(path.join(functionsDir, f), 'utf8');
+            if (src.includes('getAllBuildings(') || src.includes('getValidBuildings(')) {
+              actual++;
+            }
+          }
+        }
+        const ok = actual === docCount;
+        results.push({
+          comment: `feature_state_canonical: doc says ${docCount} CFs use registry, code has ${actual} (excl. buildingRegistry.js)`,
+          command: '[computed: count functions/*.js calling getAllBuildings(/getValidBuildings( excl. the helper itself]',
+          ok,
+          stdout: ok
+            ? `${actual} CF(s) use BuildingRegistry helpers — count matches feature_state_canonical`
+            : `MISMATCH: doc=${docCount} actual=${actual} — update **${actual} CFs use BuildingRegistry helpers** in feature_state_canonical.md`,
+        });
+      }
+    } catch (e) {
+      // Non-fatal: fresh clone may not have the user-scoped memory dir.
+    }
+  }
+
   return results;
 }
 
