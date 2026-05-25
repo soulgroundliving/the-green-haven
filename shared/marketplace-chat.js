@@ -114,6 +114,9 @@
   window._actionSheetMsgId = window._actionSheetMsgId || null;
   // Sprint 7 bugfix — live parent-post listener (replaces one-shot getDoc).
   window._chatParentPostUnsub = window._chatParentPostUnsub || null;
+  // Sprint 7 follow-up — per-chat last-seen unreadCount for in-app toast
+  // diffing. null on first snapshot so historical unread doesn't toast.
+  window._chatListSeen = window._chatListSeen || null;
 
   // ── Deep-link (§7-GG) ──────────────────────────────────────────────────
   // notifyMarketplaceChat CF builds links of the form
@@ -164,7 +167,40 @@
         fs.orderBy('lastMessageTime', 'desc')
       );
       window._chatListUnsub = fs.onSnapshot(q, snap => {
-        window._chatList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const myUid = window._authUid;
+        const nextChats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Sprint 7 follow-up: detect chats whose unreadCount[myUid] went
+        // UP since the previous snapshot — that's a "new message from
+        // counterparty" event. If the user isn't currently viewing THAT
+        // specific chat, show an in-app toast so they notice without
+        // needing a LINE OA push. Skip the very first snapshot to avoid
+        // toasting historical unread messages on app open. Skip cached
+        // snapshots too (§7-KK) — only count server-confirmed deltas.
+        const firstSnap = !window._chatListSeen;
+        const fromCache = !!snap.metadata?.fromCache;
+        const chatPageActive = !!document.getElementById('market-chat-page')?.classList.contains('active');
+        if (!firstSnap && !fromCache && typeof window.toast === 'function') {
+          for (const chat of nextChats) {
+            const nowUnread = (chat.unreadCount && chat.unreadCount[myUid]) || 0;
+            const prevUnread = window._chatListSeen.get(chat.id) || 0;
+            if (nowUnread > prevUnread) {
+              const isCurrentChat = chatPageActive && window._activeChatId === chat.id;
+              if (!isCurrentChat) {
+                const title = chat.postTitle || 'ข้อความใหม่';
+                const preview = (chat.lastMessage || '').slice(0, 40);
+                window.toast(`📩 ${title}${preview ? ': ' + preview : ''}`, 'info', 5000);
+              }
+            }
+          }
+        }
+        // Refresh per-chat unread cache for next-snapshot diffing. Always
+        // run (even on first snap / cached) so the baseline is correct.
+        if (!window._chatListSeen) window._chatListSeen = new Map();
+        for (const chat of nextChats) {
+          window._chatListSeen.set(chat.id, (chat.unreadCount && chat.unreadCount[myUid]) || 0);
+        }
+
+        window._chatList = nextChats;
         renderList();
         renderUnreadBadge();
         // S3 PR 2: refresh the frozen _activeChat snapshot so the
@@ -450,10 +486,18 @@
       window._chatMessagesUnsub = fs.onSnapshot(q, snap => {
         window._chatMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderMessages();
-        // §7-KK: only mark-read on server-confirmed snapshots — the cached
-        // initial replay would reset the badge before the real server data
-        // arrives.
-        if (window._activeChatId === chatId
+        // §7-KK: only mark-read on server-confirmed snapshots — cached
+        // initial replay would reset the badge before real server data.
+        //
+        // Sprint 7 follow-up: ALSO gate on chat-detail page actually being
+        // visible. Without this, navigating from chat A back to chat-list
+        // leaves subscribeMessages alive — a counterparty message would
+        // trigger this callback while user is on chat-list, and markRead
+        // would zero the unread badge before the user has actually opened
+        // (and seen) the new message.
+        const chatPageActive = !!document.getElementById('market-chat-page')?.classList.contains('active');
+        if (chatPageActive
+          && window._activeChatId === chatId
           && !snap.metadata?.fromCache
           && !snap.metadata?.hasPendingWrites) {
           markRead(chatId);
