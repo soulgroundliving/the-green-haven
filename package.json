@@ -19,7 +19,10 @@
     "migrate:tenant-slim": "NODE_PATH=functions/node_modules node tools/migrate-tenant-doc-to-slim.js",
     "migrate:tenant-slim:apply": "NODE_PATH=functions/node_modules node tools/migrate-tenant-doc-to-slim.js --apply",
     "backfill:occupancy-log": "node tools/backfill-occupancy-log.js",
-    "backfill:occupancy-log:apply": "node tools/backfill-occupancy-log.js --apply"
+    "backfill:occupancy-log:apply": "node tools/backfill-occupancy-log.js --apply",
+    "deploy:worktree:prep": "bash tools/worktree-deploy-prep.sh prep",
+    "deploy:worktree:cleanup": "bash tools/worktree-deploy-prep.sh cleanup",
+    "deploy:worktree:status": "bash tools/worktree-deploy-prep.sh status"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^4.0.1",
