@@ -6865,7 +6865,11 @@
             } else {
                 actions.push({ label: actionLabel, variant: 'primary', onClick: m => { m.close(); contactSeller(item); } });
             }
-            actions.push({ label: 'ปิด', variant: 'ghost', onClick: m => m.close() });
+            // Modal already has a × close button in the header (shared/modal.js
+            // adds it when dismissible:true, the default). A redundant "ปิด"
+            // footer button caused two problems on the owner view: (1) it
+            // collided semantically with "✅ ปิดประกาศ" — both read "ปิด"; (2)
+            // four 96px-min footer buttons overflowed the mobile modal width.
 
             window.GhModal.open({
                 title: item.title || 'รายละเอียดประกาศ',
