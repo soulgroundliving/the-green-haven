@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Nature Haven</title>
 
     <!-- ===== PWA: install + offline support ===== -->
@@ -338,6 +338,11 @@
             overflow-x: hidden;
             /* Prevent scroll chaining / rubber-band on mobile */
             overscroll-behavior: none;
+            /* Block double-tap-to-zoom while preserving pan/scroll/tap.
+               Paired with maximum-scale=1.0 + user-scalable=no on the
+               viewport meta (which iOS Safari has ignored since iOS 10 —
+               touch-action is the actually-enforced layer there). */
+            touch-action: manipulation;
         }
 
         .page {
