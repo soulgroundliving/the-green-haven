@@ -6935,6 +6935,28 @@
             }
         }
 
+        // Sprint 6 — invoke marketplaceStatsAggregator callable after a post
+        // completes. Bumps per-owner counters (freeGiven / skyHookCompleted /
+        // petHelped) and unlocks The Giver / Sky Walker / Pet Whisperer
+        // badges. Idempotent server-side via gamification.marketplaceLedger,
+        // so a double-fire is safe. Fire-and-forget — close already toast'd
+        // success; badge unlock is bonus content surfaced on next profile open.
+        // §7-NN: HTTPS callable (not Firestore trigger) because Firestore is
+        // in SE3 and Eventarc doesn't watch SE3.
+        async function _invokeMarketplaceStatsAggregator(postId) {
+            if (!window.firebase?.functions?.httpsCallable) return;
+            try {
+                const fn = window.firebase.functions.httpsCallable('marketplaceStatsAggregator');
+                const res = await fn({ postId });
+                if (res?.data?.badgesAwarded > 0) {
+                    const labels = (res.data.newBadges || []).map(b => `${b.emoji} ${b.label}`).join(', ');
+                    if (labels && typeof toast === 'function') toast(`ปลดล็อกตราใหม่: ${labels}`, 'success');
+                }
+            } catch (e) {
+                console.warn('marketplaceStatsAggregator invoke failed:', e?.message || e);
+            }
+        }
+
         async function markMarketClosed(id) {
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
             try {
@@ -6944,6 +6966,10 @@
                 toast('ปิดประกาศแล้วครับ', 'success');
                 // Post still exists (status=COMPLETED) → ownerUid check passes server-side.
                 _invokeCleanupMarketplaceChat(id);
+                // Sprint 6 — also bump stats + check badge unlocks. Server
+                // verifies status=COMPLETED + ownerUid match, so calling on a
+                // post that hasn't actually closed is a safe no-op.
+                _invokeMarketplaceStatsAggregator(id);
             } catch(e) {
                 console.warn('markMarketClosed:', e);
                 toast('เกิดข้อผิดพลาด ลองใหม่ครับ', 'error');
@@ -9869,6 +9895,10 @@
                 if (b && b.earnedAt) {
                     const d = new Date(b.earnedAt);
                     subEl.textContent = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()+543}`;
+                } else if (cat.marketplace) {
+                    // Sprint 6 — event-based badges show their unlock hint
+                    // (e.g. "แจกฟรี 3 ครั้ง") instead of a Pts threshold.
+                    subEl.textContent = cat.hint || `${cat.marketplace} × ${cat.minCount}`;
                 } else {
                     subEl.textContent = cat.minPts > 0 ? cat.minPts.toLocaleString()+' Pts' : 'ย้ายเข้า';
                 }
@@ -9882,7 +9912,10 @@
             const el = document.getElementById('profile-top-badge');
             if (!el) return;
             if (!badges || badges.length === 0) { el.style.display = 'none'; return; }
-            const ORDER = ['master_resident','perfect_record','rising_star','loyal_resident','green_guardian','community_star','on_time','first_month'];
+            // Sprint 6 — marketplace badges appended after points-based chain.
+            // Master Resident still wins if user has both; marketplace badges
+            // surface when no higher points-tier badge has been earned yet.
+            const ORDER = ['master_resident','perfect_record','rising_star','loyal_resident','green_guardian','community_star','on_time','first_month','the_giver','sky_walker','pet_whisperer'];
             const earnedIds = new Set((badges || []).map(_badgeId));
             const top = ORDER.find(id => earnedIds.has(id));
             if (!top) { el.style.display = 'none'; return; }

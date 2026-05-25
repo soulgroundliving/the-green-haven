@@ -40,8 +40,15 @@
     ];
 
     // ===== BADGE CATALOG =====
-    // Awarded by functions/complaintAndGamification.js checkAndAwardBadges()
-    // based on gamification.points crossing minPts threshold.
+    // Two award paths:
+    //   1. Points-based (minPts)        — checkAndAwardBadges in
+    //      functions/complaintAndGamification.js awards when
+    //      gamification.points crosses minPts.
+    //   2. Marketplace-stat-based       — marketplaceStatsAggregator in
+    //      functions/marketplaceStatsAggregator.js awards when
+    //      gamification.marketplaceStats[<key>] crosses minCount.
+    // Entries carrying a `marketplace` key are EXCLUDED from the points
+    // awarder (so the two paths don't double-award or fight).
     const BADGE_CATALOG = [
         { id: 'first_month',     emoji: '🥇', label: 'The First Generation', minPts: 0    },
         { id: 'on_time',         emoji: '⏰', label: 'On Time',               minPts: 50   },
@@ -50,7 +57,15 @@
         { id: 'loyal_resident',  emoji: '💎', label: 'Loyal Resident',        minPts: 250  },
         { id: 'rising_star',     emoji: '🌟', label: 'Rising Star',           minPts: 300  },
         { id: 'perfect_record',  emoji: '🏆', label: 'Perfect Record',        minPts: 500  },
-        { id: 'master_resident', emoji: '👑', label: 'Master Resident',       minPts: 1000 }
+        { id: 'master_resident', emoji: '👑', label: 'Master Resident',       minPts: 1000 },
+
+        // ── Sprint 6 — Marketplace Trophies (event-based, not points-based) ──
+        // Awarded by marketplaceStatsAggregator after a post transitions to
+        // status=COMPLETED. `marketplace` key names the counter on
+        // gamification.marketplaceStats that gates the unlock.
+        { id: 'the_giver',     emoji: '🍃', label: 'The Giver',     marketplace: 'freeGiven',        minCount: 3, hint: 'แจกฟรี 3 ครั้ง' },
+        { id: 'sky_walker',    emoji: '☁️', label: 'Sky Walker',    marketplace: 'skyHookCompleted', minCount: 5, hint: 'ส่งของผ่านรอก 5 ครั้ง' },
+        { id: 'pet_whisperer', emoji: '🐾', label: 'Pet Whisperer', marketplace: 'petHelped',        minCount: 1, hint: 'ช่วยเรื่องสัตว์เลี้ยง 1 ครั้ง' }
     ];
 
     // ===== RENT PAYMENT TIERS =====
