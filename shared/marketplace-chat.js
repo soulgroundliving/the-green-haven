@@ -575,7 +575,25 @@
                 </div>
             </div>`;
     }).join('');
-    requestAnimationFrame(() => { cont.scrollTop = cont.scrollHeight; });
+    // Sprint 7 follow-up: scroll to the latest message on every render.
+    // The original `cont.scrollTop = cont.scrollHeight` was a no-op because
+    // `#market-chat-messages` has no overflow-y — the actual scroll container
+    // is the page body. Two complementary scrolls:
+    //   1. window.scrollTo on documentElement.scrollHeight — handles the
+    //      common case where body is the scroll container.
+    //   2. lastBubble.scrollIntoView({ block: 'end' }) — handles any future
+    //      layout change that gives `#market-chat-messages` its own overflow
+    //      (e.g. fixed-height with internal scroll) and remains correct
+    //      because the fixed composer's `padding-bottom: 80px` on the
+    //      messages container keeps the last bubble above the composer.
+    requestAnimationFrame(() => {
+      cont.scrollTop = cont.scrollHeight; // legacy — harmless no-op if cont isn't scrollable
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      const lastBubble = cont.lastElementChild;
+      if (lastBubble && typeof lastBubble.scrollIntoView === 'function') {
+        try { lastBubble.scrollIntoView({ block: 'end' }); } catch (_) {}
+      }
+    });
   }
 
   // ── Send message ───────────────────────────────────────────────────────
