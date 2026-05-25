@@ -753,6 +753,23 @@ service cloud.firestore {
       allow write:  if isAdmin();
     }
 
+    // ===== PRESENCE (Sprint 7 follow-up — in-app activity tracking) =====
+    // presence/{lineUserId} = { lastActiveAt: ISO timestamp }
+    // Tenant self-writes a heartbeat from tenant_app while document.visibilityState
+    // === 'visible'. notifyMarketplaceChat reads this doc and suppresses the
+    // LINE OA push when lastActiveAt is within ~90s (recipient is in-app, the
+    // in-app toast already covers the notification). Write contract is
+    // intentionally restrictive: ONLY the lastActiveAt field, self-only, no
+    // other keys. CF-side (admin SDK) bypasses these rules for cleanup.
+    match /presence/{userId} {
+      allow read:   if isAdmin()
+                     || (isSignedIn() && request.auth.uid == 'line:' + userId);
+      allow write:  if isSignedIn()
+                     && request.auth.uid == 'line:' + userId
+                     && request.resource.data.keys().hasOnly(['lastActiveAt'])
+                     && request.resource.data.lastActiveAt is timestamp;
+    }
+
     // ===== DEFAULT DENY (catch-all) =====
     // (`roomWifi/*` decommissioned 2026-05-18 — tenants self-install ISP per room;
     //  app provides /api/speed-test instead. See tools/cleanup-roomWifi.js to purge
