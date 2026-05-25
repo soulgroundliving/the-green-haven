@@ -10,6 +10,7 @@
 #   1. Credential leak detection (API keys, secrets in staged files)
 #   2. Memory doc drift detection (lifecycle_*.md verifier — see verify-via-grep doctrine)
 #   2b. CF unit tests (functions/__tests__/*.test.js when functions/ files staged)
+#   2c. Scheduled CF change-detection (lifecycle_scheduled_jobs.md must mention any changed pubsub.schedule CF)
 #   3. Anti-pattern detection (Firebase compat API, BillStore misuse, auth callbacks, file size, CSP hash drift §7-II)
 #   4. Memory fabricated-path scan (warn-only)
 
@@ -82,6 +83,38 @@ if git diff --cached --name-only | grep -qE "^functions/"; then
   fi
   PASS=$(grep "pass" /tmp/unit-tests.out | tail -1 | grep -oE "[0-9]+")
   echo -e "${GREEN}✅ CF unit tests: ${PASS} passed${NC}"
+fi
+
+# ===== 2c. Scheduled CF change-detection =====
+# If a staged functions/*.js contains pubsub.schedule, it must be mentioned in lifecycle_scheduled_jobs.md.
+# Prevents "new CF added but lifecycle doc not updated" drift — root cause of 2026-05-26 doc audit findings
+# (cleanupChecklistsScheduled.js existed for months without appearing in the doc, count was wrong).
+STAGED_FUNCTIONS=$(git diff --cached --name-only | grep -E "^functions/.*\.js$")
+if [ -n "$STAGED_FUNCTIONS" ]; then
+  SCHEDULED_CF_CHANGED=$(echo "$STAGED_FUNCTIONS" | xargs grep -l "pubsub\.schedule" 2>/dev/null)
+  if [ -n "$SCHEDULED_CF_CHANGED" ]; then
+    LIFECYCLE_DOC="$HOME/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/lifecycle_scheduled_jobs.md"
+    if [ -f "$LIFECYCLE_DOC" ]; then
+      UNDOCUMENTED=""
+      while IFS= read -r cf_path; do
+        cf_name=$(basename "$cf_path" .js)
+        if ! grep -qi "$cf_name" "$LIFECYCLE_DOC"; then
+          UNDOCUMENTED="${UNDOCUMENTED}  • ${cf_name}\n"
+        fi
+      done <<< "$SCHEDULED_CF_CHANGED"
+      if [ -n "$UNDOCUMENTED" ]; then
+        echo -e "${RED}❌ BLOCKED: Scheduled CF(s) missing from lifecycle_scheduled_jobs.md${NC}"
+        echo -e "${YELLOW}   Not found in doc:${NC}"
+        echo -e "${YELLOW}${UNDOCUMENTED}${NC}"
+        echo -e "${YELLOW}   Add an entry (schedule time, region, purpose) to memory/lifecycle_scheduled_jobs.md${NC}"
+        exit 1
+      fi
+      echo -e "${GREEN}✅ Scheduled CF drift check: changed CF(s) found in lifecycle doc${NC}"
+    else
+      echo -e "${YELLOW}⚠️  lifecycle_scheduled_jobs.md not found — manually verify doc lists all changed CFs:${NC}"
+      echo -e "${YELLOW}   $SCHEDULED_CF_CHANGED${NC}"
+    fi
+  fi
 fi
 
 # ===== 3. Anti-pattern detection =====
