@@ -6964,11 +6964,15 @@
                 const fs = window.firebase.firestoreFunctions;
                 await fs.setDoc(fs.doc(db, 'marketplace', id), { status: 'COMPLETED' }, { merge: true });
                 toast('ปิดประกาศแล้วครับ', 'success');
-                // Post still exists (status=COMPLETED) → ownerUid check passes server-side.
-                _invokeCleanupMarketplaceChat(id);
-                // Sprint 6 — also bump stats + check badge unlocks. Server
-                // verifies status=COMPLETED + ownerUid match, so calling on a
-                // post that hasn't actually closed is a safe no-op.
+                // Sprint 7: chats stay alive on close. cleanupMarketplaceChat
+                // is only fired by deleteMarketItem (permanent delete). The
+                // chat composer surfaces a "🔒 ปิดอยู่" lock on closed posts
+                // so users can't reply until the owner re-opens. Re-open
+                // (_reopenMarketItem) flips status back to AVAILABLE and the
+                // composer unlocks automatically on the next openChat fetch.
+                // Sprint 6 — bump stats + check badge unlocks. Server verifies
+                // status=COMPLETED + ownerUid match, so calling on a post that
+                // hasn't actually closed is a safe no-op.
                 _invokeMarketplaceStatsAggregator(id);
             } catch(e) {
                 console.warn('markMarketClosed:', e);

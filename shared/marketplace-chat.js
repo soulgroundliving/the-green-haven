@@ -326,6 +326,73 @@
     // wire the long-press handler (idempotent — internal guard).
     cancelReply();
     attachLongPress();
+    // Sprint 7: fetch parent-post status to gate the composer. close=pause,
+    // delete=permanent — when the post is COMPLETED/closed/missing the user
+    // cannot send a new message until the owner re-opens (or the chat is a
+    // tombstone if the post was deleted entirely). Default optimistic
+    // (unlocked) until the fetch lands so the common AVAILABLE case has no
+    // perceived latency.
+    window._activeChatParentStatus = null;
+    _renderComposerLockState();
+    _fetchParentPostStatus(chat.postId);
+  }
+
+  // Sprint 7 — parent-post status helpers.
+  async function _fetchParentPostStatus(postId) {
+    if (!postId) {
+      window._activeChatParentStatus = 'DELETED';
+      _renderComposerLockState();
+      return;
+    }
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+    try {
+      const db = _db();
+      const fs = _fs();
+      const snap = await fs.getDoc(fs.doc(db, 'marketplace', postId));
+      // Race: user could've already navigated away to a different chat
+      // before this resolves. Drop the result if so.
+      if (!window._activeChatId || window._activeChat?.postId !== postId) return;
+      const post = snap.exists() ? snap.data() : null;
+      window._activeChatParentStatus = post ? (post.status || 'AVAILABLE') : 'DELETED';
+      _renderComposerLockState();
+    } catch (e) {
+      console.warn('[market-chat] parent-post status fetch failed:', e?.message || e);
+    }
+  }
+
+  // Lock the composer when the parent post is COMPLETED / closed / deleted.
+  // Surfaces an inline notice so the user understands WHY they can't reply.
+  // Idempotent — safe to call repeatedly (e.g. on every status refresh).
+  function _renderComposerLockState() {
+    const composer = document.getElementById('market-chat-composer');
+    const input = document.getElementById('market-chat-input');
+    if (!composer) return;
+    const status = window._activeChatParentStatus;
+    // Treat both legacy 'closed' and new 'COMPLETED' as locked. 'DELETED'
+    // means the parent post is gone (cleanupMarketplaceChat should have
+    // wiped this chat too, but the user might still be looking at a stale
+    // tab) — show a tombstone notice.
+    const isLocked = status === 'COMPLETED' || status === 'closed' || status === 'DELETED';
+    let notice = document.getElementById('market-chat-closed-notice');
+    if (isLocked) {
+      if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'market-chat-closed-notice';
+        notice.style.cssText = 'padding:8px 12px; background:#fef3c7; color:#92400e; font-size:12px; text-align:center; border-bottom:1px solid #fde68a; line-height:1.4;';
+        composer.insertBefore(notice, composer.firstChild);
+      }
+      notice.textContent = status === 'DELETED'
+        ? '🗑️ ประกาศนี้ถูกลบแล้ว — ตอบกลับไม่ได้'
+        : '🔒 ประกาศนี้ปิดอยู่ — รอเจ้าของเปิดอีกครั้งเพื่อตอบกลับ';
+      if (input) { input.disabled = true; input.placeholder = 'ตอบกลับไม่ได้ขณะนี้'; }
+      const sendBtn = composer.querySelector('[data-action="sendChatMessage"]');
+      if (sendBtn) sendBtn.disabled = true;
+    } else {
+      if (notice) notice.remove();
+      if (input) { input.disabled = false; input.placeholder = 'พิมพ์ข้อความ...'; }
+      const sendBtn = composer.querySelector('[data-action="sendChatMessage"]');
+      if (sendBtn) sendBtn.disabled = false;
+    }
   }
 
   // ── Messages subscription ──────────────────────────────────────────────
@@ -443,6 +510,14 @@
     }
     if (!window._activeChatId || !window._authUid) return;
     if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+    // Sprint 7 defense-in-depth: if openChat's parent-status fetch already
+    // reported the post as closed/deleted, refuse to send. The composer UI
+    // is already locked but a stale tab or scripted call could bypass that.
+    const ps = window._activeChatParentStatus;
+    if (ps === 'COMPLETED' || ps === 'closed' || ps === 'DELETED') {
+      _toast(ps === 'DELETED' ? 'ประกาศถูกลบแล้ว' : 'ประกาศนี้ปิดอยู่', 'warning');
+      return;
+    }
     const chatId = window._activeChatId;
     // S3 PR 3: capture + clear reply target BEFORE the await so a
     // rapid second send doesn't re-attach the same quote.
@@ -793,6 +868,9 @@
     openOrCreateChat,
     captureDeepLink,
     tryOpenPending,
+    // Sprint 7 — close=pause / delete=permanent
+    fetchParentPostStatus: _fetchParentPostStatus,
+    renderComposerLockState: _renderComposerLockState,
   };
 
   // ── Legacy global aliases ──────────────────────────────────────────────
