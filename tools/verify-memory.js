@@ -629,6 +629,69 @@ function runComputedAssertions() {
   return results;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Dead-link sweep: scan every `.md` file in MEMORY_DIR for markdown links
+// `[text](target.md)` (with optional `#anchor`) and verify that target.md
+// exists in MEMORY_DIR. Catches broken cross-doc references when a memory
+// file is renamed or never created.
+//
+// Root cause: 2026-05-26 Round 4 audit found 4 dead links in lifecycle docs
+// pointing at `feedback_firebase_auth_anon_race.md` / `gcp_api_key_securetoken_blocked.md`
+// / `lifecycle_lease_doc_pdpa.md` etc. that were referenced as if they existed.
+// Manual `grep -rho` sweep caught them all — promoting to verifier so it runs
+// on every `npm run verify:memory` + pre-commit.
+//
+// Scope: external URLs (`https://`, `http://`, `mailto:`), absolute paths (`/`),
+// and parent-dir refs (`../`) are skipped — only sibling memory-file refs are checked.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function runDeadLinkAssertions() {
+  const results = [];
+  if (!fs.existsSync(MEMORY_DIR)) return results;
+
+  // Scope: only LIVE docs. Skip frozen point-in-time files that may legitimately
+  // reference siblings that have since been deleted/renamed:
+  //   archive_*.md            — explicitly archived
+  //   session_*.md            — chronological session snapshots
+  //   next_session_handoff_*.md — point-in-time handoffs
+  const isLiveDoc = (f) =>
+    f.endsWith('.md') &&
+    !f.startsWith('archive_') &&
+    !f.startsWith('session_') &&
+    !f.startsWith('next_session_handoff_');
+
+  const mdFiles = fs.readdirSync(MEMORY_DIR).filter(isLiveDoc);
+  // Match `](FILENAME.md)` or `](FILENAME.md#anchor)` — captures the .md target only.
+  const linkRegex = /\]\(([^)\s#]+\.md)(?:#[^)]*)?\)/g;
+  const deadLinks = [];
+
+  for (const file of mdFiles) {
+    const content = fs.readFileSync(path.join(MEMORY_DIR, file), 'utf8');
+    let match;
+    while ((match = linkRegex.exec(content)) !== null) {
+      const target = match[1];
+      // Skip non-sibling refs: external URLs, absolute paths, relative paths with separators.
+      // Bare-filename targets only (e.g. `feedback_decision_protocol.md`).
+      if (target.includes('/') || target.includes('\\') || target.startsWith('.')) continue;
+      if (!fs.existsSync(path.join(MEMORY_DIR, target))) {
+        deadLinks.push({ file, target });
+      }
+    }
+  }
+
+  const ok = deadLinks.length === 0;
+  results.push({
+    comment: `dead-link sweep across ${mdFiles.length} live memory doc(s): ${deadLinks.length} broken .md link(s)`,
+    command: '[computed: scan live memory/*.md (excl. archive/session/handoff) for [text](X.md) sibling refs]',
+    ok,
+    stdout: ok
+      ? `All inter-memory .md links resolve (${mdFiles.length} live doc(s) scanned)`
+      : `Broken links:\n  ${deadLinks.map(d => `${d.file} → ${d.target}`).join('\n  ')}`,
+  });
+
+  return results;
+}
+
 function main() {
   const args = process.argv.slice(2);
   const flags = new Set(args.filter(a => a.startsWith('--')));
@@ -692,6 +755,24 @@ function main() {
     }
     totalRows += computedResults.length;
     totalRed += computedResults.filter(r => !r.ok).length;
+  }
+
+  // Dead-link sweep: scan every memory/*.md for broken inter-memory references.
+  const deadLinkResults = runDeadLinkAssertions();
+  if (deadLinkResults.length > 0) {
+    console.log('\n=== Dead-link sweep ===');
+    for (const r of deadLinkResults) {
+      const label = r.ok ? '✅' : '❌';
+      console.log(`  ${label} ${r.comment}`);
+      if (!r.ok) {
+        console.log(`     ${r.stdout}`);
+        allGreen = false;
+      } else {
+        console.log(`     ${r.stdout}`);
+      }
+    }
+    totalRows += deadLinkResults.length;
+    totalRed += deadLinkResults.filter(r => !r.ok).length;
   }
 
   // All-memory mode: scan handoff/journal/feedback for fabricated template paths.
