@@ -212,6 +212,14 @@ exports.unsendMarketplaceMessage = require('./unsendMarketplaceMessage').unsendM
 // fresh activity.
 exports.hideMarketplaceChat = require('./hideMarketplaceChat').hideMarketplaceChat;
 
+// Sprint 6 — Trophies & Badges. Bumps per-owner marketplace counters after
+// a post completes (free / sky-hook / pet helpers), then evaluates the 3
+// event-based badges (The Giver / Sky Walker / Pet Whisperer) and writes
+// any newly-earned to gamification.badges. HTTPS callable (not Firestore
+// trigger) per §7-NN — Eventarc doesn't watch SE3-hosted Firestore.
+// Client invokes after setDoc({status:'COMPLETED'}) lands.
+exports.marketplaceStatsAggregator = require('./marketplaceStatsAggregator').marketplaceStatsAggregator;
+
 // LINE Flex notification to tenant when new bill appears in RTDB
 // (secondary path — manual admin bill creation)
 exports.notifyBillOnCreate = require('./notifyBillOnCreate').notifyBillOnCreate;

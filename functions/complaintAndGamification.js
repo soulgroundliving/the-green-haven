@@ -219,7 +219,11 @@ async function _runCheckAndAwardBadgesPlayer(tenantId, authToken) {
   const now = new Date().toISOString();
   const normalised = normaliseBadges(rawBadges, now);
   const earnedIds = new Set(normalised.map(badgeId));
-  const toAward = BADGE_CATALOG.filter(c => !earnedIds.has(c.id) && points >= c.minPts)
+  // Sprint 6: skip event-based marketplace badges — they have their own
+  // awarder (marketplaceStatsAggregator) gated by gamification.marketplaceStats,
+  // not points. Mixing the two awarders would double-fire on every points
+  // milestone check.
+  const toAward = BADGE_CATALOG.filter(c => !c.marketplace && !earnedIds.has(c.id) && points >= c.minPts)
     .map(c => ({ id: c.id, emoji: c.emoji, label: c.label, earnedAt: now }));
   if (toAward.length > 0) {
     await peopleRef.update({ 'gamification.badges': [...normalised, ...toAward] });
@@ -266,7 +270,9 @@ exports.checkAndAwardBadges = functions.region('asia-southeast1').https.onCall(a
     const normalised = normaliseBadges(rawBadges, now);
     const earnedIds = new Set(normalised.map(badgeId));
 
-    const toAward = BADGE_CATALOG.filter(c => !earnedIds.has(c.id) && points >= c.minPts)
+    // Sprint 6: skip event-based marketplace badges — owned by
+    // marketplaceStatsAggregator (gated on gamification.marketplaceStats).
+    const toAward = BADGE_CATALOG.filter(c => !c.marketplace && !earnedIds.has(c.id) && points >= c.minPts)
       .map(c => ({ id: c.id, emoji: c.emoji, label: c.label, earnedAt: now }));
 
     if (toAward.length > 0) {
