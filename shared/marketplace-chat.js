@@ -54,6 +54,7 @@
 
   // ── Constants ──────────────────────────────────────────────────────────
   const COL = 'marketplace_chats';
+  const COL_MARKETPLACE = 'marketplace';   // Sprint 7 — parent-post live subscribe target
   const LS_PENDING_CHAT_KEY = 'gh_pending_chat_id';
   const UNSEND_WINDOW_MS = 24 * 60 * 60 * 1000;
   const SWIPE_THRESHOLD = 50;
@@ -111,6 +112,8 @@
   window._chatMessagesUnsub = window._chatMessagesUnsub || null;
   window._activeChatReplyTarget = window._activeChatReplyTarget || null;
   window._actionSheetMsgId = window._actionSheetMsgId || null;
+  // Sprint 7 bugfix — live parent-post listener (replaces one-shot getDoc).
+  window._chatParentPostUnsub = window._chatParentPostUnsub || null;
 
   // ── Deep-link (§7-GG) ──────────────────────────────────────────────────
   // notifyMarketplaceChat CF builds links of the form
@@ -330,15 +333,29 @@
     // delete=permanent — when the post is COMPLETED/closed/missing the user
     // cannot send a new message until the owner re-opens (or the chat is a
     // tombstone if the post was deleted entirely). Default optimistic
-    // (unlocked) until the fetch lands so the common AVAILABLE case has no
-    // perceived latency.
+    // (unlocked) until the first snapshot lands so the common AVAILABLE
+    // case has no perceived latency. Sprint 7 bugfix (post-PR #73): use
+    // onSnapshot instead of one-shot getDoc so the composer locks/unlocks
+    // LIVE when the seller toggles status from another device or tab —
+    // previously the lock state was frozen at openChat-time.
     window._activeChatParentStatus = null;
     _renderComposerLockState();
-    _fetchParentPostStatus(chat.postId);
+    _subscribeParentPostStatus(chat.postId);
   }
 
-  // Sprint 7 — parent-post status helpers.
-  async function _fetchParentPostStatus(postId) {
+  // Sprint 7 — parent-post live subscription. Replaces the prior one-shot
+  // _fetchParentPostStatus so that ปิดประกาศ → composer locks in real time on
+  // the counterparty's screen (and เปิดประกาศ → unlocks just as fast).
+  //
+  // §7-V: tear down the previous listener before rebinding (so opening a
+  // different chat doesn't leak the old post's subscription).
+  // §7-N: error callback nulls the unsub on permission-denied /
+  // failed-precondition so a transient auth blip self-heals on next open.
+  function _subscribeParentPostStatus(postId) {
+    if (typeof window._chatParentPostUnsub === 'function') {
+      try { window._chatParentPostUnsub(); } catch (_) { /* noop */ }
+      window._chatParentPostUnsub = null;
+    }
     if (!postId) {
       window._activeChatParentStatus = 'DELETED';
       _renderComposerLockState();
@@ -348,16 +365,35 @@
     try {
       const db = _db();
       const fs = _fs();
-      const snap = await fs.getDoc(fs.doc(db, 'marketplace', postId));
-      // Race: user could've already navigated away to a different chat
-      // before this resolves. Drop the result if so.
-      if (!window._activeChatId || window._activeChat?.postId !== postId) return;
-      const post = snap.exists() ? snap.data() : null;
-      window._activeChatParentStatus = post ? (post.status || 'AVAILABLE') : 'DELETED';
-      _renderComposerLockState();
+      window._chatParentPostUnsub = fs.onSnapshot(
+        fs.doc(db, COL_MARKETPLACE, postId),
+        (snap) => {
+          // Race-safe: drop if user has navigated to a different chat
+          // before this snapshot arrived.
+          if (!window._activeChatId || window._activeChat?.postId !== postId) return;
+          const post = snap.exists() ? snap.data() : null;
+          window._activeChatParentStatus = post ? (post.status || 'AVAILABLE') : 'DELETED';
+          _renderComposerLockState();
+        },
+        (err) => {
+          console.warn('[market-chat] parent-post subscribe failed:', err?.message || err);
+          if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+            window._chatParentPostUnsub = null;
+          }
+        }
+      );
     } catch (e) {
-      console.warn('[market-chat] parent-post status fetch failed:', e?.message || e);
+      console.warn('[market-chat] parent-post subscribe init failed:', e?.message || e);
     }
+  }
+
+  // Back-compat: the legacy one-shot helper kept exposed in case any
+  // external caller relied on the immediate-promise shape. Internally we
+  // now route through the live subscriber, but external callers (verify
+  // scripts, future plugins) that just want "tell me the current status"
+  // can keep using this name.
+  async function _fetchParentPostStatus(postId) {
+    _subscribeParentPostStatus(postId);
   }
 
   // Lock the composer when the parent post is COMPLETED / closed / deleted.
@@ -870,6 +906,7 @@
     tryOpenPending,
     // Sprint 7 — close=pause / delete=permanent
     fetchParentPostStatus: _fetchParentPostStatus,
+    subscribeParentPostStatus: _subscribeParentPostStatus,
     renderComposerLockState: _renderComposerLockState,
   };
 
