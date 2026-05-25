@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Nature Haven</title>
 
     <!-- ===== PWA: install + offline support ===== -->
@@ -339,9 +339,8 @@
             /* Prevent scroll chaining / rubber-band on mobile */
             overscroll-behavior: none;
             /* Block double-tap-to-zoom while preserving pan/scroll/tap.
-               Paired with maximum-scale=1.0 + user-scalable=no on the
-               viewport meta (which iOS Safari has ignored since iOS 10 —
-               touch-action is the actually-enforced layer there). */
+               touch-action: manipulation prevents double-tap zoom on Android
+               (iOS Safari respects it since iOS 13). */
             touch-action: manipulation;
         }
 
@@ -5105,6 +5104,8 @@
             const s = styles[type] || styles.info;
             const el = document.createElement('div');
             el.id = 'app-toast';
+            el.setAttribute('role', 'status');
+            el.setAttribute('aria-live', 'polite');
             el.style.cssText = `position:fixed;top:24px;left:0;right:0;margin:0 auto;width:max-content;max-width:calc(100% - 40px);background:${s.bg};color:${s.color};padding:12px 20px;border-radius:22px;font-size:var(--fs-md);font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.12);display:flex;align-items:center;gap:8px;animation:toastIn 0.3s ease;pointer-events:none;`;
             el.innerHTML = `<i class="fas ${s.icon}"></i><span>${_esc(msg)}</span>`;
             document.body.appendChild(el);

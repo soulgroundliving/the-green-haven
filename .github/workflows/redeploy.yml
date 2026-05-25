@@ -7,16 +7,13 @@ jobs:
   redeploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      
       - name: Trigger Vercel Redeploy
         run: |
-          # Force push a new commit to trigger Vercel
-          git config user.email "github@example.com"
-          git config user.name "GitHub Actions"
-          echo "# Rebuild timestamp: $(date)" >> REBUILD.txt
-          git add REBUILD.txt
-          git commit -m "Trigger Vercel rebuild via GitHub Actions" || echo "No changes to commit"
-          git push origin main || echo "Push completed"
+          if [ -z "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" ]; then
+            echo "ERROR: VERCEL_DEPLOY_HOOK_URL secret is not configured."
+            echo "Go to GitHub → Settings → Secrets → Actions and add VERCEL_DEPLOY_HOOK_URL."
+            echo "Get the URL from Vercel → Project Settings → Git → Deploy Hooks."
+            exit 1
+          fi
+          response=$(curl -sf -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}")
+          echo "Vercel deploy triggered: $response"
