@@ -25,7 +25,7 @@
     "deploy:worktree:status": "bash tools/worktree-deploy-prep.sh status"
   },
   "devDependencies": {
-    "@firebase/rules-unit-testing": "^4.0.1",
+    "@firebase/rules-unit-testing": "^5.0.1",
     "esbuild": "^0.28.0",
     "eslint": "^9.0.0",
     "firebase": "^11.0.0",
