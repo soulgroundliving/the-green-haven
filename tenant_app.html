@@ -6959,8 +6959,11 @@
 
         // Open the add-market form pre-populated from an existing item; submit
         // path takes the setDoc(merge:true) branch via _marketEditingId flag.
-        // Image is intentionally NOT editable in MVP (would need Storage swap +
-        // old-file cleanup); existing imageUrl/imageData stays as-is on save.
+        // Image swap: existing imageUrl/imageData is surfaced as preview. If the
+        // user picks a new image (sets _marketImageData), the submit path uploads
+        // it to Storage at the same `marketplace/{postId}/img.<ext>` path so
+        // same-ext picks overwrite cleanly (different-ext leaves the prior file
+        // as orphan — acceptable MVP per lifecycle_marketplace.md L155).
         // Chat frozen-snapshot fields (postTitle/postPrice/postImageUrl) do NOT
         // auto-refresh — that's by design per lifecycle_marketplace_chat.md.
         function editMarketItem(item) {
@@ -6984,14 +6987,23 @@
             if (titleEl) titleEl.textContent = 'แก้ไขประกาศ ✏️';
             const submitBtn = document.getElementById('market-submit-btn');
             if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-save"></i> บันทึกการแก้ไข';
-            // Image stays as-is in MVP — clear the preview to make that visually
-            // obvious (user knows the form starts from a clean slate for image).
-            // The actual image on the post is not touched on save.
+            // Surface existing image as preview so the user sees what's on the
+            // post. _marketImageData stays null as a sentinel meaning "user has
+            // NOT picked a new image yet" — the submit branch leaves imageUrl
+            // untouched in that case. Picking a new image sets _marketImageData
+            // and triggers the upload+swap path.
             _marketImageData = null;
             const prev = document.getElementById('market-image-preview');
             const ph   = document.getElementById('market-image-placeholder');
-            if (prev) { prev.style.display = 'none'; prev.src = ''; }
-            if (ph) { ph.style.display = ''; ph.querySelector('div')?.replaceChildren(); }
+            const existingImg = item.imageUrl || item.imageData || '';
+            if (existingImg && prev) {
+                prev.src = existingImg;
+                prev.style.display = 'block';
+                if (ph) ph.style.display = 'none';
+            } else {
+                if (prev) { prev.style.display = 'none'; prev.src = ''; }
+                if (ph) ph.style.display = '';
+            }
             // Navigate to the form
             if (typeof showSubPage === 'function') showSubPage('add-market-page');
             else if (typeof showPage === 'function') showPage('add-market-page');
@@ -7089,14 +7101,31 @@
                 if (isEdit) {
                     // Edit mode: setDoc(merge:true) on the existing doc. Only fields the
                     // user can actually change in the form are written. ownerUid, createdAt,
-                    // expiresAt, status, image* are intentionally NOT touched. Rule
+                    // expiresAt, status are intentionally NOT touched. Rule
                     // firestore.rules:77 enforces owner/admin gate server-side.
-                    await fs.setDoc(fs.doc(db, 'marketplace', _marketEditingId), {
+                    const patch = {
                         title, category: cat, price,
                         desc, showRoom,
                         room: showRoom ? String(_taRoom || '') : '',
                         skyHookReady, isPetCategory
-                    }, { merge: true });
+                    };
+                    // Image swap: only if user picked a new image. Upload first,
+                    // then merge the new imageUrl + clear legacy imageData so the
+                    // reader (item.imageUrl || item.imageData) picks the fresh
+                    // Storage URL. Failure leaves the prior image intact (graceful
+                    // degrade — text edits still land).
+                    if (_marketImageData) {
+                        try {
+                            const blob = _marketDataUrlToBlob(_marketImageData);
+                            const url  = await _uploadMarketImage(_marketEditingId, blob);
+                            patch.imageUrl = url;
+                            patch.imageData = '';
+                        } catch (upErr) {
+                            console.warn('marketplace image swap failed (text edits still saved):', upErr?.message || upErr);
+                            toast('เปลี่ยนรูปไม่สำเร็จ แต่ข้อมูลอื่นบันทึกแล้ว', 'warning');
+                        }
+                    }
+                    await fs.setDoc(fs.doc(db, 'marketplace', _marketEditingId), patch, { merge: true });
                     toast('แก้ไขประกาศแล้วครับ ✨', 'success');
                 } else {
                     // Step 1: addDoc with empty image fields — need postId for Storage path
