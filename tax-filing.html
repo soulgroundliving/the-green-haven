@@ -1837,6 +1837,8 @@
         if (typeof exportAnnualReportExcel === 'function') exportAnnualReportExcel();
       } else if (action === 'withholding-check') {
         if (typeof displayWithholdingReconciliation === 'function') displayWithholdingReconciliation();
+      } else if (action === 'update-checklist-status') {
+        if (typeof updateChecklistStatus === 'function') updateChecklistStatus(el.dataset.itemId, 'COMPLETED');
       } else if (action === 'navigate') {
         window.location.href = el.dataset.href;
       } else if (action === 'logout') {
