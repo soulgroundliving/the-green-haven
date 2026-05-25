@@ -3265,6 +3265,7 @@
             <button class="market-pill" data-filter="item" data-action="filterMarket">🛍️ ของมือสอง</button>
             <button class="market-pill" data-filter="service" data-action="filterMarket">💅 บริการ</button>
             <button class="market-pill" data-filter="free" data-action="filterMarket">🎁 แจกฟรี</button>
+            <button class="market-pill" data-filter="request" data-action="filterMarket">✋ อยากได้</button>
             <button class="market-pill" data-filter="skyhook" data-action="filterMarket">📦 Sky Hook</button>
             <button class="market-pill" data-filter="pet" data-action="filterMarket">🐾 สัตว์เลี้ยง</button>
         </div>
@@ -4119,11 +4120,12 @@
                 <label class="cat-radio-pill"><input type="radio" name="mcat" value="item" checked data-action-change="_onMarketCatChange"> 🛍️ ของมือสอง</label>
                 <label class="cat-radio-pill"><input type="radio" name="mcat" value="service" data-action-change="_onMarketCatChange"> 💅 บริการ</label>
                 <label class="cat-radio-pill"><input type="radio" name="mcat" value="free" data-action-change="_onMarketCatChange"> 🎁 แจกฟรี</label>
+                <label class="cat-radio-pill"><input type="radio" name="mcat" value="request" data-action-change="_onMarketCatChange"> ✋ อยากได้</label>
             </div>
 
             <!-- Title -->
             <label style="font-size:var(--fs-md); font-weight:600;">ชื่อสินค้า / บริการ <span style="color:red;">*</span></label>
-            <input type="text" id="market-title" placeholder="เช่น รับทำเล็บ, ขายหนังสือมือสอง" style="margin-bottom:15px;">
+            <input type="text" id="market-title" placeholder="เช่น รับทำเล็บ · ขายหนังสือ · ตามหาตู้เย็นมือสอง" style="margin-bottom:15px;">
 
             <!-- Price (hidden when free) -->
             <div id="market-price-row" style="margin-bottom:15px;">
@@ -6625,7 +6627,10 @@
             const catColors = {
                 item:    { bg: '#EFF6FF', text: '#3B82F6', label: '🛍️' },
                 service: { bg: '#FAF5FF', text: '#7C3AED', label: '💅' },
-                free:    { bg: '#F0FDF4', text: '#16A34A', label: '🎁' }
+                free:    { bg: '#F0FDF4', text: '#16A34A', label: '🎁' },
+                // Sprint 5 — Wishlist: tenant asking for help / item / service.
+                // Rose palette distinguishes "asking" from "free giveaway" (green).
+                request: { bg: '#FFF1F2', text: '#E11D48', label: '✋' }
             };
 
             // Build full list as innerHTML — was 20 items × ~10 createElement +
@@ -6634,10 +6639,13 @@
             const myUid = window._authUid;
             const cards = filtered.map(item => {
                 const col = catColors[item.category] || catColors.item;
-                const isFree   = item.category === 'free';
-                const priceText = isFree ? 'ฟรี' : '฿' + (item.price || 0);
-                const priceBg  = isFree ? '#F0FDF4' : '#FFF7ED';
-                const priceCol = isFree ? '#16A34A' : '#D97706';
+                const isFree    = item.category === 'free';
+                const isRequest = item.category === 'request';
+                // Sprint 5 — Wishlist: "อยากได้" badge replaces price chip on
+                // request posts (no monetary value — sender is asking, not selling).
+                const priceText = isFree ? 'ฟรี' : isRequest ? 'อยากได้' : '฿' + (item.price || 0);
+                const priceBg  = isFree ? '#F0FDF4' : isRequest ? '#FFF1F2' : '#FFF7ED';
+                const priceCol = isFree ? '#16A34A' : isRequest ? '#E11D48' : '#D97706';
                 const isOwn    = item.ownerUid === myUid;
                 const safeId   = _esc(item.id);
                 const safeTitle = _esc(item.title || '');
@@ -6714,7 +6722,7 @@
                 t.textContent = item.title || '';
                 const sub = document.createElement('div');
                 sub.style.cssText = 'font-size:var(--fs-xs);color:#888;';
-                sub.textContent = (item.category === 'free' ? 'แจกฟรี' : '฿' + (item.price || 0)) + (item.showRoom && item.room ? ' · ห้อง ' + item.room : '');
+                sub.textContent = (item.category === 'free' ? 'แจกฟรี' : item.category === 'request' ? 'อยากได้' : '฿' + (item.price || 0)) + (item.showRoom && item.room ? ' · ห้อง ' + item.room : '');
                 info.appendChild(t);
                 info.appendChild(sub);
                 const statusBadge = document.createElement('div');
@@ -6773,13 +6781,19 @@
                 if (item) contactSeller(item);
                 return;
             }
-            const isFree   = item.category === 'free';
-            const isOwn    = item.ownerUid === window._authUid;
-            const priceText = isFree ? 'ฟรี' : '฿' + (item.price || 0);
-            const priceBg  = isFree ? '#F0FDF4' : '#FFF7ED';
-            const priceCol = isFree ? '#16A34A' : '#D97706';
+            const isFree    = item.category === 'free';
+            const isRequest = item.category === 'request';
+            const isOwn     = item.ownerUid === window._authUid;
+            // Sprint 5 — Wishlist parity with renderMarketFeed: badge + CTA flip
+            // for request posts. "✋ ฉันช่วยได้" replaces "ติดต่อผู้ขาย" since the
+            // poster is asking, not selling — the helper is the responder.
+            const priceText = isFree ? 'ฟรี' : isRequest ? 'อยากได้' : '฿' + (item.price || 0);
+            const priceBg  = isFree ? '#F0FDF4' : isRequest ? '#FFF1F2' : '#FFF7ED';
+            const priceCol = isFree ? '#16A34A' : isRequest ? '#E11D48' : '#D97706';
             const actionLabel = item.category === 'service' ? '📞 นัดหมายผู้ให้บริการ'
-                : isFree ? '🙋 ขอรับของ' : '💬 ติดต่อผู้ขาย';
+                : isFree    ? '🙋 ขอรับของ'
+                : isRequest ? '✋ ฉันช่วยได้'
+                : '💬 ติดต่อผู้ขาย';
 
             // Build body via DOM API (avoid innerHTML — §7-X footgun + XSS).
             const body = document.createElement('div');
@@ -6972,7 +6986,7 @@
             // Pre-populate fields
             const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
             set('market-title', item.title);
-            set('market-price', item.category === 'free' ? '' : (item.price ?? ''));
+            set('market-price', (item.category === 'free' || item.category === 'request') ? '' : (item.price ?? ''));
             set('market-desc', item.desc);
             document.querySelectorAll('input[name="mcat"]').forEach(r => { r.checked = r.value === (item.category || 'item'); });
             const showRoomEl = document.getElementById('market-show-room');
@@ -7071,13 +7085,15 @@
         function _onMarketCatChange() {
             const cat = document.querySelector('input[name="mcat"]:checked')?.value;
             const row = document.getElementById('market-price-row');
-            if (row) row.style.display = cat === 'free' ? 'none' : '';
+            // Sprint 5 — Wishlist also has no price (poster is asking, not selling).
+            if (row) row.style.display = (cat === 'free' || cat === 'request') ? 'none' : '';
         }
 
         async function saveNewMarketItem() {
             const title = document.getElementById('market-title')?.value.trim();
             const cat   = document.querySelector('input[name="mcat"]:checked')?.value || 'item';
-            const price = cat === 'free' ? 0 : parseFloat(document.getElementById('market-price')?.value || '0');
+            // Sprint 5 — Wishlist + Free both skip the monetary value.
+            const price = (cat === 'free' || cat === 'request') ? 0 : parseFloat(document.getElementById('market-price')?.value || '0');
             const desc  = document.getElementById('market-desc')?.value.trim() || '';
             const showRoom = document.getElementById('market-show-room')?.checked ?? true;
             // Sprint 3 — Sky Hook: opt-in vertical-delivery tag (Nest 3F/4F pulley system).
@@ -7087,7 +7103,7 @@
             const isPetCategory = document.getElementById('market-pet')?.checked === true;
 
             if (!title) { toast('กรุณาใส่ชื่อสินค้า/บริการครับ', 'warning'); document.getElementById('market-title')?.focus(); return; }
-            if (cat !== 'free' && (!price || isNaN(price) || price <= 0)) { toast('กรุณาระบุราคาครับ', 'warning'); document.getElementById('market-price')?.focus(); return; }
+            if (cat !== 'free' && cat !== 'request' && (!price || isNaN(price) || price <= 0)) { toast('กรุณาระบุราคาครับ', 'warning'); document.getElementById('market-price')?.focus(); return; }
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions || !window._authUid) { toast('ระบบยังไม่พร้อม ลองใหม่ครับ', 'error'); return; }
 
             const btn = document.getElementById('market-submit-btn');
