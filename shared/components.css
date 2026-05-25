@@ -386,6 +386,7 @@
 }
 .gh-modal-footer {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-3);
   justify-content: flex-end;
   padding: var(--space-4) var(--space-5);
