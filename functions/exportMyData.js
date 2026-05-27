@@ -87,7 +87,7 @@ exports.exportMyData = functions
     });
 
     const exportedAt = Date.now();
-    console.log(`[exportMyData] uid=${authUid} tenantId=${tenantId} ${building}/${room}`);
+    console.info(`[exportMyData] uid=${authUid} tenantId=${tenantId} ${building}/${room}`);
 
     // ---- Firestore: person, tenant, lease, liffUser, consents ----
     const tenantRef = firestore.collection('tenants').doc(building).collection('list').doc(room);

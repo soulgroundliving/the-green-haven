@@ -193,6 +193,6 @@ exports.requestRoomRelink = functions
       if (!r.ok) console.warn('requestRoomRelink: notifyLiffRequest non-2xx:', r.status);
     }).catch(e => console.warn('requestRoomRelink: notifyLiffRequest failed (non-fatal):', e.message));
 
-    console.log(`requestRoomRelink: ${lineUserId} ${currentStatus} → pending (${building}/${roomTrimmed})`);
+    console.info(`requestRoomRelink: ${lineUserId} ${currentStatus} → pending (${building}/${roomTrimmed})`);
     return res.status(200).json({ ok: true, status: 'pending' });
   });

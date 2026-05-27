@@ -740,7 +740,7 @@ async function _runVariationMode(input, callerUid, callerEmail, firestore) {
     actorUid: callerUid,
   };
 
-  console.log(`transferTenant[variation]: ${building}/${oldRoomId} → ${newBuilding}/${newRoomId} ` +
+  console.info(`transferTenant[variation]: ${building}/${oldRoomId} → ${newBuilding}/${newRoomId} ` +
     `(tenantId=${tenantId}, lease=${leaseId}, amendments=${auditPayload.amendmentCountAfter}, ` +
     `claimsRefreshed=${claimsRefreshed}, by=${auditPayload.actor})`);
 
@@ -973,7 +973,7 @@ async function _runNovationMode(input, callerUid, callerEmail, firestore) {
     actorUid: callerUid,
   };
 
-  console.log(`transferTenant[novation]: ${building}/${oldRoomId} → ${newBuilding}/${newRoomId} ` +
+  console.info(`transferTenant[novation]: ${building}/${oldRoomId} → ${newBuilding}/${newRoomId} ` +
     `(${oldLeaseId} → ${newLeaseId}, tenantId=${tenantId}, rent ${auditPayload.oldRent}→${resolvedRent}, ` +
     `claimsRefreshed=${claimsRefreshed}, by=${auditPayload.actor})`);
 

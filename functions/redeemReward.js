@@ -105,7 +105,7 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
         });
         return { success: true, rewardId: playerRewardId, rewardName: reward.name, cost, pointsBefore: currentPoints, pointsAfter: newPoints, redemptionId: redemptionRef.id };
       });
-      console.log(`🎁 Player redeemed: ${tenantId} → ${playerRewardId} (cost=${result.cost}, remain=${result.pointsAfter})`);
+      console.info(`🎁 Player redeemed: ${tenantId} → ${playerRewardId} (cost=${result.cost}, remain=${result.pointsAfter})`);
       return result;
     } catch (error) {
       if (error instanceof functions.https.HttpsError) throw error;
@@ -225,7 +225,7 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
       };
     });
 
-    console.log(`🎁 Redeemed: ${canonicalBuilding}/${roomId} → ${rewardId} (cost=${result.cost}, remain=${result.pointsAfter})`);
+    console.info(`🎁 Redeemed: ${canonicalBuilding}/${roomId} → ${rewardId} (cost=${result.cost}, remain=${result.pointsAfter})`);
     return result;
   } catch (error) {
     if (error instanceof functions.https.HttpsError) throw error;

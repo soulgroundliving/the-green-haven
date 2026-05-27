@@ -65,7 +65,7 @@ exports.notifyMaintenanceTenant = functions
     }
 
     if (usersSnap.empty) {
-      console.log(`ℹ️ No approved LINE-linked tenant for ${building}/${roomId} — skip`);
+      console.info(`ℹ️ No approved LINE-linked tenant for ${building}/${roomId} — skip`);
       return { sent: 0 };
     }
 
@@ -167,7 +167,7 @@ exports.notifyMaintenanceTenant = functions
       } catch (e) {
         console.warn('statusNotifiedAt write failed (non-critical):', e.message);
       }
-      console.log(`📨 Maintenance notify sent to ${sent} user(s) — ${building}/${roomId}/${ticketId} → ${newStatus}`);
+      console.info(`📨 Maintenance notify sent to ${sent} user(s) — ${building}/${roomId}/${ticketId} → ${newStatus}`);
     }
 
     return { sent };

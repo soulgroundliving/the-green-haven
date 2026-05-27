@@ -79,7 +79,7 @@ exports.fixLegacyBillBuilding = functions
         }
       }
 
-      console.log(`✅ fixLegacyBillBuilding (${apply ? 'APPLY' : 'DRY-RUN'}) by ${decoded.email}:`, stats);
+      console.info(`✅ fixLegacyBillBuilding (${apply ? 'APPLY' : 'DRY-RUN'}) by ${decoded.email}:`, stats);
       return res.status(200).json({ success: true, dryRun: !apply, ...stats });
     } catch (e) {
       console.error('fixLegacyBillBuilding failed:', e);

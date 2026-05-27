@@ -43,15 +43,15 @@ exports.notifyBillOnCreate = functions.region('asia-southeast1')
 
     if (!bill) return null;
     if (bill.status === 'paid') {
-      console.log(`⏭ ${building}/${roomId}/${billId} already paid at creation — skip`);
+      console.info(`⏭ ${building}/${roomId}/${billId} already paid at creation — skip`);
       return null;
     }
     if (bill.billNotifiedAt) {
-      console.log(`⏭ ${building}/${roomId}/${billId} already notified — skip`);
+      console.info(`⏭ ${building}/${roomId}/${billId} already notified — skip`);
       return null;
     }
     if (!bill.totalCharge || bill.totalCharge <= 0) {
-      console.log(`⏭ ${building}/${roomId}/${billId} total=0 — skip`);
+      console.info(`⏭ ${building}/${roomId}/${billId} total=0 — skip`);
       return null;
     }
 
@@ -62,7 +62,7 @@ exports.notifyBillOnCreate = functions.region('asia-southeast1')
       try {
         const meterDoc = await firestore.collection('meter_data').doc(bill.meterDocId).get();
         if (meterDoc.exists && meterDoc.data().notifiedAt) {
-          console.log(`⏭ ${building}/${roomId}/${billId} — meter_data ${bill.meterDocId} already notified, skip`);
+          console.info(`⏭ ${building}/${roomId}/${billId} — meter_data ${bill.meterDocId} already notified, skip`);
           await rtdb.ref(`bills/${building}/${roomId}/${billId}/billNotifiedAt`).set(new Date().toISOString());
           return null;
         }
@@ -91,7 +91,7 @@ exports.notifyBillOnCreate = functions.region('asia-southeast1')
     }
 
     if (usersSnap.empty) {
-      console.log(`ℹ️ No approved LINE-linked tenant for ${building}/${roomId} — skip`);
+      console.info(`ℹ️ No approved LINE-linked tenant for ${building}/${roomId} — skip`);
       return null;
     }
 
@@ -132,7 +132,7 @@ exports.notifyBillOnCreate = functions.region('asia-southeast1')
 
     if (pushed > 0) {
       await rtdb.ref(`bills/${building}/${roomId}/${billId}/billNotifiedAt`).set(new Date().toISOString());
-      console.log(`📨 Bill notify sent to ${pushed} user(s) for ${building}/${roomId}/${billId}`);
+      console.info(`📨 Bill notify sent to ${pushed} user(s) for ${building}/${roomId}/${billId}`);
     }
     return { pushed, failed: failures.length };
   });

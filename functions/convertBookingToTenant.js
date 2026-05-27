@@ -450,6 +450,6 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
       .catch(e => console.warn('convertBookingToTenant: liffUsers role clear failed:', e.message));
   }
 
-  console.log(`✅ convertBookingToTenant: ${bookingId} → tenants/${result.building}/list/${result.roomId} (tenantId=${result.tenantId}, returning=${result.isReturningTenant}, restoredFrom=${result.restoredFrom || 'none'})`);
+  console.info(`✅ convertBookingToTenant: ${bookingId} → tenants/${result.building}/list/${result.roomId} (tenantId=${result.tenantId}, returning=${result.isReturningTenant}, restoredFrom=${result.restoredFrom || 'none'})`);
   return { success: true, ...result };
 });

@@ -81,7 +81,7 @@ async function _purgeStaleRateLimitDocs(collectionName, cutoffMs) {
   });
 
   if (queued > 0) await batch.commit();
-  console.log(`🧹 ${collectionName} cleanup: scanned=${snapshot.size} deleted=${queued}`);
+  console.info(`🧹 ${collectionName} cleanup: scanned=${snapshot.size} deleted=${queued}`);
   return { scanned: snapshot.size, deleted: queued };
 }
 
@@ -142,7 +142,7 @@ async function runMaintenanceCleanup() {
   }
 
   await Promise.all(ops);
-  console.log(`🧹 maintenance RTDB cleanup: scanned=${scanned} deleted=${deleted}`);
+  console.info(`🧹 maintenance RTDB cleanup: scanned=${scanned} deleted=${deleted}`);
   return { scanned, deleted };
 }
 
@@ -185,7 +185,7 @@ async function runLiffRejectedCleanup() {
   });
 
   if (queued > 0) await batch.commit();
-  console.log(`🧹 liffUsers rejected cleanup: scanned=${snapshot.size} deleted=${queued}`);
+  console.info(`🧹 liffUsers rejected cleanup: scanned=${snapshot.size} deleted=${queued}`);
   return { scanned: snapshot.size, deleted: queued };
 }
 

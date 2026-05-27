@@ -201,6 +201,6 @@ exports.createFacilityBooking = functions
       });
     });
 
-    console.log(`✅ createFacilityBooking: ${bookingId} ${building}/${facilityType}/${slot} ${date} ${timeSlot} uid=${tenantUid}`);
+    console.info(`✅ createFacilityBooking: ${bookingId} ${building}/${facilityType}/${slot} ${date} ${timeSlot} uid=${tenantUid}`);
     return { bookingId };
   });

@@ -320,7 +320,7 @@ try {
     exports.verifySlip = verifySlip.verifySlip;
   }
 } catch (e) {
-  console.log('verifySlip not found, skipping...');
+  console.info('verifySlip not found, skipping...');
 }
 
 try {
@@ -329,7 +329,7 @@ try {
     exports.notifyLiffRequest = notifyLiff.notifyLiffRequest;
   }
 } catch (e) {
-  console.log('notifyLiffRequest not found, skipping...');
+  console.info('notifyLiffRequest not found, skipping...');
 }
 
 try {
@@ -338,5 +338,5 @@ try {
     exports.notifyLiffStatusChange = notifyLiffStatus.notifyLiffStatusChange;
   }
 } catch (e) {
-  console.log('notifyLiffStatusChange not found, skipping...');
+  console.info('notifyLiffStatusChange not found, skipping...');
 }

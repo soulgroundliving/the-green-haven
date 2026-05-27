@@ -136,7 +136,7 @@ exports.unlinkLiffUser = functions
       })
     );
 
-    console.log(
+    console.info(
       `🔌 unlinkLiffUser: ${lineUserId} unlinked by ${adminUid} ` +
       `· tenant=${building || '-'}/${room || '-'} · people=${peopleCleared} ` +
       `· uidsCleared=${uidsToClear.length}`

@@ -85,6 +85,6 @@ exports.submitChecklist = functions
       updatedAt:           admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`✅ submitChecklist: ${instanceId} submitted by uid=${callerUid}`);
+    console.info(`✅ submitChecklist: ${instanceId} submitted by uid=${callerUid}`);
     return { submitted: true };
   });

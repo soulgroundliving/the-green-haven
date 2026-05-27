@@ -66,7 +66,7 @@ async function ensureBigQueryTable() {
   const [datasetExists] = await dataset.exists();
   if (!datasetExists) {
     await bigquery.createDataset(DATASET_ID, { location: DATASET_LOCATION });
-    console.log(`📦 Created BigQuery dataset: ${DATASET_ID}`);
+    console.info(`📦 Created BigQuery dataset: ${DATASET_ID}`);
   }
 
   const table = dataset.table(TABLE_ID);
@@ -76,7 +76,7 @@ async function ensureBigQueryTable() {
       schema: { fields: TABLE_SCHEMA },
       timePartitioning: { type: 'DAY', field: 'ts' }
     });
-    console.log(`📋 Created BigQuery table: ${DATASET_ID}.${TABLE_ID}`);
+    console.info(`📋 Created BigQuery table: ${DATASET_ID}.${TABLE_ID}`);
   }
 }
 
@@ -99,7 +99,7 @@ async function runArchive() {
     .get();
 
   if (snapshot.empty) {
-    console.log('✓ No auth_events older than 90 days. Nothing to archive.');
+    console.info('✓ No auth_events older than 90 days. Nothing to archive.');
     return { scanned: 0, inserted: 0, deleted: 0 };
   }
 
@@ -119,7 +119,7 @@ async function runArchive() {
   // Insert into BigQuery first. Throws → catch aborts BEFORE Firestore
   // delete runs. Docs stay in place for next-run retry.
   await bigquery.dataset(DATASET_ID).table(TABLE_ID).insert(rows);
-  console.log(`✅ Inserted ${rows.length} rows into BigQuery ${DATASET_ID}.${TABLE_ID}`);
+  console.info(`✅ Inserted ${rows.length} rows into BigQuery ${DATASET_ID}.${TABLE_ID}`);
 
   // Only after successful BQ insert do we delete from Firestore. Admin SDK
   // bypasses the rules `allow delete: if false`, which is intentional —
@@ -129,7 +129,7 @@ async function runArchive() {
   const batch = firestore.batch();
   snapshot.docs.forEach(d => batch.delete(d.ref));
   await batch.commit();
-  console.log(`🗑️ Deleted ${snapshot.size} archived docs from Firestore`);
+  console.info(`🗑️ Deleted ${snapshot.size} archived docs from Firestore`);
 
   return { scanned: snapshot.size, inserted: rows.length, deleted: snapshot.size };
 }
@@ -145,7 +145,7 @@ exports.archiveAuthEventsScheduled = functions
   .onRun(async (context) => {
     try {
       const result = await runArchive();
-      console.log('🗂️ auth_events archive done:', result);
+      console.info('🗂️ auth_events archive done:', result);
       return null;
     } catch (e) {
       console.error('archiveAuthEventsScheduled failed:', e);
