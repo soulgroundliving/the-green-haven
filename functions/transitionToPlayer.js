@@ -285,7 +285,6 @@ exports.transitionToPlayer = functions
     // fails, admin can manually set via grant-admin-claim tool with role:'player'.
     if (linkedAuthUid) {
       admin.auth().setCustomUserClaims(linkedAuthUid, { role: 'player' })
-        .then(() => console.log(`transitionToPlayer: claim set uid=${linkedAuthUid} role=player`))
         .catch(e => console.error(`transitionToPlayer: setCustomUserClaims failed uid=${linkedAuthUid}:`, e.message));
     } else {
       console.warn(`transitionToPlayer: no linkedAuthUid for ${building}/${roomId} — claim not set`);
@@ -296,8 +295,6 @@ exports.transitionToPlayer = functions
         .update({ role: 'player', tenantId, updatedAt: now })
         .catch(e => console.warn(`transitionToPlayer: liffUsers update failed lineID=${lineID}:`, e.message));
     }
-
-    console.log(`transitionToPlayer: ${building}/${roomId} → archive/${contractId} + people/${tenantId} (subdocs=${copiedSubdocs}, uid=${linkedAuthUid}, by=${callerEmail || context.auth.uid})`);
 
     return {
       success: true,

@@ -87,9 +87,6 @@ exports.deletePetMedia = functions
         `Storage cleanup failed: ${storageErr.message}`);
     }
 
-    console.log(`deletePetMedia: ${building}/${roomId}/${petId} ` +
-      `(storageDeleted=${storageDeleted}, errors=${storageErrors}, by=${callerEmail || context.auth.uid})`);
-
     return {
       success: true,
       building,

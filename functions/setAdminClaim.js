@@ -82,7 +82,6 @@ exports.setAdminClaim = functions.region('asia-southeast1').https.onRequest(asyn
       });
     }
     authed = true;
-    console.log('🔑 setAdminClaim: bootstrap via INIT_TOKEN (no admin yet)');
   }
 
   // ── Auth path 2: Bearer idToken with admin:true claim ────────────────────
@@ -98,7 +97,6 @@ exports.setAdminClaim = functions.region('asia-southeast1').https.onRequest(asyn
         return res.status(403).json({ error: 'Caller does not have admin custom claim' });
       }
       authed = true;
-      console.log(`🔑 setAdminClaim: called by existing admin ${decoded.email}`);
     } catch (e) {
       return res.status(401).json({ error: 'Invalid or expired ID token' });
     }
@@ -118,7 +116,6 @@ exports.setAdminClaim = functions.region('asia-southeast1').https.onRequest(asyn
   try {
     const user = await admin.auth().getUserByEmail(email.trim().toLowerCase());
     await admin.auth().setCustomUserClaims(user.uid, claims);
-    console.log(`✅ setAdminClaim: ${JSON.stringify(claims)} set on uid=${user.uid} email=${email}`);
     return res.status(200).json({ success: true, uid: user.uid, email: user.email, claims });
   } catch (e) {
     console.error('setAdminClaim error:', e.code, e.message);

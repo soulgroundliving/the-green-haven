@@ -469,9 +469,6 @@ async function handler(data, context) {
     console.error('[requestDataDeletion] failed to finalize log:', e.message);
   }
 
-  console.log(`✅ pdpa_erasure: target=${ctx.tenantId} status=${status} ` +
-              `initiatedBy=${adminInfo.uid} errors=${summary.errors.length}`);
-
   return {
     success: true,
     status,

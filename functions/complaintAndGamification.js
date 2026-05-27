@@ -29,8 +29,6 @@ exports.cleanupResolvedComplaints = functions.region('asia-southeast1').pubsub
   .schedule('0 2 * * *') // Run daily at 2 AM
   .onRun(async (context) => {
     try {
-      console.log('🧹 Cleaning up resolved complaints...');
-
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -69,10 +67,6 @@ exports.cleanupResolvedComplaints = functions.region('asia-southeast1').pubsub
               await complaintDoc.ref.delete();
               archivedCount++;
             }
-          }
-
-          if (archivedCount > 0) {
-            console.log(`✅ Archived ${archivedCount} complaints from ${buildingId}/${roomId}`);
           }
         }
       }
@@ -198,7 +192,6 @@ exports.awardComplaintFreeMonth = functions.region('asia-southeast1').pubsub
   .timeZone('Asia/Bangkok')
   .onRun(async () => {
     const result = await _runAwardComplaintFreeMonth({ dryRun: false });
-    console.log('🎯 awardComplaintFreeMonth:', JSON.stringify(result));
     return result;
   });
 
@@ -227,7 +220,6 @@ async function _runCheckAndAwardBadgesPlayer(tenantId, authToken) {
     .map(c => ({ id: c.id, emoji: c.emoji, label: c.label, earnedAt: now }));
   if (toAward.length > 0) {
     await peopleRef.update({ 'gamification.badges': [...normalised, ...toAward] });
-    toAward.forEach(b => console.log(`🎖️ Awarded "${b.label}" to player ${tenantId}`));
   }
   return { success: true, badgesAwarded: toAward.length, newBadges: toAward };
 }
@@ -280,7 +272,6 @@ exports.checkAndAwardBadges = functions.region('asia-southeast1').https.onCall(a
         'gamification.badges': [...normalised, ...toAward],
         'metadata.updatedAt': now
       });
-      toAward.forEach(b => console.log(`🎖️ Awarded "${b.label}" to ${building}/${roomId}`));
     }
 
     return { success: true, badgesAwarded: toAward.length, newBadges: toAward };

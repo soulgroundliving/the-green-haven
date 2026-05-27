@@ -170,7 +170,6 @@ async function _runAggregator({ firestore, postId, callerUid, isAdmin, FieldValu
     await target.update({
       'gamification.badges': [...normalised, ...toAward]
     });
-    toAward.forEach(b => console.log(`🎖️ marketplaceStatsAggregator awarded "${b.label}" (post ${postId})`));
   }
 
   return {

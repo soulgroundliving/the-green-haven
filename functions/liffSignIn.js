@@ -127,7 +127,6 @@ exports.liffSignIn = functions
     let playerToken;
     try {
       playerToken = await admin.auth().createCustomToken(uid, { role: 'player', tenantId });
-      console.log(`✅ liffSignIn (player): uid=${uid} tenantId=${tenantId} LINE ${lineUserId}`);
     } catch (e) {
       console.error('liffSignIn: player token failed:', e.message);
       return res.status(500).json({ error: 'Failed to create player token' });
@@ -193,7 +192,6 @@ exports.liffSignIn = functions
     // Embed { room, building, tenantId } claims so client-side Firestore rules
     // can gate people/{tenantId} reads without UID-drift issues (§7-P).
     customToken = await admin.auth().createCustomToken(uid, { room, building, tenantId });
-    console.log(`✅ liffSignIn: uid=${uid} → ${building}/${room}${tenantId ? ' tenantId=' + tenantId : ''} (LINE ${lineUserId})`);
   } catch (e) {
     console.error('liffSignIn: createCustomToken failed:', e.message);
     return res.status(500).json({ error: 'Failed to create custom token' });

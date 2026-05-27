@@ -193,7 +193,11 @@ describe('cancelFacilityBooking', () => {
 
   // 10. Today's booking is NOT past (boundary: date === today is allowed)
   it('booking dated today is not rejected as past', async () => {
-    const todayISO = new Date().toISOString().slice(0, 10);
+    // Use LOCAL date (not toISOString which is UTC) to match CF's setHours(0,0,0,0) check.
+    // In UTC+7, early morning local time is still the previous UTC date, so toISOString()
+    // would give "yesterday", causing the CF to see the booking as past.
+    const now = new Date();
+    const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     stubBooking = { status: 'confirmed', tenantUid: 'my-uid', date: todayISO };
     const result = await handler({ bookingId: 'BK_TODAY' }, ctx({ uid: 'my-uid' }));
     assert.deepEqual(result, { cancelled: true });

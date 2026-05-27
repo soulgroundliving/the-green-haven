@@ -198,8 +198,6 @@ exports.notifyTenantOnMeterUpload = onCall(
     const pushed = results.reduce((s, r) => s + (r.pushed || 0), 0);
     const failed = results.reduce((s, r) => s + (r.failed || 0), 0);
     const skipped = results.filter(r => r.skipped).length;
-    console.log(`📨 notifyTenantOnMeterUpload: ${ids.length} docs → ${pushed} pushed, ${failed} failed, ${skipped} skipped`);
-
     return { count: ids.length, pushed, failed, skipped, results };
   }
 );

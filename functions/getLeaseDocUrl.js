@@ -59,11 +59,6 @@ exports.getLeaseDocUrl = functions
     // buildings. Without this, transferred tenants get permission-denied on
     // their own contract until the Storage file is moved manually.
     const leaseBuildings = await getAllBuildings();
-    console.log(`getLeaseDocUrl[in]: path=${path} parsed=${building}/${roomId} ` +
-      `leaseId=${leaseId} caller.uid=${String(context.auth.uid || '').slice(0, 20)} ` +
-      `tokRoom=${context.auth.token?.room || ''} tokBuilding=${context.auth.token?.building || ''} ` +
-      `tokTenantId=${context.auth.token?.tenantId ? 'present' : 'missing'} ` +
-      `leaseBuildings=[${leaseBuildings.join(',')}]`);
     let viaPath;
     try {
       const r = await assertTenantAccess({
@@ -72,10 +67,6 @@ exports.getLeaseDocUrl = functions
         HttpsError: functions.https.HttpsError,
       });
       viaPath = r.viaPath;
-      const matchedAt = r.leaseData
-        ? ` matchedAt=leases/${r.leaseData.building || '?'}/list/${leaseId}`
-        : '';
-      console.log(`getLeaseDocUrl[ok]: viaPath=${viaPath}${matchedAt}`);
     } catch (authErr) {
       // Path 1d — current-tenant-contract fallback (lease-file-specific).
       //
@@ -115,9 +106,6 @@ exports.getLeaseDocUrl = functions
             const leasePathMatch = path === String(td.lease?.contractPath || '');
             if (ownerOk && (docMatch || leasePathMatch)) {
               viaPath = 'current-tenant-contract';
-              console.log(`getLeaseDocUrl[ok]: viaPath=${viaPath} ` +
-                `at=tenants/${tokBuilding}/list/${tokRoom} ` +
-                `matched=${docMatch ? 'contractDocument' : 'lease.contractPath'}`);
             }
           }
         } catch (e) {
@@ -125,7 +113,7 @@ exports.getLeaseDocUrl = functions
         }
       }
       if (!viaPath) {
-        console.log(`getLeaseDocUrl[deny]: ${authErr.message}`);
+        console.warn(`getLeaseDocUrl[deny]: ${authErr.message}`);
         throw authErr;
       }
     }

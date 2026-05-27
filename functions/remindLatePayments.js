@@ -207,13 +207,11 @@ async function runReminders() {
             lastLateReminderAt: new Date().toISOString(),
             lastLateTier: tier.key
           });
-          console.log(`📨 [${tier.key}] ${building}/${roomId} d${daysOverdue} → ${ok} user(s)`);
         }
       }
     }
   }
 
-  console.log(`🗓️ Late-payment sweep: scanned=${scanned} sent=${sent} skipped=${skipped} errors=${errors}`);
   return { scanned, sent, skipped, errors };
 }
 

@@ -136,12 +136,6 @@ exports.unlinkLiffUser = functions
       })
     );
 
-    console.log(
-      `🔌 unlinkLiffUser: ${lineUserId} unlinked by ${adminUid} ` +
-      `· tenant=${building || '-'}/${room || '-'} · people=${peopleCleared} ` +
-      `· uidsCleared=${uidsToClear.length}`
-    );
-
     return {
       success: true,
       lineUserId,

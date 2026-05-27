@@ -97,8 +97,6 @@ exports.setVerifiedPhone = functions.region('asia-southeast1').https.onCall(asyn
       'Tenant doc not found at tenants/{' + buildingCandidates.join('|') + '}/list/' + room +
       ' — sibling rooms in ' + buildingCandidates[0] + ': [' + ids + ']');
   }
-  console.log('setVerifiedPhone resolved doc at tenants/' + resolvedBuilding + '/list/' + room);
-
   // Ownership check — accept ANY of these proofs (need at least one):
   //   (a) oldAnonUid matches doc.linkedAuthUid (set by linkAuthUid via LIFF)
   //   (b) lineUserId matches doc.lineUserId (also set by linkAuthUid)

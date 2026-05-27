@@ -44,7 +44,6 @@ exports.expireBookingLocks = functions
     }
 
     if (snap.empty) {
-      console.log('expireBookingLocks: no expired locks');
       return null;
     }
 
@@ -59,7 +58,6 @@ exports.expireBookingLocks = functions
 
     try {
       await batch.commit();
-      console.log(`⏰ expireBookingLocks: expired ${snap.size} lock(s)`);
     } catch (e) {
       console.error('expireBookingLocks: batch commit failed:', e.message);
       throw e;

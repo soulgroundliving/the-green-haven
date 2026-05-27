@@ -89,6 +89,5 @@ exports.createChecklistInstance = functions
       adminSignedAt: null,
     });
 
-    console.log(`✅ createChecklistInstance: ${instanceId} ${building}/${roomId} type=${type} uid=${tenantUid}`);
     return { instanceId };
   });

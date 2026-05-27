@@ -288,7 +288,6 @@ exports.notifyMarketplaceChat = onCall(
       } catch (e) {
         console.warn(`[notifyMarketplaceChat] lastNotifyAt update failed:`, e.message);
       }
-      console.log(`[notifyMarketplaceChat] pushed to ${recipientLineUserId} for ${chatId}/${messageId}`);
       return { sent: 1 };
     }
 
