@@ -639,7 +639,12 @@ service cloud.firestore {
     // (admin SDK aggregates without leaking other prospects' PII).
     match /bookings/{bookingId} {
       allow read:  if isAdmin()
-        || (isSignedIn() && resource.data.prospectUid == request.auth.uid);
+        || (isSignedIn() && resource.data.prospectUid == request.auth.uid)
+        // Claim fallback: survives edge-case uid drift (§7-P). lineUserId
+        // claim is set by liffBookingSignIn and persisted via setCustomUserClaims.
+        || (isSignedIn()
+            && request.auth.token.role == 'prospect'
+            && resource.data.prospectLineId == request.auth.token.lineUserId);
       allow write: if isAdmin();
     }
 
