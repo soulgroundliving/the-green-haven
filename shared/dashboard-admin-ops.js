@@ -20,13 +20,13 @@
 // can chain (e.g. `debugShowMaintenance().filter(r => r.priority === 'high')`).
 function debugShowMaintenance() {
   const data = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
-  console.log('🔍 maintenance_data (' + data.length + ' items):', data);
+  console.info('🔍 maintenance_data (' + data.length + ' items):', data);
   return data;
 }
 
 function debugShowAnnouncements() {
   const data = JSON.parse(localStorage.getItem('announcements_data') || '[]');
-  console.log('🔍 announcements_data (' + data.length + ' items):', data);
+  console.info('🔍 announcements_data (' + data.length + ' items):', data);
   return data;
 }
 
@@ -37,17 +37,9 @@ function debugShowAllKeys() {
     const size = new Blob([localStorage.getItem(key)]).size;
     keys.push({ key, size: size + ' bytes' });
   }
-  console.log('🔍 All localStorage keys (' + keys.length + '):', keys);
+  console.info('🔍 All localStorage keys (' + keys.length + '):', keys);
   return keys;
 }
-
-// Expose on window so they're invokable from devtools console
-if (typeof window !== 'undefined') {
-  window.debugShowMaintenance = debugShowMaintenance;
-  window.debugShowAnnouncements = debugShowAnnouncements;
-  window.debugShowAllKeys = debugShowAllKeys;
-}
-
 
 // Grant admin/accountant custom claim to a user. Calls the deployed
 // setAdminClaim CF with the current admin's ID token. Target user must

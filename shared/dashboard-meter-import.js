@@ -99,36 +99,36 @@ function handleImportFileProcess(file) {
       // STEP 2: Parse the data
       // Building auto-detected from room names in parseImportExcelData()
       let importData = parseImportExcelData(workbook, 'rooms'); // Parse as rooms first
-      console.log('📊 Parsed import data:', importData);
+      console.info('📊 Parsed import data:', importData);
 
       if (importData) {
         // Check if V3 format - more reliable: check if Nest data exists (not just flag)
         const hasNestData = importData.nest && Object.keys(importData.nest || {}).length >= 5; // At least 5 rooms to be Nest
         const isV3Format = (importData.isV3 === true) || (importData.building === 'all') || hasNestData;
 
-        console.log(`🔍 V3 Format Check:`);
-        console.log(`   isV3=${importData.isV3}, building=${importData.building}, hasNestData=${hasNestData}`);
-        console.log(`   Data counts - Rooms: ${Object.keys(importData.rooms || {}).length}, Nest: ${Object.keys(importData.nest || {}).length}, Amazon: ${Object.keys(importData.amazon || {}).length}`);
+        console.info(`🔍 V3 Format Check:`);
+        console.info(`   isV3=${importData.isV3}, building=${importData.building}, hasNestData=${hasNestData}`);
+        console.info(`   Data counts - Rooms: ${Object.keys(importData.rooms || {}).length}, Nest: ${Object.keys(importData.nest || {}).length}, Amazon: ${Object.keys(importData.amazon || {}).length}`);
 
         let detectedBuilding = 'rooms'; // Default value
         if (isV3Format) {
           // V3 format - already has all 3 buildings (rooms/nest/amazon), don't re-parse
-          console.log(`✅ V3 format confirmed - SKIP re-parsing to preserve Nest data!`);
+          console.info(`✅ V3 format confirmed - SKIP re-parsing to preserve Nest data!`);
           detectedBuilding = 'all';
         } else {
           // V1/V2 format - auto-detect single building
-          console.log(`⚠️ Not V3 format - attempting V1/V2 building detection...`);
+          console.info(`⚠️ Not V3 format - attempting V1/V2 building detection...`);
           detectedBuilding = detectBuildingFromRooms(Object.keys(importData.rooms));
-          console.log(`🏢 Auto-detected building: ${detectedBuilding}`);
+          console.info(`🏢 Auto-detected building: ${detectedBuilding}`);
 
           // Re-parse with correct building if needed
           if (detectedBuilding === 'nest') {
-            console.log(`⚠️ Re-parsing as NEST building...`);
+            console.info(`⚠️ Re-parsing as NEST building...`);
             importData = parseImportExcelData(workbook, 'nest');
           }
         }
 
-        console.log(`📊 Final: Rooms=${Object.keys(importData.rooms || {}).length}, Nest=${Object.keys(importData.nest || {}).length}, Amazon=${Object.keys(importData.amazon || {}).length}`);
+        console.info(`📊 Final: Rooms=${Object.keys(importData.rooms || {}).length}, Nest=${Object.keys(importData.nest || {}).length}, Amazon=${Object.keys(importData.amazon || {}).length}`);
         currentImportData = importData;
 
         // STEP 6: Get match results - CRITICAL SAFETY CHECK
@@ -142,7 +142,7 @@ function handleImportFileProcess(file) {
         // - Solution: Check if exists before calling + provide fallback
         //
         // Error would be: "Uncaught ReferenceError: matchMeterDataWithPrevious is not defined"
-        console.log('🔍 Calling matchMeterDataWithPrevious...');
+        console.info('🔍 Calling matchMeterDataWithPrevious...');
         let matchResults;
         if (typeof window.matchMeterDataWithPrevious === 'function') {
           // Function exists - safe to call
@@ -152,7 +152,7 @@ function handleImportFileProcess(file) {
           console.warn('⚠️ matchMeterDataWithPrevious not available yet, using fallback');
           matchResults = { summary: { totalRooms: 0 }, details: [], canProceed: true, isFirstImport: true };
         }
-        console.log('📋 Match results:', matchResults);
+        console.info('📋 Match results:', matchResults);
         currentImportMatchResults = matchResults;
 
         // Display preview
@@ -251,7 +251,7 @@ function parseImportExcelData(workbook, building) {
   const fileInput = document.getElementById('importFileInput');
   if (fileInput && fileInput.files && fileInput.files.length > 0) {
     const filename = fileInput.files[0].name;
-    console.log(`🔍 [Year Detection] Filename: "${filename}"`);
+    console.info(`🔍 [Year Detection] Filename: "${filename}"`);
 
     // Support formats: "68_...", "...68", "... 68" etc
     const yearPatterns = [
@@ -264,15 +264,15 @@ function parseImportExcelData(workbook, building) {
     for (let i = 0; i < yearPatterns.length; i++) {
       const pattern = yearPatterns[i];
       const match = filename.match(pattern);
-      console.log(`  Pattern ${i}: ${pattern} → ${match ? 'MATCHED: ' + match[1] : 'no match'}`);
+      console.info(`  Pattern ${i}: ${pattern} → ${match ? 'MATCHED: ' + match[1] : 'no match'}`);
 
       if (match) {
         const num = parseInt(match[1]);
-        console.log(`    Parsed as number: ${num} (valid: ${num >= 50 && num <= 99})`);
+        console.info(`    Parsed as number: ${num} (valid: ${num >= 50 && num <= 99})`);
 
         if (num >= 50 && num <= 99) {
           year = num;
-          console.log(`✅ Detected year ${year} from filename: ${filename}`);
+          console.info(`✅ Detected year ${year} from filename: ${filename}`);
           break;
         }
       }
@@ -283,7 +283,7 @@ function parseImportExcelData(workbook, building) {
 
   // Try sheet name if filename didn't work
   if (!year && selectedSheet) {
-    console.log(`🔍 [Year Detection] Sheet name: "${selectedSheet}"`);
+    console.info(`🔍 [Year Detection] Sheet name: "${selectedSheet}"`);
 
     const yearPatterns = [
       /(\d{2})$/,           // End: "สค68"
@@ -295,15 +295,15 @@ function parseImportExcelData(workbook, building) {
     for (let i = 0; i < yearPatterns.length; i++) {
       const pattern = yearPatterns[i];
       const match = selectedSheet.match(pattern);
-      console.log(`  Pattern ${i}: ${pattern} → ${match ? 'MATCHED: ' + match[1] : 'no match'}`);
+      console.info(`  Pattern ${i}: ${pattern} → ${match ? 'MATCHED: ' + match[1] : 'no match'}`);
 
       if (match) {
         const num = parseInt(match[1]);
-        console.log(`    Parsed as number: ${num} (valid: ${num >= 50 && num <= 99})`);
+        console.info(`    Parsed as number: ${num} (valid: ${num >= 50 && num <= 99})`);
 
         if (num >= 50 && num <= 99) {
           year = num;
-          console.log(`✅ Detected year ${year} from sheet name: ${selectedSheet}`);
+          console.info(`✅ Detected year ${year} from sheet name: ${selectedSheet}`);
           break;
         }
       }
@@ -315,7 +315,7 @@ function parseImportExcelData(workbook, building) {
     console.warn('⚠️ Could not detect year - defaulting to 69');
     year = 69;
   } else {
-    console.log(`✅ Final year: ${year}`);
+    console.info(`✅ Final year: ${year}`);
   }
 
   // ===== V3 METER FORMAT PARSING (June 69+) =====
@@ -328,11 +328,11 @@ function parseImportExcelData(workbook, building) {
 
   // Detect file format first
   const isV3FormatFile = workbook.SheetNames.length === 1; // V3 = 1 sheet, V1/V2 = 12 sheets
-  console.log(`📊 File structure: ${workbook.SheetNames.length} sheet(s) → V${isV3FormatFile ? '3' : '1/V2'} format`);
+  console.info(`📊 File structure: ${workbook.SheetNames.length} sheet(s) → V${isV3FormatFile ? '3' : '1/V2'} format`);
 
   // ===== V3 FORMAT PARSING (Single sheet with all buildings) =====
   if (isV3FormatFile) {
-    console.log('🔧 Parsing V3 meter format - All buildings in one sheet');
+    console.info('🔧 Parsing V3 meter format - All buildings in one sheet');
 
     const allRooms = {
       rooms: {},
@@ -345,7 +345,7 @@ function parseImportExcelData(workbook, building) {
     const nestRoomList = BuildingConfig.getNestRoomIds();
 
     // Pre-populate
-    console.log('📋 Pre-populating all expected rooms with 0 values...');
+    console.info('📋 Pre-populating all expected rooms with 0 values...');
     roomsRoomList.forEach(roomNum => {
       allRooms.rooms[roomNum] = {eNew: 0, eOld: 0, wNew: 0, wOld: 0};
     });
@@ -386,7 +386,7 @@ function parseImportExcelData(workbook, building) {
   }
 
   // ===== FALLBACK: V1/V2 FORMAT PARSING (Multi-sheet with all buildings) =====
-  console.log('🔧 Parsing V1/V2 meter format (auto-detect all buildings)');
+  console.info('🔧 Parsing V1/V2 meter format (auto-detect all buildings)');
 
   const roomsRoomList = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25',
                          '26', '27', '28', '29', '30', '31', '32', '33'];
@@ -646,12 +646,12 @@ async function approveImportData() {
 
   if (importType === 'billing') {
     // Billing data goes to localStorage
-    console.log('📥 Routing to billing import (localStorage)');
+    console.info('📥 Routing to billing import (localStorage)');
     return approveBillingImportDataFromMeter(currentImportData, currentImportMatchResults);
   }
 
   // Meter data goes to Firebase (default)
-  console.log('📊 Routing to meter import (Firebase)');
+  console.info('📊 Routing to meter import (Firebase)');
 
   // Check for duplicate month upload
   const key = `${currentImportData.year}_${currentImportData.month}`;
@@ -720,7 +720,7 @@ async function approvePendingImportWithFirebase(importData, matchResults, skipCo
     Object.assign(window.METER_DATA[building][yearMonth], importData[building] || {});
   }
 
-  console.log(`✅ Meter import complete: ${totalSaved} saved, ${totalFailed} failed`);
+  console.info(`✅ Meter import complete: ${totalSaved} saved, ${totalFailed} failed`);
 
   // Trigger LINE notification for every approved tenant whose meter just changed.
   // Eventarc doesn't support asia-southeast3 (where Firestore lives), so we cannot
@@ -731,7 +731,7 @@ async function approvePendingImportWithFirebase(importData, matchResults, skipCo
       const callable = window.firebase.functions.httpsCallable('notifyTenantOnMeterUpload');
       const r = await callable({ docIds: savedDocIds });
       const { pushed = 0, failed = 0, skipped = 0 } = r?.data || {};
-      console.log(`📨 LINE notify: ${pushed} pushed, ${failed} failed, ${skipped} skipped`);
+      console.info(`📨 LINE notify: ${pushed} pushed, ${failed} failed, ${skipped} skipped`);
     } catch (e) {
       console.warn('⚠️ notifyTenantOnMeterUpload callable failed (meter saved OK):', e.message);
     }
@@ -804,19 +804,19 @@ async function performDataReplacementWithData(importData, matchResults) {
       displayRecordedMeterData(importData, matchResults);
 
       // Refresh dashboard in background
-      console.log('🔄 Refreshing dashboard after import...');
+      console.info('🔄 Refreshing dashboard after import...');
       setTimeout(async () => {
         try {
           // Refresh METER_DATA from localStorage
           if (window.METER_DATA) {
-            console.log('📊 Reloading dashboard data...');
+            console.info('📊 Reloading dashboard data...');
             // If dashboard is currently open, refresh the charts
             const dashboardPage = document.getElementById('page-dashboard');
             if (dashboardPage && dashboardPage.classList.contains('active')) {
               setTimeout(() => {
                 initDashboardCharts();
                 updateDashboardLive();
-                console.log('✅ Dashboard refreshed with new data');
+                console.info('✅ Dashboard refreshed with new data');
               }, 500);
             }
           }
@@ -876,7 +876,7 @@ function displayRecordedMeterData(importData, matchResults) {
       nestRoomList.forEach(roomNum => {
         importData.nest[roomNum] = { eNew: 0, eOld: 0, wNew: 0, wOld: 0 };
       });
-      console.log(`✅ Nest data re-populated with ${Object.keys(importData.nest).length} rooms`);
+      console.info(`✅ Nest data re-populated with ${Object.keys(importData.nest).length} rooms`);
     }
 
     // ===== COUNT BUILDINGS =====
@@ -884,7 +884,7 @@ function displayRecordedMeterData(importData, matchResults) {
     const nestCount = Object.keys(importData.nest || {}).length;
     const amazonCount = Object.keys(importData.amazon || {}).length;
 
-    console.log(`📊 Final display counts: Rooms=${roomsCount}, Nest=${nestCount}, Amazon=${amazonCount}`);
+    console.info(`📊 Final display counts: Rooms=${roomsCount}, Nest=${nestCount}, Amazon=${amazonCount}`);
 
     document.getElementById('recordedRoomsCount').textContent = roomsCount;
     document.getElementById('recordedNestCount').textContent = nestCount;
@@ -992,7 +992,7 @@ function displayRecordedMeterData(importData, matchResults) {
       recordedSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
 
-    console.log('✅ Meter data recorded section displayed', { year, month, roomsCount, nestCount, amazonCount });
+    console.info('✅ Meter data recorded section displayed', { year, month, roomsCount, nestCount, amazonCount });
 
   } catch (error) {
     console.error('Error displaying recorded meter data:', error);
@@ -1039,10 +1039,10 @@ function initMeterPage() {
   // Load METER_DATA from Excel (always refresh to get latest data)
   if (typeof METER_DATA !== 'undefined') {
     localStorage.setItem('METER_DATA', JSON.stringify(METER_DATA));
-    console.log('✅ Loaded Excel meter data (METER_DATA)');
+    console.info('✅ Loaded Excel meter data (METER_DATA)');
   }
 
-  console.log('✅ Meter page initialized');
+  console.info('✅ Meter page initialized');
   // Auto-switch to Room Config tab (default)
   setTimeout(() => {
     const roomConfigBtn = document.querySelector('[onclick*="room-config"]');
@@ -1056,7 +1056,7 @@ let _nestMeterIntervalId = null;
 let _roomsMeterIntervalId = null;
 
 function initMeterNestTab() {
-  console.log('📊 Loading Nest Building meter...');
+  console.info('📊 Loading Nest Building meter...');
   // Set current month if not set
   const monthInput = document.getElementById('nestMeterMonth');
   if (!monthInput.value) {
@@ -1073,7 +1073,7 @@ function initMeterNestTab() {
   // Add robust event listeners to reload data when month changes
   // Use 'change', 'input', and 'blur' to catch all types of changes
   const handleMonthChange = () => {
-    console.log('📅 Month changed to:', monthInput.value, ' - reloading old readings from METER_DATA...');
+    console.info('📅 Month changed to:', monthInput.value, ' - reloading old readings from METER_DATA...');
     autoFillOldReadingsNest();
   };
 
@@ -1090,7 +1090,7 @@ function initMeterNestTab() {
   let lastMonthValue = monthInput.value;
   _nestMeterIntervalId = setInterval(() => {
     if (monthInput.value !== lastMonthValue) {
-      console.log('📅 Month value changed (detected via polling):', monthInput.value);
+      console.info('📅 Month value changed (detected via polling):', monthInput.value);
       lastMonthValue = monthInput.value;
       autoFillOldReadingsNest();
     }
@@ -1098,7 +1098,7 @@ function initMeterNestTab() {
 }
 
 function initMeterRoomsTab() {
-  console.log('📊 Loading Rooms Building meter...');
+  console.info('📊 Loading Rooms Building meter...');
 
   // Set current month if not set
   const monthInput = document.getElementById('roomsMeterMonth');
@@ -1116,7 +1116,7 @@ function initMeterRoomsTab() {
   // Add robust event listeners to reload data when month changes
   // Use 'change', 'input', and 'blur' to catch all types of changes
   const handleMonthChange = () => {
-    console.log('📅 Month changed to:', monthInput.value, ' - reloading old readings from METER_DATA...');
+    console.info('📅 Month changed to:', monthInput.value, ' - reloading old readings from METER_DATA...');
     autoFillOldReadingsRooms();
   };
 
@@ -1133,7 +1133,7 @@ function initMeterRoomsTab() {
   let lastMonthValue = monthInput.value;
   _roomsMeterIntervalId = setInterval(() => {
     if (monthInput.value !== lastMonthValue) {
-      console.log('📅 Month value changed (detected via polling):', monthInput.value);
+      console.info('📅 Month value changed (detected via polling):', monthInput.value);
       lastMonthValue = monthInput.value;
       autoFillOldReadingsRooms();
     }

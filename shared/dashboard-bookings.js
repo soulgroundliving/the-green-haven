@@ -222,7 +222,7 @@
       if (lockMs > now) return;
       if (_expireFlightSet.has(b.id)) return;
       _expireFlightSet.add(b.id);
-      console.log(`[bookings] auto-expire firing: ${b.id} (lockedUntil=${new Date(lockMs).toISOString()})`);
+      console.info(`[bookings] auto-expire firing: ${b.id} (lockedUntil=${new Date(lockMs).toISOString()})`);
       const ref = fs.doc(db, 'bookings', b.id);
       fs.setDoc(ref, {
         status: 'expired',
@@ -230,7 +230,7 @@
         expiredBy: 'admin-ui-fallback',
         updatedAt: fs.serverTimestamp(),
       }, { merge: true })
-        .then(() => console.log(`[bookings] auto-expire OK: ${b.id}`))
+        .then(() => console.info(`[bookings] auto-expire OK: ${b.id}`))
         .catch(e => console.warn('[bookings] auto-expire failed:', b.id, e?.message || e))
         .finally(() => _expireFlightSet.delete(b.id));
     });

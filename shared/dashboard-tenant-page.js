@@ -111,7 +111,7 @@ function initializeAllRoomUsers() {
 
   if (updated > 0) {
     saveTenants(tenants);
-    console.log(`✅ Initialized ${updated} room users`);
+    console.info(`✅ Initialized ${updated} room users`);
     return updated;
   }
   return 0;

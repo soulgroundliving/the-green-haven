@@ -9,10 +9,10 @@ const urlsToCache = [
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
+  console.info('[SW] Installing service worker...');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Caching assets');
+      console.info('[SW] Caching assets');
       return cache.addAll(urlsToCache);
     }).then(() => {
       self.skipWaiting();
@@ -24,13 +24,13 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
+  console.info('[SW] Activating service worker...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cacheName);
+            console.info('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -116,7 +116,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
-        console.log('[SW] Serving from cache:', request.url);
+        console.info('[SW] Serving from cache:', request.url);
         return cachedResponse;
       }
 
@@ -136,7 +136,7 @@ self.addEventListener('fetch', (event) => {
 
         return response;
       }).catch(() => {
-        console.log('[SW] Fetch failed, offline:', request.url);
+        console.info('[SW] Fetch failed, offline:', request.url);
 
         // Return cached version if available
         return caches.match(request).then((cachedResponse) => {
@@ -198,7 +198,7 @@ async function syncPaymentStatus() {
 
     if (response.ok) {
       const result = await response.json();
-      console.log('[SW] Payment sync successful:', result);
+      console.info('[SW] Payment sync successful:', result);
 
       // Notify client of successful sync
       self.clients.matchAll().then(clients => {
@@ -230,5 +230,5 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('[SW] Service Worker loaded');
+console.info('[SW] Service Worker loaded');
 // Cache bust: Thu Mar 12 02:12:03 SEAST 2026

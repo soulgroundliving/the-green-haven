@@ -184,7 +184,7 @@ async function autoFillMeters(){
     );
     if (isMDEmpty && !autoFillMeters._retried) {
       autoFillMeters._retried = true;
-      console.log('⏳ METER_DATA empty — retrying autoFillMeters in 1.2s...');
+      console.info('⏳ METER_DATA empty — retrying autoFillMeters in 1.2s...');
       setTimeout(() => { autoFillMeters._retried = false; autoFillMeters(); }, 1200);
     }
   }
@@ -631,7 +631,7 @@ function _subscribeGlobalVerifiedSlips(){
             document.getElementById('page-bill')?.classList.contains('active')) {
           try { renderPaymentStatus(); } catch(e){}
         }
-        console.log('💸 Synced tenant-app payment → PaymentStore + payment_status');
+        console.info('💸 Synced tenant-app payment → PaymentStore + payment_status');
       } else {
         // Even when no new slips, fire ingestion of the snapshot's full state
         // so PaymentStore cache is populated at startup

@@ -293,9 +293,9 @@ class AccessControl {
     // Log current user info
     const user = this.getCurrentUser();
     if (user) {
-      console.log(`✅ Access Control: User '${user.email}' logged in as '${user.userType}'`);
+      console.info(`✅ Access Control: User '${user.email}' logged in as '${user.userType}'`);
     } else {
-      console.log('⚠️ Access Control: No user authenticated');
+      console.info('⚠️ Access Control: No user authenticated');
     }
   }
 
@@ -417,7 +417,7 @@ class AccessControl {
       }
 
       localStorage.setItem('access_logs', JSON.stringify(logs));
-      console.log(`📋 Access log: ${logEntry.result} - ${logEntry.userEmail} → ${page}`);
+      console.info(`📋 Access log: ${logEntry.result} - ${logEntry.userEmail} → ${page}`);
     } catch (error) {
       console.warn('Could not write access log:', error);
     }
@@ -432,4 +432,4 @@ window.addEventListener('DOMContentLoaded', () => {
   AccessControl.initialize();
 });
 
-console.log('✅ Access Control System loaded');
+console.info('✅ Access Control System loaded');

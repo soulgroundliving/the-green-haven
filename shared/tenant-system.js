@@ -31,7 +31,7 @@ class TenantConfigManager {
     const allData = this.getAllTenantsRaw();
     allData[building] = data;
     localStorage.setItem('tenant_master_data', JSON.stringify(allData));
-    console.log(`✅ Tenant data saved for ${building}`);
+    console.info(`✅ Tenant data saved for ${building}`);
   }
 
   // Add tenant to specific building
@@ -55,7 +55,7 @@ class TenantConfigManager {
     };
 
     this.saveTenants(building, tenants);
-    console.log(`✅ Tenant ${tenantId} added to ${building}: ${tenantData.name}`);
+    console.info(`✅ Tenant ${tenantId} added to ${building}: ${tenantData.name}`);
     return true;
   }
 
@@ -81,7 +81,7 @@ class TenantConfigManager {
 
     tenants[tenantId] = { ...tenants[tenantId], ...updates };
     this.saveTenants(building, tenants);
-    console.log(`✅ Tenant ${tenantId} in ${building} updated`);
+    console.info(`✅ Tenant ${tenantId} in ${building} updated`);
     return true;
   }
 
@@ -95,7 +95,7 @@ class TenantConfigManager {
 
     delete tenants[tenantId];
     this.saveTenants(building, tenants);
-    console.log(`✅ Tenant ${tenantId} deleted from ${building}`);
+    console.info(`✅ Tenant ${tenantId} deleted from ${building}`);
     return true;
   }
 
@@ -180,7 +180,7 @@ class TenantConfigManager {
         roomId,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      console.log(`✅ Tenant synced to tenants/${building}/list/${roomId} (tenantId=${tenantId})`);
+      console.info(`✅ Tenant synced to tenants/${building}/list/${roomId} (tenantId=${tenantId})`);
     } catch (error) {
       console.warn(`⚠️ Firebase sync failed for tenant ${tenantId}:`, error.message);
     }
@@ -212,7 +212,7 @@ class TenantConfigManager {
         const stored = JSON.parse(localStorage.getItem('tenant_master_data') || '{}');
         stored[building] = tenants;
         localStorage.setItem('tenant_master_data', JSON.stringify(stored));
-        console.log(`✅ Tenants for ${building} loaded from Firebase (${querySnap.size} items)`);
+        console.info(`✅ Tenants for ${building} loaded from Firebase (${querySnap.size} items)`);
         return tenants;
       }
     } catch (error) {
@@ -255,7 +255,7 @@ class TenantConfigManager {
         roomId,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      console.log(`✅ Tenant updated at tenants/${building}/list/${roomId} (tenantId=${tenantId})`);
+      console.info(`✅ Tenant updated at tenants/${building}/list/${roomId} (tenantId=${tenantId})`);
     } catch (error) {
       console.warn(`⚠️ Firebase update failed for tenant ${tenantId}:`, error.message);
     }
@@ -307,7 +307,7 @@ class TenantConfigManager {
         movedOutAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      console.log(`✅ Tenant cleared at tenants/${building}/list/${roomId} (was tenantId=${tenantId})`);
+      console.info(`✅ Tenant cleared at tenants/${building}/list/${roomId} (was tenantId=${tenantId})`);
     } catch (error) {
       console.warn(`⚠️ Firebase delete failed for tenant ${tenantId}:`, error.message);
     }
@@ -653,7 +653,7 @@ class TenantManager {
         updatedAt: new Date().toISOString()
       }, { merge: true });
 
-      console.log('✅ Tenant data synced to Firebase');
+      console.info('✅ Tenant data synced to Firebase');
       return true;
     } catch (error) {
       console.warn('⚠️ Firebase sync failed:', error);
@@ -870,7 +870,7 @@ class TenantFirebaseSync {
       this.currentBuilding = building;
       this.currentRoom = room;
 
-      console.log('✅ TenantFirebaseSync initialized for', { building, room });
+      console.info('✅ TenantFirebaseSync initialized for', { building, room });
       return true;
     } catch (error) {
       console.error('❌ Firebase initialization error:', error);
@@ -958,7 +958,7 @@ class TenantFirebaseSync {
               _raw: d,
               _source: 'tenants/list',
             };
-            console.log(`✅ TenantFirebaseSync: Loaded from tenants/${building}/list/${roomId}:`, leaseData);
+            console.info(`✅ TenantFirebaseSync: Loaded from tenants/${building}/list/${roomId}:`, leaseData);
             return leaseData;
           }
         } catch (e) {
@@ -972,7 +972,7 @@ class TenantFirebaseSync {
         // from buildings/{alias}/rooms/{r}, so the old fallback can never find
         // data anymore. tenants/{b}/list/{roomId} is the only canonical source.
 
-        console.log(`ℹ️ No lease data found in Firestore for ${building}/${roomId}, falling back to localStorage`);
+        console.info(`ℹ️ No lease data found in Firestore for ${building}/${roomId}, falling back to localStorage`);
       } else {
         console.warn('⚠️ Firestore not available, using localStorage fallback');
       }
@@ -981,7 +981,7 @@ class TenantFirebaseSync {
       if (typeof LeaseAgreementManager !== 'undefined') {
         const lease = LeaseAgreementManager.getActiveLease(this.currentBuilding, this.currentRoom);
         if (lease) {
-          console.log('✅ Loaded lease from localStorage (fallback):', lease);
+          console.info('✅ Loaded lease from localStorage (fallback):', lease);
           return lease;
         }
       }
@@ -1003,7 +1003,7 @@ class TenantFirebaseSync {
       if (typeof TenantConfigManager !== 'undefined' && this.currentBuilding) {
         const tenant = TenantConfigManager.getTenant(this.currentBuilding, tenantId);
         if (tenant) {
-          console.log('✅ Loaded tenant from localStorage:', tenant);
+          console.info('✅ Loaded tenant from localStorage:', tenant);
           return tenant;
         }
       }
@@ -1014,7 +1014,7 @@ class TenantFirebaseSync {
       if (lease) {
         // The lease object contains basic tenant info (tenantName, rent, etc.)
         // But for phone, email, address, we need the full tenant record
-        console.log('✅ Loaded tenant from lease data:', lease);
+        console.info('✅ Loaded tenant from lease data:', lease);
         return lease;
       }
 
@@ -1035,7 +1035,7 @@ class TenantFirebaseSync {
       if (typeof RoomConfigManager !== 'undefined') {
         const room = RoomConfigManager.getRoom(this.currentBuilding, this.currentRoom);
         if (room) {
-          console.log('✅ Loaded room from localStorage:', room);
+          console.info('✅ Loaded room from localStorage:', room);
           return room;
         }
       }
@@ -1051,7 +1051,7 @@ class TenantFirebaseSync {
 
       if (snapshot.exists()) {
         const roomData = snapshot.val();
-        console.log('✅ Loaded room from Firebase:', roomData);
+        console.info('✅ Loaded room from Firebase:', roomData);
         return roomData;
       }
 
@@ -1079,7 +1079,7 @@ class TenantFirebaseSync {
       const yearsToLoad = [currentBudYear - 2, currentBudYear - 1, currentBudYear];
       const yearsToLoadShort = yearsToLoad.map(y => y % 100);
 
-      console.log(`🔄 TenantFirebaseSync: Loading meter data from Firebase for building='${this.currentBuilding}'...`);
+      console.info(`🔄 TenantFirebaseSync: Loading meter data from Firebase for building='${this.currentBuilding}'...`);
 
       const db = window.firebase.firestore();
       const fs = window.firebase.firestoreFunctions;
@@ -1125,7 +1125,7 @@ class TenantFirebaseSync {
               };
             });
 
-            console.log(`   ✅ Loaded meter data for year ${year}`);
+            console.info(`   ✅ Loaded meter data for year ${year}`);
           }
         } catch (e) {
           console.debug(`   ℹ️ No meter data for year ${year}: ${e.message}`);
@@ -1133,7 +1133,7 @@ class TenantFirebaseSync {
       }
 
       if (Object.keys(allMeterData).length > 0) {
-        console.log('✅ TenantFirebaseSync: Meter data loaded from Firebase');
+        console.info('✅ TenantFirebaseSync: Meter data loaded from Firebase');
         return allMeterData;
       } else {
         console.warn('⚠️ TenantFirebaseSync: No meter data found in Firebase');
@@ -1158,7 +1158,7 @@ class TenantFirebaseSync {
       if (typeof TenantManager !== 'undefined') {
         const meterBills = TenantManager.getBillsForRoom(this.currentBuilding, this.currentRoom);
         if (meterBills && meterBills.length > 0) {
-          console.log(`✅ Loaded ${meterBills.length} bills from TenantManager (meter data)`);
+          console.info(`✅ Loaded ${meterBills.length} bills from TenantManager (meter data)`);
           allBills.push(...meterBills);
           meterBills.forEach(b => billIds.add(b.billId || b.id));
         }
@@ -1173,7 +1173,7 @@ class TenantFirebaseSync {
 
           if (snapshot.exists()) {
             const firebaseBills = Object.values(snapshot.val() || {});
-            console.log(`✅ Loaded ${firebaseBills.length} bills from Firebase`);
+            console.info(`✅ Loaded ${firebaseBills.length} bills from Firebase`);
 
             // Add Firebase bills that aren't already in the list
             firebaseBills.forEach(fbBill => {
@@ -1258,7 +1258,7 @@ class TenantFirebaseSync {
 
       if (snapshot.exists()) {
         const paymentsData = Object.values(snapshot.val() || {});
-        console.log(`✅ Loaded ${paymentsData.length} payments from Firebase`);
+        console.info(`✅ Loaded ${paymentsData.length} payments from Firebase`);
         return paymentsData.sort((a, b) =>
           new Date(b.createdAt) - new Date(a.createdAt)
         );
@@ -1289,7 +1289,7 @@ class TenantFirebaseSync {
 
       if (snapshot.exists()) {
         const ticketsData = Object.values(snapshot.val() || {});
-        console.log(`✅ Loaded ${ticketsData.length} maintenance tickets from Firebase`);
+        console.info(`✅ Loaded ${ticketsData.length} maintenance tickets from Firebase`);
         return ticketsData.sort((a, b) =>
           new Date(b.createdAt) - new Date(a.createdAt)
         );
@@ -1322,7 +1322,7 @@ class TenantFirebaseSync {
     try {
       const lease = await this.loadLease();
       if (lease?.contractDocument) {
-        console.log('✅ Loaded contract document');
+        console.info('✅ Loaded contract document');
         return lease.contractDocument;
       }
       return null;
@@ -1337,8 +1337,8 @@ class TenantFirebaseSync {
    */
   static async loadAllData() {
     try {
-      console.log('🔄 Loading all tenant data from Firebase...');
-      console.log('   Building:', this.currentBuilding, 'Room:', this.currentRoom);
+      console.info('🔄 Loading all tenant data from Firebase...');
+      console.info('   Building:', this.currentBuilding, 'Room:', this.currentRoom);
 
       // Load data in parallel (including meter data)
       const [lease, room, bills, payments, tickets, announcements, meterData] =
@@ -1406,7 +1406,7 @@ class TenantFirebaseSync {
         meterData: meterData || {}
       };
 
-      console.log('✅ All tenant data loaded:', {
+      console.info('✅ All tenant data loaded:', {
         hasLease: !!lease,
         leaseDetails: lease ? Object.keys(lease) : 'none',
         hasTenant: !!tenant,
@@ -1454,7 +1454,7 @@ class TenantFirebaseSync {
         createdAt: new Date().toISOString()
       });
 
-      console.log('✅ Maintenance ticket saved to Firebase:', ticketId);
+      console.info('✅ Maintenance ticket saved to Firebase:', ticketId);
       return ticketId;
     } catch (error) {
       console.error('❌ Error saving maintenance ticket:', error);
@@ -1477,7 +1477,7 @@ class TenantFirebaseSync {
 
       await window.firebaseRemove(ticketRef);
 
-      console.log('✅ Maintenance ticket deleted from Firebase:', ticketId);
+      console.info('✅ Maintenance ticket deleted from Firebase:', ticketId);
       return true;
     } catch (error) {
       console.error('❌ Error deleting maintenance ticket:', error);
@@ -1495,33 +1495,33 @@ class TenantFirebaseSync {
       return;
     }
 
-    console.log('🔍 === DEBUG: Firebase Structure ===');
-    console.log('Building:', this.currentBuilding);
-    console.log('Room:', this.currentRoom);
+    console.info('🔍 === DEBUG: Firebase Structure ===');
+    console.info('Building:', this.currentBuilding);
+    console.info('Room:', this.currentRoom);
 
     // Try root
     try {
-      console.log('\n📍 Checking root:');
+      console.info('\n📍 Checking root:');
       const rootRef = window.firebaseRef(this.database, '');
       const rootSnapshot = await window.firebaseGet(rootRef);
       if (rootSnapshot.exists()) {
         const keys = Object.keys(rootSnapshot.val());
-        console.log('   Root keys:', keys);
+        console.info('   Root keys:', keys);
 
         // For each key, try to get data for this building/room
         for (const key of keys) {
-          console.log(`\n📍 Checking /${key}/${this.currentBuilding}/${this.currentRoom}:`);
+          console.info(`\n📍 Checking /${key}/${this.currentBuilding}/${this.currentRoom}:`);
           try {
             const ref = window.firebaseRef(this.database,
               `${key}/${this.currentBuilding}/${this.currentRoom}`);
             const snapshot = await window.firebaseGet(ref);
             if (snapshot.exists()) {
-              console.log(`   ✅ DATA FOUND:`, snapshot.val());
+              console.info(`   ✅ DATA FOUND:`, snapshot.val());
             } else {
-              console.log(`   No data`);
+              console.info(`   No data`);
             }
           } catch (e) {
-            console.log(`   Error: ${e.message}`);
+            console.info(`   Error: ${e.message}`);
           }
         }
       }
@@ -1529,7 +1529,7 @@ class TenantFirebaseSync {
       console.error('Error checking root:', e);
     }
 
-    console.log('\n✅ Debug complete');
+    console.info('\n✅ Debug complete');
   }
 
   /**
@@ -1548,12 +1548,12 @@ class TenantFirebaseSync {
       const unsubscribe = window.firebaseOnValue(leaseRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.val();
-          console.log('📡 Real-time lease update:', data);
+          console.info('📡 Real-time lease update:', data);
           callback({ type: 'lease', data: data });
         }
       });
 
-      console.log('📡 Real-time listener active for lease data');
+      console.info('📡 Real-time listener active for lease data');
       return unsubscribe;
     } catch (error) {
       console.error('❌ Error setting up real-time listener:', error);
@@ -1580,4 +1580,4 @@ if (typeof module !== 'undefined' && module.exports) {
   };
 }
 
-console.log('✅ Tenant System loaded (v3.0 - Consolidated from 3 modules)');
+console.info('✅ Tenant System loaded (v3.0 - Consolidated from 3 modules)');

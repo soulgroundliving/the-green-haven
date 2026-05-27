@@ -189,7 +189,7 @@ function saveSecureSession(user) {
 
   setSessionTimeout();
 
-  console.log('✅ Secure session saved');
+  console.info('✅ Secure session saved');
 }
 
 /**
@@ -245,7 +245,7 @@ function secureLogout() {
   localStorage.removeItem('paymentData');
   localStorage.removeItem('tenantData');
 
-  console.log('✅ Secure logout completed');
+  console.info('✅ Secure logout completed');
   window.location.href = '/login';
 }
 
@@ -273,7 +273,7 @@ function addSecurityHeaders() {
     window.top.location = window.self.location;
   }
 
-  console.log('✅ Security headers applied');
+  console.info('✅ Security headers applied');
 }
 
 // ===== DATA VALIDATION HELPER =====
@@ -354,7 +354,7 @@ window.addEventListener('load', () => {
     // Don't redirect here, let individual pages handle auth
   }
 
-  console.log('✅ Security utilities initialized');
+  console.info('✅ Security utilities initialized');
 });
 
 // Export functions for use in other scripts
@@ -380,4 +380,4 @@ window.SecurityUtils = {
   validateForm
 };
 
-console.log('✅ Security utilities loaded');
+console.info('✅ Security utilities loaded');

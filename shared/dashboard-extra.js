@@ -753,7 +753,7 @@ function stopRealtimeListeners() {
     }
   });
   window.realtimeListeners = {};
-  console.log('✅ Real-time listeners stopped');
+  console.info('✅ Real-time listeners stopped');
 }
 
 function setupAnnouncementListener() {
@@ -828,7 +828,7 @@ async function initializeCloudData() {
       return;
     }
 
-    console.log('🔄 Initializing cloud data from Firebase...');
+    console.info('🔄 Initializing cloud data from Firebase...');
 
     // Load owner info
     if (typeof OwnerConfigManager !== 'undefined' && typeof OwnerConfigManager.loadOwnerInfoFromFirebase === 'function') {
@@ -847,7 +847,7 @@ async function initializeCloudData() {
       await LeaseAgreementManager.loadLeasesFromFirebase('nest');
     }
 
-    console.log('✅ Cloud data initialization complete');
+    console.info('✅ Cloud data initialization complete');
   } catch (error) {
     console.warn('⚠️ Cloud data initialization failed:', error.message);
   }

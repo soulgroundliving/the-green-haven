@@ -599,7 +599,7 @@ window.RequestsStore = window.RequestsStore || (function(){
 
 let _complaintsUnsub = null;
 function initComplaintsPage() {
-  console.log('✅ Complaints page initialized');
+  console.info('✅ Complaints page initialized');
   // Phase 3: pull from RequestsStore (cache + Firestore subscription auto-runs)
   renderComplaints(window.RequestsStore.getComplaints());
   if (typeof window !== 'undefined' && !window._complaintsRendererSubscribed) {
@@ -733,7 +733,7 @@ window.HistoricalDataStore = window.HistoricalDataStore || (function(){
         year: Number(year),
         savedAt: new Date().toISOString()
       }, { merge: true });
-      console.log(`☁️ historicalRevenue/${year} pushed to Firestore`);
+      console.info(`☁️ historicalRevenue/${year} pushed to Firestore`);
       return true;
     } catch (e) {
       console.warn(`HistoricalDataStore push failed for year ${year}:`, e?.message);
@@ -751,7 +751,7 @@ window.HistoricalDataStore = window.HistoricalDataStore || (function(){
       const ok = await _pushYearToCloud(y, local[y]);
       if (ok) pushed++; else failed++;
     }
-    console.log(`☁️ Migration done: ${pushed} pushed, ${failed} failed`);
+    console.info(`☁️ Migration done: ${pushed} pushed, ${failed} failed`);
     return { pushed, failed, skipped: 0, years };
   }
 

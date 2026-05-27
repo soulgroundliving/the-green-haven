@@ -284,10 +284,10 @@ async function initDashboardCharts(){
   try {
     if(window.firebase && window.firebase.firestore) {
       firebaseData = await loadDashboardDataFromFirebase();
-      console.log('✅ Loaded dashboard data from Firebase');
+      console.info('✅ Loaded dashboard data from Firebase');
     }
   } catch(err) {
-    console.log('⚠️ Firebase dashboard load failed:', err.message);
+    console.info('⚠️ Firebase dashboard load failed:', err.message);
   }
 
   // Use HISTORICAL_DATA first (imported bills take priority), then Firebase

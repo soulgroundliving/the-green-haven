@@ -221,7 +221,7 @@ class BillingSystem {
    * @returns {Promise<Array>} - Array of generated bill objects
    */
   static async generateBillsFromMeterData(building, year) {
-    console.log(`\n🔄 Auto-generating bills for ${building}/${year} from meter data...`);
+    console.info(`\n🔄 Auto-generating bills for ${building}/${year} from meter data...`);
 
     try {
       if (!window.firebase?.firestore) {
@@ -243,11 +243,11 @@ class BillingSystem {
       const querySnap = await fs.getDocs(q);
 
       if (querySnap.size === 0) {
-        console.log(`⏭️ No meter data found for ${building}/${year}`);
+        console.info(`⏭️ No meter data found for ${building}/${year}`);
         return [];
       }
 
-      console.log(`📊 Found ${querySnap.size} meter readings for ${building}/${year}`);
+      console.info(`📊 Found ${querySnap.size} meter readings for ${building}/${year}`);
 
       // Group by room and month
       const metersByRoomMonth = {};
@@ -257,7 +257,7 @@ class BillingSystem {
         metersByRoomMonth[key] = data;
       });
 
-      console.log(`📈 Organizing into ${Object.keys(metersByRoomMonth).length} room-month combinations`);
+      console.info(`📈 Organizing into ${Object.keys(metersByRoomMonth).length} room-month combinations`);
 
       // Generate bills for each room-month combination
       for (const [key, meterData] of Object.entries(metersByRoomMonth)) {
@@ -271,7 +271,7 @@ class BillingSystem {
         }
       }
 
-      console.log(`✅ Generated ${generatedBills.length} bills`);
+      console.info(`✅ Generated ${generatedBills.length} bills`);
       return generatedBills;
 
     } catch (error) {
@@ -364,7 +364,7 @@ class BillingSystem {
         updatedAt: new Date().toISOString()
       };
 
-      console.log(`  ✅ ${roomId} month ${month}: ฿${totalCharge}`);
+      console.info(`  ✅ ${roomId} month ${month}: ฿${totalCharge}`);
       return bill;
 
     } catch (error) {
@@ -378,8 +378,8 @@ class BillingSystem {
    * @returns {Promise<number>} - Number of bills generated
    */
   static async autogenerateBillsForAllYears(building) {
-    console.log(`\n🚀 ===== AUTO-BILL GENERATION =====`);
-    console.log(`Building: ${building}`);
+    console.info(`\n🚀 ===== AUTO-BILL GENERATION =====`);
+    console.info(`Building: ${building}`);
 
     try {
       if (!window.firebase?.firestore) {
@@ -413,12 +413,12 @@ class BillingSystem {
         }
       }
 
-      console.log(`\n${'='.repeat(60)}`);
-      console.log(`✅ AUTO-GENERATION COMPLETE`);
-      console.log(`📊 Total bills generated: ${totalGenerated}`);
-      console.log(`📍 Bills stored in localStorage (bills_2567, bills_2568, bills_2569)`);
-      console.log(`📲 Tenant app will automatically display them on next load`);
-      console.log(`${'='.repeat(60)}\n`);
+      console.info(`\n${'='.repeat(60)}`);
+      console.info(`✅ AUTO-GENERATION COMPLETE`);
+      console.info(`📊 Total bills generated: ${totalGenerated}`);
+      console.info(`📍 Bills stored in localStorage (bills_2567, bills_2568, bills_2569)`);
+      console.info(`📲 Tenant app will automatically display them on next load`);
+      console.info(`${'='.repeat(60)}\n`);
 
       return totalGenerated;
 
@@ -449,7 +449,7 @@ class BillingSystem {
       const db = window.firebase.firestore();
       const q = query(collection(db, 'meter_data'), where('building', '==', building));
 
-      console.log(`👁️ Watching meter_data collection for ${building}...`);
+      console.info(`👁️ Watching meter_data collection for ${building}...`);
 
       // Skip the very first snapshot — Firestore replays existing docs as 'added'
       // when a listener attaches, which would trigger a redundant second regen
@@ -460,9 +460,9 @@ class BillingSystem {
         const changes = snapshot.docChanges();
         const hasChanges = changes.some(change => change.type === 'added' || change.type === 'modified');
         if (hasChanges) {
-          console.log(`📡 New meter data detected! Re-generating bills...`);
+          console.info(`📡 New meter data detected! Re-generating bills...`);
           await BillingSystem.autogenerateBillsForAllYears(building);
-          console.log(`✅ Bills auto-updated from new meter data`);
+          console.info(`✅ Bills auto-updated from new meter data`);
         }
       }, (err) => {
         // §7-N: surface runtime listener errors (permission-denied, index-missing,
@@ -513,14 +513,14 @@ class BillingSystem {
         console.warn(`⚠️ pushBillsToFirebase: failed for ${bill.billId}:`, e.message);
       }
     }
-    if (pushed > 0) console.log(`📡 Pushed ${pushed}/${bills.length} bills to RTDB (${fbBuilding})`);
+    if (pushed > 0) console.info(`📡 Pushed ${pushed}/${bills.length} bills to RTDB (${fbBuilding})`);
     return pushed;
   }
 
   static saveBillsToLocalStorage(bills) {
     if (!bills || bills.length === 0) return 0;
 
-    console.log(`\n💾 Saving ${bills.length} bills to localStorage...`);
+    console.info(`\n💾 Saving ${bills.length} bills to localStorage...`);
 
     // Group bills by year
     const billsByYear = {};
@@ -551,7 +551,7 @@ class BillingSystem {
         const merged = [...existingBills, ...newBills];
         localStorage.setItem(key, JSON.stringify(merged));
 
-        console.log(`  ✅ Saved ${newBills.length} bills to ${key} (total: ${merged.length})`);
+        console.info(`  ✅ Saved ${newBills.length} bills to ${key} (total: ${merged.length})`);
         savedCount += newBills.length;
       } catch (e) {
         console.error(`  ❌ Failed to save bills for year ${year}:`, e.message);
@@ -627,7 +627,7 @@ class BillingSystem {
       bills[billIndex].status = status;
       bills[billIndex].updatedAt = new Date().toISOString();
       localStorage.setItem(key, JSON.stringify(bills));
-      console.log(`✅ Updated bill ${billId} status to ${status}`);
+      console.info(`✅ Updated bill ${billId} status to ${status}`);
       return bills[billIndex];
     }
 
@@ -730,7 +730,7 @@ let _billingMeterUnsubscribe = null;
 
 async function _bootstrapAutoBilling() {
   if (!_isAdminDashboard()) {
-    console.log('ℹ️ BillingSystem: skipping auto-regen (not admin dashboard)');
+    console.info('ℹ️ BillingSystem: skipping auto-regen (not admin dashboard)');
     return;
   }
   let waitCount = 0;
@@ -743,7 +743,7 @@ async function _bootstrapAutoBilling() {
   const params = new URLSearchParams(window.location.search);
   const building = params.get('building') || localStorage.getItem('currentBuilding') || 'rooms';
 
-  console.log('🔔 Billing system activated (admin dashboard)');
+  console.info('🔔 Billing system activated (admin dashboard)');
   await BillingSystem.autogenerateBillsForAllYears(building);
 
   if (typeof window.initHistoricalDataDisplay === 'function') {
@@ -1075,4 +1075,4 @@ if (typeof window !== 'undefined') {
 window.BillingCalculator = BillingSystem; // Alias for backward compatibility
 }
 
-console.log('✅ BillingSystem (consolidated) loaded');
+console.info('✅ BillingSystem (consolidated) loaded');

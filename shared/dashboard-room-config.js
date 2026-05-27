@@ -12,7 +12,7 @@ function loadRoomConfigUI() {
     }
 
     const building = dropdown.value || 'rooms';
-    console.log('📋 Loading room config for building:', building);
+    console.info('📋 Loading room config for building:', building);
 
     if (typeof RoomConfigManager === 'undefined') {
       console.error('❌ RoomConfigManager not loaded');
@@ -20,7 +20,7 @@ function loadRoomConfigUI() {
     }
 
     const config = RoomConfigManager.getRoomsConfig(building);
-    console.log('📦 Config loaded:', config);
+    console.info('📦 Config loaded:', config);
 
     const tbody = document.getElementById('roomConfigBody');
     if (!tbody) {
@@ -67,7 +67,7 @@ function loadRoomConfigUI() {
     `}).join('');
 
     populateTemplateSelect(building);
-    console.log('✅ Room config UI loaded successfully');
+    console.info('✅ Room config UI loaded successfully');
   } catch (error) {
     console.error('❌ Error loading room config UI:', error);
   }
@@ -146,7 +146,7 @@ function updateRoomField(building, roomId, fieldName, value) {
     }[fieldName] || fieldName;
 
     showToast(`✅ บันทึก${fieldLabel}สำหรับห้อง ${roomId} เรียบร้อย`, 'success', 2500);
-    console.log(`✅ อัปเดต ${fieldName} สำหรับ ${roomId}`);
+    console.info(`✅ อัปเดต ${fieldName} สำหรับ ${roomId}`);
     refreshPropertyPageIfActive();
   }
 }
@@ -156,7 +156,7 @@ function updateRoomRate(building, roomId, rateType, rate) {
 
   const rateLabel = rateType === 'water' ? 'อัตราน้ำ' : 'อัตราไฟฟ้า';
   showToast(`✅ บันทึก${rateLabel}สำหรับห้อง ${roomId} = ${rate} บาท/หน่วย`, 'success', 2500);
-  console.log(`✅ อัปเดตอัตรา ${rateType === 'water' ? 'น้ำ' : 'ไฟ'} สำหรับ ${roomId} = ${rate} บาท/หน่วย`);
+  console.info(`✅ อัปเดตอัตรา ${rateType === 'water' ? 'น้ำ' : 'ไฟ'} สำหรับ ${roomId} = ${rate} บาท/หน่วย`);
   refreshPropertyPageIfActive();
 }
 
@@ -164,7 +164,7 @@ function updateTrashRate(building, roomId, rate) {
   RoomConfigManager.updateTrashRate(building, roomId, parseInt(rate));
 
   showToast(`✅ บันทึกค่าขยะสำหรับห้อง ${roomId} = ${rate} บาท`, 'success', 2500);
-  console.log(`✅ อัปเดตค่าขยะสำหรับ ${roomId} = ${rate} บาท`);
+  console.info(`✅ อัปเดตค่าขยะสำหรับ ${roomId} = ${rate} บาท`);
   refreshPropertyPageIfActive();
 }
 

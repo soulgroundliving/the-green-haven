@@ -65,10 +65,10 @@ const SecureConfig = {
 // Initialize Firebase API Key from environment if available
 if (typeof process !== 'undefined' && process.env.FIREBASE_API_KEY) {
   SecureConfig.firebase.apiKey = process.env.FIREBASE_API_KEY;
-  console.log('✅ Firebase API Key loaded from environment');
+  console.info('✅ Firebase API Key loaded from environment');
 } else if (typeof window !== 'undefined' && window.FIREBASE_API_KEY) {
   SecureConfig.firebase.apiKey = window.FIREBASE_API_KEY;
-  console.log('✅ Firebase API Key loaded from window variable');
+  console.info('✅ Firebase API Key loaded from window variable');
 }
 
 // Initialize PromptPay from localStorage or environment
@@ -302,4 +302,4 @@ if (typeof module !== 'undefined' && module.exports) {
   };
 }
 
-console.log('✅ Config System loaded (v3.0 - Consolidated from 2 modules)');
+console.info('✅ Config System loaded (v3.0 - Consolidated from 2 modules)');

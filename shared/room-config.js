@@ -92,7 +92,7 @@ class RoomConfigManager {
         legacy.id = 'ร้านใหญ่';
         if (!legacy.name || legacy.name === 'ร้าน Amazon') legacy.name = 'ร้านใหญ่';
         localStorage.setItem(`rooms_config_${building}`, JSON.stringify(config));
-        console.log('✅ Migrated shop room id: Amazon ☕ → ร้านใหญ่');
+        console.info('✅ Migrated shop room id: Amazon ☕ → ร้านใหญ่');
       }
     }
 
@@ -111,7 +111,7 @@ class RoomConfigManager {
         if (!storedIds.has(r.id)) config.rooms.push({ ...r });
       });
       localStorage.setItem(`rooms_config_${building}`, JSON.stringify(config));
-      console.log(`✅ RoomConfigManager: restored ${def.rooms.length - storedIds.size} missing rooms for building "${building}"`);
+      console.info(`✅ RoomConfigManager: restored ${def.rooms.length - storedIds.size} missing rooms for building "${building}"`);
     }
 
     // Merge structural fields (floor, type) from defaults into stored rooms
@@ -175,7 +175,7 @@ class RoomConfigManager {
       const cfg = this.getRoomsConfig(b);
       this.syncToFirebase(b, cfg);
     }
-    console.log('✅ RoomConfigManager: bulk synced rooms_config to RTDB');
+    console.info('✅ RoomConfigManager: bulk synced rooms_config to RTDB');
   }
 
   /**
@@ -222,7 +222,7 @@ class RoomConfigManager {
             building, rooms
           };
           localStorage.setItem(`rooms_config_${building}`, JSON.stringify(config));
-          console.log(`☁️ RoomConfigManager synced ${building}: ${rooms.length} rooms`);
+          console.info(`☁️ RoomConfigManager synced ${building}: ${rooms.length} rooms`);
           // Phase 5 race fix: notify listeners so pages re-render after F5 + cloud arrival
           (this._listeners || []).forEach(fn => { try { fn(building, config); } catch(e){} });
           // Generic event so any page can listen
@@ -308,7 +308,7 @@ class RoomConfigManager {
     if (room) {
       room.rentPrice = price;
       this.saveRoomsConfig(building, config);
-      console.log(`✅ Room ${roomId} rent price updated to ${price}`);
+      console.info(`✅ Room ${roomId} rent price updated to ${price}`);
       return true;
     }
     console.warn(`⚠️ Room ${roomId} not found`);
@@ -322,7 +322,7 @@ class RoomConfigManager {
     if (room) {
       room[fieldName] = value;
       this.saveRoomsConfig(building, config);
-      console.log(`✅ Room ${roomId} ${fieldName} updated to ${value}`);
+      console.info(`✅ Room ${roomId} ${fieldName} updated to ${value}`);
       return true;
     }
     return false;
@@ -339,7 +339,7 @@ class RoomConfigManager {
     if (room) {
       room.trashRate = rate;
       this.saveRoomsConfig(building, config);
-      console.log(`✅ Room ${roomId} trash rate updated to ${rate}`);
+      console.info(`✅ Room ${roomId} trash rate updated to ${rate}`);
       return true;
     }
     console.warn(`⚠️ Room ${roomId} not found`);

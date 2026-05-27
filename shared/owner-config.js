@@ -44,7 +44,7 @@ class OwnerConfigManager {
       return false;
     }
     localStorage.setItem('owner_info', JSON.stringify(data));
-    console.log('✅ Owner info saved:', data.name);
+    console.info('✅ Owner info saved:', data.name);
     return true;
   }
 
@@ -75,7 +75,7 @@ class OwnerConfigManager {
 
   static clearOwnerInfo() {
     localStorage.removeItem('owner_info');
-    console.log('✅ Owner info cleared');
+    console.info('✅ Owner info cleared');
   }
 
   static async saveOwnerInfoWithFirebase(data) {
@@ -98,7 +98,7 @@ class OwnerConfigManager {
         ...data,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      console.log('✅ Owner info synced to Firebase');
+      console.info('✅ Owner info synced to Firebase');
     } catch (error) {
       console.warn('⚠️ Firebase sync failed (using localStorage):', error.message);
     }
@@ -158,7 +158,7 @@ class OwnerConfigManager {
         this.saveOwnerInfo(data);
         // Re-apply in case Firestore has a newer favicon than the cache.
         this.applyFavicon(data.faviconDataUrl);
-        console.log('✅ Owner info loaded from Firebase');
+        console.info('✅ Owner info loaded from Firebase');
         return data;
       }
     } catch (error) {

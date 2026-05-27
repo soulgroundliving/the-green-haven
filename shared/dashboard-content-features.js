@@ -21,7 +21,7 @@ function initAnnouncementsPage() {
 
   // Set up real-time Firebase listeners for announcements
   setupAnnouncementListener();
-  console.log('✅ Real-time announcement listeners activated');
+  console.info('✅ Real-time announcement listeners activated');
 
   // Dynamic building selector — re-render from BuildingRegistry so new
   // properties created in the Buildings admin page appear here automatically.
@@ -55,7 +55,7 @@ function loadAnnouncements() {
 
 function saveAnnouncementsData(data) {
   localStorage.setItem('announcements_data', JSON.stringify(data));
-  console.log('✅ Announcements saved to localStorage');
+  console.info('✅ Announcements saved to localStorage');
 }
 
 async function saveAnnouncement() {
@@ -103,7 +103,7 @@ async function saveAnnouncement() {
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
 
-    console.log('📢 Announcement published via CF:', json.id);
+    console.info('📢 Announcement published via CF:', json.id);
   } catch (err) {
     console.error('saveAnnouncement failed:', err);
     showToast('❌ บันทึกไม่สำเร็จ: ' + (err?.message || 'unknown'), 'error');

@@ -47,7 +47,7 @@ class InvoiceReceiptManager {
       invoices[invoiceId] = invoice;
       localStorage.setItem(key, JSON.stringify(invoices));
 
-      console.log(`✅ Invoice created: ${invoiceId}`);
+      console.info(`✅ Invoice created: ${invoiceId}`);
 
       // Sync to Firebase
       this.syncInvoiceToFirebase(building, invoiceId, invoice);
@@ -92,7 +92,7 @@ class InvoiceReceiptManager {
       receipts[receiptId] = receipt;
       localStorage.setItem(key, JSON.stringify(receipts));
 
-      console.log(`✅ Receipt created: ${receiptId}`);
+      console.info(`✅ Receipt created: ${receiptId}`);
 
       // Update invoice status to 'paid'
       this.updateInvoiceStatus(building, invoiceId, 'paid');
@@ -203,7 +203,7 @@ class InvoiceReceiptManager {
         invoices[invoiceId].status = status;
         invoices[invoiceId].updatedAt = new Date().toISOString();
         localStorage.setItem(key, JSON.stringify(invoices));
-        console.log(`✅ Invoice ${invoiceId} status updated to: ${status}`);
+        console.info(`✅ Invoice ${invoiceId} status updated to: ${status}`);
 
         // Sync to Firebase
         this.syncInvoiceToFirebase(building, invoiceId, invoices[invoiceId]);
@@ -238,7 +238,7 @@ class InvoiceReceiptManager {
         ...invoiceData,
         syncedAt: new Date().toISOString()
       }, { merge: true }).then(() => {
-        console.log(`✅ Invoice synced to Firebase: ${invoiceId}`);
+        console.info(`✅ Invoice synced to Firebase: ${invoiceId}`);
       }).catch(err => {
         console.warn(`⚠️ Firebase sync failed for invoice:`, err);
       });
@@ -268,7 +268,7 @@ class InvoiceReceiptManager {
         ...receiptData,
         syncedAt: new Date().toISOString()
       }, { merge: true }).then(() => {
-        console.log(`✅ Receipt synced to Firebase: ${receiptId}`);
+        console.info(`✅ Receipt synced to Firebase: ${receiptId}`);
       }).catch(err => {
         console.warn(`⚠️ Firebase sync failed for receipt:`, err);
       });
@@ -359,7 +359,7 @@ class InvoiceReceiptManager {
         last_sync: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }, { merge: true }).then(() => {
-        console.log(`✅ Invoices synced to Dashboard: ${allInvoices.length} invoices`);
+        console.info(`✅ Invoices synced to Dashboard: ${allInvoices.length} invoices`);
       }).catch(err => {
         console.warn(`⚠️ Dashboard invoice sync failed:`, err);
       });
@@ -377,7 +377,7 @@ class InvoiceReceiptManager {
         last_sync: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }, { merge: true }).then(() => {
-        console.log(`✅ Receipts synced to Dashboard: ${allReceipts.length} receipts`);
+        console.info(`✅ Receipts synced to Dashboard: ${allReceipts.length} receipts`);
       }).catch(err => {
         console.warn(`⚠️ Dashboard receipt sync failed:`, err);
       });
@@ -407,7 +407,7 @@ class InvoiceReceiptManager {
       });
 
       localStorage.setItem(key, JSON.stringify(invoices));
-      console.log(`✅ Marked ${totalMarked} invoices as paid for ${building}`);
+      console.info(`✅ Marked ${totalMarked} invoices as paid for ${building}`);
 
       return { success: true, marked: totalMarked };
     } catch (error) {
@@ -417,4 +417,4 @@ class InvoiceReceiptManager {
   }
 }
 
-console.log('✅ InvoiceReceiptManager loaded');
+console.info('✅ InvoiceReceiptManager loaded');
