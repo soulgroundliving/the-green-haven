@@ -10,7 +10,7 @@
     "serve": "firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "echo \"No tests configured yet\"",
+    "test": "npm run sync-shared && node --test __tests__/*.test.js",
     "sync-shared": "node -e \"require('fs').copyFileSync('../shared/gamification-rules.js', './gamification-rules.js'); console.log('synced gamification-rules.js from shared/')\""
   },
   "dependencies": {
