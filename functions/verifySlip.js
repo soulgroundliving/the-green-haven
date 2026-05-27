@@ -54,52 +54,49 @@ async function checkRateLimit(userId, timeWindow = 'minute') {
       'hour': 60 * 60 * 1000,
       'day': 24 * 60 * 60 * 1000
     }[timeWindow];
-
-    const rateLimitRef = db.collection('rateLimits').doc(`${userId}_${timeWindow}`);
-    const doc = await rateLimitRef.get();
-
-    if (!doc.exists) {
-      // First request
-      await rateLimitRef.set({
-        count: 1,
-        windowStart: now,
-        updatedAt: new Date()
-      });
-      return true;
-    }
-
-    const data = doc.data();
-    const windowElapsed = now - data.windowStart;
-
-    if (windowElapsed > timeMs) {
-      // Window expired, reset
-      await rateLimitRef.update({
-        count: 1,
-        windowStart: now,
-        updatedAt: new Date()
-      });
-      return true;
-    }
-
-    // Still in window
     const maxRequests = {
       'minute': RATE_LIMIT_CONFIG.maxRequestsPerMinute,
       'hour': RATE_LIMIT_CONFIG.maxRequestsPerHour,
       'day': RATE_LIMIT_CONFIG.maxRequestsPerDay
     }[timeWindow];
 
-    if (data.count >= maxRequests) {
-      console.warn(`⚠️ Rate limit exceeded for ${userId} (${timeWindow}): ${data.count}/${maxRequests}`);
-      return false;
-    }
+    const rateLimitRef = db.collection('rateLimits').doc(`${userId}_${timeWindow}`);
 
-    // Increment count
-    await rateLimitRef.update({
-      count: data.count + 1,
-      updatedAt: new Date()
+    // Wrap in a Firestore transaction so concurrent CF instances can't race past
+    // the limit. Without a transaction, two instances that both read count=N at
+    // the same moment would both write count=N+1 — allowing 2× the intended
+    // requests. runTransaction retries the losing writer so it re-reads the
+    // committed value and enforces the cap correctly.
+    const allowed = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(rateLimitRef);
+
+      if (!doc.exists) {
+        // First request in this window — create document atomically.
+        tx.set(rateLimitRef, { count: 1, windowStart: now, updatedAt: new Date() });
+        return true;
+      }
+
+      const data = doc.data();
+      const windowElapsed = now - data.windowStart;
+
+      if (windowElapsed > timeMs) {
+        // Window expired — reset counter atomically.
+        tx.set(rateLimitRef, { count: 1, windowStart: now, updatedAt: new Date() });
+        return true;
+      }
+
+      // Still inside the active window.
+      if (data.count >= maxRequests) {
+        console.warn(`⚠️ Rate limit exceeded for ${userId} (${timeWindow}): ${data.count}/${maxRequests}`);
+        return false;  // no write — transaction commits as a no-op read
+      }
+
+      // Increment counter atomically.
+      tx.update(rateLimitRef, { count: data.count + 1, updatedAt: new Date() });
+      return true;
     });
 
-    return true;
+    return allowed;
   } catch (error) {
     console.error('❌ Rate limit check failed (failing CLOSED for safety):', error);
     // Fail CLOSED — Firestore throttle/outage should NOT silently grant a bypass
