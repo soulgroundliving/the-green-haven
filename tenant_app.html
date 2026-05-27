@@ -6539,7 +6539,7 @@
                         .map(d => ({ id: d.id, ...d.data() }))
                         .filter(i => !i.expiresAt || i.expiresAt > now);
                     renderMarketFeed();
-                    if (typeof _renderBellVisibility === 'function') _renderBellVisibility();
+                    if (typeof window._renderBellVisibility === 'function') window._renderBellVisibility();
                 }, err => console.warn('marketplace subscribe:', err?.message));
             } catch(e) { console.warn('subscribeMarketplace:', e); }
         }
@@ -8202,415 +8202,6 @@
         }
         _onLiffClaimsReady(_subscribeComplaintsFromFirestore);
 
-        // ===== Broadcast Announcements (in-app, from admin) =====
-        // Subscribe to announcements/ (all types — notice/event/banner), filter by audience
-        // resolved from token claims, keep last 20 in memory, drive bell badge + dropdown.
-        // C4 S2 (2026-05-18): single-source after migration of legacy collections.
-        let _broadcastsUnsub = null;
-        let _broadcastsList  = [];          // cached, filtered, newest first
-        let _broadcastsInitialReplay = true; // toast suppressed during first snapshot
-        function _broadcastShowToast(msg) {
-            try {
-                const el = document.createElement('div');
-                el.textContent = String(msg || '');
-                el.setAttribute('role', 'status');
-                el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:80px;' +
-                    'background:rgba(20,30,25,0.94);color:#fff;padding:11px 18px;border-radius:22px;' +
-                    'font-size:14px;font-family:inherit;z-index:2000;box-shadow:0 6px 24px rgba(0,0,0,.25);' +
-                    'max-width:88vw;text-align:center;line-height:1.4;animation:fadein .25s;';
-                document.body.appendChild(el);
-                setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; }, 3400);
-                setTimeout(() => el.remove(), 3800);
-            } catch (_) {}
-        }
-        function _broadcastReadKey() {
-            const tid = _taTenant?.tenantId || _taTenant?.id || _taRoom || 'anon';
-            return 'gh_last_broadcast_read_' + tid;
-        }
-        function _getLastBroadcastReadAt() {
-            try { return localStorage.getItem(_broadcastReadKey()) || ''; } catch (_) { return ''; }
-        }
-        function _setLastBroadcastReadAt(iso) {
-            try { localStorage.setItem(_broadcastReadKey(), iso); } catch (_) {}
-        }
-        function _broadcastSentAtIso(d) {
-            if (!d || !d.sentAt) return '';
-            if (typeof d.sentAt === 'string') return d.sentAt;
-            if (typeof d.sentAt.toDate === 'function') return d.sentAt.toDate().toISOString();
-            return '';
-        }
-        function _unreadBroadcastCount() {
-            const cutoff = _getLastBroadcastReadAt();
-            const broadcasts = _broadcastsList.filter(d => {
-                const iso = _broadcastSentAtIso(d);
-                return iso && (!cutoff || iso > cutoff);
-            }).length;
-            // Lease-renewal alert is a persistent reminder — counts as unread
-            // for as long as the tenant's lease is within the 60-day warning
-            // window, regardless of when they last opened the bell.
-            return broadcasts + (_leaseAlertItem() ? 1 : 0);
-        }
-        // Reads from server-emitted leaseNotifications/ docs subscribed by
-        // _subscribeLeaseNotifications(). Returns the highest-urgency UNREAD
-        // item (expired > 14 > 30 > 60). Null if no unread docs. This used to
-        // be a local-compute synthesizer; replaced with server source so the
-        // CF anti-spam (lastExpiryTier) controls when alerts fire.
-        function _leaseAlertItem() {
-            const URGENCY = { 'expired': 0, '14': 1, '30': 2, '60': 3 };
-            const unread = (_taLeaseNotifs || [])
-                .filter(d => d.status !== 'read' && d.status !== 'stale');
-            if (unread.length === 0) return null;
-            unread.sort((a, b) => (URGENCY[a.tier] ?? 99) - (URGENCY[b.tier] ?? 99));
-            return _formatLeaseNotifForBell(unread[0]);
-        }
-        function _formatLeaseNotifForBell(d) {
-            const tier = d.tier;
-            const days = d.daysRemainingAtEmit;
-            let icon, title;
-            if (tier === 'expired') { icon = '⛔'; title = 'สัญญาเช่าหมดอายุแล้ว'; }
-            else if (tier === '14') { icon = '🚨'; title = 'สัญญาเช่าใกล้หมดอายุ!'; }
-            else if (tier === '30') { icon = '⚠️'; title = 'สัญญาเช่าใกล้หมดอายุ'; }
-            else                    { icon = '📢'; title = 'สัญญาเช่าใกล้หมดอายุ'; }  // '60'
-            const dateStr = (d.leaseEndDate && d.leaseEndDate.toDate)
-                ? d.leaseEndDate.toDate().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
-                : '—';
-            const body = (tier === 'expired')
-                ? `วันสิ้นสุด ${dateStr} · โปรดติดต่อ Admin เพื่อจัดการสัญญา`
-                : `สัญญาของคุณจะหมดอายุในอีก ${days != null ? days : '—'} วัน · วันสิ้นสุด ${dateStr}`;
-            return {
-                type: 'notice',
-                title: `${icon} ${title}`,
-                body,
-                sentAt: new Date().toISOString(),
-                _virtualLeaseAlert: true,
-                _tier: tier,
-                _daysRemaining: days,
-                _notifId: d.id
-            };
-        }
-        function _renderBroadcastBadge() {
-            const badge = document.getElementById('map-bell-badge');
-            if (!badge) return;
-            const n = _unreadBroadcastCount();
-            if (n > 0) {
-                badge.textContent = n > 99 ? '99+' : String(n);
-                badge.style.display = 'inline-flex';
-            } else {
-                badge.style.display = 'none';
-            }
-            _renderBellVisibility();
-        }
-        function _renderBellVisibility() {
-            const btn = document.getElementById('map-bell-btn');
-            if (!btn) return;
-            btn.style.display = 'flex';
-        }
-        function _escapeBroadcastHtml(s) {
-            return String(s || '')
-                .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-                .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-        }
-        function _broadcastRelTime(iso) {
-            if (!iso) return '';
-            const t = new Date(iso).getTime();
-            if (!Number.isFinite(t)) return '';
-            const diff = Date.now() - t;
-            if (diff < 60*1000)            return 'เมื่อสักครู่';
-            if (diff < 60*60*1000)         return Math.floor(diff/60000) + ' นาทีที่แล้ว';
-            if (diff < 24*60*60*1000)      return Math.floor(diff/3600000) + ' ชั่วโมงที่แล้ว';
-            if (diff < 7*24*60*60*1000)    return Math.floor(diff/86400000) + ' วันที่แล้ว';
-            return new Date(t).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' });
-        }
-        function _renderBroadcastsList() {
-            const el = document.getElementById('broadcasts-panel-list');
-            if (!el) return;
-            // Synthesize lease alert at top of list (when expiry ≤ 60 days).
-            const leaseItem = _leaseAlertItem();
-            const items = leaseItem ? [leaseItem, ..._broadcastsList] : _broadcastsList;
-            if (!items.length) {
-                el.innerHTML = '<div style="text-align:center; padding:3rem 1rem; color:var(--text-muted); font-size:.92rem;">ยังไม่มีประกาศ</div>';
-                return;
-            }
-            const cutoff = _getLastBroadcastReadAt();
-            const TYPE_BADGE = { notice: '📢', event: '📅', banner: '🎉' };
-            const TYPE_LABEL = { notice: 'ประกาศ', event: 'กิจกรรม', banner: 'ประกาศ' };
-            const MONTHS_TH  = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-            const fmtEventDate = (ts) => {
-                let d;
-                if (ts instanceof Date) d = ts;
-                else if (ts?.toDate) d = ts.toDate();
-                else if (typeof ts === 'string') d = new Date(ts);
-                else if (typeof ts === 'number') d = new Date(ts);
-                else return '';
-                if (!d || isNaN(d.getTime())) return '';
-                return `${d.getDate()} ${MONTHS_TH[d.getMonth()]} ${d.getFullYear()+543} · ${('0'+d.getHours()).slice(-2)}:${('0'+d.getMinutes()).slice(-2)}`;
-            };
-            el.innerHTML = items.map(d => {
-                const iso    = _broadcastSentAtIso(d);
-                // Lease alert is always treated as unread — it's a persistent
-                // reminder until the lease is renewed.
-                const unread = d._virtualLeaseAlert ? true : (iso && (!cutoff || iso > cutoff));
-                const type   = d.type || 'notice';
-                const badge  = TYPE_BADGE[type] || '📢';
-                const label  = d._virtualLeaseAlert ? 'สัญญาเช่า' : (TYPE_LABEL[type] || 'ประกาศ');
-                const title  = _escapeBroadcastHtml(d.title || '(ไม่มีหัวข้อ)');
-                const body   = _escapeBroadcastHtml(d.body || '');
-                const when   = d._virtualLeaseAlert ? '' : _broadcastRelTime(iso);
-                // Lease-alert color matches the LINE Flex tiers from the CF
-                // (functions/remindLeaseExpiry.js): expired = dark red, 14 = red,
-                // 30 = orange, 60 = amber. Soft yellow bg keeps the band readable
-                // and visually distinct from regular announcements.
-                const LEASE_TIER_COLOR = {
-                    'expired': '#b71c1c',
-                    '14':      '#c62828',
-                    '30':      '#e65100',
-                    '60':      '#f57f17'
-                };
-                const leaseBorder = d._virtualLeaseAlert
-                    ? `border-left:4px solid ${LEASE_TIER_COLOR[d._tier] || '#f57f17'};`
-                    : (unread ? 'border-left:3px solid var(--primary-green, #4caf50);' : '');
-                const leaseBg = d._virtualLeaseAlert ? 'background:#fff8e1;' : '';
-                // Click target: only lease alerts are clickable (→ contract-action-page).
-                // Catch-all dispatcher (data-action="openLeaseAlertFromBell") calls the
-                // window-scoped handler with (el, event) → reads data-notif-id off el.
-                const leaseClick = (d._virtualLeaseAlert && d._notifId)
-                    ? ` data-action="openLeaseAlertFromBell" data-notif-id="${_escapeBroadcastHtml(d._notifId)}" role="button" tabindex="0"`
-                    : '';
-                const leaseCursor = d._virtualLeaseAlert ? 'cursor:pointer;' : '';
-                // Event-specific: show date + location below body.
-                const eventMeta = (type === 'event' && (d.eventDate || d.location)) ? `
-                    <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #e5e7eb; font-size:.82rem; color:var(--text-muted); display:flex; flex-wrap:wrap; gap:12px;">
-                        ${d.eventDate ? `<span>📅 ${_escapeBroadcastHtml(fmtEventDate(d.eventDate))}</span>` : ''}
-                        ${d.location ? `<span>📍 ${_escapeBroadcastHtml(d.location)}</span>` : ''}
-                    </div>` : '';
-                const leaseFooter = d._virtualLeaseAlert ? `
-                    <div style="margin-top:8px; font-size:.82rem; color:#1565c0; font-weight:600;">
-                        แตะเพื่อต่อสัญญา →
-                    </div>` : '';
-                return `<div${leaseClick} style="border-bottom:1px solid var(--border, #e5e5e5); padding:14px 20px; ${leaseBorder} ${leaseBg} ${leaseCursor}">
-                    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:.35rem;">
-                        <strong style="font-size:.98rem; ${unread ? 'color:var(--text-dark);' : 'color:var(--text-muted);'}">${d._virtualLeaseAlert ? '' : badge + ' '}${title}</strong>
-                        ${when ? `<span style="font-size:.78rem; color:var(--text-muted); white-space:nowrap;">${when}</span>` : ''}
-                    </div>
-                    <div style="font-size:.74rem; color:var(--text-muted); margin-bottom:.4rem;">${label}</div>
-                    <div style="font-size:.9rem; color:var(--text-dark, #333); white-space:pre-wrap;">${body}</div>
-                    ${eventMeta}
-                    ${leaseFooter}
-                </div>`;
-            }).join('');
-        }
-        // C4 Session 1 v2 (2026-05-17): bell shows ALL announcement types
-        // (notice/event/banner). UX consolidation — community feed "ประกาศ & กิจกรรม"
-        // section is hidden; bell is the single surface.
-        // S2 (2026-05-18): legacy broadcastMessages + communityEvents merge dropped post-migration.
-        //
-        // S1 v2.1 bug fix: audience filter now derived from the ACTUAL token claim
-        // (getIdTokenResult), not _taBuilding. Reason: if _taBuilding is set client-side
-        // (default 'rooms') but the Firebase Auth token doesn't actually carry that
-        // building claim, the rule `audience == request.auth.token.building` fails for
-        // building-specific docs in the result set → WHOLE QUERY rejected. Using the
-        // real claim guarantees rule alignment.
-        let _broadcastsRefreshScheduled = false;
-        window._bellLastErr = window._bellLastErr || {};
-
-        async function _bellResolveAudiences() {
-            const audiences = ['all'];
-            try {
-                const user = window.firebaseAuth?.currentUser;
-                if (user && typeof user.getIdTokenResult === 'function') {
-                    const res = await user.getIdTokenResult();
-                    const claimed = res?.claims?.building;
-                    if (typeof claimed === 'string' && claimed && claimed !== 'all') {
-                        audiences.push(claimed);
-                    }
-                }
-            } catch (e) {
-                console.warn('[bell] getIdTokenResult failed:', e?.message || e);
-            }
-            // Defensive: if no claim resolved, ALSO try _taBuilding (so non-LIFF/admin
-            // preview still sees something building-scoped). Rule allows 'all' always.
-            if (audiences.length === 1 && _taBuilding && _taBuilding !== 'all') {
-                audiences.push(_taBuilding);
-            }
-            window._bellLastAudiences = audiences;
-            return audiences;
-        }
-
-        async function _subscribeBroadcasts() {
-            if (_broadcastsUnsub) return;
-            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-            // Anti-pattern §7-U: claim-presence guard FIRST, before setting unsub.
-            if (!_taBuilding) return;
-            const fs = window.firebase.firestoreFunctions;
-            const db = window.firebase.firestore();
-            // Resolve audiences from the ACTUAL token claims (not the client-side
-            // _taBuilding shortcut). Prevents rule denial on building-specific docs.
-            const audiences = await _bellResolveAudiences();
-
-            // C4 S2 (2026-05-18): single-source from announcements/ post-migration.
-            // Legacy broadcastMessages + communityEvents subscribers dropped.
-            const newCache    = new Map();
-            const sourcesReplayed = new Set();
-            const TOTAL_SOURCES = 1;
-            let unsubNew = null;
-            let retryNewTimer = null;
-
-            const rerender = (sourceId) => {
-                sourcesReplayed.add(sourceId);
-                const byId = new Map();
-                for (const d of newCache.values()) byId.set(d.id, d);
-                const priorIds = new Set(_broadcastsList.map(b => b.id));
-                _broadcastsList = [...byId.values()].sort((a, b) => {
-                    const ta = a.sentAt?.toDate?.()?.getTime?.() ?? new Date(a.sentAt || 0).getTime();
-                    const tb = b.sentAt?.toDate?.()?.getTime?.() ?? new Date(b.sentAt || 0).getTime();
-                    return tb - ta;
-                }).slice(0, 20);
-                _renderBroadcastBadge();
-                _renderBroadcastsList();
-                if (_broadcastsInitialReplay) {
-                    if (sourcesReplayed.size >= TOTAL_SOURCES) _broadcastsInitialReplay = false;
-                    return;
-                }
-                const fresh = _broadcastsList.find(d => !priorIds.has(d.id));
-                if (fresh) _broadcastShowToast('📣 ประกาศใหม่: ' + (fresh.title || ''));
-            };
-
-            const subscribeNew = () => {
-                if (unsubNew) return;
-                try {
-                    // Drop type filter — bell shows ALL types (notice/event/banner).
-                    // Also drop orderBy so this query works on Firestore's auto single-field
-                    // index for `audience` (no composite needed). Client-side sort by sentAt
-                    // happens in `rerender`. Trade-off: limit returns "some 20" not "newest 20";
-                    // acceptable because rerender sorts and the collection is small.
-                    const qNew = fs.query(
-                        fs.collection(db, 'announcements'),
-                        fs.where('audience', 'in', audiences),
-                        fs.limit(20)
-                    );
-                    unsubNew = fs.onSnapshot(qNew, snap => {
-                        newCache.clear();
-                        snap.docs.forEach(d => newCache.set(d.id, { id: d.id, ...d.data() }));
-                        window._bellLastErr.new = null;
-                        rerender('new');
-                    }, err => {
-                        console.warn('announcements/bell subscribe failed:', err?.message || err);
-                        window._bellLastErr.new = err?.code || err?.message || String(err);
-                        if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                            try { unsubNew && unsubNew(); } catch(_){}
-                            unsubNew = null;
-                            // Composite index may still be building (1-5 min after deploy).
-                            // Retry once after 8s — bell stays empty in the meantime.
-                            if (err?.code === 'failed-precondition' && !retryNewTimer) {
-                                retryNewTimer = setTimeout(() => {
-                                    retryNewTimer = null;
-                                    if (_broadcastsUnsub) subscribeNew();
-                                }, 8000);
-                            }
-                        }
-                    });
-                } catch (e) {
-                    console.warn('announcements/bell init failed:', e?.message || e);
-                    window._bellLastErr.new = 'init: ' + (e?.message || e);
-                }
-            };
-
-            subscribeNew();
-            _broadcastsUnsub = () => {
-                if (retryNewTimer) { clearTimeout(retryNewTimer); retryNewTimer = null; }
-                try { unsubNew && unsubNew(); } catch(_){}
-                unsubNew = null;
-            };
-        }
-        _onLiffClaimsReady(_subscribeBroadcasts);
-
-        // Lease-expiry notifications — server emits at 60/30/14/expired milestones
-        // via functions/remindLeaseExpiry.js. Bell synthesizer reads from this list.
-        // See firestore.rules `match /leaseNotifications` for read scope.
-        function _subscribeLeaseNotifications() {
-            if (_taLeaseNotifsUnsub) return;  // §7-V: idempotency
-            // §7-U: claim guard — without building+room from token claims, the
-            // where() returns empty AND we mark unsub set → stale forever.
-            if (!_taBuilding || !_taRoom) return;
-            if (!window.firebase?.firestoreFunctions) return;
-            const fs = window.firebase.firestoreFunctions;
-            const db = window.firebase.firestore();
-            const q = fs.query(
-                fs.collection(db, 'leaseNotifications'),
-                fs.where('building', '==', _taBuilding),
-                fs.where('room', '==', String(_taRoom))
-            );
-            _taLeaseNotifsUnsub = fs.onSnapshot(q, snap => {
-                _taLeaseNotifs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                try {
-                    if (typeof _renderBroadcastBadge === 'function') _renderBroadcastBadge();
-                    if (typeof _renderBroadcastsList === 'function') _renderBroadcastsList();
-                } catch (e) { console.warn('[leaseNotifs] re-render failed:', e?.message || e); }
-            }, err => {
-                // §7-N: error callback prevents silent stuck state. Reset unsub on
-                // permission-denied / failed-precondition so the next claim-ready
-                // event can retry (§7-U recovery pattern).
-                console.warn('[leaseNotifs] subscribe failed:', err?.code || err?.message);
-                if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                    _taLeaseNotifsUnsub = null;
-                }
-            });
-        }
-        _onLiffClaimsReady(_subscribeLeaseNotifications);
-
-        // C4 S1 v2.2 (2026-05-17): if Firebase Auth becomes available AFTER the bell
-        // first subscribed (or while the subscribers were stuck in permission-denied),
-        // re-trigger _subscribeBroadcasts so the now-authenticated queries can succeed.
-        // Real-LIFF symptom observed: `signed in: no` at first subscribe → permission-denied
-        // on broadcastMessages + announcements → bell stayed empty for the session.
-        (function _wireBellAuthRecovery() {
-            const tryWire = () => {
-                const auth = window.firebaseAuth;
-                if (!auth || typeof auth.onAuthStateChanged !== 'function') {
-                    setTimeout(tryWire, 800);
-                    return;
-                }
-                auth.onAuthStateChanged((user) => {
-                    if (!user || !_taBuilding) return;
-                    const errs = window._bellLastErr || {};
-                    const someSourceFailed = !!errs.new;
-                    // Re-subscribe if (a) never subscribed OR (b) the new-source
-                    // previously failed (likely with permission-denied while auth was null).
-                    // After (b) we must tear down so the idempotency check inside
-                    // _subscribeBroadcasts doesn't short-circuit.
-                    if (!_broadcastsUnsub || someSourceFailed) {
-                        if (_broadcastsUnsub) {
-                            try { _broadcastsUnsub(); } catch(_){}
-                            _broadcastsUnsub = null;
-                        }
-                        _subscribeBroadcasts();
-                    }
-                });
-            };
-            tryWire();
-        })();
-
-        function openBroadcastsPanel() {
-            const panel = document.getElementById('broadcasts-panel');
-            if (!panel) return;
-            _renderBroadcastsList();
-            panel.style.display = 'flex';
-            // Mark all as read using newest sentAt
-            const newest = _broadcastsList[0];
-            const iso = newest ? _broadcastSentAtIso(newest) : new Date().toISOString();
-            if (iso) {
-                _setLastBroadcastReadAt(iso);
-                _renderBroadcastBadge();
-                // Re-render list so the unread accents disappear
-                setTimeout(_renderBroadcastsList, 0);
-            }
-        }
-        function closeBroadcastsPanel() {
-            const panel = document.getElementById('broadcasts-panel');
-            if (panel) panel.style.display = 'none';
-        }
-        window.openBroadcastsPanel  = openBroadcastsPanel;
-        window.closeBroadcastsPanel = closeBroadcastsPanel;
 
         // Peek-mode entry for the daily bonus modal. checkDailyLogin() is the
         // automatic-on-load gate (returns early once today's claim is in localStorage);
@@ -9925,12 +9516,6 @@
         }
 
         let _taRoom = '', _taBuilding = '', _taLease = null, _taTenant = null;
-        // Server-emitted lease-expiry milestone docs (leaseNotifications/{b}_{r}_{tier}).
-        // Tier ∈ {'60','30','14','expired'} — written by functions/remindLeaseExpiry.js
-        // when the daily sweep crosses each milestone. _leaseAlertItem() reads from
-        // this array; null if no unread items.
-        let _taLeaseNotifs = [];
-        let _taLeaseNotifsUnsub = null;
         // Module-level helper — was declared as inline closure in 5+ places, allocating
         // a new arrow function on every render call. Function declaration (not const)
         // so the binding is fully hoisted and callable from earlier-defined functions.
@@ -11513,7 +11098,7 @@
             const badge = document.getElementById('nav-badge-community');
             if (badge) badge.style.display = 'none';
             _setMarketSeenAt();
-            _renderBellVisibility();
+            if (typeof window._renderBellVisibility === 'function') window._renderBellVisibility();
             renderQuizHub();
             renderQuizHistory();
         }
@@ -12628,7 +12213,7 @@
                 svcBadge.textContent = pendingTix > 9 ? '9+' : pendingTix;
                 svcBadge.style.display = pendingTix > 0 ? 'flex' : 'none';
             }
-            _renderBellVisibility();
+            if (typeof window._renderBellVisibility === 'function') window._renderBellVisibility();
         }
 
         // ---- PAYMENT FLOW ----
@@ -13447,8 +13032,8 @@
         // and list refresh when tenant data lands.
         function displayLeaseRenewalAlert() {
             try {
-                if (typeof _renderBroadcastBadge === 'function') _renderBroadcastBadge();
-                if (typeof _renderBroadcastsList === 'function') _renderBroadcastsList();
+                if (typeof window._renderBroadcastBadge === 'function') window._renderBroadcastBadge();
+                if (typeof window._renderBroadcastsList === 'function') window._renderBroadcastsList();
             } catch(e) { console.warn('displayLeaseRenewalAlert:', e); }
         }
 
@@ -14263,10 +13848,10 @@
                 if (typeof showSubPage === 'function') {
                     showSubPage('contract-action-page');
                 }
-                if (window.firebase?.firestoreFunctions && Array.isArray(_taLeaseNotifs)) {
+                if (window.firebase?.firestoreFunctions && Array.isArray(window._taLeaseNotifs)) {
                     const fs = window.firebase.firestoreFunctions;
                     const db = window.firebase.firestore();
-                    _taLeaseNotifs
+                    window._taLeaseNotifs
                         .filter(d => d.status !== 'read' && d.status !== 'stale')
                         .forEach(d => {
                             const ref = fs.doc(db, 'leaseNotifications', d.id);
@@ -14293,6 +13878,9 @@
 
     <!-- ===== WELLNESS ARTICLES (extracted from inline script) ===== -->
     <script src="./shared/wellness-articles.js" defer></script>
+
+    <!-- ===== BROADCAST ANNOUNCEMENTS + LEASE NOTIFICATIONS (extracted from inline script) ===== -->
+    <script src="./shared/broadcasts.js" defer></script>
 
     <!-- ported from tenant.html: photo modal -->
     <div id="photoModal" role="dialog" aria-modal="true" aria-labelledby="photoModal-title" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:20px;">
