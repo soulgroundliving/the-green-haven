@@ -90,7 +90,7 @@ fi
 # If a staged functions/*.js contains pubsub.schedule, it must be mentioned in lifecycle_scheduled_jobs.md.
 # Prevents "new CF added but lifecycle doc not updated" drift — root cause of 2026-05-26 doc audit findings
 # (cleanupChecklistsScheduled.js existed for months without appearing in the doc, count was wrong).
-STAGED_FUNCTIONS=$(git diff --cached --name-only | grep -E "^functions/.*\.js$")
+STAGED_FUNCTIONS=$(git diff --cached --name-only | grep -E "^functions/[^/]+\.js$")
 if [ -n "$STAGED_FUNCTIONS" ]; then
   SCHEDULED_CF_CHANGED=$(echo "$STAGED_FUNCTIONS" | xargs grep -l "pubsub\.schedule" 2>/dev/null)
   if [ -n "$SCHEDULED_CF_CHANGED" ]; then
