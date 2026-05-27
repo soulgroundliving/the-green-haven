@@ -22,6 +22,8 @@
       --green: #2d8653;
       --green-light: #4caf50;
       --blue: #1976d2;
+      --blue-dark: #1565c0;
+      --blue-pale: #e3f2fd;
       --red: #c62828;
       --yellow: #f57f17;
       --bg: #f4f6f8;
@@ -139,7 +141,7 @@
     }
 
     .btn-secondary:hover {
-      background: #1565c0;
+      background: var(--blue-dark);
     }
 
     .btn-warning {
@@ -340,13 +342,13 @@
     }
 
     .info-box {
-      background: #e3f2fd;
+      background: var(--blue-pale);
       border-left: 4px solid var(--blue);
       padding: 15px;
       border-radius: 6px;
       margin-bottom: 20px;
       font-size: 13px;
-      color: #1565c0;
+      color: var(--blue-dark);
     }
 
     @media (max-width: 768px) {

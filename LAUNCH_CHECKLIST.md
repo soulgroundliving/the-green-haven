@@ -66,10 +66,14 @@ Live URL: <https://the-green-haven.vercel.app>
 ## 7. Cloud Functions deployment
 
 - [ ] CI `deploy-functions.yml` workflow ✅ green (auto-deploys on push to `main` touching `functions/`)
-- [ ] Firebase Console → Functions → ≥ 85 functions deployed, all `asia-southeast1`
-- [ ] Key CFs respond (HTTP 400 = running but rejected empty body — that's fine):
-  - [ ] `curl -s -o /dev/null -w "%{http_code}" -X GET https://asia-southeast1-the-green-haven.cloudfunctions.net/liffSignIn` → non-000, non-5xx
-  - [ ] `curl -s -o /dev/null -w "%{http_code}" -X GET https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip` → non-000, non-5xx
+- [ ] Firebase Console → Functions → ≥ 86 functions deployed, all `asia-southeast1`
+- [ ] Key CFs respond (HTTP 400/401 = running but rejected empty/unauth body — that's fine):
+  - [ ] `curl -s -o /dev/null -w "%{http_code}" -X POST https://asia-southeast1-the-green-haven.cloudfunctions.net/liffSignIn` → non-000, non-5xx
+  - [ ] `curl -s -o /dev/null -w "%{http_code}" -X POST https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip` → non-000, non-5xx
+  - [ ] `curl -s -o /dev/null -w "%{http_code}" -X POST https://asia-southeast1-the-green-haven.cloudfunctions.net/liffBookingSignIn` → non-000, non-5xx
+  - [ ] `curl -s -o /dev/null -w "%{http_code}" -X POST https://asia-southeast1-the-green-haven.cloudfunctions.net/redeemReward` → non-000, non-5xx
+  - [ ] `curl -s -o /dev/null -w "%{http_code}" -X POST https://asia-southeast1-the-green-haven.cloudfunctions.net/publishAnnouncement` → non-000, non-5xx
+  - [ ] `curl -s -o /dev/null -w "%{http_code}" -X POST https://asia-southeast1-the-green-haven.cloudfunctions.net/submitChecklist` → non-000, non-5xx
 - [x] ~~รัน seedRewards ครั้งเดียว~~ — done at launch; CF removed 2026-04-28 (admin CRUD via dashboard)
 - [x] ~~ตรวจ Firestore `rewards/` มี 7 docs~~ — verified at launch
 

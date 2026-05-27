@@ -74,6 +74,12 @@
   --green-light: var(--brand-primary-light);
   --green-pale:  var(--brand-primary-soft);
 
+  /* Blue secondary — info surfaces, booking status pills, bill action buttons */
+  --blue:        #1976d2;
+  --blue-dark:   #1565c0;
+  --blue-pale:   #e3f2fd;
+  --blue-bright: #1e88e5;
+
   /* Surfaces ──────────────────────────────────────────────── */
   --surface-page:   var(--cloud);
   --surface-card:   #ffffff;
@@ -203,6 +209,8 @@ button, input, select, textarea {
   /* Brand surface tints — tinted dark instead of mint cream */
   --brand-primary-soft: #0f2725;  /* card highlight tint */
   --brand-primary-wash: #0c1614;  /* same as page bg */
+  --blue-pale: #0d1b2a;
+  --blue-dark: #90caf9;
 
   /* Surface aliases */
   --surface-page:   var(--cloud);
@@ -233,6 +241,8 @@ button, input, select, textarea {
     --muted:   #c5d6cf;
     --brand-primary-soft: #0f2725;
     --brand-primary-wash: #0c1614;
+    --blue-pale: #0d1b2a;
+    --blue-dark: #90caf9;
     --surface-page:   #0c1614;
     --surface-card:   #162825;
     --surface-raised: #1d3431;
