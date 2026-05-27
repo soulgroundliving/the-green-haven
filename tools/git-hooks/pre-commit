@@ -71,10 +71,11 @@ fi
 echo -e "${GREEN}✅ Memory verifier: all green${NC}"
 
 # ===== 2b. CF unit tests (fast, ~200ms) =====
-# Run functions/__tests__/*.test.js if any functions/ files are staged
+# Run via npm run test:unit (which auto-syncs gamification-rules.js first per PR #92)
+# when any functions/ file is staged.
 if git diff --cached --name-only | grep -qE "^functions/"; then
   echo -e "${YELLOW}🧪 Running CF unit tests (functions/ changed)...${NC}"
-  if ! node --test functions/__tests__/*.test.js > /tmp/unit-tests.out 2>&1; then
+  if ! npm run test:unit > /tmp/unit-tests.out 2>&1; then
     echo -e "${RED}❌ CF unit tests failed:${NC}"
     grep -E "✖|fail" /tmp/unit-tests.out | head -20
     echo ""
