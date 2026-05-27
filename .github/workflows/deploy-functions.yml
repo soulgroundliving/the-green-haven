@@ -61,6 +61,10 @@ jobs:
       # Expose secret to env so `if:` can check it (secrets are not
       # available directly in step-level `if:` expressions).
       SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN }}
+      # defineString() params from verifyBookingSlip.js + verifySlip.js — these
+      # CFs read SLIPOK_API_URL at deploy time. Locally it lives in
+      # functions/.env (gitignored). For CI we write it from a GitHub secret.
+      SLIPOK_API_URL: ${{ secrets.SLIPOK_API_URL }}
 
     steps:
       - name: Verify required secret is configured
@@ -112,6 +116,23 @@ jobs:
 
       - name: Install firebase-tools
         run: npm install -g firebase-tools@latest
+
+      - name: Write functions/.env from secrets
+        # firebase-functions/params defineString() values are read from
+        # functions/.env at deploy time. Local devs have this file via
+        # `npm run deploy:worktree:prep`; CI has to write it.
+        # NOTE: defineSecret() values come from GCP Secret Manager and do
+        # NOT need to be written here.
+        run: |
+          if [ -z "$SLIPOK_API_URL" ]; then
+            echo "::error::SLIPOK_API_URL secret is not configured."
+            echo "Add as repo secret: GitHub → Settings → Secrets → Actions"
+            echo "Name:  SLIPOK_API_URL"
+            echo "Value: same as the SLIPOK_API_URL=... line in your local functions/.env"
+            exit 1
+          fi
+          echo "SLIPOK_API_URL=$SLIPOK_API_URL" > functions/.env
+          echo "✅ functions/.env written ($(wc -l < functions/.env) line(s))"
 
       - name: Deploy Cloud Functions
         # google-github-actions/auth writes the SA key path to
