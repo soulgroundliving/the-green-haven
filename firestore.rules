@@ -81,28 +81,21 @@ service cloud.firestore {
     // `type` is 'notice'|'event'|'banner' — client filters by type for surface
     // (bell vs feed vs banner panel). Read tightened from `if true` to
     // signed-in-required so per-building audience filter actually works.
-    // Write stays open to admin during Session 1 transition (legacy admin code
-    // still writes directly until Step 2 rewires it to publishAnnouncement CF);
-    // Session 3 will tighten to `if false` once CF is sole writer.
+    // C4 S3 (2026-05-27): write tightened to false — publishAnnouncement CF uses
+    // admin SDK which bypasses rules. No client SDK should ever write here directly.
     match /announcements/{annId} {
       allow read:  if isAdmin()
                 || (isSignedIn() && resource.data.audience == 'all')
                 || (isSignedIn() && resource.data.audience == request.auth.token.building);
-      allow write: if isAdmin();
+      allow write: if false;  // CF only (publishAnnouncement / updateAnnouncement / deleteAnnouncement)
     }
 
-    // ===== BROADCAST MESSAGES (admin → tenant in-app announcement) =====
-    // Written EXCLUSIVELY by broadcastMessage CF (admin SDK bypasses rules).
-    // Read scoped by audience: 'all' (everyone signed-in) or building match.
-    match /broadcastMessages/{id} {
-      allow read:  if isAdmin()
-                || (isSignedIn() && resource.data.audience == 'all')
-                || (isSignedIn() && resource.data.audience == request.auth.token.building);
-      allow write: if false;  // CF only
-    }
+    // broadcastMessages collection DECOMMISSIONED C4 S3 (2026-05-27).
+    // Legacy docs remain in Firestore until Admin SDK cleanup script runs.
+    // No rule block → Firestore default deny applies to all reads + writes.
 
     // ===== COMMUNITY EVENTS / DOCS / WELLNESS =====
-    match /communityEvents/{id}    { allow read: if true; allow write: if isAdmin(); }
+    // communityEvents DECOMMISSIONED C4 S3 (2026-05-27) — migrated to announcements/.
     match /communityDocuments/{id} { allow read: if true; allow write: if isAdmin(); }
     match /wellness_articles/{id}  { allow read: if true; allow write: if isAdmin(); }
 

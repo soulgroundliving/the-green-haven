@@ -17,13 +17,6 @@ exports.submitChecklist          = require('./submitChecklist').submitChecklist;
 exports.adminSignChecklist       = require('./adminSignChecklist').adminSignChecklist;
 exports.deleteChecklistInstance  = require('./deleteChecklistInstance').deleteChecklistInstance;
 
-// Admin-only: publish in-app announcement to tenants (broadcastMessages/{id})
-// In-app only — no LINE Multicast (free tier 200/mo too low; deferred).
-// Deprecated 2026-05-17 by publishAnnouncement (C4 merge); kept alive
-// defensively while admin browsers may still hold stale JS. Session 3
-// removes this once Sessions 1-2 confirm full cutover.
-exports.broadcastMessage = require('./broadcastMessage').broadcastMessage;
-
 // Unified writer for tenant-facing announcements (notice/event/banner) —
 // writes to announcements/{auto} with type discriminator + unified audience.
 // Replaces broadcastMessage CF + direct communityEvents + direct announcements

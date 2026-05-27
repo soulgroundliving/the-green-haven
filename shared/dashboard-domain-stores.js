@@ -346,74 +346,9 @@ function _subscribeNewAnnouncementsEvents() {
   } catch (e) { console.warn('_subscribeNewAnnouncementsEvents:', e); }
 }
 
-// ===== CommunityEventsStore (2026-04-19) — Firestore canonical =====
-window.CommunityEventsStore = window.CommunityEventsStore || (function(){
-  let cache = null;
-  const listeners = new Set();
-  let unsub = null;
-  function _local() {
-    try { return JSON.parse(localStorage.getItem('community_events_data') || '[]'); }
-    catch(e) { return []; }
-  }
-  function _writeLocal(arr) {
-    try { localStorage.setItem('community_events_data', JSON.stringify(arr)); } catch(e){}
-  }
-  function getAll() { return cache !== null ? cache : _local(); }
-  function getById(id) { return getAll().find(e => e.id === id) || null; }
-  function onChange(fn) {
-    listeners.add(fn);
-    if (cache !== null) { try { fn(cache); } catch(e){} }
-    return () => listeners.delete(fn);
-  }
-  function _notify() { listeners.forEach(fn => { try { fn(getAll()); } catch(e){} }); }
-  async function setOne(ev) {
-    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-      // Local-only fallback
-      const all = getAll().filter(e => e.id !== ev.id);
-      all.push(ev);
-      cache = all; _writeLocal(all); _notify();
-      return false;
-    }
-    try {
-      const fs = window.firebase.firestoreFunctions;
-      const db = window.firebase.firestore();
-      await fs.setDoc(fs.doc(db, 'communityEvents', ev.id), ev, { merge: true });
-      return true;
-    } catch (e) { console.warn('CommunityEventsStore setOne:', e?.message); return false; }
-  }
-  async function remove(id) {
-    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-      cache = getAll().filter(e => e.id !== id);
-      _writeLocal(cache); _notify();
-      return false;
-    }
-    try {
-      const fs = window.firebase.firestoreFunctions;
-      const db = window.firebase.firestore();
-      await fs.deleteDoc(fs.doc(db, 'communityEvents', id));
-      return true;
-    } catch (e) { console.warn('CommunityEventsStore remove:', e?.message); return false; }
-  }
-  function subscribe() {
-    if (unsub) return;
-    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-      setTimeout(subscribe, 1500); return;
-    }
-    try {
-      const fs = window.firebase.firestoreFunctions;
-      const db = window.firebase.firestore();
-      unsub = fs.onSnapshot(fs.collection(db, 'communityEvents'), snap => {
-        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        cache = docs;
-        _writeLocal(docs);
-        _notify();
-      }, err => console.warn('communityEvents listen:', err?.message));
-    } catch(e) { console.warn('subscribe:', e); }
-  }
-  // C4 S2 (2026-05-18): auto-subscribe dropped — admin reads events from announcements/
-  // via _subscribeNewAnnouncementsEvents only. Store kept for S3 decom (clean removal).
-  return { getAll, getById, onChange, setOne, remove, subscribe };
-})();
+// CommunityEventsStore REMOVED — C4 S3 (2026-05-27).
+// communityEvents collection migrated to announcements/ (type='event') in S2.
+// Admin reads events via _subscribeNewAnnouncementsEvents (announcements/ only).
 
 function initCommunityEventsPage() {
   loadAndRenderCommunityEvents();
