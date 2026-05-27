@@ -28,11 +28,14 @@ function resetStubs(overrides = {}) {
     // admin.auth().createCustomToken
     customToken: 'test-custom-token-xyz',
     createTokenError: null,
+    // rate limit — false = not exceeded (allow through)
+    rateLimitExceeded: false,
     ...overrides,
   };
   captured = {
     fetchCalls: [],        // { url, opts }
     createTokenCalls: [],  // { uid, claims }
+    setClaimsCalls: [],    // { uid, claims }
     resSets: [],           // { k, v } from res.set()
   };
 }
@@ -52,6 +55,21 @@ const nodeFetchStub = async (url, opts) => {
 
 // ── firebase-admin stub ───────────────────────────────────────────────────────
 
+// admin.firestore() stub — supports collection/doc/runTransaction for rate limiting.
+// admin.firestore.Timestamp / FieldValue are static properties on the function.
+const _firestoreInstance = () => ({
+  collection: () => ({ doc: () => ({}) }),
+  runTransaction: async (fn) => {
+    const tx = {
+      get: async () => ({ exists: stubState.rateLimitExceeded, data: () => ({ count: stubState.rateLimitExceeded ? 999 : 0, windowStart: { toMillis: () => Date.now() - 60000 } }) }),
+      set: () => {},
+    };
+    return fn(tx);
+  },
+});
+_firestoreInstance.Timestamp = { fromMillis: (ms) => ({ toMillis: () => ms }) };
+_firestoreInstance.FieldValue = { serverTimestamp: () => null };
+
 const adminStub = {
   apps: [{}],          // non-empty → initializeApp() skipped
   initializeApp: () => {},
@@ -61,7 +79,11 @@ const adminStub = {
       if (stubState.createTokenError) throw stubState.createTokenError;
       return stubState.customToken;
     },
+    setCustomUserClaims: async (uid, claims) => {
+      captured.setClaimsCalls.push({ uid, claims: { ...claims } });
+    },
   }),
+  firestore: _firestoreInstance,
 };
 
 // ── Module._load intercept ────────────────────────────────────────────────────
@@ -133,9 +155,9 @@ describe('liffBookingSignIn — CORS / method routing', () => {
     assert.equal(res._body, '');
   });
 
-  it('OPTIONS sets Access-Control-Allow-Origin: *', async () => {
+  it('OPTIONS sets Access-Control-Allow-Origin to Vercel deployment URL', async () => {
     const res = await call({ method: 'OPTIONS' });
-    assert.equal(res._headers['Access-Control-Allow-Origin'], '*');
+    assert.equal(res._headers['Access-Control-Allow-Origin'], 'https://the-green-haven.vercel.app');
   });
 
   it('GET returns 200 with status:ok and numeric ts', async () => {
@@ -157,9 +179,9 @@ describe('liffBookingSignIn — CORS / method routing', () => {
     assert.ok(res._body.error.length > 0);
   });
 
-  it('Access-Control-Allow-Origin: * is set on POST requests', async () => {
+  it('Access-Control-Allow-Origin is set to Vercel deployment URL on POST requests', async () => {
     const res = await call();
-    assert.equal(res._headers['Access-Control-Allow-Origin'], '*');
+    assert.equal(res._headers['Access-Control-Allow-Origin'], 'https://the-green-haven.vercel.app');
   });
 });
 
@@ -302,5 +324,39 @@ describe('liffBookingSignIn — success response shape', () => {
     resetStubs({ lineVerifyBody: { sub: 'Uother999', name: 'Test' } });
     const res = await call();
     assert.equal(res._body.lineUserId, 'Uother999');
+  });
+});
+
+describe('liffBookingSignIn — rate limiting', () => {
+  beforeEach(() => resetStubs());
+
+  it('returns 429 when rate limit is exceeded for the lineUserId', async () => {
+    resetStubs({ rateLimitExceeded: true });
+    const res = await call();
+    assert.equal(res._status, 429);
+    assert.ok(res._body.error.toLowerCase().includes('too many'), `error was: ${res._body.error}`);
+  });
+
+  it('returns 200 when rate limit is not exceeded', async () => {
+    resetStubs({ rateLimitExceeded: false });
+    const res = await call();
+    assert.equal(res._status, 200);
+  });
+});
+
+describe('liffBookingSignIn — setCustomUserClaims (§7-Z)', () => {
+  beforeEach(() => resetStubs());
+
+  it('calls setCustomUserClaims with the same UID as createCustomToken', async () => {
+    await call();
+    assert.equal(captured.setClaimsCalls.length, 1);
+    assert.equal(captured.setClaimsCalls[0].uid, 'book:Uabc123');
+  });
+
+  it('persists role:prospect and lineUserId in setCustomUserClaims', async () => {
+    await call();
+    const sc = captured.setClaimsCalls[0];
+    assert.equal(sc.claims.role, 'prospect');
+    assert.equal(sc.claims.lineUserId, 'Uabc123');
   });
 });

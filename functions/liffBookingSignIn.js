@@ -28,11 +28,47 @@ if (!admin.apps.length) admin.initializeApp();
 // based separation between tenant_app.html and booking.html).
 const LINE_CHANNEL_ID = '2009790149';
 
+// Allowed origins — only the Vercel deployment may call this CF.
+// Matches liffSignIn.js; wildcard was the original value (fixed).
+const ALLOWED_ORIGIN = 'https://the-green-haven.vercel.app';
+
+// Rate limit: max 10 sign-ins per lineUserId per rolling hour.
+// Stored in rateLimits/booking_<lineUserId> (cleaned up by cleanupOldDocs daily).
+const RATE_WINDOW_MS = 60 * 60 * 1000;
+const RATE_MAX = 10;
+
+async function _checkRateLimit(lineUserId) {
+  const fs = admin.firestore();
+  const ref = fs.collection('rateLimits').doc(`booking_${lineUserId}`);
+  const now = Date.now();
+  let exceeded = false;
+  await fs.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    let count = 1;
+    let windowStart = now;
+    if (snap.exists) {
+      const d = snap.data();
+      const start = d.windowStart ? d.windowStart.toMillis() : 0;
+      if (now - start < RATE_WINDOW_MS) {
+        count = (d.count || 0) + 1;
+        windowStart = start;
+      }
+    }
+    exceeded = count > RATE_MAX;
+    tx.set(ref, {
+      count,
+      windowStart: admin.firestore.Timestamp.fromMillis(windowStart),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+  return exceeded;
+}
+
 exports.liffBookingSignIn = functions
   .region('asia-southeast1')
   .runWith({ minInstances: 1 })
   .https.onRequest(async (req, res) => {
-  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
   if (req.method === 'OPTIONS') {
     res.set('Access-Control-Allow-Methods', 'POST');
     res.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -79,6 +115,16 @@ exports.liffBookingSignIn = functions
     return res.status(500).json({ error: 'Could not reach LINE verify endpoint' });
   }
 
+  // Rate limit: 10 sign-ins per lineUserId per hour
+  try {
+    const exceeded = await _checkRateLimit(lineUserId);
+    if (exceeded) {
+      return res.status(429).json({ error: 'Too many sign-in attempts. Try again in an hour.' });
+    }
+  } catch (e) {
+    console.warn('liffBookingSignIn: rate-limit check failed (non-fatal):', e.message);
+  }
+
   // UID prefix "book:" keeps prospect Auth user separate from tenant Auth user
   // (which uses "line:" prefix in liffSignIn). Same LINE account → two Firebase
   // Auth users, no claim collision.
@@ -98,6 +144,9 @@ exports.liffBookingSignIn = functions
       role: 'prospect',
       lineUserId,
     });
+    // Persist claims on the user record so token refreshes keep them (§7-Z).
+    admin.auth().setCustomUserClaims(uid, { role: 'prospect', lineUserId })
+      .catch(e => console.warn('liffBookingSignIn: setCustomUserClaims failed (non-fatal):', e.message));
   } catch (e) {
     console.error('liffBookingSignIn: createCustomToken failed:', e.message);
     return res.status(500).json({ error: 'Failed to create custom token' });
