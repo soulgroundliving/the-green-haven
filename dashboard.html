@@ -16,33 +16,35 @@
 <!-- Sentry error monitoring (~5KB loader stub; full SDK pulls only on first error) -->
 <script>window.SENTRY_APP_NAME = 'dashboard';</script>
 <script src="https://js.sentry-cdn.com/70de55e358255ab981939b708a743b1d.min.js" crossorigin="anonymous"></script>
-<script src="./shared/sentry-init.js"></script>
+<script src="./shared/sentry-init.js" defer></script>
 <!-- Modal a11y bridge + base modal helper (ESC + backdrop + focus trap) -->
 <link rel="stylesheet" href="./shared/components.css">
+<!-- theme-toggle: applied BEFORE first paint to avoid flash of wrong theme — must NOT be deferred -->
 <script src="./shared/theme-toggle.js"></script>
-<script src="./shared/modal.js"></script>
-<script src="./shared/modal-a11y-bridge.js"></script>
-<script src="./shared/onboarding-tour.js"></script>
-<script src="./shared/thai-date.js"></script>
-<script src="./shared/security.js"></script>
-<script src="./shared/rich-text-policy.js"></script>
-<script src="./shared/firebase-config-loader.js"></script>
-<script src="./shared/year-utils.js"></script>
-<script src="./shared/gamification-rules.js"></script>
-<script src="./shared/access-control.js"></script>
-<script src="./shared/audit.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
-<script src="./shared/room-config.js"></script>
-<script src="./shared/owner-config.js"></script>
-<script src="./shared/tenant-system.js"></script>
-<script src="./shared/person-ssot.js"></script>
-<script src="./shared/tenant-lookup.js"></script>
-<script src="./shared/lease-config.js"></script>
-<script src="./shared/invoice-receipt-manager.js"></script>
-<script src="./shared/meter-unified.js"></script>
-<script src="./shared/billing-system.js"></script>
-<script src="./shared/bill-generator.js"></script>
+<!-- Shared infrastructure — all deferred; no top-level window.X aliases in any inline block -->
+<script src="./shared/modal.js" defer></script>
+<script src="./shared/modal-a11y-bridge.js" defer></script>
+<script src="./shared/onboarding-tour.js" defer></script>
+<script src="./shared/thai-date.js" defer></script>
+<script src="./shared/security.js" defer></script>
+<script src="./shared/rich-text-policy.js" defer></script>
+<script src="./shared/firebase-config-loader.js" defer></script>
+<script src="./shared/year-utils.js" defer></script>
+<script src="./shared/gamification-rules.js" defer></script>
+<script src="./shared/access-control.js" defer></script>
+<script src="./shared/audit.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous" defer></script>
+<script src="./shared/room-config.js" defer></script>
+<script src="./shared/owner-config.js" defer></script>
+<script src="./shared/tenant-system.js" defer></script>
+<script src="./shared/person-ssot.js" defer></script>
+<script src="./shared/tenant-lookup.js" defer></script>
+<script src="./shared/lease-config.js" defer></script>
+<script src="./shared/invoice-receipt-manager.js" defer></script>
+<script src="./shared/meter-unified.js" defer></script>
+<script src="./shared/billing-system.js" defer></script>
+<script src="./shared/bill-generator.js" defer></script>
 <!-- Perf #3: jsPDF (+ html2pdf bundle ~400KB combined) lazy-loaded on first
      invoice/receipt export via window.ensurePDFLibs(). Not needed on every
      page load — only the Bill tab generates PDFs. -->
@@ -66,11 +68,11 @@
     };
   })();
 </script>
-<script src="./shared/invoice-pdf-generator.js"></script>
-<script src="./shared/config-unified.js"></script>
-<script src="./shared/building-config.js"></script>
-<script src="./shared/building-registry.js"></script>
-<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
+<script src="./shared/invoice-pdf-generator.js" defer></script>
+<script src="./shared/config-unified.js" defer></script>
+<script src="./shared/building-config.js" defer></script>
+<script src="./shared/building-registry.js" defer></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" defer></script>
 <!-- TEST/MOCK DATA REMOVED FOR PRODUCTION DEPLOYMENT -->
 <!-- (Was: mock-tenant-data.js, mock-meter-history.js, init-test-data.js) -->
 <script>
@@ -5477,29 +5479,29 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
 <!-- Toggle Button for Firebase Panel - REMOVED FOR PRODUCTION (was blocking content on scroll) -->
 
-<script src="./shared/dashboard-main.js"></script>
-<script src="./shared/dashboard-room-config.js"></script>
-<script src="./shared/dashboard-bill.js"></script>
-<script src="./shared/dashboard-home-live.js"></script>
-<script src="./shared/dashboard-meter-import.js"></script>
-<script src="./shared/dashboard-wellness-content.js"></script>
-<script src="./shared/dashboard-property.js"></script>
-<script src="./shared/dashboard-tenant-page.js"></script>
-<script src="./shared/occupancy-log.js"></script>
-<script src="./shared/dashboard-tenant-modal.js"></script>
-<script src="./shared/dashboard-lease-renew-roompicker.js"></script>
-<script src="./shared/dashboard-lease-renew.js"></script>
-<script src="./shared/dashboard-bookings.js"></script>
-<script src="./shared/dashboard-requests-admin.js"></script>
-<script src="./shared/dashboard-broadcast.js"></script>
-<script src="./shared/dashboard-content-features.js"></script>
-<script src="./shared/dashboard-payment-verify.js"></script>
-<script src="./shared/dashboard-buildings.js"></script>
-<script src="./shared/dashboard-building-selects.js"></script>
-<script src="./shared/facility-booking.js"></script>
-<script src="./shared/checklist-manager.js"></script>
-<script src="./shared/dashboard-checklist-admin.js"></script>
-<script src="./shared/dashboard-pdpa-erasure.js"></script>
+<script src="./shared/dashboard-main.js" defer></script>
+<script src="./shared/dashboard-room-config.js" defer></script>
+<script src="./shared/dashboard-bill.js" defer></script>
+<script src="./shared/dashboard-home-live.js" defer></script>
+<script src="./shared/dashboard-meter-import.js" defer></script>
+<script src="./shared/dashboard-wellness-content.js" defer></script>
+<script src="./shared/dashboard-property.js" defer></script>
+<script src="./shared/dashboard-tenant-page.js" defer></script>
+<script src="./shared/occupancy-log.js" defer></script>
+<script src="./shared/dashboard-tenant-modal.js" defer></script>
+<script src="./shared/dashboard-lease-renew-roompicker.js" defer></script>
+<script src="./shared/dashboard-lease-renew.js" defer></script>
+<script src="./shared/dashboard-bookings.js" defer></script>
+<script src="./shared/dashboard-requests-admin.js" defer></script>
+<script src="./shared/dashboard-broadcast.js" defer></script>
+<script src="./shared/dashboard-content-features.js" defer></script>
+<script src="./shared/dashboard-payment-verify.js" defer></script>
+<script src="./shared/dashboard-buildings.js" defer></script>
+<script src="./shared/dashboard-building-selects.js" defer></script>
+<script src="./shared/facility-booking.js" defer></script>
+<script src="./shared/checklist-manager.js" defer></script>
+<script src="./shared/dashboard-checklist-admin.js" defer></script>
+<script src="./shared/dashboard-pdpa-erasure.js" defer></script>
 
 <!-- html2canvas: lazy-loaded on first PNG export from checklist viewer (~150KB).
      KNOWN: html2canvas injects a runtime <style> element during render, which
@@ -5612,13 +5614,13 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 </div>
 
-<script src="./shared/dashboard-domain-stores.js"></script>
-<script src="./shared/dashboard-tenant-lease.js"></script>
-<script src="./shared/dashboard-bills.js"></script>
-<script src="./shared/dashboard-config.js"></script>
-<script src="./shared/dashboard-admin-ops.js"></script>
-<script src="./shared/dashboard-extra.js"></script>
-<script src="./shared/dashboard-insights.js"></script>
+<script src="./shared/dashboard-domain-stores.js" defer></script>
+<script src="./shared/dashboard-tenant-lease.js" defer></script>
+<script src="./shared/dashboard-bills.js" defer></script>
+<script src="./shared/dashboard-config.js" defer></script>
+<script src="./shared/dashboard-admin-ops.js" defer></script>
+<script src="./shared/dashboard-extra.js" defer></script>
+<script src="./shared/dashboard-insights.js" defer></script>
 
 <!-- ===== NOTIFICATION BELL ===== -->
 <div id="notifBellWrapper">
