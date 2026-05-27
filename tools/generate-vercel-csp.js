@@ -106,7 +106,7 @@ const directives = [
   `default-src 'self' https: wss:`,
   `script-src 'self' ${scriptHashTokens} ${SCRIPT_SRC_EXTERNAL}`,
   `script-src-elem 'self' ${scriptHashTokens} ${SCRIPT_SRC_EXTERNAL}`,
-  `style-src 'self' ${styleHashTokens} 'unsafe-inline' ${STYLE_SRC_EXTERNAL}`,
+  `style-src 'self' ${styleHashTokens} ${STYLE_SRC_EXTERNAL}`,
   `style-src-elem 'self' ${styleHashTokens} ${STYLE_SRC_EXTERNAL}`,
   `style-src-attr 'unsafe-inline'`,
   `img-src ${IMG_SRC}`,
