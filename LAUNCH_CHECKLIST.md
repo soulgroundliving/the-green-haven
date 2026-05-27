@@ -120,3 +120,36 @@ Live URL: <https://the-green-haven.vercel.app>
 2. ~~CF migration: `awardRentPaymentPoints`~~ — removed 2026-04-28 (no caller; verifySlip already awards rent payment points)
 3. Image optimization — contract documents เป็น base64 JPG ใน Firestore = bloat. ย้ายไป Cloud Storage
 4. PDF export ใบเสร็จ — มี jsPDF โหลดแล้ว แต่ยังใช้ html2canvas → PNG, ทำ PDF version
+
+---
+
+## 11. CF Rollback Procedure
+
+เมื่อ CF deploy ไปแล้วและพบ bug ใน production:
+
+### ขั้นตอน
+
+```bash
+# 1. หา commit ที่ต้องการ revert
+git log --oneline functions/<cf-name>.js
+
+# 2. Revert commit นั้น (สร้าง revert commit ใหม่ — ไม่ reset history)
+git revert <sha> --no-edit
+
+# 3. Push → deploy-functions.yml auto-triggers
+git push origin main
+```
+
+### ตรวจสอบ
+
+- เปิด GitHub Actions → `Deploy Cloud Functions` → รอ green ✅
+- Firebase Console → Functions → ตรวจ version timestamp อัปเดต
+- `curl` key CF endpoint → non-5xx confirms live
+
+### กรณีเร่งด่วน (hotfix โดยไม่รอ CI)
+
+```bash
+firebase deploy --only functions:<cf-name>
+```
+
+ต้องรัน `pwd && git branch --show-current` ก่อนเสมอ (§7 anti-pattern: deploy from wrong branch rolls back prod silently).
