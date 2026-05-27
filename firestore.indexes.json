@@ -126,14 +126,6 @@
       ]
     },
     {
-      "collectionGroup": "broadcastMessages",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "audience", "order": "ASCENDING" },
-        { "fieldPath": "sentAt", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "announcements",
       "queryScope": "COLLECTION",
       "fields": [
