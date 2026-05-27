@@ -19,11 +19,21 @@
 #   - Cloud Functions Admin           (cloudfunctions.admin)
 #   - Service Account User            (iam.serviceAccountUser — act as runtime SA)
 #   - Firebase Authentication Admin   (firebaseauth.admin — setCustomUserClaims)
+#   - Firebase Admin                  (firebase.admin — covers billing.viewer + extensions
+#                                      + project metadata that Gen 2 deploy reads)
 #   - Secret Manager Admin            (secretmanager.admin — Gen 2 CFs with defineSecret
 #                                      need secrets.get for metadata, not just accessor)
 #   - Cloud Scheduler Admin           (cloudscheduler.admin — scheduled CFs)
 #   - Cloud Run Admin                 (run.admin — Gen 2 CFs are Cloud Run services)
 #   - Artifact Registry Writer        (artifactregistry.writer — Gen 2 container push)
+#   - Service Usage Consumer          (serviceusage.serviceUsageConsumer — enables
+#                                      required APIs during deploy)
+#
+# Required APIs to enable once on the project:
+#   gcloud services enable cloudbilling.googleapis.com --project=the-green-haven
+#   gcloud services enable cloudfunctions.googleapis.com --project=the-green-haven
+#   gcloud services enable run.googleapis.com --project=the-green-haven
+#   (others auto-enable during first deploy)
 #
 # When adding a new role: `gcloud projects add-iam-policy-binding the-green-haven
 #   --member="serviceAccount:github-deploy@the-green-haven.iam.gserviceaccount.com"
