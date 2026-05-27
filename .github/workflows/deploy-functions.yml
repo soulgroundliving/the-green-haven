@@ -125,7 +125,7 @@ jobs:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN }}
 
       - name: Install firebase-tools
-        run: npm install -g firebase-tools@latest
+        run: npm install -g firebase-tools@15.13.0
 
       - name: Write functions/.env from secrets
         # firebase-functions/params defineString() values are read from
@@ -154,3 +154,23 @@ jobs:
             --project the-green-haven \
             --force \
             --non-interactive
+
+      - name: Post-deploy smoke check
+        # Verify key onRequest CFs respond after deploy. A 4xx is fine — the CF
+        # is running but rejected the empty GET body. Fail only on 000 (unreachable)
+        # or 5xx (server error). Retries 3× with 15s gaps for cold-start.
+        run: |
+          CF_BASE="https://asia-southeast1-the-green-haven.cloudfunctions.net"
+          for ATTEMPT in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 -X GET "${CF_BASE}/liffSignIn")
+            if [ "$STATUS" != "000" ] && [ "${STATUS:0:1}" != "5" ]; then
+              echo "✅ Post-deploy smoke: liffSignIn responded HTTP $STATUS (attempt $ATTEMPT)"
+              break
+            fi
+            if [ "$ATTEMPT" = "3" ]; then
+              echo "::error::Post-deploy smoke FAILED: liffSignIn returned $STATUS after 3 attempts"
+              exit 1
+            fi
+            echo "⏳ Attempt $ATTEMPT: status $STATUS — retrying in 15s..."
+            sleep 15
+          done

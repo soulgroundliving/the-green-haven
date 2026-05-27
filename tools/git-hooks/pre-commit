@@ -11,7 +11,7 @@
 #   2. Memory doc drift detection (lifecycle_*.md verifier — see verify-via-grep doctrine)
 #   2b. CF unit tests (functions/__tests__/*.test.js when functions/ files staged)
 #   2c. Scheduled CF change-detection (lifecycle_scheduled_jobs.md must mention any changed pubsub.schedule CF)
-#   3. Anti-pattern detection (Firebase compat API, BillStore misuse, auth callbacks, file size, CSP hash drift §7-II)
+#   3. Anti-pattern detection (Firebase compat API, BillStore misuse, auth callbacks, file size, CSP hash drift §7-II, onSnapshot err §7-N, createCustomToken §7-Z)
 #   4. Memory fabricated-path scan (warn-only)
 
 RED='\033[0;31m'
@@ -203,6 +203,37 @@ if [ -n "$STAGED_SHARED" ]; then
     echo -e "${YELLOW}   Examples: 'openTenantModal', 'editRoom', 'showPage' already wired${NC}"
     ANTIPATTERN_FOUND=1
   fi
+fi
+
+# N. onSnapshot without error callback (§7-N) — WARN only
+# Swallowed errors cause "stuck loading" symptoms with zero console output.
+# Heuristic: new .onSnapshot( line added without a visible error parameter on the same line.
+if echo "$STAGED_DIFF" | grep -E "^\+[^+]" | grep -qE "\.onSnapshot\(" ; then
+  MISSING_ERR_LINES=$(echo "$STAGED_DIFF" | grep -E "^\+[^+]" | grep -E "\.onSnapshot\(" | \
+    grep -vE ",\s*(err|error|_err|onErr|\(e\)|\(err\))" | grep -vE "\.onSnapshot\(\s*$")
+  if [ -n "$MISSING_ERR_LINES" ]; then
+    echo -e "${YELLOW}⚠️  WARNING: New .onSnapshot() may be missing an error callback${NC}"
+    echo "$MISSING_ERR_LINES" | head -3
+    echo -e "${YELLOW}   Required: fs.onSnapshot(q, onNext, (err) => { console.error(...) })${NC}"
+    echo -e "${YELLOW}   See CLAUDE.md §7-N. If error callback is on the next line, this warning is a false positive.${NC}"
+  fi
+fi
+
+# Z. createCustomToken without setCustomUserClaims (§7-Z) — BLOCK
+# Developer claims in createCustomToken are ephemeral (~1h); setCustomUserClaims persists them.
+STAGED_CF_FILES=$(git diff --cached --name-only | grep -E "^functions/[^/]+\.js$" | grep -v "__tests__")
+if [ -n "$STAGED_CF_FILES" ]; then
+  while IFS= read -r cf_path; do
+    if grep -q "createCustomToken" "$cf_path" 2>/dev/null; then
+      if ! grep -q "setCustomUserClaims" "$cf_path" 2>/dev/null; then
+        echo -e "${RED}❌ BLOCKED: createCustomToken without setCustomUserClaims in $cf_path${NC}"
+        echo -e "${YELLOW}   Claims minted in createCustomToken vanish after ~1h token refresh${NC}"
+        echo -e "${YELLOW}   Add: admin.auth().setCustomUserClaims(uid, claims).catch(...)${NC}"
+        echo -e "${YELLOW}   See CLAUDE.md §7-Z${NC}"
+        ANTIPATTERN_FOUND=1
+      fi
+    fi
+  done <<< "$STAGED_CF_FILES"
 fi
 
 if [ $ANTIPATTERN_FOUND -eq 1 ]; then

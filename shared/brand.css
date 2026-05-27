@@ -385,16 +385,16 @@ button:not(:disabled):not([aria-disabled="true"]):hover {
 .u-color-muted    { color: var(--text-muted, #666) !important; }
 .u-text-sm        { font-size: .8rem; }
 .u-error-text     { color: #d32f2f; font-size: .85rem; margin-top: 4px; }
-.u-note-blue      { background: #e3f2fd; border-radius: 8px; padding: 10px 12px; font-size: .82rem; color: #1565c0; margin-bottom: 12px; }
+.u-note-blue      { background: var(--brand-primary-soft); border-radius: 8px; padding: 10px 12px; font-size: .82rem; color: var(--brand-primary-dark); margin-bottom: 12px; }
 /* Toggle/danger buttons */
 .u-btn-green { background: var(--green-dark, #1a5c38) !important; }
 .u-btn-red   { background: #c62828 !important; }
 /* Inline-table action buttons */
 .u-btn-tbl-edit { padding: 4px 10px; background: var(--green-pale, #e8f5e9); color: var(--green-dark, #1a5c38); border: 1px solid var(--green, #2d8653); border-radius: 4px; cursor: pointer; margin-right: 4px; font-family: 'Sarabun', sans-serif; font-size: .8rem; }
 .u-btn-tbl-del  { padding: 4px 10px; background: #ffebee; color: #c62828; border: 1px solid #c62828; border-radius: 4px; cursor: pointer; font-family: 'Sarabun', sans-serif; font-size: .8rem; }
-.u-btn-upload   { background: #1565c0; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: .78rem; font-weight: 700; cursor: pointer; margin-left: 8px; font-family: inherit; }
-.u-btn-preview  { margin-left: 8px; padding: 6px 12px; background: #1976d2; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: .8rem; font-family: 'Sarabun', sans-serif; }
-.u-btn-download { flex: 1; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.u-btn-upload   { background: var(--brand-primary-dark); color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: .78rem; font-weight: 700; cursor: pointer; margin-left: 8px; font-family: inherit; }
+.u-btn-preview  { margin-left: 8px; padding: 6px 12px; background: var(--brand-primary); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: .8rem; font-family: 'Sarabun', sans-serif; }
+.u-btn-download { flex: 1; padding: 12px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
 .u-btn-close    { flex: 1; padding: 12px; background: #f0f0f0; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
 .u-btn-confirm-cancel { padding: .6rem 1.2rem; background: #e0e0e0; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: .9rem; transition: background .2s; }
 .u-btn-confirm-cancel:hover { background: #d0d0d0; }
@@ -417,7 +417,7 @@ button:not(:disabled):not([aria-disabled="true"]):hover {
 .u-notif         { position: fixed; top: 20px; right: 20px; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.2); font-size: 14px; font-weight: 600; z-index: 10000; animation: slideIn .3s ease-out; }
 /* Payment/receipt inline notification rows */
 .payment-notification-item  { background: var(--brand-primary-soft); border-left: 4px solid var(--brand-primary); padding: 12px; margin: 8px 0; border-radius: 4px; font-size: 14px; }
-.receipt-notification-item  { background: #e3f2fd; border-left: 4px solid #1976d2; padding: 12px; margin: 8px 0; border-radius: 4px; font-size: 14px; }
+.receipt-notification-item  { background: var(--brand-primary-soft); border-left: 4px solid var(--brand-primary); padding: 12px; margin: 8px 0; border-radius: 4px; font-size: 14px; }
 .u-payment-badge { display: inline-block; background: #f44336; color: white; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-size: 12px; font-weight: bold; margin-left: 4px; }
 /* Lightbox photo */
 .u-photo-overlay { background: rgba(0,0,0,.85) !important; }
@@ -444,7 +444,7 @@ button:not(:disabled):not([aria-disabled="true"]):hover {
 .u-msg-ok      { background: var(--brand-primary-soft); border-left: 4px solid var(--brand-primary-dark); padding: 1rem; border-radius: 4px; color: var(--text, #333); }
 .u-msg-err     { background: #ffebee; border-left: 4px solid #c62828; padding: 1rem; border-radius: 4px; color: var(--text, #333); }
 .u-msg-warn    { background: #fff3e0; border-left: 4px solid #e65100; padding: 1rem; border-radius: 4px; color: var(--text, #333); }
-.u-msg-info    { background: #e3f2fd; border-left: 4px solid #1565c0; padding: 1rem; border-radius: 4px; color: var(--text, #333); }
+.u-msg-info    { background: var(--brand-primary-soft); border-left: 4px solid var(--brand-primary-dark); padding: 1rem; border-radius: 4px; color: var(--text, #333); }
 /* Year-tab / filter pill — shared tab row used across all admin pages */
 .year-tabs { display: flex; gap: 7px; margin-bottom: 1.2rem; flex-wrap: wrap; align-items: center; }
 .year-tab {

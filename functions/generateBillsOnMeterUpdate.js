@@ -59,7 +59,7 @@ exports.generateBillsOnMeterUpdate = functions.region('asia-southeast1')
     const meterData = change.after.exists ? change.after.data() : null;
 
     if (!meterData) {
-      console.log(`⏭ meter_data/${docId} deleted — skip`);
+      console.info(`⏭ meter_data/${docId} deleted — skip`);
       return null;
     }
 
@@ -91,7 +91,7 @@ exports.generateBillsOnMeterUpdate = functions.region('asia-southeast1')
 
     // Skip if rent=0 — probably empty room or misconfigured
     if (rent <= 0) {
-      console.log(`⏭ ${building}/${roomId} rent=0 (vacancy or missing config) — skip bill gen`);
+      console.info(`⏭ ${building}/${roomId} rent=0 (vacancy or missing config) — skip bill gen`);
       return null;
     }
 
@@ -149,16 +149,16 @@ exports.generateBillsOnMeterUpdate = functions.region('asia-southeast1')
     const existingSnap = await rtdb.ref(`bills/${building}/${roomId}/${billId}`).once('value');
     const existing = existingSnap.val();
     if (existing && existing.status === 'paid') {
-      console.log(`⏭ ${building}/${roomId}/${billId} already paid — preserve, not regenerated`);
+      console.info(`⏭ ${building}/${roomId}/${billId} already paid — preserve, not regenerated`);
       return null;
     }
     if (existing && existing.totalCharge > 0 && existing.generatedBy !== 'auto_cf') {
-      console.log(`⏭ ${building}/${roomId}/${billId} manually generated — preserve`);
+      console.info(`⏭ ${building}/${roomId}/${billId} manually generated — preserve`);
       return null;
     }
 
     await rtdb.ref(`bills/${building}/${roomId}/${billId}`).set(bill);
-    console.log(`✅ Auto-generated: ${building}/${roomId}/${billId} total=฿${total}`);
+    console.info(`✅ Auto-generated: ${building}/${roomId}/${billId} total=฿${total}`);
 
     // Audit log (optional — RTDB audit_logs for transparency)
     try {
