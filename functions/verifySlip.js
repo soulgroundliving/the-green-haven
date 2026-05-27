@@ -113,7 +113,7 @@ async function checkRateLimit(userId, timeWindow = 'minute') {
  * @param {object} params - Request parameters
  * @returns {object} - { valid: boolean, error?: string }
  */
-function validateRequest(params) {
+async function validateRequest(params) {
   if (!params.file) {
     return { valid: false, error: 'File is required' };
   }
@@ -130,8 +130,13 @@ function validateRequest(params) {
     return { valid: false, error: 'Room ID or User ID is required' };
   }
 
-  if (!params.building || !['rooms', 'nest'].includes(params.building)) {
-    return { valid: false, error: 'Valid building is required (rooms or nest)' };
+  if (!params.building) {
+    return { valid: false, error: 'building is required' };
+  }
+  const { getValidBuildings } = require('./buildingRegistry');
+  const validBuildings = await getValidBuildings();
+  if (!validBuildings.has(params.building)) {
+    return { valid: false, error: `Valid building is required (got '${params.building}')` };
   }
 
   return { valid: true };
@@ -545,7 +550,7 @@ exports.verifySlip = functions
     if (!decoded) return;
 
     // ===== VALIDATION =====
-    const validation = validateRequest(req.body);
+    const validation = await validateRequest(req.body);
     if (!validation.valid) {
       return res.status(400).json({ error: validation.error });
     }
