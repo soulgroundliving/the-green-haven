@@ -1,0 +1,115 @@
+# Auto-deploy Cloud Functions on push to main.
+#
+# Why this exists: Firebase CF deploy was 100% manual before this workflow.
+# Pattern was "merge PR to main, remember to run firebase deploy --only
+# functions:<name> from local terminal". Easy to forget. After PR #94 added
+# 59 defer attributes (no CF changes), the team got into the habit of NOT
+# deploying — which then masked the bug when a real CF change was missed.
+# CLAUDE.md §7-NN documents the corollary risk: stale registrations from
+# half-finished deploys.
+#
+# Trigger:
+#   - Push to main touching functions/** → deploy that change immediately
+#   - Push to main touching shared/gamification-rules.js → predeploy hook
+#     syncs it into functions/, so a redeploy is needed
+#   - Manual via Actions UI (workflow_dispatch) for forced redeploys
+#
+# Auth: uses FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN secret (service-account
+# JSON). Required IAM roles on the service account:
+#   - Cloud Functions Admin
+#   - Service Account User
+#   - Firebase Authentication Admin (for setCustomUserClaims in some CFs)
+#   - Cloud Secret Manager Secret Accessor (for SLIPOK_API_KEY etc.)
+#   - Cloud Scheduler Admin (for scheduled CFs like remindLeaseExpiry)
+#
+# Cost: free on the Actions side. Each deploy uses ~5–10 minutes of compute
+# (Firebase CLI smart-diffs unchanged CFs, so steady-state is fast).
+#
+# Safety: tests run BEFORE deploy. Any failing unit test blocks the entire
+# push from deploying — no partial-deploy risk.
+
+name: Deploy Cloud Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - 'shared/gamification-rules.js'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
+
+# Cancel any in-flight deploy if a newer push lands — no point deploying
+# yesterday's code over today's.
+concurrency:
+  group: deploy-functions-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: deploy-cf
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Expose secret to env so `if:` can check it (secrets are not
+      # available directly in step-level `if:` expressions).
+      SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN }}
+
+    steps:
+      - name: Verify required secret is configured
+        run: |
+          if [ -z "$SA_KEY" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN secret is not configured."
+            echo "Go to: GitHub → repo Settings → Secrets and variables → Actions → New repository secret."
+            echo "Name:  FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN"
+            echo "Value: contents of a service-account JSON key file with these IAM roles:"
+            echo "         - Cloud Functions Admin"
+            echo "         - Service Account User"
+            echo "         - Firebase Authentication Admin"
+            echo "         - Secret Manager Secret Accessor"
+            echo "         - Cloud Scheduler Admin"
+            echo ""
+            echo "Generate via:"
+            echo "  gcloud iam service-accounts keys create key.json \\"
+            echo "    --iam-account=<sa-email>"
+            exit 1
+          fi
+          echo "✅ Service-account secret is present"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install function dependencies
+        working-directory: functions
+        run: npm ci --no-audit --no-fund
+
+      # Tests run BEFORE deploy. If unit tests fail, NOTHING deploys.
+      # npm test in functions/ runs `sync-shared` first (copies gamification
+      # rules from shared/), then node --test on __tests__/*.test.js.
+      - name: Run Cloud Function unit tests
+        working-directory: functions
+        run: npm test
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN }}
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools@latest
+
+      - name: Deploy Cloud Functions
+        # google-github-actions/auth writes the SA key path to
+        # GOOGLE_APPLICATION_CREDENTIALS — firebase-tools picks it up
+        # automatically when no FIREBASE_TOKEN is set.
+        run: |
+          firebase deploy \
+            --only functions \
+            --project the-green-haven \
+            --force \
+            --non-interactive
