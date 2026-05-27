@@ -103,6 +103,10 @@ if (!process.env.VERCEL && !process.env.FORCE_BUILD) {
         legalComments: 'none',
         logLevel: 'warning',
         bundle: false,
+        // Strip debug-noise console calls from production. Marks these as
+        // side-effect-free so minifySyntax dead-code-eliminates them.
+        // console.warn / console.error are preserved (Sentry breadcrumbs + admin debug).
+        pure: ['console.log', 'console.debug', 'console.info'],
       });
     } catch (e) {
       console.error(`❌ Failed on ${file}: ${e.message}`);
