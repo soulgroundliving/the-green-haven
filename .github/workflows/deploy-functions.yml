@@ -16,11 +16,18 @@
 #
 # Auth: uses FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN secret (service-account
 # JSON). Required IAM roles on the service account:
-#   - Cloud Functions Admin
-#   - Service Account User
-#   - Firebase Authentication Admin (for setCustomUserClaims in some CFs)
-#   - Cloud Secret Manager Secret Accessor (for SLIPOK_API_KEY etc.)
-#   - Cloud Scheduler Admin (for scheduled CFs like remindLeaseExpiry)
+#   - Cloud Functions Admin           (cloudfunctions.admin)
+#   - Service Account User            (iam.serviceAccountUser — act as runtime SA)
+#   - Firebase Authentication Admin   (firebaseauth.admin — setCustomUserClaims)
+#   - Secret Manager Admin            (secretmanager.admin — Gen 2 CFs with defineSecret
+#                                      need secrets.get for metadata, not just accessor)
+#   - Cloud Scheduler Admin           (cloudscheduler.admin — scheduled CFs)
+#   - Cloud Run Admin                 (run.admin — Gen 2 CFs are Cloud Run services)
+#   - Artifact Registry Writer        (artifactregistry.writer — Gen 2 container push)
+#
+# When adding a new role: `gcloud projects add-iam-policy-binding the-green-haven
+#   --member="serviceAccount:github-deploy@the-green-haven.iam.gserviceaccount.com"
+#   --role="roles/ROLENAME"`
 #
 # Cost: free on the Actions side. Each deploy uses ~5–10 minutes of compute
 # (Firebase CLI smart-diffs unchanged CFs, so steady-state is fast).
@@ -63,11 +70,14 @@ jobs:
             echo "Go to: GitHub → repo Settings → Secrets and variables → Actions → New repository secret."
             echo "Name:  FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN"
             echo "Value: contents of a service-account JSON key file with these IAM roles:"
-            echo "         - Cloud Functions Admin"
-            echo "         - Service Account User"
-            echo "         - Firebase Authentication Admin"
-            echo "         - Secret Manager Secret Accessor"
-            echo "         - Cloud Scheduler Admin"
+            echo "         - Cloud Functions Admin     (cloudfunctions.admin)"
+            echo "         - Service Account User      (iam.serviceAccountUser)"
+            echo "         - Firebase Authentication Admin (firebaseauth.admin)"
+            echo "         - Secret Manager Admin      (secretmanager.admin — NOT secretAccessor;"
+            echo "                                       Gen 2 deploy needs secrets.get for metadata)"
+            echo "         - Cloud Scheduler Admin     (cloudscheduler.admin)"
+            echo "         - Cloud Run Admin           (run.admin — Gen 2 CFs)"
+            echo "         - Artifact Registry Writer  (artifactregistry.writer — Gen 2 image push)"
             echo ""
             echo "Generate via:"
             echo "  gcloud iam service-accounts keys create key.json \\"
