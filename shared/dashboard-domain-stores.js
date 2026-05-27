@@ -443,33 +443,21 @@ async function saveCommunityEvent() {
   }
 
   const wasEdit = !!_editingEventId;
-  // C4 S2 (2026-05-18): event edit disabled — updateAnnouncement CF lands in S3.
-  // S2 sealed legacy reads, so the old `isLegacyEdit → CommunityEventsStore.setOne`
-  // path is dead. Create path via publishAnnouncement CF stays.
-  if (wasEdit) {
-    showToast('การแก้ไขกิจกรรมจะรองรับใน Session 3 (เร็วๆ นี้) — กรุณาลบแล้วสร้างใหม่', 'warning');
-    return;
-  }
 
   try {
     const eventDateIso = new Date(`${date}T${time || '00:00'}`).toISOString();
     const authInstance = window.firebaseAuth || window.auth;
     const idToken = await authInstance?.currentUser?.getIdToken?.();
     if (!idToken) throw new Error('Not signed in');
-    const res = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/publishAnnouncement', {
+    const cfBase = 'https://asia-southeast1-the-green-haven.cloudfunctions.net/';
+    const endpoint = wasEdit ? cfBase + 'updateAnnouncement' : cfBase + 'publishAnnouncement';
+    const body = wasEdit
+      ? { id: _editingEventId, title, body: description || title, audience: building, eventDate: eventDateIso, location }
+      : { type: 'event', title, body: description || title, audience: building, eventDate: eventDateIso, location };
+    const res = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + idToken,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        type: 'event',
-        title,
-        body: description || title,
-        audience: building,
-        eventDate: eventDateIso,
-        location,
-      }),
+      headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
@@ -482,19 +470,46 @@ async function saveCommunityEvent() {
   ['eventTitle','eventDate','eventTime','eventLocation','eventDescription']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const bldEl = document.getElementById('eventBuilding'); if (bldEl) bldEl.value = 'all';
+  const wasEditLabel = wasEdit;
   _editingEventId = null;
   toggleAddEventForm();
-  showToast('✅ สร้างกิจกรรมแล้ว (☁️ Firestore)', 'success');
+  showToast(wasEditLabel ? '✅ แก้ไขกิจกรรมแล้ว (☁️ Firestore)' : '✅ สร้างกิจกรรมแล้ว (☁️ Firestore)', 'success');
 }
 
-// C4 S2 (2026-05-18): edit + delete disabled — update/deleteAnnouncement CFs land in S3.
-// Reading from new cache so a future re-enable doesn't require touching legacy store.
 function editEvent(id) {
-  showToast('การแก้ไขกิจกรรมจะรองรับใน Session 3 (เร็วๆ นี้) — กรุณาลบแล้วสร้างใหม่', 'warning');
+  const ev = window._newAnnouncementsEventCache?.get(id);
+  if (!ev) { showToast('ไม่พบข้อมูลกิจกรรม', 'error'); return; }
+  const set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
+  set('eventTitle',       ev.title);
+  set('eventDate',        ev.date);
+  set('eventTime',        ev.time);
+  set('eventLocation',    ev.location);
+  set('eventDescription', ev.description);
+  set('eventBuilding',    ev.building || 'all');
+  _editingEventId = id;
+  const form = document.getElementById('addEventForm');
+  if (form?.classList.contains('u-hidden')) form.classList.remove('u-hidden');
+  document.getElementById('eventTitle')?.focus();
 }
 
 async function deleteEvent(id) {
-  showToast('การลบกิจกรรมจะรองรับใน Session 3 (เร็วๆ นี้) — แก้ไขผ่าน Firestore Console ชั่วคราว', 'warning');
+  if (!window.confirm('ลบกิจกรรมนี้?')) return;
+  try {
+    const authInstance = window.firebaseAuth || window.auth;
+    const idToken = await authInstance?.currentUser?.getIdToken?.();
+    if (!idToken) throw new Error('Not signed in');
+    const res = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/deleteAnnouncement', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+    showToast('🗑️ ลบกิจกรรมแล้ว', 'success');
+  } catch (e) {
+    console.error('deleteEvent failed:', e);
+    showToast('❌ ลบไม่สำเร็จ: ' + (e?.message || 'unknown'), 'error');
+  }
 }
 
 // ===== COMPLAINTS PAGE =====

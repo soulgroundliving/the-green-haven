@@ -22,7 +22,9 @@ exports.deleteChecklistInstance  = require('./deleteChecklistInstance').deleteCh
 // Replaces broadcastMessage CF + direct communityEvents + direct announcements
 // writes. Tenant_app reads NEW + LEGACY merged during Session 1; Session 2 =
 // migration; Session 3 = legacy decom. See memory/lifecycle_announcements_unified.md.
-exports.publishAnnouncement = require('./publishAnnouncement').publishAnnouncement;
+exports.publishAnnouncement  = require('./publishAnnouncement').publishAnnouncement;
+exports.updateAnnouncement  = require('./updateAnnouncement').updateAnnouncement;
+exports.deleteAnnouncement  = require('./deleteAnnouncement').deleteAnnouncement;
 
 // Admin-only: LINE push to tenant when maintenance ticket status changes.
 exports.notifyMaintenanceTenant = require('./notifyMaintenanceTenant').notifyMaintenanceTenant;
