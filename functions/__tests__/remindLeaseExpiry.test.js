@@ -237,10 +237,19 @@ after(() => {
 /**
  * Build a lease doc descriptor where the moveOutDate is `daysLeft` days from now.
  * Positive daysLeft = future expiry; 0 = today; negative = already expired.
+ *
+ * Uses LOCAL midnight (not UTC) so the date string matches how the CF computes
+ * daysLeft (via setHours(0,0,0,0) which is also local). Using toISOString() gives
+ * the UTC date which diverges from local date in timezones like Bangkok (UTC+7)
+ * when the test runs in the early morning hours, making tests flaky.
  */
 function makeLeaseDoc(id, daysLeft, extra = {}) {
-  const endMs     = Date.now() + daysLeft * 24 * 60 * 60 * 1000;
-  const moveOutDate = new Date(endMs).toISOString().slice(0, 10);
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+  const endMs  = todayMidnight.getTime() + daysLeft * 24 * 60 * 60 * 1000;
+  const d      = new Date(endMs);
+  // Format as LOCAL date (YYYY-MM-DD) — must match CF's local-midnight comparison.
+  const moveOutDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   return {
     id,
     data: {

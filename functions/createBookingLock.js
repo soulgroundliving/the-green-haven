@@ -246,7 +246,6 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
     throw new functions.https.HttpsError('internal', e.message || 'Lock transaction failed');
   }
 
-  console.info(`🔒 createBookingLock: ${canonicalBuilding}/${canonicalRoomId} locked by ${context.auth.uid} → bookingId=${bookingId}`);
   return {
     bookingId,
     qrPayload,

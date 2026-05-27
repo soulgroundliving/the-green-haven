@@ -167,7 +167,6 @@ async function writeSummary(yearBE) {
     aggregatedAt: new Date().toISOString()
   };
   await docRef.set(payload);
-  console.info(`✅ taxSummary/${yearBE} updated: total ฿${annual.totalRevenue.toLocaleString()} (paid ฿${annual.paidRevenue.toLocaleString()})`);
   return { yearBE, totalRevenue: annual.totalRevenue, paidRevenue: annual.paidRevenue };
 }
 
@@ -188,7 +187,6 @@ exports.aggregateMonthlyRevenueScheduled = functions
       const tasks = [writeSummary(currentBE)];
       if (now.getMonth() === 0) tasks.push(writeSummary(currentBE - 1));
       const results = await Promise.all(tasks);
-      console.info('🗓️ Monthly aggregation done:', results);
       return null;
     } catch (e) {
       console.error('aggregateMonthlyRevenueScheduled failed:', e);

@@ -328,9 +328,6 @@ exports.archiveTenantOnMoveOut = functions
         e.message || 'Archive batch commit failed');
     }
 
-    console.info(`archiveTenantOnMoveOut: ${building}/${roomId} → archive/${contractId} ` +
-      `(tenantId=${tenantId}, subdocs=${copiedSubdocs}, reason=${archiveReason}, by=${callerEmail || callerUid})`);
-
     // ── Post-batch: Storage cleanup (§7-DD analogue for Storage) ───────────
     // Firestore pet docs were moved to tenants/{b}/archive/{contractId}/pets/*
     // by the batch above. Storage files at pets/{b}/{r}/{petId}/* are NOT

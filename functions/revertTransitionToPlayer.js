@@ -307,13 +307,10 @@ exports.revertTransitionToPlayer = functions
     // unset revertedAt on archive first, which is intentional friction).
     if (linkedAuthUid) {
       admin.auth().setCustomUserClaims(linkedAuthUid, { room: roomId, building })
-        .then(() => console.info(`revertTransitionToPlayer: claim restored uid=${linkedAuthUid} → ${building}/${roomId}`))
         .catch(e => console.error(`revertTransitionToPlayer: setCustomUserClaims failed uid=${linkedAuthUid}:`, e.message));
     } else {
       console.warn(`revertTransitionToPlayer: no linkedAuthUid for tenant ${tenantId} — claim NOT revoked (manual fix needed)`);
     }
-
-    console.info(`revertTransitionToPlayer: ${building}/${roomId} ← archive/${contractId} (tenantId=${tenantId}, subdocs=${restoredSubdocs}, uid=${linkedAuthUid}, by=${callerEmail || context.auth.uid})`);
 
     return {
       success: true,

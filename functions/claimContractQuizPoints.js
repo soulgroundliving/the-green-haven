@@ -185,7 +185,6 @@ exports.claimContractQuizPoints = functions.region('asia-southeast1').https.onCa
       };
     });
 
-    console.info(`📜 Contract quiz: ${canonicalBuilding}/${roomId} passed=${result.passed} +${result.reward}`);
     return result;
   } catch (error) {
     if (error instanceof functions.https.HttpsError) throw error;

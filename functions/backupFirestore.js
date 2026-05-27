@@ -71,12 +71,10 @@ async function ensureBackupBucket() {
   const [exists] = await bucket.exists();
   if (exists) return BACKUP_BUCKET;
 
-  console.info(`📦 Creating backup bucket gs://${BACKUP_BUCKET} in ${BACKUP_BUCKET_LOCATION}...`);
   await storage.createBucket(BACKUP_BUCKET, {
     location: BACKUP_BUCKET_LOCATION,
     storageClass: 'STANDARD'
   });
-  console.info(`✅ Created bucket gs://${BACKUP_BUCKET}`);
   return BACKUP_BUCKET;
 }
 
@@ -91,16 +89,12 @@ async function runBackup() {
   const databaseName = firestoreClient.databasePath(PROJECT_ID, '(default)');
   const startedAt = new Date().toISOString();
 
-  console.info(`📦 Starting Firestore export → ${outputUriPrefix}`);
-
   // Kick off the long-running export operation.
   const [operation] = await firestoreClient.exportDocuments({
     name: databaseName,
     outputUriPrefix,
     collectionIds: []  // empty = all collections
   });
-  console.info(`✅ Export operation queued: ${operation.name}`);
-
   // Persist 'queued' status immediately so admin can verify the cron
   // actually fired. Without this, a silent cron failure (mis-scheduled,
   // permission revoked, region drift) leaves admin with no signal short
@@ -200,7 +194,6 @@ async function pruneOldBackups(bucketName) {
         deleted++;
       }
     }
-    if (deleted > 0) console.info(`🗑️ Pruned ${deleted}/${scanned} files older than ${RETENTION_DAYS}d`);
   } catch (e) {
     console.warn(`⚠️ Prune step failed (backup still succeeded): ${e.message}`);
   }
@@ -219,7 +212,6 @@ exports.backupFirestoreScheduled = functions
   .onRun(async () => {
     try {
       const result = await runBackup();
-      console.info('🗂️ Firestore backup complete:', JSON.stringify(result));
       return null;
     } catch (e) {
       console.error('backupFirestoreScheduled failed:', e);

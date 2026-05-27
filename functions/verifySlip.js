@@ -20,9 +20,6 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-const { validateRequest, isSafeTransactionId } = require('./_verifySlipValidate');
-const { logVerificationAttempt, saveVerifiedSlip, markBillPaidInRTDB, recordPaymentAndAwardPoints } = require('./_verifySlipWrite');
-
 // ==================== CONFIGURATION ====================
 // Secret: set via `firebase functions:secrets:set SLIPOK_API_KEY`
 // Param:  set in functions/.env (e.g. SLIPOK_API_URL=https://api.slipok.com/...)
@@ -110,6 +107,46 @@ async function checkRateLimit(userId, timeWindow = 'minute') {
   }
 }
 
+// ==================== VALIDATION ====================
+/**
+ * Validate request parameters
+ * @param {object} params - Request parameters
+ * @returns {object} - { valid: boolean, error?: string }
+ */
+function validateRequest(params) {
+  if (!params.file) {
+    return { valid: false, error: 'File is required' };
+  }
+
+  if (typeof params.file !== 'string') {
+    return { valid: false, error: 'File must be base64 string' };
+  }
+
+  if (!params.expectedAmount || params.expectedAmount <= 0) {
+    return { valid: false, error: 'Expected amount must be positive' };
+  }
+
+  if (!params.room && !params.userId) {
+    return { valid: false, error: 'Room ID or User ID is required' };
+  }
+
+  if (!params.building || !['rooms', 'nest'].includes(params.building)) {
+    return { valid: false, error: 'Valid building is required (rooms or nest)' };
+  }
+
+  return { valid: true };
+}
+
+// ==================== TRANSACTION ID SAFETY ====================
+/**
+ * Validate transactionId is safe to use as a Firestore doc ID.
+ * Firestore disallows '/', leading '.', and reserved prefixes; we additionally
+ * cap length and restrict charset to defend against malformed SlipOK responses.
+ */
+function isSafeTransactionId(txid) {
+  return typeof txid === 'string' && /^[A-Za-z0-9_-]{4,200}$/.test(txid);
+}
+
 // ==================== SLIPOK API CALL ====================
 /**
  * Call SlipOK API to verify payment slip
@@ -163,6 +200,234 @@ async function callSlipOKAPI(fileBuffer) {
     console.error('❌ SlipOK API call failed:', error);
     throw new Error(`SlipOK verification error: ${error.message}`);
   }
+}
+
+// ==================== LOGGING ====================
+/**
+ * Log verification attempt for audit trail
+ * @param {object} params - Verification parameters
+ * @param {object} result - Verification result
+ * @param {string} status - 'success', 'failed', 'rate_limited', 'duplicate'
+ */
+async function logVerificationAttempt(params, result, status) {
+  try {
+    await db.collection('slipVerificationLog').add({
+      status,
+      building: params.building,
+      room: params.room,
+      userId: params.userId,
+      expectedAmount: params.expectedAmount,
+      verifiedAmount: result?.amount,
+      transactionId: result?.transactionId,
+      slipSender: result?.sender?.displayName || result?.sender?.name,
+      slipDate: result?.date,
+      error: result?.error,
+      timestamp: new Date(),
+      ipAddress: params.ipAddress,
+      userAgent: params.userAgent
+    });
+    // Verification log success is silent — main success log at end of
+    // verifySlip handler is the single operational record.
+  } catch (error) {
+    console.error('⚠️ Failed to log verification:', error);
+    // Don't throw - logging failure shouldn't break the main function
+  }
+}
+
+// ==================== SAVE VERIFIED SLIP ====================
+/**
+ * Save verified slip data to Firestore
+ * @param {object} slipData - Verified slip data
+ * @param {object} params - Original request parameters
+ */
+async function saveVerifiedSlip(slipData, params) {
+  // Use transactionId as doc ID + .create() so concurrent submissions of the
+  // same slip can't both succeed — Firestore enforces doc-ID uniqueness
+  // atomically. ALREADY_EXISTS (gRPC code 6) is propagated to the caller so
+  // the user gets a duplicate response. Any other error is swallowed (storage
+  // failure shouldn't break verification — slip is already proven valid).
+  await db.collection('verifiedSlips').doc(slipData.transactionId).create({
+    transactionId: slipData.transactionId,
+    building: params.building,
+    room: params.room,
+    userId: params.userId,
+    amount: slipData.amount,
+    expectedAmount: params.expectedAmount,
+    sender: slipData.sender?.displayName || slipData.sender?.name,
+    receiver: slipData.receiver?.displayName || slipData.receiver?.name,
+    date: slipData.date,
+    bankCode: slipData.sendingBankCode,
+    timestamp: new Date(),
+    verifiedAt: new Date(),
+    verified: true
+  });
+}
+
+/**
+ * Mark matching RTDB bill as paid so admin dashboard + tax aggregation stay in sync.
+ * Looks up bills/{building}/{room}/* and flips the bill matching slip's billing month.
+ * Non-blocking.
+ */
+async function markBillPaidInRTDB(slipData, params) {
+  try {
+    const rtdb = admin.database();
+    const buildingRaw = params.building === 'nest' ? 'nest' : 'rooms';
+    const room = String(params.room);
+    if (!room) return;
+    // Determine billing month (BKK)
+    const BKK_OFFSET_MS = 7 * 3600 * 1000;
+    const slipMs = new Date(slipData.transTimestamp || slipData.date || Date.now()).getTime();
+    const bkk = new Date(slipMs + BKK_OFFSET_MS);
+    const billYearBE = bkk.getUTCFullYear() + 543;
+    const billMonth = bkk.getUTCMonth() + 1;
+    const ref = rtdb.ref(`bills/${buildingRaw}/${room}`);
+    const snap = await ref.once('value');
+    const bills = snap.val() || {};
+    const updates = {};
+    let matched = 0;
+    Object.keys(bills).forEach(billId => {
+      const b = bills[billId];
+      if (!b || b.status === 'paid') return;
+      const by = Number(b.year); const bm = Number(b.month);
+      const byBE = by < 2400 ? 2500 + (by % 100) : by;
+      if (byBE === billYearBE && bm === billMonth) {
+        updates[`${billId}/status`] = 'paid';
+        updates[`${billId}/paidAt`] = Date.now();
+        updates[`${billId}/paidVia`] = 'tenant_app_slipok';
+        updates[`${billId}/paidRef`] = slipData.transactionId || '';
+        matched++;
+      }
+    });
+    if (matched > 0) {
+      await ref.update(updates);
+    }
+
+    // Mirror payment record into payments/{b}/{r}/{pushId} for admin
+    // reconciliation audit trail. RTDB payments .write rule locked to
+    // admin-only as of 2026-05-22 security sprint (anti-pattern NC-1 fix);
+    // this CF write via Admin SDK is the new canonical writer. Previously
+    // tenant_app.html:12122 pushed from client — that path now silent-fails
+    // per the locked-down rule (caught by existing try/catch; localStorage
+    // cache preserves tenant UI). Runs even when matched === 0 so the slip
+    // audit trail has no gaps if a matching bill is missing.
+    //
+    // Field shape mirrors the legacy client push at tenant_app.html:12100
+    // (billId/month/year/amount/paidAt/method/transRef/building/room) so
+    // downstream readers (TenantFirebaseSync.loadPaymentHistory, dashboard
+    // reconciliation) see consistent records pre- and post-migration.
+    try {
+      const firstMatchedBillId = matched > 0
+        ? Object.keys(updates).find(k => k.endsWith('/status'))?.split('/')[0] || null
+        : null;
+      const nowIso = new Date().toISOString();
+      await rtdb.ref(`payments/${buildingRaw}/${room}`).push({
+        billId: firstMatchedBillId,
+        month: billMonth,
+        year: billYearBE,
+        amount: Number(slipData.amount) || 0,
+        paidAt: nowIso,
+        createdAt: nowIso,
+        method: 'PromptPay',
+        slipOkVerified: true,
+        transRef: slipData.transactionId || null,
+        transactionId: slipData.transactionId || null,  // alias for forward-compat readers
+        building: buildingRaw,
+        room: room,
+        sender: (slipData.sender && (slipData.sender.displayName || slipData.sender.name)) || '',
+        matchedBillCount: matched,
+        source: 'cf:verifySlip',
+      });
+    } catch (paymentsErr) {
+      console.error('⚠️ markBillPaidInRTDB: payments/ audit write failed:', paymentsErr?.message);
+    }
+  } catch (e) {
+    console.error('⚠️ markBillPaidInRTDB failed:', e?.message);
+  }
+}
+
+// ==================== PAYMENT GAMIFICATION (Nest only) ====================
+/**
+ * Record on-time/late payment stats and award gamification points.
+ * Writes tenants/{id}/paymentHistory/{YYYY-MM} + updates gamification counters.
+ * Non-blocking: caller should wrap in try/catch so failures don't break verify.
+ */
+async function recordPaymentAndAwardPoints(slipData, params) {
+  if (params.building !== 'nest') return null;
+
+  // Firestore schema: tenants/{building}/list/{roomId}
+  const roomId = String(params.room);
+  const tenantRef = db.collection('tenants').doc('nest').collection('list').doc(roomId);
+  const tenantDoc = await tenantRef.get();
+
+  if (!tenantDoc.exists) {
+    return null;  // No tenant doc → no points to award (rooms-building tenants don't get points)
+  }
+
+  const tenantData = tenantDoc.data();
+  const dueDay = tenantData.lease?.dueDay || tenantData.dueDay || 5;
+
+  const slipMs = new Date(slipData.transTimestamp || slipData.date).getTime();
+  if (isNaN(slipMs)) {
+    console.warn('🎮 Invalid slip timestamp, skipping award');
+    return null;
+  }
+
+  // Bangkok timezone (UTC+7) — Cloud Functions run in UTC, so shift explicitly
+  const BKK_OFFSET_MS = 7 * 3600 * 1000;
+  const slipBkk = new Date(slipMs + BKK_OFFSET_MS);
+  const billYear = slipBkk.getUTCFullYear();
+  const billMonthIdx = slipBkk.getUTCMonth();
+  const monthKey = `${billYear}-${String(billMonthIdx + 1).padStart(2, '0')}`;
+
+  // Due date = end of dueDay of bill month in BKK → convert to UTC ms
+  const dueBkkMs = Date.UTC(billYear, billMonthIdx, dueDay, 23, 59, 59);
+  const dueUtcMs = dueBkkMs - BKK_OFFSET_MS;
+  const daysDiff = Math.floor((slipMs - dueUtcMs) / 86400000);
+
+  let points, status;
+  if (daysDiff <= -4)     { points = 150; status = 'early_bird'; }
+  else if (daysDiff <= 0) { points = 100; status = 'on_time'; }
+  else if (daysDiff <= 3) { points = 40;  status = 'slightly_late'; }
+  else if (daysDiff <= 5) { points = 15;  status = 'late'; }
+  else                    { points = 0;   status = 'too_late'; }
+
+  const historyRef = tenantRef.collection('paymentHistory').doc(monthKey);
+  const existing = await historyRef.get();
+  if (existing.exists) {
+    // Idempotent: already awarded for this month, no-op silently
+    return { skipped: true, monthKey };
+  }
+
+  await db.runTransaction(async (tx) => {
+    const fresh = await tx.get(tenantRef);
+    const g = fresh.data()?.gamification || {};
+    const isOnTime = daysDiff <= 0;
+    const newStreak = isOnTime ? (g.currentStreak || 0) + 1 : 0;
+
+    tx.set(historyRef, {
+      slipDate: new Date(slipMs),
+      dueDate: new Date(dueUtcMs),
+      amount: slipData.amount,
+      status,
+      daysDiff,
+      points,
+      transactionId: slipData.transactionId,
+      recordedAt: new Date()
+    });
+
+    tx.update(tenantRef, {
+      'gamification.points': (g.points || 0) + points,
+      'gamification.paymentPoints': (g.paymentPoints || 0) + points,
+      'gamification.onTimeCount': (g.onTimeCount || 0) + (isOnTime ? 1 : 0),
+      'gamification.lateCount': (g.lateCount || 0) + (isOnTime ? 0 : 1),
+      'gamification.currentStreak': newStreak,
+      'gamification.longestStreak': Math.max(g.longestStreak || 0, newStreak),
+      'gamification.lastPaymentStatus': status,
+      'gamification.lastPaymentAt': new Date()
+    });
+  });
+
+  return { roomId, points, status, daysDiff, monthKey };
 }
 
 // ==================== RECEIPT NOTIFICATION ====================
@@ -220,7 +485,6 @@ async function sendReceiptNotification(slipData, params) {
     })
   ));
 
-  console.info(`🧾 Receipt notification sent: ${building}/${room} → ${usersSnap.size} user(s)`);
 }
 
 // ==================== MAIN CLOUD FUNCTION ====================
@@ -278,7 +542,7 @@ exports.verifySlip = functions
     if (!decoded) return;
 
     // ===== VALIDATION =====
-    const validation = await validateRequest(req.body);
+    const validation = validateRequest(req.body);
     if (!validation.valid) {
       return res.status(400).json({ error: validation.error });
     }
@@ -429,8 +693,6 @@ exports.verifySlip = functions
     // ===== RETURN SUCCESS =====
     // amountDiff is guaranteed ≤1 by the validation above; amountValid kept
     // in response for backward compat with any caller that reads it.
-    console.info(`✅ Slip verified: ${identifier}, Amount: ฿${slipData.amount}`);
-
     return res.status(200).json({
       success: true,
       data: slipData,

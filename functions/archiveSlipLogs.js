@@ -73,7 +73,6 @@ async function ensureBigQueryTable() {
   const [datasetExists] = await dataset.exists();
   if (!datasetExists) {
     await bigquery.createDataset(DATASET_ID, { location: DATASET_LOCATION });
-    console.info(`📦 Created BigQuery dataset: ${DATASET_ID}`);
   }
 
   const table = dataset.table(TABLE_ID);
@@ -83,7 +82,6 @@ async function ensureBigQueryTable() {
       schema: { fields: TABLE_SCHEMA },
       timePartitioning: { type: 'DAY', field: 'timestamp' }  // cheaper per-day scans
     });
-    console.info(`📋 Created BigQuery table: ${DATASET_ID}.${TABLE_ID}`);
   }
 }
 
@@ -103,7 +101,6 @@ async function runArchive() {
     .get();
 
   if (snapshot.empty) {
-    console.info('✓ No slip logs older than 90 days. Nothing to archive.');
     return { scanned: 0, inserted: 0, deleted: 0 };
   }
 
@@ -132,15 +129,11 @@ async function runArchive() {
   // Insert into BigQuery. If this throws, the catch below aborts BEFORE any
   // Firestore delete runs — docs remain in place and next run retries.
   await bigquery.dataset(DATASET_ID).table(TABLE_ID).insert(rows);
-  console.info(`✅ Inserted ${rows.length} rows into BigQuery ${DATASET_ID}.${TABLE_ID}`);
-
   // Only after successful BQ insert do we delete from Firestore.
   // Batch limit is 500 operations — matches BATCH_SIZE.
   const batch = firestore.batch();
   snapshot.docs.forEach(d => batch.delete(d.ref));
   await batch.commit();
-  console.info(`🗑️ Deleted ${snapshot.size} archived docs from Firestore`);
-
   return { scanned: snapshot.size, inserted: rows.length, deleted: snapshot.size };
 }
 
@@ -155,7 +148,6 @@ exports.archiveSlipLogsScheduled = functions
   .onRun(async (context) => {
     try {
       const result = await runArchive();
-      console.info('🗂️ Slip log archive done:', result);
       return null;
     } catch (e) {
       console.error('archiveSlipLogsScheduled failed:', e);

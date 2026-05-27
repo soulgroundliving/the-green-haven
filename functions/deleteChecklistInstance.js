@@ -62,6 +62,5 @@ exports.deleteChecklistInstance = functions
     // ── Delete the Firestore doc ──────────────────────────────────────────
     await ref.delete();
 
-    console.info(`✅ deleteChecklistInstance: ${instanceId} (${building}/${roomId}) — storage files removed: ${storageFilesDeleted}`);
     return { deleted: true, storageFilesDeleted };
   });

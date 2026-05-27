@@ -118,6 +118,5 @@ exports.processLineRetryQueue = functions
     }
 
     const result = { processed: snap.size, recovered, failed, abandoned };
-    console.info('📨 lineRetryQueue:', JSON.stringify(result));
     return result;
   });

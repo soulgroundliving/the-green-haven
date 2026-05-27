@@ -310,7 +310,6 @@ exports.verifyBookingSlip = functions
         'Slip was verified but booking update failed — admin will resolve');
     }
 
-    console.info(`✅ verifyBookingSlip: bookingId=${bookingId} → paid (txid=${slipData.transactionId}, amount=฿${slipData.amount})`);
     return {
       success: true,
       bookingId,

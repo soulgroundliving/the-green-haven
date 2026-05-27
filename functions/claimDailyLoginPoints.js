@@ -67,7 +67,6 @@ exports.claimDailyLoginPoints = functions.region('asia-southeast1').https.onCall
         });
         return { pointsBefore: currentPoints, pointsAfter, reward, bonus, streak };
       });
-      console.info(`🎮 Player daily check-in: ${tenantId} +${result.reward} (streak=${result.streak})`);
       return { success: true, ...result };
     } catch (error) {
       if (error instanceof functions.https.HttpsError) throw error;
@@ -132,7 +131,6 @@ exports.claimDailyLoginPoints = functions.region('asia-southeast1').https.onCall
       return { pointsBefore: currentPoints, pointsAfter, reward, bonus, streak };
     });
 
-    console.info(`📱 Daily check-in: ${canonicalBuilding}/${roomId} +${result.reward} (streak=${result.streak}, bonus=${result.bonus})`);
     return { success: true, ...result };
   } catch (error) {
     if (error instanceof functions.https.HttpsError) throw error;

@@ -196,9 +196,5 @@ exports.adminApprovedLink = functions
       body: JSON.stringify({ lineUserId }),
     }).catch(e => console.warn('adminApprovedLink: notify failed (non-fatal):', e.message));
 
-    console.info(
-      `adminApprovedLink: admin=${adminEmail} pre-approved ${lineUserId} ` +
-      `for ${building}/${roomTrimmed} (F2 direct link)`
-    );
     return { ok: true, lineUserId, building, room: roomTrimmed, status: 'approved' };
   });

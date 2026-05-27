@@ -40,11 +40,8 @@ async function runCleanupPlayersOver1Year() {
     .get();
 
   if (snap.empty) {
-    console.info('✅ cleanupPlayersOver1Year: no expired players found');
     return { scanned: 0, deleted: 0 };
   }
-
-  console.info(`🧹 cleanupPlayersOver1Year: ${snap.size} expired player(s) to purge`);
 
   let deleted = 0;
   const errors = [];
@@ -53,7 +50,6 @@ async function runCleanupPlayersOver1Year() {
     const transitionedAt = doc.data().transitionedAt?.toDate?.().toISOString() ?? 'unknown';
     try {
       await firestore.recursiveDelete(doc.ref);
-      console.info(`  ✅ purged ${doc.id} (transitionedAt: ${transitionedAt})`);
       deleted++;
     } catch (e) {
       console.error(`  ❌ failed to purge ${doc.id}:`, e.message);
@@ -76,7 +72,6 @@ exports.cleanupPlayersOver1YearScheduled = functions
   .onRun(async () => {
     try {
       const result = await runCleanupPlayersOver1Year();
-      console.info('✅ cleanupPlayersOver1Year finished:', JSON.stringify(result));
       return result;
     } catch (e) {
       console.error('cleanupPlayersOver1Year failed:', e);

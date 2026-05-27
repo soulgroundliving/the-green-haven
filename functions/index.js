@@ -118,7 +118,7 @@ try {
     exports.verifySlip = verifySlip.verifySlip;
   }
 } catch (e) {
-  console.info('verifySlip not found, skipping...');
+  // optional module
 }
 
 // LINE Flex notification to tenant when new bill appears in RTDB (secondary path).
@@ -276,7 +276,7 @@ try {
     exports.notifyLiffRequest = notifyLiff.notifyLiffRequest;
   }
 } catch (e) {
-  console.info('notifyLiffRequest not found, skipping...');
+  // optional module
 }
 
 try {
@@ -285,7 +285,7 @@ try {
     exports.notifyLiffStatusChange = notifyLiffStatus.notifyLiffStatusChange;
   }
 } catch (e) {
-  console.info('notifyLiffStatusChange not found, skipping...');
+  // optional module
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
