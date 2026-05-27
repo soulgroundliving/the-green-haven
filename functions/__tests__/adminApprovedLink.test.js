@@ -107,6 +107,13 @@ Module._load = function (request, parent, isMain) {
   if (request === 'firebase-admin') return adminStub;
   if (request.endsWith('/buildingRegistry') || request === './buildingRegistry') return buildingRegistryStub;
   if (request === 'node-fetch') return fetchStub;
+  if (request === 'firebase-functions/v1') {
+    class HttpsError extends Error {
+      constructor(code, message) { super(message); this.code = code; }
+    }
+    const wrapOnCall = (h) => { const fn = (d, c) => h(d, c); fn.run = (d, c) => h(d, c); return fn; };
+    return { https: { HttpsError, onCall: wrapOnCall }, region: () => ({ https: { HttpsError, onCall: wrapOnCall } }) };
+  }
   return originalLoad.call(this, request, parent, isMain);
 };
 
