@@ -23,7 +23,6 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/service-worker.js')
-            .then(reg => console.log('🛡️ SW registered (scope:', reg.scope, ')'))
             .catch(err => console.warn('SW registration failed:', err.message));
         });
       }
@@ -9017,7 +9016,6 @@
                 const uidBefore = user.uid;
                 const lineUserId = (typeof window._taLineUserId === 'string' && window._taLineUserId) ||
                                    sessionStorage.getItem('lineUserId') || null;
-                console.log('[OTP] before link: uid=', uidBefore, 'providers=', user.providerData?.map(p => p.providerId), 'lineUserId=', lineUserId);
 
                 // Unlink any previously-linked phone first — link rejects when a provider
                 // is already linked. Swallow errors (no-op if no phone was linked).
@@ -9041,7 +9039,6 @@
                     btn.disabled = false; return;
                 }
                 const uidAfter = window.firebaseAuth.currentUser?.uid;
-                console.log('[OTP] after link: uid=', uidAfter, '(unchanged=', uidBefore === uidAfter, ')');
 
                 if (!_taRoom || !_taBuilding) {
                     _setOtpStatus('⛔ ข้อมูลห้องไม่พร้อม', 'error'); btn.disabled = false; return;
@@ -9058,7 +9055,6 @@
                         room: String(_taRoom),
                         phone: _otpPendingPhone,
                     });
-                    console.log('[OTP] setVerifiedPhone CF result:', cfRes?.data);
                 } catch (we) {
                     console.error('[OTP] setVerifiedPhone CF failed:', we?.code, we?.message);
                     _setOtpStatus('⛔ บันทึกไม่สำเร็จ: ' + (we?.message || we?.code || 'unknown'), 'error');
@@ -10354,7 +10350,6 @@
                 if (!tr.claims.admin && !(tr.claims.room && tr.claims.building)) {
                     if (_billsRetryCount < 5) {
                         _billsRetryCount++;
-                        console.log(`⏳ Bills subscription waiting for room/building claims (retry ${_billsRetryCount}/5)`);
                         setTimeout(_subscribeBillsRealtime, 2000 * _billsRetryCount);
                     } else {
                         console.warn('⛔ Bills subscription gave up — claims not set after 5 retries. Check linkAuthUid CF.');
@@ -10519,7 +10514,6 @@
                     document.body.appendChild(banner);
                 }
             } catch(_) {}
-            console.log('🔌 unlinked mode applied — world-map only');
         }
 
         // S4 detector: real-time Firestore status flip. Pairs with S3 (claim-loss
@@ -10769,7 +10763,6 @@
                     try { window._playerProfile = JSON.parse(localStorage.getItem('player_profile') || 'null'); } catch(_) {}
                 }
                 _applyPlayerMode();
-                console.log('✅ LIFF custom token sign-in — player mode');
                 window.dispatchEvent(new Event('liffLinked'));
                 return { linked: true, role: 'player' };
             }
@@ -10781,7 +10774,6 @@
             window._tenantAppRoom = _taRoom;
             window._tenantAppBuilding = _taBuilding;
 
-            console.log('✅ LIFF custom token sign-in — room claims set');
             window.dispatchEvent(new Event('liffLinked'));
             return { linked: true, room: _taRoom, building: _taBuilding };
         }
@@ -10837,7 +10829,6 @@
         }
 
         async function initLiffAndLink() {
-            console.log('[LIFF] start initLiffAndLink');
             const inLine = /Line\//i.test(navigator.userAgent);
             if (inLine) _showLiffConnectingOverlay('🔄 กำลังเชื่อมต่อ LINE...');
 
@@ -10848,14 +10839,12 @@
             }
             try {
                 await liff.init({ liffId: LIFF_ID });
-                console.log('[LIFF] init ok');
             } catch (e) {
                 console.warn('[LIFF] init failed:', e);
                 if (inLine) _showLiffErrorOverlay('LIFF init failed: ' + (e.message || e));
                 return null;
             }
             if (!liff.isLoggedIn()) {
-                console.log('[LIFF] not logged in, isInClient=', liff.isInClient && liff.isInClient());
                 if (liff.isInClient && liff.isInClient()) {
                     liff.login();
                     return null;
@@ -10867,7 +10856,6 @@
                 const profile = await liff.getProfile();
                 window._lineProfile = profile;
                 window._lineUserId = profile.userId;
-                console.log('[LIFF] profile ok:', profile.displayName, 'uid=', profile.userId);
             } catch (e) {
                 console.warn('[LIFF] getProfile failed:', e);
                 if (inLine) _showLiffErrorOverlay('ดึงข้อมูล LINE ไม่สำเร็จ: ' + (e.message || e));
@@ -10878,7 +10866,6 @@
 
             // Wait for Firebase Auth to be ready (needed for signInWithCustomToken).
             if (!window.firebaseAuth) {
-                console.log('[LIFF] waiting for firebase...');
                 await new Promise(resolve => {
                     const t = setTimeout(() => { console.warn('[LIFF] firebase wait timed out'); resolve(); }, 6000);
                     window.addEventListener('firebaseInitialized', () => { clearTimeout(t); resolve(); }, { once: true });
@@ -11953,7 +11940,6 @@
                 _backfillCashLegacyBills();
                 if (typeof renderBillsList === 'function') renderBillsList();
                 if (typeof _renderUsageChart === 'function') _renderUsageChart();
-                console.log(`✅ Meter history loaded: ${_meterHistoryCache.length} months (${_taBuilding}/${_taRoom})`);
             } catch (e) {
                 console.warn('⚠️ meter history load failed:', e.message);
             } finally {
@@ -13147,14 +13133,12 @@
             // (verifySlip already went through — show receipt + exit; no new RTDB stub)
             if (_taCurrentBill.status === 'paid') {
                 if (typeof toast === 'function') toast('บิลนี้ชำระเรียบร้อยแล้ว — ไม่ต้องจ่ายซ้ำ', 'info');
-                console.log('⏭ Skip _saveTenantPayment: bill already paid', _taCurrentBill.billId);
                 return;
             }
             // Guard against paying synthetic bills (auto-calculated from meter, not yet issued by admin)
             // Paying these creates orphan RTDB stubs that show as "฿0 จ่ายแล้ว" duplicates.
             if (_taCurrentBill.synthetic) {
                 if (typeof toast === 'function') toast('บิลนี้ยังเป็นการคำนวณล่วงหน้า รอแอดมินออกบิลอย่างเป็นทางการก่อน', 'warning');
-                console.log('⏭ Skip _saveTenantPayment: synthetic bill', _taCurrentBill.billId);
                 return;
             }
             const billId = _taCurrentBill.id||_taCurrentBill.billId||`${_taCurrentBill.year}-${String(_taCurrentBill.month).padStart(2,'0')}`;

@@ -169,10 +169,6 @@
       // Mark Firebase as ready
       window.firebaseReady = true;
 
-      // Log Firebase connection status
-      console.log('✅ Firebase initialized successfully');
-      console.log('📊 Database URL:', firebaseConfig.databaseURL);
-      console.log('🔐 Auth:', auth);
     } catch (error) {
       console.error('❌ Failed to initialize Firebase:', error);
       alert('Error initializing Firebase. Please check console.');
@@ -185,7 +181,6 @@
 
   // Load METER_DATA from Firebase on initialization
   async function initializeMeterDataFromFirebase() {
-    console.log('📥 Loading meter data from Firebase...');
     window.METER_DATA = { rooms: {}, nest: {} };
 
     // Wait for Firebase to finish initializing (firestore assigned after initializeFirebase() resolves)
@@ -226,8 +221,6 @@
       const meterCollection = collection(firestore, 'meter_data');
       const allDocs = await getDocs(meterCollection);
 
-      console.log(`📊 Found ${allDocs.size} meter readings in Firebase`);
-
       if (allDocs.size > 0) {
         // Reconstruct METER_DATA structure from individual documents
         allDocs.forEach(doc => {
@@ -258,7 +251,6 @@
         const roomsMonths = Object.keys(window.METER_DATA.rooms || {}).length;
         const nestMonths = Object.keys(window.METER_DATA.nest || {}).length;
 
-        console.log(`✅ Loaded meter data: rooms=${roomsMonths} months, nest=${nestMonths} months`);
       } else {
         console.warn('⚠️ No meter data found in Firebase');
         window.METER_DATA = { rooms: {}, nest: {} };
@@ -300,7 +292,6 @@
         ...data,
         lastUpdated: new Date().toISOString()
       });
-      console.log(`✅ Saved to Firebase: ${path}`);
       return true;
     } catch (error) {
       console.error(`❌ Error saving to Firebase (${path}):`, error);
@@ -315,10 +306,8 @@
       const snapshot = await get(dbRef);
 
       if (snapshot.exists()) {
-        console.log(`✅ Read from Firebase: ${path}`);
         return snapshot.val();
       } else {
-        console.log(`⚠️ No data found at: ${path}`);
         return null;
       }
     } catch (error) {
@@ -330,8 +319,6 @@
   // Sync all data to Firebase
   window.syncDataToFirebase = async function() {
     try {
-      console.log('🔄 Syncing data to Firebase...');
-
       // Save bills data
       const billsData = JSON.parse(localStorage.getItem('billsData') || '{}');
       if (Object.keys(billsData).length > 0) {
@@ -350,7 +337,6 @@
         await window.saveToFirebase('data/tenants', tenantData);
       }
 
-      console.log('✅ Data sync to Firebase complete');
       return true;
     } catch (error) {
       console.error('❌ Error syncing data to Firebase:', error);
@@ -367,16 +353,12 @@
     // Safe to delete this block after 2026-11 (all affected admin browsers
     // will have re-opened the dashboard at least once by then).
     try { localStorage.removeItem('lease_alert_settings'); } catch (_) {}
-    console.log('🚀 Initializing Firebase integration...');
     await _fbInitPromise; // ensure auth is set before onAuthStateChanged
 
     // Check if user is already authenticated
     // Note: auth?.currentUser may be null here even if logged in — Firebase restores
     // the persistent session asynchronously via onAuthStateChanged.
     const currentUser = auth?.currentUser ?? null;
-    if (currentUser) {
-      console.log('✅ Firebase using existing auth (Email:', currentUser.email || 'unknown', ')');
-    }
 
     // Admin auth: dashboard requires a real email/password Firebase Auth user
     // (with admin:true custom claim). Anonymous fallback was removed — it was
@@ -390,7 +372,7 @@
       const settle = (handler) => { if (!settled) { settled = true; handler(); } };
       const unsub = onAuthStateChanged(auth, (user) => {
         if (user && user.email) {
-          settle(() => console.log('✅ Firebase auth active:', user.email));
+          settle(() => {});
           unsub();
         } else {
           // First fire saw null (or anon) — give persistence a moment, then
@@ -399,7 +381,7 @@
             if (settled) return;
             const cur = auth?.currentUser;
             if (cur && cur.email) {
-              settle(() => console.log('✅ Firebase auth active (delayed restore):', cur.email));
+              settle(() => {});
             } else {
               settle(() => {
                 console.warn('🔒 No admin auth — redirecting to /login');
@@ -424,13 +406,8 @@
       } catch (error) {
         console.warn('⚠️ Firebase connection test failed or timed out:', error.message);
       }
-    } else {
-      console.log('⏳ Firebase not ready at load event, connection test will run after init');
     }
   });
-
-  // Log Firebase functions available
-  console.log('✅ Firebase functions loaded: testFirebaseConnection, saveToFirebase, readFromFirebase, syncDataToFirebase');
 
   // Initialize monitoring panel
   window.firebaseMonitorReady = true;
@@ -535,8 +512,6 @@
     setInterval(checkDashboardSessionTimeout, 30000);
     // Initial check
     checkDashboardSessionTimeout();
-
-    console.log('✅ Authentication verified:', user.name);
 
     // Admin onboarding tour — fires once per device (localStorage gate)
     setTimeout(function () {
