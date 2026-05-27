@@ -49,7 +49,7 @@ function loadRoomConfigUI() {
           <input type="number" value="${rent}" data-action="updateRentAndDeposit" data-building="${building}" data-room="${room.id}" data-deposit-id="${depositId}" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td class="table-th">
-          <input type="number" id="${depositId}" value="${rent * 2}" readonly style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;background:#f5f5f5;color:#666;">
+          <input type="number" id="${depositId}" value="${rent * 2}" readonly style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;background:#f5f5f5;color:${DashColors.TEXT_MUTED};">
         </td>
         <td class="table-th">
           <input type="number" value="${room.waterRate}" step="0.01" data-action="updateRoomRate" data-building="${building}" data-room="${room.id}" data-rate="water" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
@@ -61,7 +61,7 @@ function loadRoomConfigUI() {
           <input type="number" value="${room.trashRate || 20}" step="1" data-action="updateTrashRate" data-building="${building}" data-room="${room.id}" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td class="table-th" style="text-align:center;">
-          <button data-action="deleteRoom" data-building="${building}" data-id="${room.id}" style="padding:0.4rem 0.8rem;background:#f44336;color:white;border:none;border-radius:4px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:0.85rem;">ลบ</button>
+          <button data-action="deleteRoom" data-building="${building}" data-id="${room.id}" style="padding:0.4rem 0.8rem;background:${DashColors.RED_MED};color:white;border:none;border-radius:4px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:0.85rem;">ลบ</button>
         </td>
       </tr>
     `}).join('');

@@ -196,7 +196,7 @@ function openTenantModal(building, roomId) {
         petsListEl.innerHTML = roomPets.length > 0
           ? roomPets.map(p => {
               const icon = emojis[(p.type||'').toLowerCase()] || '🐾';
-              return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px;border:1px solid #f3e5f5;">
+              return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px;border:1px solid ${DashColors.PURPLE_BG};">
                 <span style="font-size:1.3rem;">${icon}</span>
                 <div><div style="font-weight:600;font-size:.9rem;">${p.name || '—'}</div><div style="font-size:.78rem;color:var(--text-muted);">${p.type || ''}</div></div>
               </div>`;
@@ -350,8 +350,8 @@ async function showTenantLeaseHistory(building, roomId) {
       const moveIn  = l.moveInDate    ? new Date(l.moveInDate).toLocaleDateString('th-TH')    : '—';
       const moveOut = l.moveOutDate   ? new Date(l.moveOutDate).toLocaleDateString('th-TH')   : (l.status==='active'?'ปัจจุบัน':'—');
       const badge   = l.status==='active'
-        ? '<span style="background:#e8f5e9;color:#388e3c;padding:2px 8px;border-radius:10px;font-size:.7rem;">กำลังเช่า</span>'
-        : '<span style="background:#f3e5f5;color:#7b1fa2;padding:2px 8px;border-radius:10px;font-size:.7rem;">สิ้นสุดแล้ว</span>';
+        ? `<span style="background:${DashColors.GREEN_BG};color:${DashColors.GREEN_MED};padding:2px 8px;border-radius:10px;font-size:.7rem;">กำลังเช่า</span>`
+        : `<span style="background:${DashColors.PURPLE_BG};color:#7b1fa2;padding:2px 8px;border-radius:10px;font-size:.7rem;">สิ้นสุดแล้ว</span>`;
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">
         <div><strong>${l.tenantName||'—'}</strong> ${badge}</div>
         <div style="font-size:.78rem;color:var(--text-muted);">${moveIn} → ${moveOut}</div>
@@ -419,8 +419,8 @@ function showBillingModal(roomId) {
 
   const statusBadge = existingBill
     ? (existingBill.status === 'paid'
-        ? '<span style="color:#388e3c;font-weight:700;">✅ ชำระแล้ว</span>'
-        : '<span style="color:#f57c00;font-weight:700;">⏳ ค้างชำระ</span>')
+        ? `<span style="color:${DashColors.GREEN_MED};font-weight:700;">✅ ชำระแล้ว</span>`
+        : `<span style="color:${DashColors.ORANGE_DARK};font-weight:700;">⏳ ค้างชำระ</span>`)
     : '';
 
   const modal = document.createElement('div');
@@ -428,13 +428,13 @@ function showBillingModal(roomId) {
   modal.className = 'u-modal-overlay';
   modal.dataset.modal = 'true';
   modal.innerHTML = `
-    <div style="background:#fff;border-radius:var(--radius);max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#388e3c,#1b5e20);color:#fff;padding:1.2rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
+    <div style="background:${DashColors.WHITE};border-radius:var(--radius);max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
+      <div style="background:linear-gradient(135deg,${DashColors.GREEN_MED},${DashColors.GREEN_DEEP});color:${DashColors.WHITE};padding:1.2rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
         <div>
           <div style="font-weight:700;font-size:1.05rem;">💰 บันทึกการชำระ</div>
           <div style="font-size:.8rem;opacity:.85;">${roomId} · ${tenantName}</div>
         </div>
-        <button data-action="closeNearestDataModal" style="background:rgba(255,255,255,.2);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.1rem;">✕</button>
+        <button data-action="closeNearestDataModal" style="background:rgba(255,255,255,.2);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:${DashColors.WHITE};font-size:1.1rem;">✕</button>
       </div>
       <div style="padding:1.5rem;">
         <div style="background:#f9fafb;border-radius:8px;padding:1rem;margin-bottom:1rem;font-size:.9rem;line-height:2;">
@@ -454,9 +454,9 @@ function showBillingModal(roomId) {
           <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">หมายเหตุการชำระ</label>
           <input type="text" id="billingPayNote" placeholder="เช่น โอนผ่าน PromptPay" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.9rem;">
         </div>
-        <button data-action="markBillPaid" data-room="${roomId}" data-month="${existingBill.month}" data-year="${existingBill.year}" data-billid="${existingBill.billId}" style="width:100%;padding:12px;background:linear-gradient(135deg,#388e3c,#1b5e20);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;">✅ บันทึกว่าชำระแล้ว</button>
+        <button data-action="markBillPaid" data-room="${roomId}" data-month="${existingBill.month}" data-year="${existingBill.year}" data-billid="${existingBill.billId}" style="width:100%;padding:12px;background:linear-gradient(135deg,${DashColors.GREEN_MED},${DashColors.GREEN_DEEP});color:${DashColors.WHITE};border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;">✅ บันทึกว่าชำระแล้ว</button>
         ` : existingBill?.status === 'paid' ? `
-        <div style="text-align:center;padding:1rem;color:#388e3c;font-weight:700;">✅ ชำระเรียบร้อยแล้ว</div>
+        <div style="text-align:center;padding:1rem;color:${DashColors.GREEN_MED};font-weight:700;">✅ ชำระเรียบร้อยแล้ว</div>
         ` : `
         <div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:.85rem;">ยังไม่มีบิลสำหรับเดือนนี้<br>กรุณาสร้างบิลจากหน้า "บิล" ก่อน</div>
         `}

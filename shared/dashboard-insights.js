@@ -49,7 +49,7 @@
   function errorHTML(target, err) {
     const safe = String(err || 'unknown').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
     return `<div style="text-align:center;padding:1.5rem;">
-      <div style="color:var(--alert,#c06458);font-size:.88rem;margin-bottom:.4rem;">⚠️ โหลดข้อมูลไม่สำเร็จ</div>
+      <div style="color:var(--alert,${DashColors.TERRACOTTA});font-size:.88rem;margin-bottom:.4rem;">⚠️ โหลดข้อมูลไม่สำเร็จ</div>
       <div style="color:var(--text-muted);font-size:.72rem;margin-bottom:.6rem;">${safe}</div>
       <button data-action="refreshInsight" data-target="${target}"
               style="font-size:.78rem;padding:4px 12px;background:var(--green-pale);color:var(--green-dark);
@@ -71,8 +71,8 @@
     if (d == null || isNaN(d)) return { key: 'none', label: '—', color: 'var(--text-muted)', stars: 0 };
     if (d < -2) return { key: 'excellent', label: 'จ่ายเร็ว', color: 'var(--green)', stars: 4 };
     if (d <= 2) return { key: 'good',      label: 'ตรงเวลา', color: 'var(--blue)', stars: 3 };
-    if (d <= 7) return { key: 'late',      label: 'ช้าเล็กน้อย', color: 'var(--accent,#ff9800)', stars: 2 };
-    return { key: 'chronic', label: 'ช้าเรื้อรัง', color: 'var(--alert,#c06458)', stars: 1 };
+    if (d <= 7) return { key: 'late',      label: 'ช้าเล็กน้อย', color: `var(--accent,${DashColors.ORANGE_MED})`, stars: 2 };
+    return { key: 'chronic', label: 'ช้าเรื้อรัง', color: `var(--alert,${DashColors.TERRACOTTA})`, stars: 1 };
   }
   function streakFire(days) {
     if (!days || days < 7) return '';
@@ -232,7 +232,7 @@
               <tbody>${tableRows}</tbody>
             </table>
           </div>
-          <div style="margin-top:.7rem;padding-top:.6rem;border-top:1px dashed var(--border-subtle,#ebe9e2);">
+          <div style="margin-top:.7rem;padding-top:.6rem;border-top:1px dashed var(--border-subtle,${DashColors.WARM_WHITE});">
             <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;">🏆 ผู้เช่ากระตือรือร้น</div>
             <div>${topPills}</div>
           </div>
@@ -468,7 +468,7 @@
         top.forEach((r, i) => {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
           const fire = streakFire(r.streak);
-          listHTML += `<li style="display:grid;grid-template-columns:30px 1fr 70px 60px;padding:.45rem .25rem;border-bottom:1px solid var(--border-subtle,#ebe9e2);align-items:center;font-size:.86rem;">
+          listHTML += `<li style="display:grid;grid-template-columns:30px 1fr 70px 60px;padding:.45rem .25rem;border-bottom:1px solid var(--border-subtle,${DashColors.WARM_WHITE});align-items:center;font-size:.86rem;">
             <span>${medal}</span>
             <span style="font-weight:600;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.72rem;font-weight:400;">(${buildingLabel(r.building)})</span></span>
             <span style="text-align:right;font-variant-numeric:tabular-nums;color:var(--green-dark);font-weight:600;">${r.streak} วัน</span>
@@ -486,14 +486,14 @@
                     style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
           </div>
           ${listHTML}
-          <div style="margin-top:.7rem;padding-top:.6rem;border-top:1px dashed var(--border-subtle,#ebe9e2);">
+          <div style="margin-top:.7rem;padding-top:.6rem;border-top:1px dashed var(--border-subtle,${DashColors.WARM_WHITE});">
             <div style="font-size:.82rem;margin-bottom:.4rem;">
               📅 Today's logins:
               <strong style="color:var(--blue);">${todayCount} / ${totalRooms}</strong>
               <span style="color:var(--text-muted);font-size:.72rem;">(${todayPct}%)</span>
             </div>
             <div style="font-size:.82rem;">
-              💤 Inactive >7d: <strong style="color:var(--alert,#c06458);">${inactive.length} ห้อง</strong>
+              💤 Inactive >7d: <strong style="color:var(--alert,${DashColors.TERRACOTTA});">${inactive.length} ห้อง</strong>
               ${inactive.length > 0 ? '<button data-action="showInactiveRooms" style="margin-left:.4rem;font-size:.72rem;padding:1px 8px;background:transparent;border:none;color:var(--blue);cursor:pointer;text-decoration:underline;font-family:\'Sarabun\',sans-serif;" aria-label="ดูรายชื่อห้องที่ไม่ active">ดูรายชื่อ →</button>' : ''}
             </div>
           </div>
@@ -611,13 +611,13 @@
           </div>
           <div style="display:flex;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap;align-items:center;">
             <span style="font-size:.78rem;color:var(--text-muted);">เรียง:</span>
-            <select data-action="setPBSort" style="padding:4px 10px;border-radius:999px;border:1.5px solid var(--border-base,#dcdbd4);background:#fff;font-family:'Sarabun',sans-serif;font-size:.78rem;cursor:pointer;">
+            <select data-action="setPBSort" style="padding:4px 10px;border-radius:999px;border:1.5px solid var(--border-base,#dcdbd4);background:${DashColors.WHITE};font-family:'Sarabun',sans-serif;font-size:.78rem;cursor:pointer;">
               <option value="avg_desc" ${_pbState.sortBy==='avg_desc'?'selected':''}>จ่ายช้าสุด ▼</option>
               <option value="avg_asc" ${_pbState.sortBy==='avg_asc'?'selected':''}>จ่ายเร็วสุด ▼</option>
               <option value="count_desc" ${_pbState.sortBy==='count_desc'?'selected':''}>บิลมากสุด ▼</option>
             </select>
             <span style="font-size:.78rem;color:var(--text-muted);">ตึก:</span>
-            <select data-action="setPBBuilding" style="padding:4px 10px;border-radius:999px;border:1.5px solid var(--border-base,#dcdbd4);background:#fff;font-family:'Sarabun',sans-serif;font-size:.78rem;cursor:pointer;">
+            <select data-action="setPBBuilding" style="padding:4px 10px;border-radius:999px;border:1.5px solid var(--border-base,#dcdbd4);background:${DashColors.WHITE};font-family:'Sarabun',sans-serif;font-size:.78rem;cursor:pointer;">
               <option value="all" ${_pbState.buildingFilter==='all'?'selected':''}>ทั้งหมด</option>
               <option value="rooms" ${_pbState.buildingFilter==='rooms'?'selected':''}>🏠 ห้องแถว</option>
               <option value="nest" ${_pbState.buildingFilter==='nest'?'selected':''}>🏢 Nest</option>
@@ -657,7 +657,7 @@
     wrap.setAttribute('aria-modal', 'true');
     wrap.style.cssText = 'position:fixed;inset:0;background:rgba(31,31,28,.55);z-index:1500;display:flex;align-items:center;justify-content:center;padding:20px;';
     wrap.innerHTML = `
-      <div style="background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;padding:1.5rem;font-family:'Sarabun',sans-serif;">
+      <div style="background:${DashColors.WHITE};border-radius:16px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;padding:1.5rem;font-family:'Sarabun',sans-serif;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
           <strong style="font-size:1rem;color:var(--green-dark);">${esc(title)}</strong>
           <button data-action="closeInsightsModal" aria-label="ปิด"
@@ -686,7 +686,7 @@
     const rows = claims.map(c => {
       const dt = c.claimedAt ? new Date(c.claimedAt) : null;
       const dateStr = dt && !isNaN(dt) ? dt.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
-      return `<li style="display:flex;justify-content:space-between;padding:.5rem .25rem;border-bottom:1px solid var(--border-subtle,#ebe9e2);">
+      return `<li style="display:flex;justify-content:space-between;padding:.5rem .25rem;border-bottom:1px solid var(--border-subtle,${DashColors.WARM_WHITE});">
         <span><strong>${esc(c.room)}</strong> <span style="color:var(--text-muted);font-size:.78rem;">(${buildingLabel(c.building)})</span></span>
         <span style="color:var(--text-muted);font-size:.82rem;">${esc(dateStr)}</span>
       </li>`;
@@ -731,9 +731,9 @@
         ${sub('⚠️ ปัญหา/ร้องเรียน', r.score.issues, 25, 'var(--blue)')}
         ${sub('📅 ระยะเวลาเช่า', r.score.tenure,   25, 'var(--moss,#5a7a5a)')}
       </div>
-      <div style="font-size:.82rem;color:var(--text-muted);border-top:1px dashed var(--border-subtle,#ebe9e2);padding-top:.7rem;">
+      <div style="font-size:.82rem;color:var(--text-muted);border-top:1px dashed var(--border-subtle,${DashColors.WARM_WHITE});padding-top:.7rem;">
         <div style="margin-bottom:.3rem;">📅 เริ่มเช่า: <strong style="color:var(--ink,#1f1f1c);">${esc(fmtDate(r.startDate))}</strong>${r.monthsTenure!=null?` <span style="color:var(--text-muted);">(${r.monthsTenure} เดือน)</span>`:''}</div>
-        ${r.endDate ? `<div style="margin-bottom:.3rem;">📅 หมดสัญญา: <strong style="color:var(--ink);">${esc(fmtDate(r.endDate))}</strong>${r.daysToEnd!=null?` <span style="color:${r.daysToEnd<=90?'var(--alert,#c06458)':'var(--text-muted)'};">(${r.daysToEnd>=0?`อีก ${r.daysToEnd} วัน`:`เลย ${-r.daysToEnd} วัน`})</span>`:''}</div>` : ''}
+        ${r.endDate ? `<div style="margin-bottom:.3rem;">📅 หมดสัญญา: <strong style="color:var(--ink);">${esc(fmtDate(r.endDate))}</strong>${r.daysToEnd!=null?` <span style="color:${r.daysToEnd<=90?`var(--alert,${DashColors.TERRACOTTA})`:'var(--text-muted)'};">(${r.daysToEnd>=0?`อีก ${r.daysToEnd} วัน`:`เลย ${-r.daysToEnd} วัน`})</span>`:''}</div>` : ''}
         <div style="margin-bottom:.3rem;">💳 เฉลี่ยจ่าย: <strong style="color:var(--ink);">${r.paymentDelta!=null?(r.paymentDelta>=0?'+':'')+r.paymentDelta.toFixed(1)+' วัน':'—'}</strong> (ค้าง ${r.paymentLateCount} ครั้ง)</div>
         <div style="margin-bottom:.3rem;">🔥 Streak: <strong style="color:var(--ink);">${r.streak} วัน</strong>${r.lastClaim?` <span style="color:var(--text-muted);">(last: ${esc(r.lastClaim)})</span>`:''}</div>
         <div>⚠️ Complaints (90d): <strong style="color:var(--ink);">${r.complaintCount} ครั้ง</strong></div>
@@ -749,9 +749,9 @@
       return;
     }
     inactive.sort((a, b) => (a.lastClaim || '').localeCompare(b.lastClaim || ''));
-    const rows = inactive.map(r => `<li style="display:flex;justify-content:space-between;padding:.5rem .25rem;border-bottom:1px solid var(--border-subtle,#ebe9e2);">
+    const rows = inactive.map(r => `<li style="display:flex;justify-content:space-between;padding:.5rem .25rem;border-bottom:1px solid var(--border-subtle,${DashColors.WARM_WHITE});">
       <span><strong>${esc(r.roomId)}</strong> <span style="color:var(--text-muted);font-size:.78rem;">(${buildingLabel(r.building)})</span></span>
-      <span style="color:var(--alert,#c06458);font-size:.82rem;">last: ${esc(r.lastClaim || '—')}</span>
+      <span style="color:var(--alert,${DashColors.TERRACOTTA});font-size:.82rem;">last: ${esc(r.lastClaim || '—')}</span>
     </li>`).join('');
     openModal(`💤 Inactive >7 days — ${inactive.length} ห้อง`,
       `<ul style="list-style:none;padding:0;margin:0;">${rows}</ul>`);
@@ -808,8 +808,8 @@
   function healthTier(total) {
     if (total >= 80) return { key: 'healthy',  emoji: '🟢', label: 'Healthy', color: 'var(--green)' };
     if (total >= 60) return { key: 'steady',   emoji: '🟡', label: 'Steady',  color: 'var(--blue)' };
-    if (total >= 40) return { key: 'at-risk',  emoji: '🟠', label: 'At Risk', color: 'var(--accent,#ff9800)' };
-    return                  { key: 'critical', emoji: '🔴', label: 'Critical',color: 'var(--alert,#c06458)' };
+    if (total >= 40) return { key: 'at-risk',  emoji: '🟠', label: 'At Risk', color: `var(--accent,${DashColors.ORANGE_MED})` };
+    return                  { key: 'critical', emoji: '🔴', label: 'Critical',color: `var(--alert,${DashColors.TERRACOTTA})` };
   }
 
   // Months between a date string/Date and now
@@ -1038,14 +1038,14 @@
       const vacantCount = annotated.length - occupied.length;
 
       const chipStyle = (active, color) =>
-        `display:inline-block;padding:4px 12px;margin-right:6px;margin-bottom:4px;background:${active ? color : '#fff'};border:1.5px solid ${color};color:${active ? '#fff' : color};border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;`;
+        `display:inline-block;padding:4px 12px;margin-right:6px;margin-bottom:4px;background:${active ? color : DashColors.WHITE};border:1.5px solid ${color};color:${active ? DashColors.WHITE : color};border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;`;
       const f = _hsState.tierFilter;
       const chips = `
         <button data-action="setHSFilter" data-tier="all" style="${chipStyle(f === 'all', 'var(--text-muted)')}">ทั้งหมด (${annotated.length})</button>
         <button data-action="setHSFilter" data-tier="healthy" style="${chipStyle(f === 'healthy', 'var(--green)')}">🟢 ${dist.healthy}</button>
         <button data-action="setHSFilter" data-tier="steady" style="${chipStyle(f === 'steady', 'var(--blue)')}">🟡 ${dist.steady}</button>
-        <button data-action="setHSFilter" data-tier="at-risk" style="${chipStyle(f === 'at-risk', 'var(--accent,#ff9800)')}">🟠 ${dist['at-risk']}</button>
-        <button data-action="setHSFilter" data-tier="critical" style="${chipStyle(f === 'critical', 'var(--alert,#c06458)')}">🔴 ${dist.critical}</button>
+        <button data-action="setHSFilter" data-tier="at-risk" style="${chipStyle(f === 'at-risk', `var(--accent,${DashColors.ORANGE_MED})`)}">🟠 ${dist['at-risk']}</button>
+        <button data-action="setHSFilter" data-tier="critical" style="${chipStyle(f === 'critical', `var(--alert,${DashColors.TERRACOTTA})`)}">🔴 ${dist.critical}</button>
         ${vacantCount > 0 ? `<button data-action="setHSFilter" data-tier="vacant" style="${chipStyle(f === 'vacant', '#9ca3af')}">🔑 ${vacantCount}</button>` : ''}
       `;
 
@@ -1054,7 +1054,7 @@
         : rows.map(r => `
           <div data-action="${r.isVacant ? '' : 'showHealthDetail'}" data-key="${esc(r.building)}:${esc(r.roomId)}"
                class="health-tile${r.isVacant ? '' : ' health-tile--interactive'}"
-               style="cursor:${r.isVacant ? 'default' : 'pointer'};background:${r.isVacant ? 'var(--mist,#f7f6f3)' : '#fff'};border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;opacity:${r.isVacant ? '.7' : '1'};">
+               style="cursor:${r.isVacant ? 'default' : 'pointer'};background:${r.isVacant ? 'var(--mist,#f7f6f3)' : DashColors.WHITE};border:1px solid var(--border-subtle,${DashColors.WARM_WHITE});border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;opacity:${r.isVacant ? '.7' : '1'};">
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.2rem;">
               <span style="font-weight:700;font-size:.92rem;">${esc(r.roomName || r.roomId)} <span style="color:var(--text-muted);font-size:.7rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
               ${r.isVacant
@@ -1068,15 +1068,15 @@
             </div>
             <div style="font-size:.72rem;color:${r.tier.color};font-weight:600;margin-bottom:${r.flags.length ? '.4rem' : '0'};">${r.tier.emoji} ${r.tier.label}</div>
             ${r.flags.length ? `
-            <div style="border-top:1px dashed var(--border-subtle,#ebe9e2);padding-top:.35rem;">
-              <div style="font-size:.68rem;color:var(--text-muted);line-height:1.4;" title="${esc(r.flags.join(' · '))}">⚠️ ${esc(r.flags[0])}${r.flags.length > 1 ? ` <span style="color:var(--alert,#c06458);">+${r.flags.length - 1}</span>` : ''}</div>
+            <div style="border-top:1px dashed var(--border-subtle,${DashColors.WARM_WHITE});padding-top:.35rem;">
+              <div style="font-size:.68rem;color:var(--text-muted);line-height:1.4;" title="${esc(r.flags.join(' · '))}">⚠️ ${esc(r.flags[0])}${r.flags.length > 1 ? ` <span style="color:var(--alert,${DashColors.TERRACOTTA});">+${r.flags.length - 1}</span>` : ''}</div>
               ${r.recommend ? `<div style="font-size:.68rem;color:var(--green-dark);font-weight:600;margin-top:.2rem;">💡 ${esc(r.recommend)}</div>` : ''}
             </div>` : ''}`}
           </div>`).join('');
 
       const statusLine = churnCount === 0
         ? `<span style="color:var(--green-dark);">✅ ทุกห้องอยู่ในเกณฑ์ปกติ</span>`
-        : `<span style="color:var(--alert,#c06458);">⚠️ ${churnCount} ห้องต้องการความสนใจ</span>`;
+        : `<span style="color:var(--alert,${DashColors.TERRACOTTA});">⚠️ ${churnCount} ห้องต้องการความสนใจ</span>`;
 
       container.innerHTML = `
         <div class="card">
@@ -1151,11 +1151,11 @@
       if (rows.length === 0) {
         bodyHTML = `<div style="color:var(--green-dark);font-size:.9rem;padding:.4rem 0;">✅ ไม่มีบิลค้างชำระ</div>`;
       } else {
-        const tileColor = r => r.daysOverdue > 14 ? 'var(--alert,#c06458)' : r.daysOverdue > 7 ? 'var(--accent,#ff9800)' : 'var(--blue)';
+        const tileColor = r => r.daysOverdue > 14 ? `var(--alert,${DashColors.TERRACOTTA})` : r.daysOverdue > 7 ? `var(--accent,${DashColors.ORANGE_MED})` : 'var(--blue)';
         bodyHTML = `
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.5rem;margin-bottom:.7rem;">
             ${rows.map(r => `
-              <div style="background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${tileColor(r)};border-radius:10px;padding:.65rem .75rem;">
+              <div style="background:${DashColors.WHITE};border:1px solid var(--border-subtle,${DashColors.WARM_WHITE});border-left:4px solid ${tileColor(r)};border-radius:10px;padding:.65rem .75rem;">
                 <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.15rem;">
                   <span style="font-weight:700;font-size:.9rem;">${esc(r.room)} <span style="color:var(--text-muted);font-size:.68rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
                   <span style="color:${tileColor(r)};font-weight:700;font-size:.88rem;font-variant-numeric:tabular-nums;">฿${r.totalOwed.toLocaleString()}</span>
@@ -1165,13 +1165,13 @@
               </div>`).join('')}
           </div>
           <div style="font-size:.8rem;color:var(--text-muted);">
-            รวม <strong style="color:var(--alert,#c06458);">${rows.length} ห้อง</strong> ·
-            ยอดค้างรวม <strong style="color:var(--alert,#c06458);">฿${totalOwed.toLocaleString()}</strong>
+            รวม <strong style="color:var(--alert,${DashColors.TERRACOTTA});">${rows.length} ห้อง</strong> ·
+            ยอดค้างรวม <strong style="color:var(--alert,${DashColors.TERRACOTTA});">฿${totalOwed.toLocaleString()}</strong>
           </div>`;
       }
 
       container.innerHTML = `
-        <div class="card" style="border-left:4px solid var(--alert,#c06458);">
+        <div class="card" style="border-left:4px solid var(--alert,${DashColors.TERRACOTTA});">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
             <span>📌 ค่าเช่าค้างชำระ</span>
             <button data-action="refreshInsight" data-target="overdue" aria-label="รีเฟรช"
@@ -1304,7 +1304,7 @@
       const totalLiff = lStatus.pending + lStatus.approved + lStatus.rejected;
 
       // ── Ops v2 helpers ──
-      const accentColors = { ok: '#0f766e', warn: '#d97706', danger: '#dc2626', neutral: 'var(--border,#e5e7eb)' };
+      const accentColors = { ok: DashColors.TEAL, warn: '#d97706', danger: '#dc2626', neutral: `var(--border,${DashColors.BORDER_LIGHT})` };
       const ops2Badge = (cls, text) => `<span class="ops2-badge ${cls}">${text}</span>`;
       const ops2Stat = (val, cls, lbl) =>
         `<div class="ops2-stat"><div class="ops2-stat-v ${cls}">${val}</div><div class="ops2-stat-l">${lbl}</div></div>`;
@@ -1521,8 +1521,8 @@
       } else {
         const TOP_N = 5;
         const rows = spikes.slice(0, TOP_N).map(s => {
-          const color = s.ratio >= 2 ? 'var(--alert,#c06458)' : 'var(--accent,#ff9800)';
-          return `<tr style="border-bottom:1px solid var(--border-subtle,#ebe9e2);border-left:3px solid ${color};">
+          const color = s.ratio >= 2 ? `var(--alert,${DashColors.TERRACOTTA})` : `var(--accent,${DashColors.ORANGE_MED})`;
+          return `<tr style="border-bottom:1px solid var(--border-subtle,${DashColors.WARM_WHITE});border-left:3px solid ${color};">
             <td style="padding:.3rem .5rem;font-weight:600;">${esc(s.roomId)} <span style="color:var(--text-muted);font-size:.72rem;">${buildingLabel(s.building)}</span></td>
             <td style="padding:.3rem .5rem;text-align:right;font-variant-numeric:tabular-nums;">${s.latestE} <span style="color:var(--text-muted);font-size:.72rem;">หน่วย</span></td>
             <td style="padding:.3rem .5rem;text-align:right;font-variant-numeric:tabular-nums;">${s.medianE} <span style="color:var(--text-muted);font-size:.72rem;">หน่วย</span></td>
@@ -1612,8 +1612,8 @@
         }).sort((a, b) => b.total - a.total);
 
         const tableRows = rows.map(r => {
-          const rateColor = r.completionRate >= 80 ? 'var(--green)' : r.completionRate >= 50 ? 'var(--blue)' : 'var(--accent,#ff9800)';
-          return `<tr style="border-bottom:1px solid var(--border-subtle,#ebe9e2);">
+          const rateColor = r.completionRate >= 80 ? 'var(--green)' : r.completionRate >= 50 ? 'var(--blue)' : `var(--accent,${DashColors.ORANGE_MED})`;
+          return `<tr style="border-bottom:1px solid var(--border-subtle,${DashColors.WARM_WHITE});">
             <td style="padding:.3rem .5rem;max-width:110px;">
               <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.prov.name)}">${esc(r.prov.name)}</div>
               ${r.prov.type ? `<div style="font-size:.7rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.prov.type)}</div>` : ''}
@@ -1636,7 +1636,7 @@
           </table>`;
       }
 
-      container.innerHTML = `<div class="card" style="border-top:3px solid var(--brand-primary,#0f766e);">
+      container.innerHTML = `<div class="card" style="border-top:3px solid var(--brand-primary,${DashColors.TEAL});">
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
           <span>🏗️ Provider Scorecard</span>
           <button data-action="refreshInsight" data-target="providerScore" aria-label="รีเฟรช Provider Scorecard"

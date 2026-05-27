@@ -172,7 +172,7 @@ function renderCompactRoomGrid(){
         <div class="compact-card-id">${displayRoomId}</div>
         <span class="compact-card-type">${r.type==='commercial'?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
         <span style="margin-left:auto;display:flex;gap:6px;align-items:center;">
-          <span style="font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOccupied?'var(--green-pale)':'#f3e5f5'};color:${isOccupied?'var(--green-dark)':'#6a1b9a'};font-weight:600;">${isOccupied?'มีผู้เช่า':'ว่าง'}</span>
+          <span style="font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOccupied?'var(--green-pale)':DashColors.PURPLE_BG};color:${isOccupied?'var(--green-dark)':'#6a1b9a'};font-weight:600;">${isOccupied?'มีผู้เช่า':'ว่าง'}</span>
           ${paymentStatusHTML}
         </span>
       </div>
@@ -207,8 +207,8 @@ function renderCompactRoomGrid(){
       </div>
       ${paymentInfo.overdueAmount > 0 ? `
       <div class="compact-card-info">
-        <span style="color:#d32f2f;font-size:.75rem;">ค้างชำระ</span>
-        <span style="font-weight:700;color:#d32f2f;">฿${paymentInfo.overdueAmount.toLocaleString()}</span>
+        <span style="color:${DashColors.RED_TEXT};font-size:.75rem;">ค้างชำระ</span>
+        <span style="font-weight:700;color:${DashColors.RED_TEXT};">฿${paymentInfo.overdueAmount.toLocaleString()}</span>
       </div>
       ` : ''}
       ` : `
@@ -217,9 +217,9 @@ function renderCompactRoomGrid(){
       </div>
       `}
       <div class="compact-card-actions" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
-        <button class="compact-btn" data-action="editRoom" data-room="${r.id}" title="แก้ไขสัญญาเช่า" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
-        <button class="compact-btn" data-action="recordPayment" data-room="${r.id}" title="บันทึกค่าเช่า" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">💰 ชำระ</button>
-        <button class="compact-btn" data-action="goBillFromTable" data-room="${r.id}" title="ดูบิล" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
+        <button class="compact-btn" data-action="editRoom" data-room="${r.id}" title="แก้ไขสัญญาเช่า" style="background:${DashColors.BLUE_BG};color:${DashColors.BLUE_MED};border:1px solid ${DashColors.BLUE_MED};padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
+        <button class="compact-btn" data-action="recordPayment" data-room="${r.id}" title="บันทึกค่าเช่า" style="background:${DashColors.GREEN_BG};color:${DashColors.GREEN_MED};border:1px solid ${DashColors.GREEN_MED};padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">💰 ชำระ</button>
+        <button class="compact-btn" data-action="goBillFromTable" data-room="${r.id}" title="ดูบิล" style="background:${DashColors.ORANGE_BG};color:${DashColors.ORANGE_DARK};border:1px solid ${DashColors.ORANGE_DARK};padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
       </div>
     </div>`;
   }).join('');
@@ -230,7 +230,7 @@ function renderCompactRoomGrid(){
 
   // Add contract expiry summary at the bottom
   const summaryHtml = `
-  <div style="grid-column:1/-1;margin-top:1rem;padding:1rem;background:linear-gradient(135deg, #e8f5e9, #f1f8e9);border-radius:8px;border-left:4px solid var(--green);">
+  <div style="grid-column:1/-1;margin-top:1rem;padding:1rem;background:linear-gradient(135deg, ${DashColors.GREEN_BG}, #f1f8e9);border-radius:8px;border-left:4px solid var(--green);">
     <div style="font-weight:700;color:var(--green-dark);margin-bottom:0.5rem;">📋 สรุปสัญญา (ห้องแถว)</div>
     <div style="display:flex;gap:2rem;flex-wrap:wrap;font-size:.85rem;">
       <div>⚠️ <strong>${expiring30}</strong> ห้อง หมดภายใน 30 วัน</div>
@@ -297,7 +297,7 @@ function renderRoomSelectionCheckboxes() {
       <label style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;background:white;" data-action="toggleBatchRoomSelection" data-room="${room.id}">
         <input type="checkbox" id="batchRoom_${room.id}" data-action="updateBatchRoomCount" style="cursor:pointer;">
         <span style="font-size:0.85rem;font-weight:600;color:#333;">${room.id}</span>
-        <span style="font-size:0.75rem;color:#666;">฿${currentRent}</span>
+        <span style="font-size:0.75rem;color:${DashColors.TEXT_MUTED};">฿${currentRent}</span>
       </label>
     `;
   }).join('');
@@ -376,7 +376,7 @@ function updateAdjustmentDisplay() {
 
 function updatePreview() {
   if (batchSelectedRooms.size === 0) {
-    document.getElementById('previewResult').innerHTML = '<p style="margin:0;color:#999;">เลือกห้องเพื่อดูตัวอย่าง</p>';
+    document.getElementById('previewResult').innerHTML = `<p style="margin:0;color:${DashColors.TEXT_LIGHTER};">เลือกห้องเพื่อดูตัวอย่าง</p>`;
     return;
   }
 
@@ -384,7 +384,7 @@ function updatePreview() {
   const adjustValue = parseFloat(document.getElementById('adjustmentValue')?.value || 0);
 
   if (isNaN(adjustValue) || adjustValue === 0) {
-    document.getElementById('previewResult').innerHTML = '<p style="margin:0;color:#999;">กรอกจำนวนที่ต้องการปรับ</p>';
+    document.getElementById('previewResult').innerHTML = `<p style="margin:0;color:${DashColors.TEXT_LIGHTER};">กรอกจำนวนที่ต้องการปรับ</p>`;
     return;
   }
 
@@ -403,12 +403,12 @@ function updatePreview() {
     const change = newRent - room.rentPrice;
     const changePercent = ((change / room.rentPrice) * 100).toFixed(1);
     const arrow = change >= 0 ? '↑' : '↓';
-    const color = change > 0 ? '#4caf50' : (change < 0 ? '#d32f2f' : '#999');
+    const color = change > 0 ? DashColors.GREEN_ACTIVE : (change < 0 ? DashColors.RED_TEXT : DashColors.TEXT_LIGHTER);
 
     return `<p style="margin:4px 0;font-size:0.8rem;"><strong>${room.id}</strong>: ฿${room.rentPrice} <span style="color:${color};">→ ฿${newRent} ${arrow} ${Math.abs(changePercent)}%</span></p>`;
   }).join('');
 
-  document.getElementById('previewResult').innerHTML = preview || '<p style="margin:0;color:#999;">ไม่มีการเปลี่ยนแปลง</p>';
+  document.getElementById('previewResult').innerHTML = preview || `<p style="margin:0;color:${DashColors.TEXT_LIGHTER};">ไม่มีการเปลี่ยนแปลง</p>`;
 }
 
 function applyBatchRentAdjustment() {
@@ -523,7 +523,7 @@ function renderNestCompactGrid(){
     const petBadgesHtml = roomPets.length > 0
       ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;">${roomPets.map(p => {
           const em = {'dog':'🐕','cat':'🐈','rabbit':'🐇','bird':'🐦','fish':'🐠','hamster':'🐹'}[((p.type||'').toLowerCase())] || '🐾';
-          return `<span title="${p.type}: ${p.name}" style="font-size:.68rem;padding:1px 6px;border-radius:8px;background:#f3e5f5;color:#6a1b9a;border:1px solid #ce93d8;">${em} ${p.name}</span>`;
+          return `<span title="${p.type}: ${p.name}" style="font-size:.68rem;padding:1px 6px;border-radius:8px;background:${DashColors.PURPLE_BG};color:#6a1b9a;border:1px solid #ce93d8;">${em} ${p.name}</span>`;
         }).join('')}</div>`
       : '';
 
@@ -535,7 +535,7 @@ function renderNestCompactGrid(){
       <div class="compact-card-header">
         <div class="compact-card-id">${r.id}</div>
         <span class="compact-card-type" style="background: ${r.type === 'pet' ? 'var(--purple-pale)' : 'var(--blue)'}60; color: ${r.type === 'pet' ? 'var(--purple)' : 'var(--blue)'};">${floorLabel}</span>
-        <span style="margin-left:auto;font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOccupied?'var(--green-pale)':'#f3e5f5'};color:${isOccupied?'var(--green-dark)':'#6a1b9a'};font-weight:600;">${isOccupied?'มีผู้เช่า':'ว่าง'}</span>
+        <span style="margin-left:auto;font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOccupied?'var(--green-pale)':DashColors.PURPLE_BG};color:${isOccupied?'var(--green-dark)':'#6a1b9a'};font-weight:600;">${isOccupied?'มีผู้เช่า':'ว่าง'}</span>
       </div>
       ${petBadgesHtml}
       <div class="compact-card-info">
@@ -573,8 +573,8 @@ function renderNestCompactGrid(){
         </div>
         ${paymentInfo.overdueAmount > 0 ? `
         <div class="compact-card-info">
-          <span style="color:#d32f2f;font-size:.75rem;">ค้างชำระ</span>
-          <span style="font-weight:700;color:#d32f2f;">฿${paymentInfo.overdueAmount.toLocaleString()}</span>
+          <span style="color:${DashColors.RED_TEXT};font-size:.75rem;">ค้างชำระ</span>
+          <span style="font-weight:700;color:${DashColors.RED_TEXT};">฿${paymentInfo.overdueAmount.toLocaleString()}</span>
         </div>
         ` : ''}
         `;
@@ -585,9 +585,9 @@ function renderNestCompactGrid(){
       </div>
       `}
       <div class="compact-card-actions" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
-        <button class="compact-btn" data-action="editRoom" data-room="${r.id}" title="แก้ไขสัญญาเช่า" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
-        <button class="compact-btn" data-action="recordPayment" data-room="${r.id}" title="บันทึกค่าเช่า" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">💰 ชำระ</button>
-        <button class="compact-btn" data-action="goBillFromTable" data-room="${r.id}" title="ดูบิล" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
+        <button class="compact-btn" data-action="editRoom" data-room="${r.id}" title="แก้ไขสัญญาเช่า" style="background:${DashColors.BLUE_BG};color:${DashColors.BLUE_MED};border:1px solid ${DashColors.BLUE_MED};padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
+        <button class="compact-btn" data-action="recordPayment" data-room="${r.id}" title="บันทึกค่าเช่า" style="background:${DashColors.GREEN_BG};color:${DashColors.GREEN_MED};border:1px solid ${DashColors.GREEN_MED};padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">💰 ชำระ</button>
+        <button class="compact-btn" data-action="goBillFromTable" data-room="${r.id}" title="ดูบิล" style="background:${DashColors.ORANGE_BG};color:${DashColors.ORANGE_DARK};border:1px solid ${DashColors.ORANGE_DARK};padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
       </div>
     </div>`;
   }).join('');
@@ -598,7 +598,7 @@ function renderNestCompactGrid(){
 
   // Add contract expiry summary at the bottom
   const summaryHtml = `
-  <div style="grid-column:1/-1;margin-top:1rem;padding:1rem;background:linear-gradient(135deg, #f3e5f5, #ede7f6);border-radius:8px;border-left:4px solid var(--purple);">
+  <div style="grid-column:1/-1;margin-top:1rem;padding:1rem;background:linear-gradient(135deg, ${DashColors.PURPLE_BG}, #ede7f6);border-radius:8px;border-left:4px solid var(--purple);">
     <div style="font-weight:700;color:var(--purple);margin-bottom:0.5rem;">📋 สรุปสัญญา (Nest)</div>
     <div style="display:flex;gap:2rem;flex-wrap:wrap;font-size:.85rem;">
       <div>⚠️ <strong>${expiring30}</strong> ห้อง หมดภายใน 30 วัน</div>

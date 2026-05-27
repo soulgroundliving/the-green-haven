@@ -339,23 +339,23 @@ function renderLiffRequestsList(docs){
   };
 
   list.innerHTML = docs.map(d => {
-    const colors = { pending:'#f57c00', approved:'#2d8653', rejected:'#c62828' };
+    const colors = { pending:DashColors.ORANGE_DARK, approved:'#2d8653', rejected:DashColors.RED_DEEP };
     const labels = { pending:'⏳ รออนุมัติ', approved:'✅ อนุมัติแล้ว', rejected:'❌ ปฏิเสธ' };
-    const c = colors[d.status] || '#999';
+    const c = colors[d.status] || DashColors.TEXT_LIGHTER;
     const when = d.requestedAt ? new Date(d.requestedAt).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
     const pic = d.linePictureUrl ? `<img src="${esc(d.linePictureUrl)}" style="width:42px;height:42px;border-radius:50%;flex-shrink:0;">` : '<div style="width:42px;height:42px;border-radius:50%;background:#eee;flex-shrink:0;"></div>';
     const buildingLabel = window.CONFIG?.getBuildingLabel?.(d.building) || (d.building === 'nest' ? '🏢 ตึก Nest' : '🏠 ห้องเช่า');
     const rejectionReasonHtml = (d.status === 'rejected' && d.rejectionReason)
-      ? `<div style="font-size:.72rem;color:#c62828;margin-top:2px;">เหตุผล: ${esc(d.rejectionReason)}</div>` : '';
+      ? `<div style="font-size:.72rem;color:${DashColors.RED_DEEP};margin-top:2px;">เหตุผล: ${esc(d.rejectionReason)}</div>` : '';
     const actions = d.status === 'pending' ? `
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-        <button data-action="approveLiffLink" data-id="${esc(d.id)}" style="padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">✅ อนุมัติ</button>
-        <button data-action="rejectLiffLink" data-id="${esc(d.id)}" style="padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">❌ ปฏิเสธ</button>
-        <button data-action="adminDirectLinkLiff" data-id="${esc(d.id)}" data-building="${esc(d.building||'')}" data-room="${esc(d.room||'')}" title="F2: ลูกบ้านเปลี่ยน LINE account ใหม่ — บันทึกหลักฐานและอนุมัติโดยตรง" style="padding:6px 12px;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;">🆔 LINE ใหม่</button>
+        <button data-action="approveLiffLink" data-id="${esc(d.id)}" style="padding:6px 14px;background:var(--green);color:${DashColors.WHITE};border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">✅ อนุมัติ</button>
+        <button data-action="rejectLiffLink" data-id="${esc(d.id)}" style="padding:6px 14px;background:var(--red);color:${DashColors.WHITE};border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">❌ ปฏิเสธ</button>
+        <button data-action="adminDirectLinkLiff" data-id="${esc(d.id)}" data-building="${esc(d.building||'')}" data-room="${esc(d.room||'')}" title="F2: ลูกบ้านเปลี่ยน LINE account ใหม่ — บันทึกหลักฐานและอนุมัติโดยตรง" style="padding:6px 12px;background:${DashColors.GREEN_BG};color:${DashColors.GREEN_DARK};border:1px solid #a5d6a7;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.8rem;">🆔 LINE ใหม่</button>
       </div>` : (d.status === 'approved'
         ? `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
             <div style="font-size:.72rem;color:var(--text-muted);">โดย ${esc(d.approvedBy||'Admin')} · ${d.approvedAt?new Date(d.approvedAt).toLocaleDateString('th-TH'):''}</div>
-            <button data-action="unlinkLiffLink" data-id="${esc(d.id)}" data-arg="${esc(d.lineDisplayName||'-')}" style="padding:4px 10px;background:transparent;color:#c62828;border:1px solid #ef9a9a;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.72rem;font-weight:600;" title="ยกเลิกการเชื่อมต่อ LINE ของลูกบ้านนี้">🔌 ยกเลิกการเชื่อม</button>
+            <button data-action="unlinkLiffLink" data-id="${esc(d.id)}" data-arg="${esc(d.lineDisplayName||'-')}" style="padding:4px 10px;background:transparent;color:${DashColors.RED_DEEP};border:1px solid #ef9a9a;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.72rem;font-weight:600;" title="ยกเลิกการเชื่อมต่อ LINE ของลูกบ้านนี้">🔌 ยกเลิกการเชื่อม</button>
           </div>`
         : d.status === 'unlinked'
           ? `<div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">🔌 ยกเลิกการเชื่อมแล้ว${d.unlinkedAt?' · '+new Date(d.unlinkedAt.toDate?d.unlinkedAt.toDate():d.unlinkedAt).toLocaleDateString('th-TH'):''}</div>`

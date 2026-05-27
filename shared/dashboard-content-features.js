@@ -186,7 +186,7 @@ function renderAnnouncementsList() {
             </div>
             <div style="color: var(--text); line-height: 1.6; white-space: pre-wrap;">${_escCF(ann.content)}</div>
           </div>
-          <button data-action="deleteAnnouncement" data-id="${ann.id}" style="padding: 6px 12px; background: #ffebee; color: var(--red); border: 1px solid var(--red); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">🗑️ ลบ</button>
+          <button data-action="deleteAnnouncement" data-id="${ann.id}" style="padding: 6px 12px; background: ${DashColors.RED_BG}; color: var(--red); border: 1px solid var(--red); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">🗑️ ลบ</button>
         </div>
       </div>
     `)
@@ -304,10 +304,10 @@ function printContract(roomId){
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
   <style>body{font-family:'Sarabun',sans-serif;font-size:14px;padding:40px;color:#222;line-height:1.7;}
   h2{text-align:center;font-size:18px;margin-bottom:4px;}
-  .sub{text-align:center;color:#666;font-size:13px;margin-bottom:30px;}
+  .sub{text-align:center;color:${DashColors.TEXT_MUTED};font-size:13px;margin-bottom:30px;}
   .section{margin-bottom:18px;} .section-title{font-weight:700;font-size:14px;border-bottom:1.5px solid #222;padding-bottom:4px;margin-bottom:10px;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
-  td{padding:6px 10px;border:1px solid #ddd;} td:first-child{font-weight:600;background:#f8f8f8;width:40%;}
+  td{padding:6px 10px;border:1px solid ${DashColors.BORDER};} td:first-child{font-weight:600;background:#f8f8f8;width:40%;}
   .sig-row{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:50px;}
   .sig-box{border-top:1.5px solid #222;padding-top:6px;text-align:center;font-size:13px;}
   @media print{body{padding:20px;}}
@@ -416,12 +416,12 @@ function renderAnalyticsPage(){
         labels:monthLabels,
         datasets:[
           {label:'จำนวนห้องที่ชำระ',data:paidCountByMonth,backgroundColor:'rgba(45,136,45,0.75)',borderRadius:5,yAxisID:'y'},
-          {label:'รายรับรวม (บาท)',data:revenueByMonth,type:'line',borderColor:'#e65100',backgroundColor:'transparent',pointBackgroundColor:'#e65100',tension:.4,yAxisID:'y1'}
+          {label:'รายรับรวม (บาท)',data:revenueByMonth,type:'line',borderColor:DashColors.ORANGE_DEEP,backgroundColor:'transparent',pointBackgroundColor:DashColors.ORANGE_DEEP,tension:.4,yAxisID:'y1'}
         ]
       },
       options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index'},
         scales:{
-          y:{position:'left',title:{display:true,text:'ห้อง'},max:rooms.length,grid:{color:'#f0f0f0'}},
+          y:{position:'left',title:{display:true,text:'ห้อง'},max:rooms.length,grid:{color:DashColors.SURFACE_GRAY}},
           y1:{position:'right',title:{display:true,text:'บาท'},grid:{drawOnChartArea:false},ticks:{callback:v=>'฿'+v.toLocaleString()}}
         },
         plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}
@@ -467,7 +467,7 @@ function renderAnalyticsPage(){
       },
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false}},
-        scales:{y:{ticks:{callback:v=>'฿'+v.toLocaleString()},grid:{color:'#f0f0f0'}},x:{ticks:{font:{size:10}}}}
+        scales:{y:{ticks:{callback:v=>'฿'+v.toLocaleString()},grid:{color:DashColors.SURFACE_GRAY}},x:{ticks:{font:{size:10}}}}
       }
     });
   }

@@ -26,13 +26,13 @@
   const _expireFlightSet = new Set();  // bookingIds currently being auto-expired (de-dupe)
 
   const STATUS_PILL = {
-    locked:        { label: '🔒 ล็อคไว้',     bg: '#fff3e0', color: '#e65100' },
-    paid:          { label: '✅ จ่ายแล้ว',     bg: '#e8f5e9', color: '#1a5c38' },
-    kyc_pending:   { label: '📋 รอตรวจ KYC',  bg: '#e3f2fd', color: '#1565c0' },
+    locked:        { label: '🔒 ล็อคไว้',     bg: DashColors.ORANGE_BG, color: DashColors.ORANGE_DEEP },
+    paid:          { label: '✅ จ่ายแล้ว',     bg: DashColors.GREEN_BG, color: '#1a5c38' },
+    kyc_pending:   { label: '📋 รอตรวจ KYC',  bg: DashColors.BLUE_BG, color: DashColors.BLUE_DARK },
     kyc_approved:  { label: '📋 KYC ผ่าน',    bg: '#e8eaf6', color: '#3f51b5' },
-    converted:     { label: '✓ แปลงแล้ว',    bg: '#f3e5f5', color: '#6a1b9a' },
-    cancelled:     { label: '✕ ยกเลิก',       bg: '#fafafa', color: '#9e9e9e' },
-    expired:       { label: '⏰ หมดเวลา',     bg: '#ffebee', color: '#c62828' },
+    converted:     { label: '✓ แปลงแล้ว',    bg: DashColors.PURPLE_BG, color: '#6a1b9a' },
+    cancelled:     { label: '✕ ยกเลิก',       bg: DashColors.SURFACE_FAINT, color: '#9e9e9e' },
+    expired:       { label: '⏰ หมดเวลา',     bg: DashColors.RED_BG, color: DashColors.RED_DEEP },
   };
 
   // ── Public entry point — called by switchTenantMainTab on tab open ────────
@@ -59,7 +59,7 @@
     if (_unsub) { render(); return; }   // already subscribed
 
     if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-      root.innerHTML = '<div style="padding:1rem;color:#c62828;">Firebase ไม่พร้อม — รีเฟรชหน้า</div>';
+      root.innerHTML = `<div style="padding:1rem;color:${DashColors.RED_DEEP};">Firebase ไม่พร้อม — รีเฟรชหน้า</div>`;
       return;
     }
     const fs = window.firebase.firestoreFunctions;
@@ -71,11 +71,11 @@
         render();
       }, err => {
         console.error('bookings onSnapshot:', err);
-        root.innerHTML = `<div style="padding:1rem;color:#c62828;">โหลด bookings ไม่สำเร็จ: ${escapeHtml(err.message)}</div>`;
+        root.innerHTML = `<div style="padding:1rem;color:${DashColors.RED_DEEP};">โหลด bookings ไม่สำเร็จ: ${escapeHtml(err.message)}</div>`;
       });
     } catch (e) {
       console.error('bookings subscribe failed:', e);
-      root.innerHTML = `<div style="padding:1rem;color:#c62828;">โหลด bookings ไม่สำเร็จ: ${escapeHtml(e.message)}</div>`;
+      root.innerHTML = `<div style="padding:1rem;color:${DashColors.RED_DEEP};">โหลด bookings ไม่สำเร็จ: ${escapeHtml(e.message)}</div>`;
     }
   };
 
@@ -89,16 +89,16 @@
     if (countEl) countEl.textContent = `${filtered.length} / ${_bookings.length} รายการ`;
 
     if (filtered.length === 0) {
-      root.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted, #666);">
+      root.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted, ${DashColors.TEXT_MUTED});">
         ${_bookings.length === 0 ? 'ยังไม่มีการจอง — รอลูกบ้านเปิด LIFF จองห้อง' : 'ไม่พบรายการตรงตามตัวกรอง'}
       </div>`;
       return;
     }
 
-    let html = `<div style="overflow-x:auto;background:#fff;border-radius:8px;box-shadow:var(--shadow-sm);">
+    let html = `<div style="overflow-x:auto;background:${DashColors.WHITE};border-radius:8px;box-shadow:var(--shadow-sm);">
       <table style="width:100%;border-collapse:collapse;font-size:.88rem;">
         <thead>
-          <tr style="background:var(--green-pale, #e8f5e9);text-align:left;">
+          <tr style="background:var(--green-pale, ${DashColors.GREEN_BG});text-align:left;">
             <th style="padding:.6rem .8rem;">วันจอง</th>
             <th style="padding:.6rem .8rem;">ลูกบ้านที่จอง</th>
             <th style="padding:.6rem .8rem;">ห้อง</th>
@@ -150,7 +150,7 @@
   }
 
   function renderRow(b) {
-    const s = STATUS_PILL[b.status] || { label: b.status, bg: '#eee', color: '#666' };
+    const s = STATUS_PILL[b.status] || { label: b.status, bg: '#eee', color: DashColors.TEXT_MUTED };
     const created = b.createdAt && typeof b.createdAt.toDate === 'function'
       ? formatDateTime(b.createdAt.toDate()) : '—';
     const startDate = b.startDate && typeof b.startDate.toDate === 'function'
@@ -168,23 +168,23 @@
     let countdownHtml = '';
     if (lockMs > Date.now()) {
       // Active lock — render ticking countdown
-      countdownHtml = `<div data-bk-countdown="${lockMs}" style="font-size:.72rem;color:#e65100;margin-top:2px;font-variant-numeric:tabular-nums;font-weight:600;">${formatCountdown(lockMs - Date.now())}</div>`;
+      countdownHtml = `<div data-bk-countdown="${lockMs}" style="font-size:.72rem;color:${DashColors.ORANGE_DEEP};margin-top:2px;font-variant-numeric:tabular-nums;font-weight:600;">${formatCountdown(lockMs - Date.now())}</div>`;
     } else if (lockMs > 0) {
       // Stale lock — past expiry but status still 'locked'; auto-expire is firing
-      countdownHtml = `<div style="font-size:.72rem;color:#c62828;margin-top:2px;font-weight:600;">⏰ หมดเวลาแล้ว · กำลังอัปเดต…</div>`;
+      countdownHtml = `<div style="font-size:.72rem;color:${DashColors.RED_DEEP};margin-top:2px;font-weight:600;">⏰ หมดเวลาแล้ว · กำลังอัปเดต…</div>`;
     }
 
     return `<tr style="border-top:1px solid var(--border, #e0e0e0);">
-      <td style="padding:.5rem .8rem;color:var(--text-muted, #666);font-size:.8rem;">${created}</td>
+      <td style="padding:.5rem .8rem;color:var(--text-muted, ${DashColors.TEXT_MUTED});font-size:.8rem;">${created}</td>
       <td style="padding:.5rem .8rem;">
         <div style="font-weight:600;">${escapeHtml(b.prospectName || '—')}</div>
-        <div style="color:var(--text-muted, #666);font-size:.78rem;">${phone}</div>
+        <div style="color:var(--text-muted, ${DashColors.TEXT_MUTED});font-size:.78rem;">${phone}</div>
       </td>
       <td style="padding:.5rem .8rem;">
         <div style="font-family:var(--font-numeric, monospace);">${room}</div>
-        <div style="font-size:.72rem;color:var(--text-muted, #999);margin-top:1px;">${shortBookingRef(b.id)}</div>
+        <div style="font-size:.72rem;color:var(--text-muted, ${DashColors.TEXT_LIGHTER});margin-top:1px;">${shortBookingRef(b.id)}</div>
       </td>
-      <td style="padding:.5rem .8rem;font-size:.85rem;">${startDate}<br><small style="color:var(--text-muted, #666);">${b.durationMonths || '?'} เดือน</small></td>
+      <td style="padding:.5rem .8rem;font-size:.85rem;">${startDate}<br><small style="color:var(--text-muted, ${DashColors.TEXT_MUTED});">${b.durationMonths || '?'} เดือน</small></td>
       <td style="padding:.5rem .8rem;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">฿${formatNum(b.depositAmount)}</td>
       <td style="padding:.5rem .8rem;">
         <span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:.78rem;background:${s.bg};color:${s.color};">${s.label}</span>
@@ -259,7 +259,7 @@
       const remain = expireMs - now;
       el.textContent = formatCountdown(remain);
       if (remain <= 0) {
-        el.style.color = '#c62828';
+        el.style.color = DashColors.RED_DEEP;
         el.removeAttribute('data-bk-countdown');  // freeze; status will flip via onSnapshot
         anyExpired = true;
       }
@@ -284,10 +284,10 @@
       buttons.push(`<button data-bk-action="slip" data-id="${id}" class="u-btn-preview" style="margin:0;padding:4px 10px;">🧾 สลิป</button>`);
     }
     if (b.kycDocsPath && (status === 'kyc_pending' || status === 'kyc_approved')) {
-      buttons.push(`<button data-bk-action="viewKyc" data-id="${id}" class="u-btn-tbl-edit" style="background:#e3f2fd;border-color:#1976d2;color:#1565c0;">🪪 เอกสาร</button>`);
+      buttons.push(`<button data-bk-action="viewKyc" data-id="${id}" class="u-btn-tbl-edit" style="background:${DashColors.BLUE_BG};border-color:${DashColors.BLUE_MED};color:${DashColors.BLUE_DARK};">🪪 เอกสาร</button>`);
     }
     if (status === 'kyc_pending') {
-      buttons.push(`<button data-bk-action="approveKyc" data-id="${id}" class="u-btn-tbl-edit" style="background:#bbdefb;border-color:#1976d2;color:#0d47a1;">✓ อนุมัติ KYC</button>`);
+      buttons.push(`<button data-bk-action="approveKyc" data-id="${id}" class="u-btn-tbl-edit" style="background:#bbdefb;border-color:${DashColors.BLUE_MED};color:#0d47a1;">✓ อนุมัติ KYC</button>`);
     }
     if (status === 'paid' || status === 'kyc_approved') {
       buttons.push(`<button data-bk-action="convert" data-id="${id}" class="u-btn-tbl-edit" style="background:#e1bee7;border-color:#6a1b9a;color:#4a148c;font-weight:700;">🏠 แปลงเป็นผู้เช่า</button>`);
@@ -357,7 +357,7 @@
     if (b.contractId) rows.push(['Contract ID', escapeHtml(b.contractId)]);
     if (b.expiredAt?.toDate) rows.push(['หมดเวลาเมื่อ', formatDateTime(b.expiredAt.toDate())]);
     return `<div style="display:grid;grid-template-columns:auto 1fr;gap:.4rem 1rem;font-size:.88rem;">
-      ${rows.map(([k, v]) => `<div style="color:var(--text-muted, #666);">${k}</div><div style="font-family:var(--font-numeric, monospace);">${v}</div>`).join('')}
+      ${rows.map(([k, v]) => `<div style="color:var(--text-muted, ${DashColors.TEXT_MUTED});">${k}</div><div style="font-family:var(--font-numeric, monospace);">${v}</div>`).join('')}
     </div>`;
   }
 
@@ -400,7 +400,7 @@
         </div>
         <div class="u-btn-row" style="margin-top:1rem;">
           ${b.status === 'kyc_pending'
-            ? `<button id="kyc-approve-btn" class="u-btn-ok" style="background:var(--green-dark);color:#fff;border-color:var(--green-dark);">✓ อนุมัติ KYC</button>`
+            ? `<button id="kyc-approve-btn" class="u-btn-ok" style="background:var(--green-dark);color:${DashColors.WHITE};border-color:var(--green-dark);">✓ อนุมัติ KYC</button>`
             : ''}
           <button class="u-btn-cancel" data-bk-kyc-close>ปิด</button>
         </div>
@@ -462,7 +462,7 @@
       </div>`;
     } catch (e) {
       const body = document.getElementById('kyc-docs-body');
-      if (body) body.innerHTML = `<div style="padding:1rem;color:#c62828;">โหลดเอกสารไม่สำเร็จ: ${escapeHtml(e.message || String(e))}</div>`;
+      if (body) body.innerHTML = `<div style="padding:1rem;color:${DashColors.RED_DEEP};">โหลดเอกสารไม่สำเร็จ: ${escapeHtml(e.message || String(e))}</div>`;
       console.error('openKycViewer failed:', e);
     }
   }
@@ -556,7 +556,7 @@
     if (typeof window.toast === 'function') { window.toast(msg, kind); return; }
     const t = document.createElement('div');
     t.className = kind === 'error' ? 'u-toast' : 'u-toast-center';
-    if (kind === 'error') t.style.background = '#c62828';
+    if (kind === 'error') t.style.background = DashColors.RED_DEEP;
     t.textContent = msg;
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 3500);

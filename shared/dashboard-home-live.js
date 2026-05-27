@@ -494,12 +494,12 @@ async function initDashboardCharts(){
   const avgOth=Math.max(0,avg-avgR-avgE-avgW);
   const pieTotal=avgR+avgE+avgW+avgOth||1;
   const piePct=v=>Math.round(v/pieTotal*100);
-  chartPie=mkChart('chartPie','doughnut',{labels:[`ค่าเช่าห้อง ${piePct(avgR)}%`,`ค่าไฟ ${piePct(avgE)}%`,`ค่าน้ำ ${piePct(avgW)}%`,`อื่นๆ ${piePct(avgOth)}%`],datasets:[{data:[avgR,avgE,avgW,avgOth],backgroundColor:['#0f766e','#ff8f00','#2196f3','#9c27b0'],borderWidth:0,hoverOffset:8}]},{plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}},tooltip:{callbacks:{label:c=>c.label+': ฿'+Math.round(c.raw).toLocaleString()}}}});
+  chartPie=mkChart('chartPie','doughnut',{labels:[`ค่าเช่าห้อง ${piePct(avgR)}%`,`ค่าไฟ ${piePct(avgE)}%`,`ค่าน้ำ ${piePct(avgW)}%`,`อื่นๆ ${piePct(avgOth)}%`],datasets:[{data:[avgR,avgE,avgW,avgOth],backgroundColor:[DashColors.TEAL,'#ff8f00','#2196f3','#9c27b0'],borderWidth:0,hoverOffset:8}]},{plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}},tooltip:{callbacks:{label:c=>c.label+': ฿'+Math.round(c.raw).toLocaleString()}}}});
 
   const yrAvgs=['67','68','69'].map(y=>{const v=(dataSource[y]?.months||[]).filter(m=>mgt(m)>0);return v.length?Math.round(v.reduce((a,m)=>a+mgt(m),0)/v.length):0;});
   const yrHasData=y=>(dataSource[y]?.months||[]).some(m=>mgt(m)>0);
   const yrLabels=['67','68','69'].map(y=>yrHasData(y)?`${2500+parseInt(y)}\n(Actual)`:`${2500+parseInt(y)}\n(Forecast)`);
-  chartYears=mkChart('chartYears','bar',{labels:yrLabels,datasets:[{label:'เฉลี่ย/เดือน',data:yrAvgs,backgroundColor:['#0f766e','#1976d2','#ff8f00'],borderRadius:8}]},{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:11}}}}});
+  chartYears=mkChart('chartYears','bar',{labels:yrLabels,datasets:[{label:'เฉลี่ย/เดือน',data:yrAvgs,backgroundColor:[DashColors.TEAL,DashColors.BLUE_MED,'#ff8f00'],borderRadius:8}]},{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:11}}}}});
 
   const lineOpts=()=>({layout:{padding:{right:8}},plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>items[0]?.label||'',label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(1)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{autoSkip:true,maxTicksLimit:8,maxRotation:60,minRotation:30,font:{size:11}}}}});
   chartElec =mkChart('chartElec','line', {labels:elecChartLabels,datasets:[{label:'ค่าไฟ', data:elecChartData, borderColor:'#ff8f00',backgroundColor:'rgba(255,143,0,.1)',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},lineOpts());
@@ -571,10 +571,10 @@ function renderLast6MonthsTable(dataSource, mv, mgt, yr) {
     }
     return `<tr style="border-bottom:1px solid var(--border);">
       <td style="padding:.55rem .7rem;font-weight:700;">${row.label}</td>
-      <td style="padding:.55rem .7rem;text-align:right;color:#0f766e;">฿${dRent.toLocaleString()}</td>
+      <td style="padding:.55rem .7rem;text-align:right;color:${DashColors.TEAL};">฿${dRent.toLocaleString()}</td>
       <td style="padding:.55rem .7rem;text-align:right;color:#ff8f00;">฿${dElec.toLocaleString()}</td>
       <td style="padding:.55rem .7rem;text-align:right;color:#2196f3;">฿${dWater.toLocaleString()}</td>
-      <td style="padding:.55rem .7rem;text-align:right;font-size:.78rem;color:#666;">${dBreakdown}</td>
+      <td style="padding:.55rem .7rem;text-align:right;font-size:.78rem;color:${DashColors.TEXT_MUTED};">${dBreakdown}</td>
       <td style="padding:.55rem .7rem;text-align:right;font-weight:800;color:var(--green-dark);">฿${dTotal.toLocaleString()}</td>
     </tr>`;
   }).join('');
@@ -661,7 +661,7 @@ function renderMeterTable(){
   if(window.isArchivedMonth && window.isArchivedMonth(year, month)){
     const t = window.loadTrackingStart();
     const monthName=MONTHS_FULL[month]||month;
-    el.innerHTML = `<div style="padding:2rem;text-align:center;background:#fafafa;border:2px dashed var(--border);border-radius:8px;">
+    el.innerHTML = `<div style="padding:2rem;text-align:center;background:${DashColors.SURFACE_FAINT};border:2px dashed var(--border);border-radius:8px;">
       <div style="font-size:2rem;margin-bottom:.5rem;">📦</div>
       <div style="font-weight:700;margin-bottom:.4rem;">Archived — ${monthName} ${year}</div>
       <div style="font-size:.85rem;color:var(--text-muted);max-width:480px;margin:0 auto;">
@@ -760,7 +760,7 @@ function renderMeterTable(){
     if (isPaid) {
       statusCell = `<button class="mt-paid-badge" data-action="showPayDetail" data-id="${r.id}" data-year="${year}" data-month="${month}">✅ จ่ายแล้ว ฿${(p.amount||0).toLocaleString()}</button>`;
     } else if (isVacant && hasUsage) {
-      statusCell = `<span class="mt-pending-badge" style="background:#fff3e0;color:#e65100;border-color:#ffb74d;" title="ห้องไม่มีผู้เช่าแต่มิเตอร์เพิ่ม — admin ตรวจสอบ">🟡 ว่าง — มีค้าง</span>`;
+      statusCell = `<span class="mt-pending-badge" style="background:${DashColors.ORANGE_BG};color:${DashColors.ORANGE_DEEP};border-color:#ffb74d;" title="ห้องไม่มีผู้เช่าแต่มิเตอร์เพิ่ม — admin ตรวจสอบ">🟡 ว่าง — มีค้าง</span>`;
     } else {
       statusCell = `<span class="mt-pending-badge">⏳ รอ</span>`;
     }
@@ -785,7 +785,7 @@ function renderMeterTable(){
       <strong>${monthName} ${year}</strong>
       <span class="mt-pill green">✅ จ่ายแล้ว ${totalPaid} ห้อง · ฿${totalAmt.toLocaleString()}</span>
       <span class="mt-pill amber">⏳ รอ ${totalPending} ห้อง</span>
-      ${totalVacantPending > 0 ? `<span class="mt-pill" style="background:#fff3e0;color:#e65100;border:1px solid #ffb74d;">🟡 ว่าง&nbsp;—&nbsp;มีค้าง ${totalVacantPending} ห้อง</span>` : ''}
+      ${totalVacantPending > 0 ? `<span class="mt-pill" style="background:${DashColors.ORANGE_BG};color:${DashColors.ORANGE_DEEP};border:1px solid #ffb74d;">🟡 ว่าง&nbsp;—&nbsp;มีค้าง ${totalVacantPending} ห้อง</span>` : ''}
     </div>
     <div class="scroll-x">
       <table class="data-table">
@@ -946,7 +946,7 @@ function updatePaymentStatusWidget(_activeRooms, _bills) {
 
   el.innerHTML = `
     <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
-      <div><div style="font-size:1.5rem;font-weight:800;color:#0f766e">${paidCount}</div><div style="font-size:.72rem;color:#0f766e;font-weight:600;">✅ จ่ายแล้ว</div></div>
+      <div><div style="font-size:1.5rem;font-weight:800;color:${DashColors.TEAL}">${paidCount}</div><div style="font-size:.72rem;color:${DashColors.TEAL};font-weight:600;">✅ จ่ายแล้ว</div></div>
       <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${pendingTotal}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">⏳ รอชำระ</div></div>
       <div><div style="font-size:1.15rem;font-weight:800;color:var(--green-dark)">฿${totalCollected.toLocaleString()}</div><div style="font-size:.72rem;color:var(--text-muted)">เก็บได้แล้ว</div></div>
     </div>
@@ -956,7 +956,7 @@ function updatePaymentStatusWidget(_activeRooms, _bills) {
          <div style="display:flex;flex-wrap:wrap;gap:4px;">${[
            ...pendingBills.map(b => {
              const sr = _normRoom(b.room || b.roomId);
-             return `<span data-action="goBillFromTable" data-id="${sr}" data-year="${beYear}" data-month="${month}" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;cursor:pointer;" title="ออกบิลแล้ว — รอชำระ">⏳${sr}</span>`;
+             return `<span data-action="goBillFromTable" data-id="${sr}" data-year="${beYear}" data-month="${month}" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:${DashColors.ORANGE_BG};color:${DashColors.ORANGE_DEEP};border:1px solid #ffcc80;cursor:pointer;" title="ออกบิลแล้ว — รอชำระ">⏳${sr}</span>`;
            }),
            ...unbilledRooms.map(r => {
              const sr = _normRoom(r.id);
@@ -978,7 +978,7 @@ function updateComplaintsWidget() {
     : `<div style="display:flex;gap:1.4rem;flex-wrap:wrap;">
         <div><div style="font-size:1.5rem;font-weight:800;color:#dc2626">${cOpen}</div><div style="font-size:.72rem;color:#dc2626;font-weight:600;">🔴 Open</div></div>
         <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${cInProg}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">🟡 In Progress</div></div>
-        <div><div style="font-size:1.5rem;font-weight:800;color:#0f766e">${cDone}</div><div style="font-size:.72rem;color:#0f766e;font-weight:600;">✅ Resolved</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:${DashColors.TEAL}">${cDone}</div><div style="font-size:.72rem;color:${DashColors.TEAL};font-weight:600;">✅ Resolved</div></div>
         <div><div style="font-size:1.5rem;font-weight:800;color:var(--text-muted)">${comp.length}</div><div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Total</div></div>
       </div>`;
 }
@@ -994,8 +994,8 @@ function updateMaintenanceWidget() {
     ? '<div style="color:var(--text-muted);font-size:.85rem;">ไม่มีคำขอซ่อม</div>'
     : `<div style="display:flex;gap:1.4rem;flex-wrap:wrap;">
         <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${mxPending}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">⏳ Pending</div></div>
-        <div><div style="font-size:1.5rem;font-weight:800;color:#1976d2">${mxInProg}</div><div style="font-size:.72rem;color:#1976d2;font-weight:600;">🔨 In Progress</div></div>
-        <div><div style="font-size:1.5rem;font-weight:800;color:#0f766e">${mxDone}</div><div style="font-size:.72rem;color:#0f766e;font-weight:600;">✅ Done</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:${DashColors.BLUE_MED}">${mxInProg}</div><div style="font-size:.72rem;color:${DashColors.BLUE_MED};font-weight:600;">🔨 In Progress</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:${DashColors.TEAL}">${mxDone}</div><div style="font-size:.72rem;color:${DashColors.TEAL};font-weight:600;">✅ Done</div></div>
         <div><div style="font-size:1.5rem;font-weight:800;color:var(--text-muted)">${mx.length}</div><div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Total</div></div>
       </div>`;
 }
@@ -1060,7 +1060,7 @@ function updateTenantStatusWidget(_activeRooms) {
     <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
       <div><div style="font-size:1.5rem;font-weight:800;color:var(--blue)">${occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">มีผู้เช่า</div></div>
       <div><div style="font-size:1.5rem;font-weight:800;color:var(--accent)">${totalRooms - occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">ห้องว่าง</div></div>
-      <div><div style="font-size:1.5rem;font-weight:800;color:${occRate>=80?'#0f766e':occRate>=60?'#f59e0b':'#dc2626'}">${occRate}%</div><div style="font-size:.72rem;color:var(--text-muted)">Occupancy Rate</div></div>
+      <div><div style="font-size:1.5rem;font-weight:800;color:${occRate>=80?DashColors.TEAL:occRate>=60?'#f59e0b':'#dc2626'}">${occRate}%</div><div style="font-size:.72rem;color:var(--text-muted)">Occupancy Rate</div></div>
       ${soonRooms.length ? `<div><div style="font-size:1.5rem;font-weight:800;color:var(--red)">${soonRooms.length}</div><div style="font-size:.72rem;color:var(--text-muted)">สัญญาใกล้หมด</div></div>` : ''}
     </div>
     ${breakdownHtml}

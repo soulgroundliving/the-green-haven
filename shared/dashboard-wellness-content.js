@@ -171,7 +171,7 @@ function compressImageToBase64(file, maxWidth = 800, quality = 0.78) {
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = DashColors.WHITE;
         ctx.fillRect(0, 0, w, h);
         ctx.drawImage(img, 0, 0, w, h);
         const useFmt = (file.type === 'image/png') ? 'image/png' : 'image/jpeg';
@@ -440,8 +440,8 @@ async function renderWellnessArticlesList() {
           <div style="font-size:.75rem;color:var(--text-muted);">${a.category || 'Wellness'} • อ่าน ${a.readtime || 3} นาที • ${a.reward > 0 ? '+' + a.reward + ' pts' : 'ไม่ให้แต้ม'}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button data-action="editWellness" data-id="${_escWC(d.id)}" style="padding:6px 10px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">✏️ แก้</button>
-          <button data-action="deleteWellness" data-wid="${_escWC(d.id)}" data-wtitle="${title}" style="padding:6px 10px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">🗑️ ลบ</button>
+          <button data-action="editWellness" data-id="${_escWC(d.id)}" style="padding:6px 10px;background:var(--green);color:${DashColors.WHITE};border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">✏️ แก้</button>
+          <button data-action="deleteWellness" data-wid="${_escWC(d.id)}" data-wtitle="${title}" style="padding:6px 10px;background:#e74c3c;color:${DashColors.WHITE};border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">🗑️ ลบ</button>
         </div>
       </div>`;
     }).join('');
@@ -605,13 +605,13 @@ function _renderQuizQuestions(quiz) {
         <input type="text" value="${_escAttr(opt)}" placeholder="ตัวเลือกที่ ${oi+1}"
                data-quiz-option data-qi="${qi}" data-oi="${oi}"
                style="flex:1;padding:.4rem .5rem;border:1px solid var(--border);border-radius:5px;font-family:var(--font-brand);font-size:.85rem;">
-        ${opts.length > QUIZ_MIN_OPTIONS ? `<button type="button" data-action="quizRemoveOption" data-qi="${qi}" data-oi="${oi}" style="background:#fff;color:var(--text-muted);border:1px solid var(--border);border-radius:5px;width:28px;height:28px;cursor:pointer;font-size:.9rem;" title="ลบตัวเลือก">×</button>` : ''}
+        ${opts.length > QUIZ_MIN_OPTIONS ? `<button type="button" data-action="quizRemoveOption" data-qi="${qi}" data-oi="${oi}" style="background:${DashColors.WHITE};color:var(--text-muted);border:1px solid var(--border);border-radius:5px;width:28px;height:28px;cursor:pointer;font-size:.9rem;" title="ลบตัวเลือก">×</button>` : ''}
       </div>`).join('');
     return `
-      <div class="quiz-q-card" data-qi="${qi}" style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;">
+      <div class="quiz-q-card" data-qi="${qi}" style="background:${DashColors.WHITE};border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
           <strong style="font-size:.85rem;color:var(--text-muted);">คำถามที่ ${qi+1}</strong>
-          <button type="button" data-action="quizRemoveQuestion" data-qi="${qi}" style="background:#fff;color:#e74c3c;border:1px solid #f6cfca;border-radius:5px;padding:3px 10px;font-size:.75rem;cursor:pointer;">✕ ลบคำถาม</button>
+          <button type="button" data-action="quizRemoveQuestion" data-qi="${qi}" style="background:${DashColors.WHITE};color:#e74c3c;border:1px solid #f6cfca;border-radius:5px;padding:3px 10px;font-size:.75rem;cursor:pointer;">✕ ลบคำถาม</button>
         </div>
         <input type="text" value="${_escAttr(q.q || '')}" placeholder="พิมพ์คำถาม..."
                data-quiz-q data-qi="${qi}"

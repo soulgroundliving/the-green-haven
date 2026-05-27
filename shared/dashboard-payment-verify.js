@@ -196,7 +196,7 @@ function renderPVFeed(slips) {
     const timeStr = ts.toLocaleString('th-TH', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
     const amountOk = !s.expectedAmount || Math.abs(s.amount - s.expectedAmount) < 1;
     return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
-      <div style="background:${amountOk ? 'var(--green-pale)' : '#fff3e0'};color:${amountOk ? 'var(--green-dark)' : '#e65100'};border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">${amountOk ? '✅' : '⚠️'}</div>
+      <div style="background:${amountOk ? 'var(--green-pale)' : DashColors.ORANGE_BG};color:${amountOk ? 'var(--green-dark)' : DashColors.ORANGE_DEEP};border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">${amountOk ? '✅' : '⚠️'}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-weight:700;font-size:.9rem;">ห้อง <span style="color:var(--green-dark);">${_pvEscape(s.room || '—')}</span> <span style="color:var(--text-muted);font-size:.78rem;">${_pvEscape(s.building || '')}</span></div>
         <div style="font-size:.78rem;color:var(--text-muted);">โดย ${_pvEscape(s.sender || '—')} · ${_pvEscape(bankName(s.bankCode))}</div>
@@ -217,13 +217,13 @@ window.openManualVerifyModal = function(){
   modal.className = 'u-modal-overlay';
   modal.dataset.modal = 'true';
   const today = new Date().toISOString().split('T')[0];
-  modal.innerHTML = `<div style="background:#fff;border-radius:12px;padding:1.8rem;width:92%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+  modal.innerHTML = `<div style="background:${DashColors.WHITE};border-radius:12px;padding:1.8rem;width:92%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
     <div style="font-size:1.15rem;font-weight:800;margin-bottom:1rem;color:var(--text);">✍️ บันทึกการชำระด้วยตัวเอง</div>
-    <div style="background:#ffebee;border-left:4px solid #c62828;border-radius:6px;padding:.7rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#b71c1c;">
+    <div style="background:${DashColors.RED_BG};border-left:4px solid ${DashColors.RED_DEEP};border-radius:6px;padding:.7rem 1rem;margin-bottom:1rem;font-size:.82rem;color:${DashColors.RED_DARKEST};">
       <strong>⚠️ สำคัญ:</strong> อย่ากดบันทึกถ้ายังไม่ได้เช็ค bank statement จริง<br>
       สลิปอาจปลอมได้ — ต้องเปิดแอปธนาคารยืนยันว่าเงินเข้าบัญชีจริง
     </div>
-    <label style="display:flex;gap:8px;align-items:flex-start;padding:.7rem;background:#fff9c4;border-radius:6px;margin-bottom:1rem;cursor:pointer;">
+    <label style="display:flex;gap:8px;align-items:flex-start;padding:.7rem;background:${DashColors.YELLOW_BG};border-radius:6px;margin-bottom:1rem;cursor:pointer;">
       <input type="checkbox" id="mv-bank-confirmed" style="margin-top:3px;flex-shrink:0;">
       <span style="font-size:.82rem;color:#5d4037;font-weight:600;">
         ✅ ผมได้เปิดแอปธนาคาร/bank statement แล้วว่าเงินเข้าบัญชีจริง
@@ -264,7 +264,7 @@ window.openManualVerifyModal = function(){
     <div style="margin-bottom:1.2rem;"><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">เหตุผลการยืนยันเอง <span style="color:var(--red);">*</span></label>
       <input type="text" id="mv-reason" placeholder="เช่น SlipOK SCB delay ยาว, สลิปไม่คมชัด, มีค่าปรับที่ไม่ได้บันทึก..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
     <div style="display:flex;gap:.6rem;">
-      <button data-action="submitManualVerify" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Sarabun';font-weight:700;cursor:pointer;">💾 บันทึก</button>
+      <button data-action="submitManualVerify" style="flex:1;background:var(--green);color:${DashColors.WHITE};border:none;border-radius:8px;padding:10px;font-family:'Sarabun';font-weight:700;cursor:pointer;">💾 บันทึก</button>
       <button data-action="closeNearestDataModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:8px;padding:10px;font-family:'Sarabun';font-weight:700;cursor:pointer;">ยกเลิก</button>
     </div>
   </div>`;
@@ -446,8 +446,8 @@ function _drawPVHTable(tbl, allBills, effectiveSlips, now, beYear) {
     const total   = Number(bill?.totalCharge || (rent + water + electric + trash) || slip?.amount || 0);
 
     const statusHtml = isPaid
-      ? '<span style="color:#388e3c;font-weight:700;">✅ ชำระแล้ว</span>'
-      : '<span style="color:#f57c00;font-weight:700;">⏳ ค้างชำระ</span>';
+      ? `<span style="color:${DashColors.GREEN_MED};font-weight:700;">✅ ชำระแล้ว</span>`
+      : `<span style="color:${DashColors.ORANGE_DARK};font-weight:700;">⏳ ค้างชำระ</span>`;
 
     return `<tr style="background:${isPaid ? 'var(--green-pale)' : '#fff8e1'};">
       <td style="padding:6px 8px;font-weight:600;">${_MONTHS_TH[m]} ${String(y).slice(-2)}</td>
@@ -673,19 +673,19 @@ function updateLinkPreview(){
   const qrId = 'qr-' + room;
 
   document.getElementById('linkPreview').innerHTML = `
-    <div style="background:#fff;border-radius:8px;padding:1.5rem;margin-top:1rem;">
+    <div style="background:${DashColors.WHITE};border-radius:8px;padding:1.5rem;margin-top:1rem;">
       <div style="margin-bottom:1.5rem;">
         <label style="display:block;margin-bottom:.5rem;font-weight:700;color:var(--text);">📱 ลิ้งค์ชำระเงิน:</label>
         <div style="background:#f5f5f5;padding:10px;border-radius:6px;word-break:break-all;font-size:.9rem;font-family:monospace;margin-bottom:10px;">
           ${paymentLink}
         </div>
-        <button data-action="copyToClipboard" data-id="${paymentLink}" style="padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.9rem;">📋 คัดลอก</button>
+        <button data-action="copyToClipboard" data-id="${paymentLink}" style="padding:8px 16px;background:var(--blue);color:${DashColors.WHITE};border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.9rem;">📋 คัดลอก</button>
       </div>
 
       <div>
         <label style="display:block;margin-bottom:.5rem;font-weight:700;color:var(--text);">📲 QR Code:</label>
         <div style="background:#f5f5f5;border-radius:6px;padding:1rem;text-align:center;" id="${qrId}"></div>
-        <button data-action="downloadQRCode" data-id="${qrId}" data-arg="payment-room-${room}" style="width:100%;margin-top:10px;padding:8px 16px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.9rem;">⬇️ ดาวน์โหลด QR Code</button>
+        <button data-action="downloadQRCode" data-id="${qrId}" data-arg="payment-room-${room}" style="width:100%;margin-top:10px;padding:8px 16px;background:var(--green);color:${DashColors.WHITE};border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.9rem;">⬇️ ดาวน์โหลด QR Code</button>
       </div>
     </div>
   `;
@@ -696,7 +696,7 @@ function updateLinkPreview(){
       width: 180,
       height: 180,
       colorDark: '#000',
-      colorLight: '#fff'
+      colorLight: DashColors.WHITE
     });
   }, 50);
 }

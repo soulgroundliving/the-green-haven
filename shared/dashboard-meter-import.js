@@ -464,7 +464,7 @@ function displayImportPreview(importData, matchResults) {
           <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.eOld || 0)}</td>
           <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wNew || 0)}</td>
           <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wOld || 0)}</td>
-          <td style="padding:0.7rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
+          <td style="padding:0.7rem;text-align:center;"><span style="background:${DashColors.GREEN_BORDER};color:${DashColors.GREEN_DARK};padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
         </tr>
       `;
     });
@@ -481,7 +481,7 @@ function displayImportPreview(importData, matchResults) {
           <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.eOld || 0)}</td>
           <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wNew || 0)}</td>
           <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wOld || 0)}</td>
-          <td style="padding:0.7rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
+          <td style="padding:0.7rem;text-align:center;"><span style="background:${DashColors.GREEN_BORDER};color:${DashColors.GREEN_DARK};padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
         </tr>
       `;
     });
@@ -498,7 +498,7 @@ function displayImportPreview(importData, matchResults) {
           <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.eOld || 0)}</td>
           <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wNew || 0)}</td>
           <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wOld || 0)}</td>
-          <td style="padding:0.7rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
+          <td style="padding:0.7rem;text-align:center;"><span style="background:${DashColors.GREEN_BORDER};color:${DashColors.GREEN_DARK};padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
         </tr>
       `;
     });
@@ -557,21 +557,21 @@ function displayMatchSummary(matchResults) {
   html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem;">';
 
   // OK Status
-  html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid #4caf50;">
-    <div style="font-size:1.2rem;font-weight:bold;color:#4caf50;">${escapeHtml(okCount)}</div>
-    <div style="font-size:0.85rem;color:#666;">✅ ตรงกัน</div>
+  html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid ${DashColors.GREEN_ACTIVE};">
+    <div style="font-size:1.2rem;font-weight:bold;color:${DashColors.GREEN_ACTIVE};">${escapeHtml(okCount)}</div>
+    <div style="font-size:0.85rem;color:${DashColors.TEXT_MUTED};">✅ ตรงกัน</div>
   </div>`;
 
   // Warning Status
-  html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid #ff9800;">
-    <div style="font-size:1.2rem;font-weight:bold;color:#ff9800;">${escapeHtml(warningCount)}</div>
-    <div style="font-size:0.85rem;color:#666;">⚠️ ต่างเล็กน้อย</div>
+  html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid ${DashColors.ORANGE_MED};">
+    <div style="font-size:1.2rem;font-weight:bold;color:${DashColors.ORANGE_MED};">${escapeHtml(warningCount)}</div>
+    <div style="font-size:0.85rem;color:${DashColors.TEXT_MUTED};">⚠️ ต่างเล็กน้อย</div>
   </div>`;
 
   // Error Status
-  html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid #f44336;">
-    <div style="font-size:1.2rem;font-weight:bold;color:#f44336;">${escapeHtml(errorCount)}</div>
-    <div style="font-size:0.85rem;color:#666;">❌ ต่างมาก</div>
+  html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid ${DashColors.RED_MED};">
+    <div style="font-size:1.2rem;font-weight:bold;color:${DashColors.RED_MED};">${escapeHtml(errorCount)}</div>
+    <div style="font-size:0.85rem;color:${DashColors.TEXT_MUTED};">❌ ต่างมาก</div>
   </div>`;
 
   html += '</div>';
@@ -583,7 +583,7 @@ function displayMatchSummary(matchResults) {
     html += '<div style="font-size:0.85rem;">';
     mismatches.forEach(m => {
       const icon = m.status === 'error' ? '❌' : '⚠️';
-      html += `<div style="padding:0.25rem;color:#666;">
+      html += `<div style="padding:0.25rem;color:${DashColors.TEXT_MUTED};">
         ${icon} ห้อง <strong>${escapeHtml(m.room)}</strong> (${escapeHtml(m.fieldLabel)}):
         นำเข้า ${escapeHtml(m.imported)} / ระบบ ${escapeHtml(m.expected)} (ต่างกัน ${escapeHtml(m.delta)})
       </div>`;
@@ -594,18 +594,18 @@ function displayMatchSummary(matchResults) {
   // Status message
   if (canProceed) {
     if (errorCount === 0) {
-      html += '<div style="color:#4caf50;font-weight:600;padding:0.25rem;">✅ ข้อมูลสามารถบันทึกได้</div>';
+      html += `<div style="color:${DashColors.GREEN_ACTIVE};font-weight:600;padding:0.25rem;">✅ ข้อมูลสามารถบันทึกได้</div>`;
       approveBtn.disabled = false;
       approveBtn.classList.remove('u-op50');
       approveBtn.classList.remove('u-no-ptr');
     } else {
-      html += '<div style="color:#ff9800;font-weight:600;padding:0.25rem;">⚠️ มีข้อมูลที่ต่างกัน ตรวจสอบอีกครั้ง</div>';
+      html += `<div style="color:${DashColors.ORANGE_MED};font-weight:600;padding:0.25rem;">⚠️ มีข้อมูลที่ต่างกัน ตรวจสอบอีกครั้ง</div>`;
       approveBtn.disabled = true;
       approveBtn.classList.add('u-op50');
       approveBtn.classList.add('u-no-ptr');
     }
   } else {
-    html += '<div style="color:#f44336;font-weight:600;padding:0.25rem;">❌ มีข้อผิดพลาดในข้อมูล ไม่สามารถบันทึกได้</div>';
+    html += `<div style="color:${DashColors.RED_MED};font-weight:600;padding:0.25rem;">❌ มีข้อผิดพลาดในข้อมูล ไม่สามารถบันทึกได้</div>`;
     approveBtn.disabled = true;
     approveBtn.classList.add('u-op50');
     approveBtn.classList.add('u-no-ptr');
@@ -753,30 +753,30 @@ async function testNotifyMeter() {
     const room     = String(document.getElementById('testNotifyRoom').value || '').trim();
     const ym       = String(document.getElementById('testNotifyYM').value || '').trim();
     if (!building || !room || !ym || !/^\d{1,4}_\d{1,2}$/.test(ym)) {
-      setMsg('⚠️ กรอก ห้อง และ ปี_เดือน (เช่น 69_5)', '#c62828');
+      setMsg('⚠️ กรอก ห้อง และ ปี_เดือน (เช่น 69_5)', DashColors.RED_DEEP);
       return;
     }
     const docId = `${building}_${ym}_${room}`;
-    setMsg(`⏳ กำลังส่ง... (docId: ${docId})`, '#666');
+    setMsg(`⏳ กำลังส่ง... (docId: ${docId})`, DashColors.TEXT_MUTED);
 
     if (!window.firebase?.functions?.httpsCallable) {
-      setMsg('❌ Firebase functions SDK ยังไม่พร้อม — refresh หน้าก่อน', '#c62828');
+      setMsg('❌ Firebase functions SDK ยังไม่พร้อม — refresh หน้าก่อน', DashColors.RED_DEEP);
       return;
     }
     const fn = window.firebase.functions.httpsCallable('notifyTenantOnMeterUpload');
     const r = await fn({ docIds: [docId], force: true });
     const d = r?.data || {};
     if (d.pushed > 0) {
-      setMsg(`✅ ส่งสำเร็จ — pushed: ${d.pushed} | failed: ${d.failed} | skipped: ${d.skipped} — ตรวจ LINE ของ tenant`, '#2e7d32');
+      setMsg(`✅ ส่งสำเร็จ — pushed: ${d.pushed} | failed: ${d.failed} | skipped: ${d.skipped} — ตรวจ LINE ของ tenant`, DashColors.GREEN_DARK);
     } else if (d.skipped > 0) {
       const reason = d.results?.[0]?.skipped || 'unknown';
       setMsg(`⏭ skipped (${reason}) — ห้องนี้อาจยังไม่ approved ใน liffUsers หรือ rent=0`, '#f57f17');
     } else {
-      setMsg(`⚠️ ไม่มี push และไม่ skip — ดู results: <code>${JSON.stringify(d.results || [])}</code>`, '#c62828');
+      setMsg(`⚠️ ไม่มี push และไม่ skip — ดู results: <code>${JSON.stringify(d.results || [])}</code>`, DashColors.RED_DEEP);
     }
   } catch (e) {
     console.error('testNotifyMeter:', e);
-    setMsg(`❌ ${e?.message || e}`, '#c62828');
+    setMsg(`❌ ${e?.message || e}`, DashColors.RED_DEEP);
   }
 }
 
@@ -895,11 +895,11 @@ function displayRecordedMeterData(importData, matchResults) {
     let tableHtml = '<div style="font-weight:600;margin-bottom:0.8rem;">📋 ข้อมูลมิเตอร์ทั้งหมด (43 ห้อง):</div>';
 
     tableHtml += '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;max-height:600px;overflow-y:auto;">';
-    tableHtml += '<thead style="position:sticky;top:0;"><tr style="background:#e8f5e9;border-bottom:2px solid #4caf50;">';
-    tableHtml += '<th style="padding:0.6rem;text-align:left;border-right:1px solid #c8e6c9;">🏢 Building</th>';
-    tableHtml += '<th style="padding:0.6rem;text-align:left;border-right:1px solid #c8e6c9;">🔢 ห้อง</th>';
-    tableHtml += '<th style="padding:0.6rem;text-align:right;border-right:1px solid #c8e6c9;">📊 เก่า</th>';
-    tableHtml += '<th style="padding:0.6rem;text-align:right;border-right:1px solid #c8e6c9;">📊 ใหม่</th>';
+    tableHtml += `<thead style="position:sticky;top:0;"><tr style="background:${DashColors.GREEN_BG};border-bottom:2px solid ${DashColors.GREEN_ACTIVE};">`;
+    tableHtml += `<th style="padding:0.6rem;text-align:left;border-right:1px solid ${DashColors.GREEN_BORDER};">🏢 Building</th>`;
+    tableHtml += `<th style="padding:0.6rem;text-align:left;border-right:1px solid ${DashColors.GREEN_BORDER};">🔢 ห้อง</th>`;
+    tableHtml += `<th style="padding:0.6rem;text-align:right;border-right:1px solid ${DashColors.GREEN_BORDER};">📊 เก่า</th>`;
+    tableHtml += `<th style="padding:0.6rem;text-align:right;border-right:1px solid ${DashColors.GREEN_BORDER};">📊 ใหม่</th>`;
     tableHtml += '<th style="padding:0.6rem;text-align:right;">📈 ใช้</th>';
     tableHtml += '</tr></thead><tbody>';
 
@@ -907,12 +907,12 @@ function displayRecordedMeterData(importData, matchResults) {
     const allRoomsData = Object.entries(importData.rooms || {});
     allRoomsData.forEach(([roomNum, data]) => {
       const usage = Math.abs((data.eNew || 0) - (data.eOld || 0));
-      tableHtml += `<tr style="border-bottom:1px solid #e8f5e9;background:#fafafa;">
-        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;"><strong>🏠 Rooms</strong></td>
-        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;">${roomNum}</td>
-        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;">${(data.eOld || 0).toLocaleString()}</td>
-        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;"><strong>${(data.eNew || 0).toLocaleString()}</strong></td>
-        <td style="padding:0.5rem;text-align:right;color:#2e7d32;font-weight:600;">${usage.toLocaleString()}</td>
+      tableHtml += `<tr style="border-bottom:1px solid ${DashColors.GREEN_BG};background:${DashColors.SURFACE_FAINT};">
+        <td style="padding:0.5rem;border-right:1px solid ${DashColors.GREEN_BORDER};"><strong>🏠 Rooms</strong></td>
+        <td style="padding:0.5rem;border-right:1px solid ${DashColors.GREEN_BORDER};">${roomNum}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid ${DashColors.GREEN_BORDER};">${(data.eOld || 0).toLocaleString()}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid ${DashColors.GREEN_BORDER};"><strong>${(data.eNew || 0).toLocaleString()}</strong></td>
+        <td style="padding:0.5rem;text-align:right;color:${DashColors.GREEN_DARK};font-weight:600;">${usage.toLocaleString()}</td>
       </tr>`;
     });
 
@@ -920,11 +920,11 @@ function displayRecordedMeterData(importData, matchResults) {
     const allNestData = Object.entries(importData.nest || {});
     allNestData.forEach(([roomNum, data]) => {
       const usage = Math.abs((data.eNew || 0) - (data.eOld || 0));
-      tableHtml += `<tr style="border-bottom:1px solid #e8f5e9;background:#fafafa;">
-        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;"><strong>🏢 Nest</strong></td>
-        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;">${roomNum}</td>
-        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;">${(data.eOld || 0).toLocaleString()}</td>
-        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;"><strong>${(data.eNew || 0).toLocaleString()}</strong></td>
+      tableHtml += `<tr style="border-bottom:1px solid ${DashColors.GREEN_BG};background:${DashColors.SURFACE_FAINT};">
+        <td style="padding:0.5rem;border-right:1px solid ${DashColors.GREEN_BORDER};"><strong>🏢 Nest</strong></td>
+        <td style="padding:0.5rem;border-right:1px solid ${DashColors.GREEN_BORDER};">${roomNum}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid ${DashColors.GREEN_BORDER};">${(data.eOld || 0).toLocaleString()}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid ${DashColors.GREEN_BORDER};"><strong>${(data.eNew || 0).toLocaleString()}</strong></td>
         <td style="padding:0.5rem;text-align:right;color:#6a1b9a;font-weight:600;">${usage.toLocaleString()}</td>
       </tr>`;
     });
@@ -933,11 +933,11 @@ function displayRecordedMeterData(importData, matchResults) {
     const allAmazonData = Object.entries(importData.amazon || {});
     allAmazonData.forEach(([roomNum, data]) => {
       const usage = Math.abs((data.eNew || 0) - (data.eOld || 0));
-      tableHtml += `<tr style="border-bottom:1px solid #e8f5e9;background:#fafafa;">
-        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;"><strong>📦 ร้านใหญ่</strong></td>
-        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;">${roomNum}</td>
-        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;">${(data.eOld || 0).toLocaleString()}</td>
-        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;"><strong>${(data.eNew || 0).toLocaleString()}</strong></td>
+      tableHtml += `<tr style="border-bottom:1px solid ${DashColors.GREEN_BG};background:${DashColors.SURFACE_FAINT};">
+        <td style="padding:0.5rem;border-right:1px solid ${DashColors.GREEN_BORDER};"><strong>📦 ร้านใหญ่</strong></td>
+        <td style="padding:0.5rem;border-right:1px solid ${DashColors.GREEN_BORDER};">${roomNum}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid ${DashColors.GREEN_BORDER};">${(data.eOld || 0).toLocaleString()}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid ${DashColors.GREEN_BORDER};"><strong>${(data.eNew || 0).toLocaleString()}</strong></td>
         <td style="padding:0.5rem;text-align:right;color:#f57f17;font-weight:600;">${usage.toLocaleString()}</td>
       </tr>`;
     });
@@ -958,24 +958,24 @@ function displayRecordedMeterData(importData, matchResults) {
     // Validation summary
     if (matchResults && matchResults.summary) {
       const { okCount, warningCount, errorCount } = matchResults.summary;
-      comparisonHtml += `<div style="background:#e8f5e9;padding:0.8rem;border-radius:4px;border-left:4px solid #4caf50;">
-        <div style="color:#2e7d32;font-weight:600;margin-bottom:0.3rem;">✅ ข้อมูลตรงกัน</div>
-        <div style="font-size:1.2rem;font-weight:600;color:#2e7d32;">${okCount}</div>
+      comparisonHtml += `<div style="background:${DashColors.GREEN_BG};padding:0.8rem;border-radius:4px;border-left:4px solid ${DashColors.GREEN_ACTIVE};">
+        <div style="color:${DashColors.GREEN_DARK};font-weight:600;margin-bottom:0.3rem;">✅ ข้อมูลตรงกัน</div>
+        <div style="font-size:1.2rem;font-weight:600;color:${DashColors.GREEN_DARK};">${okCount}</div>
         <div style="color:var(--text-muted);font-size:0.8rem;">ห้อง</div>
       </div>`;
 
       if (warningCount > 0) {
-        comparisonHtml += `<div style="background:#fff3e0;padding:0.8rem;border-radius:4px;border-left:4px solid #ff9800;">
-          <div style="color:#e65100;font-weight:600;margin-bottom:0.3rem;">⚠️ ต่างเล็กน้อย</div>
-          <div style="font-size:1.2rem;font-weight:600;color:#e65100;">${warningCount}</div>
+        comparisonHtml += `<div style="background:${DashColors.ORANGE_BG};padding:0.8rem;border-radius:4px;border-left:4px solid ${DashColors.ORANGE_MED};">
+          <div style="color:${DashColors.ORANGE_DEEP};font-weight:600;margin-bottom:0.3rem;">⚠️ ต่างเล็กน้อย</div>
+          <div style="font-size:1.2rem;font-weight:600;color:${DashColors.ORANGE_DEEP};">${warningCount}</div>
           <div style="color:var(--text-muted);font-size:0.8rem;">ห้อง</div>
         </div>`;
       }
 
       if (errorCount > 0) {
-        comparisonHtml += `<div style="background:#ffebee;padding:0.8rem;border-radius:4px;border-left:4px solid #f44336;">
-          <div style="color:#c62828;font-weight:600;margin-bottom:0.3rem;">❌ ต่างมาก</div>
-          <div style="font-size:1.2rem;font-weight:600;color:#c62828;">${errorCount}</div>
+        comparisonHtml += `<div style="background:${DashColors.RED_BG};padding:0.8rem;border-radius:4px;border-left:4px solid ${DashColors.RED_MED};">
+          <div style="color:${DashColors.RED_DEEP};font-weight:600;margin-bottom:0.3rem;">❌ ต่างมาก</div>
+          <div style="font-size:1.2rem;font-weight:600;color:${DashColors.RED_DEEP};">${errorCount}</div>
           <div style="color:var(--text-muted);font-size:0.8rem;">ห้อง</div>
         </div>`;
       }
@@ -1154,7 +1154,7 @@ function renderNestMeterGrid() {
   const nestRooms = BuildingConfig.getNestRoomIds();
 
   gridEl.innerHTML = nestRooms.map(room => `
-    <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
+    <div style="background:#f9f9f9;border:1px solid ${DashColors.BORDER};border-radius:8px;padding:1rem;">
       <div style="font-weight:600;margin-bottom:0.8rem;color:var(--text);">🏠 ${room}</div>
 
       <!-- Electric Reading -->
@@ -1297,7 +1297,7 @@ function renderRoomsMeterGrid() {
   const rooms_grid_list = RoomConfigManager.getAllRooms('rooms');
 
   gridEl.innerHTML = rooms_grid_list.map(room => `
-    <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
+    <div style="background:#f9f9f9;border:1px solid ${DashColors.BORDER};border-radius:8px;padding:1rem;">
       <div style="font-weight:600;margin-bottom:0.8rem;color:var(--text);">🏠 ${room}</div>
 
       <!-- Electric Reading -->

@@ -346,7 +346,7 @@ function showAddMaintenanceModal(){
   const modal=document.createElement('div');
   modal.id='mx-add-modal';
   modal.className='u-modal-overlay';
-  modal.innerHTML=`<div style="background:#fff;border-radius:12px;padding:2rem;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+  modal.innerHTML=`<div style="background:${DashColors.WHITE};border-radius:12px;padding:2rem;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
     <div style="font-size:1.3rem;font-weight:700;margin-bottom:1.5rem;color:var(--text);">➕ แจ้งซ่อมใหม่</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
       <div><label style="font-weight:600;display:block;margin-bottom:6px;">ห้อง</label><input type="text" id="mx-room-modal" placeholder="เช่น 15ก, 22, Amazon" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
@@ -372,7 +372,7 @@ function showAddMaintenanceModal(){
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
       <div><label style="font-weight:600;display:block;margin-bottom:6px;">ผู้รับเหมา <span style="font-weight:400;color:var(--text-muted);font-size:.85em;">(ไม่บังคับ)</span></label>
-        <select id="mx-provider-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;">
+        <select id="mx-provider-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:${DashColors.WHITE};">
           <option value="">— ไม่ระบุ —</option>
           ${(typeof window.ServiceProvidersStore !== 'undefined' && window.ServiceProvidersStore.getAll
             ? window.ServiceProvidersStore.getAll()
@@ -384,7 +384,7 @@ function showAddMaintenanceModal(){
         <input type="number" id="mx-cost-modal" placeholder="เช่น 500" min="0" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
     </div>
     <div style="display:flex;gap:10px;">
-      <button data-action="addMaintenanceRequestFromModal" style="flex:1;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกงานซ่อม</button>
+      <button data-action="addMaintenanceRequestFromModal" style="flex:1;background:linear-gradient(135deg, ${DashColors.GREEN_ACTIVE} 0%, ${DashColors.GREEN_DARK} 100%);color:${DashColors.WHITE};border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกงานซ่อม</button>
       <button data-action="closeAddMaintenanceModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">ยกเลิก</button>
     </div>
   </div>`;
@@ -563,7 +563,7 @@ function showAssignModal(id){
       <input type="text" id="assigned-name" placeholder="เช่น สมชาย, นายช่างสมบูรณ์" value="${_escReq(item.assignedTo||'')}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
     </div>
     <div style="display:flex;gap:10px;">
-      <button data-action="assignMaintenanceWorker" data-id="${id}" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ ยืนยัน</button>
+      <button data-action="assignMaintenanceWorker" data-id="${id}" style="flex:1;background:var(--green);color:${DashColors.WHITE};border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ ยืนยัน</button>
       <button data-action="closeAssignModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
     </div>
   `;
@@ -593,7 +593,7 @@ function showNotesModal(id){
       <textarea id="work-notes" placeholder="อธิบายสิ่งที่ทำแล้ว เช่น ซ่อมแซมไฟฟ้า เปลี่ยนสวิตช์..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;resize:vertical;min-height:100px;">${_escReq(item.workNotes||'')}</textarea>
     </div>
     <div style="display:flex;gap:10px;">
-      <button data-action="saveWorkNotes" data-id="${id}" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
+      <button data-action="saveWorkNotes" data-id="${id}" style="flex:1;background:var(--green);color:${DashColors.WHITE};border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
       <button data-action="closeNotesModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
     </div>
   `;
@@ -751,7 +751,7 @@ function showProviderModal(id){
       <input type="number" id="pv-cost" placeholder="เช่น 500" min="0" value="${item.costThb||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
     </div>
     <div style="display:flex;gap:10px;">
-      <button data-action="saveProviderAssignment" data-id="${id}" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
+      <button data-action="saveProviderAssignment" data-id="${id}" style="flex:1;background:var(--green);color:${DashColors.WHITE};border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
       <button data-action="closeProviderModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
     </div>
   `;
@@ -920,7 +920,7 @@ function renderMaintenancePage(){
   el.innerHTML=filtered.map(x=>`
     <div class="mx-row" style="${x.status==='done'?'opacity:.7;':''}">
       <div>
-        <div style="width:60px;height:60px;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;flex-shrink:0;box-shadow:0 2px 8px rgba(76, 175, 80, 0.3);">
+        <div style="width:60px;height:60px;background:linear-gradient(135deg, ${DashColors.GREEN_ACTIVE} 0%, ${DashColors.GREEN_DARK} 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;color:${DashColors.WHITE};font-weight:700;font-size:1.1rem;flex-shrink:0;box-shadow:0 2px 8px rgba(76, 175, 80, 0.3);">
           ${x.room.substring(0,2)}
         </div>
         <div>
@@ -929,10 +929,10 @@ function renderMaintenancePage(){
           <div style="font-size:.85rem;color:#555;line-height:1.5;margin-bottom:6px;">${_escReq(x.desc||'')}</div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
             <span class="mx-status-pill ${MX_STATUS_CLASS[x.status]||'mx-pending'}">${MX_STATUS_LABEL[x.status]||x.status}</span>
-            ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?'<span style="font-size:.75rem;color:var(--blue);background:#e3f2fd;padding:4px 10px;border-radius:20px;">📸 มีรูปภาพ</span>':''}
+            ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?`<span style="font-size:.75rem;color:var(--blue);background:${DashColors.BLUE_BG};padding:4px 10px;border-radius:20px;">📸 มีรูปภาพ</span>`:''}
             ${x.assignedTo?'<span style="font-size:.75rem;color:#5e35b1;background:#e8e4f3;padding:4px 10px;border-radius:20px;">👤 '+_escReq(x.assignedTo)+'</span>':''}
-            ${x.assignedProviderId?'<span style="font-size:.75rem;color:#e65100;background:#fff3e0;padding:4px 10px;border-radius:20px;">🏗️ '+_escReq(_provMap[x.assignedProviderId]||x.assignedProviderId)+'</span>':''}
-            ${x.costThb?'<span style="font-size:.75rem;color:#1565c0;background:#e3f2fd;padding:4px 10px;border-radius:20px;">💰 ฿'+x.costThb.toLocaleString()+'</span>':''}
+            ${x.assignedProviderId?`<span style="font-size:.75rem;color:${DashColors.ORANGE_DEEP};background:${DashColors.ORANGE_BG};padding:4px 10px;border-radius:20px;">🏗️ `+_escReq(_provMap[x.assignedProviderId]||x.assignedProviderId)+'</span>':''}
+            ${x.costThb?`<span style="font-size:.75rem;color:${DashColors.BLUE_DARK};background:${DashColors.BLUE_BG};padding:4px 10px;border-radius:20px;">💰 ฿`+x.costThb.toLocaleString()+'</span>':''}
           </div>
           ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?`<div style="margin-top:8px;"><button class="photo-viewer-btn" data-action="openPhotoModal" data-id="${x.beforePhoto||x.photoUrl||x.photo||''}" data-arg="${x.afterPhoto||''}">📸 รูปภาพ</button></div>`:''}
 
@@ -1145,7 +1145,7 @@ function showAddHousekeepingModal(){
   const modal=document.createElement('div');
   modal.id='hk-add-modal';
   modal.className='u-modal-overlay';
-  modal.innerHTML=`<div style="background:#fff;border-radius:12px;padding:2rem;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+  modal.innerHTML=`<div style="background:${DashColors.WHITE};border-radius:12px;padding:2rem;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
     <div style="font-size:1.3rem;font-weight:700;margin-bottom:1.5rem;color:var(--text);">➕ ขอบริการทำความสะอาดใหม่</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
       <div><label style="font-weight:600;display:block;margin-bottom:6px;">ห้อง</label><input type="text" id="hk-room-modal" placeholder="เช่น 15ก, 22, Amazon" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
@@ -1169,7 +1169,7 @@ function showAddHousekeepingModal(){
       </div>
     </div>
     <div style="display:flex;gap:10px;">
-      <button data-action="addHousekeepingRequestFromModal" style="flex:1;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกการขอบริการ</button>
+      <button data-action="addHousekeepingRequestFromModal" style="flex:1;background:linear-gradient(135deg, ${DashColors.GREEN_ACTIVE} 0%, ${DashColors.GREEN_DARK} 100%);color:${DashColors.WHITE};border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกการขอบริการ</button>
       <button data-action="closeAddHousekeepingModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">ยกเลิก</button>
     </div>
   </div>`;
@@ -1349,7 +1349,7 @@ function renderHousekeepingList(){
     return `
     <div class="mx-row" style="${x.status==='done'?'opacity:.7;':''}">
       <div>
-        <div style="width:60px;height:60px;background:linear-gradient(135deg, #2196f3 0%, #1976d2 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;flex-shrink:0;box-shadow:0 2px 8px rgba(33, 150, 243, 0.3);">
+        <div style="width:60px;height:60px;background:linear-gradient(135deg, #2196f3 0%, ${DashColors.BLUE_MED} 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;color:${DashColors.WHITE};font-weight:700;font-size:1.1rem;flex-shrink:0;box-shadow:0 2px 8px rgba(33, 150, 243, 0.3);">
           ${_escReq(String(x.room||'').substring(0,2))}
         </div>
         <div>
@@ -1497,8 +1497,8 @@ function renderDepositsPage() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
         <div>
           <div style="font-weight:700;color:#334435;font-size:var(--fs-md);">ห้อง ${r.roomId} <span style="font-size:11px;color:#9ca3af;font-weight:400;">${r.building}</span></div>
-          <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:3px;">รับเมื่อ: ${r.receivedAt || '—'} · ${statusBadge(r.status)}</div>
-          ${(r.deductions||[]).length ? `<div style="font-size:10px;color:#6b7280;margin-top:4px;">หัก: ${(r.deductions||[]).map(d=>`${d.reason} (${fmt(d.amount)})`).join(', ')}</div>` : ''}
+          <div style="font-size:var(--fs-sm);color:${DashColors.TEXT_SECONDARY};margin-top:3px;">รับเมื่อ: ${r.receivedAt || '—'} · ${statusBadge(r.status)}</div>
+          ${(r.deductions||[]).length ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};margin-top:4px;">หัก: ${(r.deductions||[]).map(d=>`${d.reason} (${fmt(d.amount)})`).join(', ')}</div>` : ''}
           ${r.notes ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">หมายเหตุ: ${r.notes}</div>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0;">
@@ -1532,17 +1532,17 @@ function showReturnDepositModal(building, roomId) {
       </div>
       <div style="margin-bottom:12px;">
         <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">วันที่คืนมัดจำ</label>
-        <input id="dep-ret-date" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;box-sizing:border-box;">
+        <input id="dep-ret-date" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:8px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;">
       </div>
       <div id="dep-deductions-list" style="margin-bottom:8px;"></div>
       <button data-action="addDepDeduction" style="font-size:11px;color:#3b82f6;background:none;border:none;cursor:pointer;padding:0;margin-bottom:8px;font-family:inherit;">+ เพิ่มรายการหัก</button>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <input id="dep-deduction-reason" placeholder="เหตุผล (เช่น ค่าเสียหาย)" style="flex:1;padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
-        <input id="dep-deduction-amount" type="number" placeholder="จำนวนเงิน" style="width:110px;padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
+        <input id="dep-deduction-reason" placeholder="เหตุผล (เช่น ค่าเสียหาย)" style="flex:1;padding:7px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
+        <input id="dep-deduction-amount" type="number" placeholder="จำนวนเงิน" style="width:110px;padding:7px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
       </div>
       <div style="margin-bottom:12px;">
         <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">หมายเหตุ</label>
-        <input id="dep-ret-notes" type="text" placeholder="(ไม่บังคับ)" value="${dep.notes||''}" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;box-sizing:border-box;">
+        <input id="dep-ret-notes" type="text" placeholder="(ไม่บังคับ)" value="${dep.notes||''}" style="width:100%;padding:8px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;">
       </div>
       <div style="display:flex;gap:10px;margin-top:18px;">
         <button data-action="closeReturnDepositModal" style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">ยกเลิก</button>
@@ -1623,14 +1623,14 @@ async function exportDepositReceipt(building, roomId) {
   wrap.innerHTML = `
     <div style="text-align:center;margin-bottom:18px;">
       <div style="font-size:1.2rem;font-weight:800;color:#334435;">${owner.name || 'The Green Haven'}</div>
-      <div style="font-size:13px;color:#6b7280;margin-top:2px;">ใบรับเงินคืนมัดจำ / Deposit Refund Receipt</div>
+      <div style="font-size:13px;color:${DashColors.TEXT_SECONDARY};margin-top:2px;">ใบรับเงินคืนมัดจำ / Deposit Refund Receipt</div>
     </div>
     <hr style="border:none;border-top:1px dashed #d1d5db;margin:12px 0;">
     <table style="width:100%;font-size:13px;border-collapse:collapse;">
-      <tr><td style="padding:4px 0;color:#6b7280;">ห้อง / Room</td><td style="text-align:right;font-weight:700;">${roomId} (${building})</td></tr>
-      <tr><td style="padding:4px 0;color:#6b7280;">มัดจำ / Deposit</td><td style="text-align:right;">${fmt(dep.amount)}</td></tr>
-      <tr><td style="padding:4px 0;color:#6b7280;">วันที่รับ / Received</td><td style="text-align:right;">${dep.receivedAt||'—'}</td></tr>
-      <tr><td style="padding:4px 0;color:#6b7280;">วันที่คืน / Returned</td><td style="text-align:right;">${dep.returnedAt||'—'}</td></tr>
+      <tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">ห้อง / Room</td><td style="text-align:right;font-weight:700;">${roomId} (${building})</td></tr>
+      <tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">มัดจำ / Deposit</td><td style="text-align:right;">${fmt(dep.amount)}</td></tr>
+      <tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">วันที่รับ / Received</td><td style="text-align:right;">${dep.receivedAt||'—'}</td></tr>
+      <tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">วันที่คืน / Returned</td><td style="text-align:right;">${dep.returnedAt||'—'}</td></tr>
     </table>
     ${(dep.deductions||[]).length ? `
     <div style="margin-top:12px;padding:10px;background:#fef9ec;border-radius:8px;font-size:12px;">

@@ -65,19 +65,19 @@
             <div style="font-weight:700;font-size:1.05rem;">${_esc(b.displayName)}</div>
             <div style="font-family:monospace;font-size:.78rem;color:var(--text-muted);margin-top:.15rem;">buildings/${id}</div>
           </div>
-          <span style="font-size:.72rem;padding:.15rem .5rem;border-radius:6px;background:${badgeColor};color:#fff;">${status}</span>
+          <span style="font-size:.72rem;padding:.15rem .5rem;border-radius:6px;background:${badgeColor};color:${DashColors.WHITE};">${status}</span>
         </div>
         ${b.address ? `<div style="font-size:.85rem;color:var(--text-muted);">📍 ${_esc(b.address)}</div>` : ''}
         ${b.companyName ? `<div style="font-size:.85rem;">🏢 ${_esc(b.companyName)}</div>` : ''}
         ${b.promptPayId ? `<div style="font-size:.85rem;font-family:monospace;">💰 ${_esc(b.promptPayId)}</div>` : ''}
         ${b.contact ? `<div style="font-size:.85rem;">☎️ ${_esc(b.contact)}</div>` : ''}
         ${b.ownerEmail ? `<div style="font-size:.78rem;color:var(--text-muted);">👤 ${_esc(b.ownerEmail)}</div>` : ''}
-        ${isFallback ? `<div style="font-size:.72rem;color:#ff9800;margin-top:.25rem;">⚠️ ยังไม่ได้บันทึกใน Firestore — กด "แก้ไข" เพื่อสร้าง</div>` : ''}
+        ${isFallback ? `<div style="font-size:.72rem;color:${DashColors.ORANGE_MED};margin-top:.25rem;">⚠️ ยังไม่ได้บันทึกใน Firestore — กด "แก้ไข" เพื่อสร้าง</div>` : ''}
         ${_renderRoomChips(b.id, rooms)}
         <div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap;">
           <button data-action="openBuildingModal" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;flex:1;">✏️ แก้ไข</button>
-          <button data-action="openChecklistEditor" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;flex:1;background:#e3f2fd;border-color:#90caf9;color:#1565c0;">🗒️ Checklist</button>
-          ${status === 'active' && !isFallback ? `<button data-action="archiveBuildingPrompt" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;background:#fff;border:1px solid #f44336;color:#f44336;">🗑️ Archive</button>` : ''}
+          <button data-action="openChecklistEditor" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;flex:1;background:${DashColors.BLUE_BG};border-color:#90caf9;color:${DashColors.BLUE_DARK};">🗒️ Checklist</button>
+          ${status === 'active' && !isFallback ? `<button data-action="archiveBuildingPrompt" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;background:${DashColors.WHITE};border:1px solid ${DashColors.RED_MED};color:${DashColors.RED_MED};">🗑️ Archive</button>` : ''}
         </div>
       </div>
     `;
@@ -98,7 +98,7 @@
     if (!listEl) return;
     listEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted);">กำลังโหลดข้อมูลอาคาร...</div>';
     if (!window.BuildingRegistry) {
-      listEl.innerHTML = '<div style="grid-column:1/-1;color:#c62828;text-align:center;padding:1rem;">BuildingRegistry not loaded</div>';
+      listEl.innerHTML = `<div style="grid-column:1/-1;color:${DashColors.RED_DEEP};text-align:center;padding:1rem;">BuildingRegistry not loaded</div>`;
       return;
     }
     await window.BuildingRegistry.refresh();
