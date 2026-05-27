@@ -130,12 +130,12 @@
         throw new Error('Firebase ยังไม่พร้อม');
       }
       const db = window.firebase.firestore();
-      const { collection, collectionGroup, getDocs, query } = window.firebase.firestoreFunctions;
+      const { collection, collectionGroup, getDocs, query, limit } = window.firebase.firestoreFunctions;
 
       // Load articles + claims (parallel) + tenant total for occupancy denominator
       const [articleSnap, claimSnap, tenants] = await Promise.all([
         getDocs(collection(db, 'wellness_articles')),
-        getDocs(query(collectionGroup(db, 'wellnessClaimed'))),
+        getDocs(query(collectionGroup(db, 'wellnessClaimed'), limit(1000))),
         loadAllTenantDocs()
       ]);
 
@@ -837,8 +837,8 @@
       throw new Error('Firestore ยังไม่พร้อม');
     }
     const db = window.firebase.firestore();
-    const { collection, getDocs } = window.firebase.firestoreFunctions;
-    const snap = await getDocs(collection(db, 'complaints'));
+    const { collection, getDocs, query, limit } = window.firebase.firestoreFunctions;
+    const snap = await getDocs(query(collection(db, 'complaints'), limit(500)));
     const cutoff = Date.now() - 90 * 86400000;
     const byRoom = {};
     snap.forEach(d => {
