@@ -95,6 +95,28 @@
     closeDialog(dialog);
   }, true);
 
+  // Tab focus trap — cycle within the topmost visible dialog (WCAG 2.1 §2.1.2)
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Tab') return;
+    const dialog = topmost(visibleDialogs());
+    if (!dialog) return;
+    const focusables = Array.from(dialog.querySelectorAll(FOCUSABLE));
+    if (!focusables.length) { e.preventDefault(); return; }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first || !dialog.contains(document.activeElement)) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last || !dialog.contains(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }, true);
+
   // Backdrop click — only when the click target IS the dialog overlay element
   document.addEventListener('click', function (e) {
     const dialog = e.target.closest(DIALOG_SELECTOR);

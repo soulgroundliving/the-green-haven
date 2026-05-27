@@ -7031,7 +7031,14 @@
         }
 
         async function deleteMarketItem(id) {
-            if (!confirm('ลบประกาศนี้ถาวรเลยไหมครับ? ไม่สามารถกู้คืนได้')) return;
+            const _delOk = await window.GhModal.confirm({
+                title: 'ลบประกาศ',
+                body: 'ลบประกาศนี้ถาวรเลยไหมครับ? ไม่สามารถกู้คืนได้',
+                confirmLabel: 'ลบ',
+                cancelLabel: 'ยกเลิก',
+                danger: true,
+            });
+            if (!_delOk) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
             try {
                 // Clean chats FIRST while post still exists — auth requires
@@ -12578,8 +12585,14 @@
         }
 
         // ---- LOGOUT ----
-        function logoutTenantApp() {
-            if (!confirm('ต้องการออกจากระบบ?')) return;
+        async function logoutTenantApp() {
+            const _logoutOk = await window.GhModal.confirm({
+                title: 'ออกจากระบบ',
+                body: 'ต้องการออกจากระบบ?',
+                confirmLabel: 'ออกจากระบบ',
+                cancelLabel: 'ยกเลิก',
+            });
+            if (!_logoutOk) return;
             sessionStorage.clear();
             try { localStorage.removeItem('tenant_session'); } catch(_){}
             try { localStorage.removeItem('tenant_app_room'); } catch(_){}
