@@ -348,14 +348,14 @@ function showAddMaintenanceModal(){
   modal.className='u-modal-overlay';
   modal.innerHTML=`<div style="background:${DashColors.WHITE};border-radius:12px;padding:2rem;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
     <div style="font-size:1.3rem;font-weight:700;margin-bottom:1.5rem;color:var(--text);">➕ แจ้งซ่อมใหม่</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
-      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ห้อง</label><input type="text" id="mx-room-modal" placeholder="เช่น 15ก, 22, Amazon" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
-      <div><label style="font-weight:600;display:block;margin-bottom:6px;">วันที่แจ้ง</label><input type="date" id="mx-date-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
+    <div class="u-grid-2col">
+      <div><label class="u-field-label">ห้อง</label><input type="text" id="mx-room-modal" placeholder="เช่น 15ก, 22, Amazon" class="u-input-md"></div>
+      <div><label class="u-field-label">วันที่แจ้ง</label><input type="date" id="mx-date-modal" class="u-input-md"></div>
     </div>
-    <div style="margin-bottom:1.5rem;"><label style="font-weight:600;display:block;margin-bottom:6px;">รายละเอียดปัญหา</label><textarea id="mx-desc-modal" placeholder="เช่น ประตูปิดไม่สนิท, น้ำรั้ว, แอร์ไม่เย็น..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;min-height:80px;resize:vertical;"></textarea></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
-      <div><label style="font-weight:600;display:block;margin-bottom:6px;">หมวดหมู่</label>
-        <select id="mx-category-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+    <div style="margin-bottom:1.5rem;"><label class="u-field-label">รายละเอียดปัญหา</label><textarea id="mx-desc-modal" placeholder="เช่น ประตูปิดไม่สนิท, น้ำรั้ว, แอร์ไม่เย็น..." class="u-ta-md" style="min-height:80px;"></textarea></div>
+    <div class="u-grid-2col">
+      <div><label class="u-field-label">หมวดหมู่</label>
+        <select id="mx-category-modal" class="u-input-md">
           <option value="electrical">⚡ ไฟฟ้า</option>
           <option value="plumbing">🚿 ประปา/น้ำ</option>
           <option value="repair">🔧 ซ่อมแซมทั่วไป</option>
@@ -363,15 +363,15 @@ function showAddMaintenanceModal(){
           <option value="other">📦 อื่นๆ</option>
         </select>
       </div>
-      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ความสำคัญ</label>
-        <select id="mx-priority-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+      <div><label class="u-field-label">ความสำคัญ</label>
+        <select id="mx-priority-modal" class="u-input-md">
           <option value="normal">🟡 ปกติ</option>
           <option value="urgent">🔴 ด่วน</option>
         </select>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
-      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ผู้รับเหมา <span style="font-weight:400;color:var(--text-muted);font-size:.85em;">(ไม่บังคับ)</span></label>
+    <div class="u-grid-2col">
+      <div><label class="u-field-label">ผู้รับเหมา <span style="font-weight:400;color:var(--text-muted);font-size:.85em;">(ไม่บังคับ)</span></label>
         <select id="mx-provider-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:${DashColors.WHITE};">
           <option value="">— ไม่ระบุ —</option>
           ${(typeof window.ServiceProvidersStore !== 'undefined' && window.ServiceProvidersStore.getAll
@@ -380,10 +380,10 @@ function showAddMaintenanceModal(){
           ).map(p => `<option value="${_escReq(p.id)}">${_escReq(p.name)}${p.type ? ' ('+_escReq(p.type)+')' : ''}</option>`).join('')}
         </select>
       </div>
-      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ค่าใช้จ่าย (฿) <span style="font-weight:400;color:var(--text-muted);font-size:.85em;">(ไม่บังคับ)</span></label>
-        <input type="number" id="mx-cost-modal" placeholder="เช่น 500" min="0" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
+      <div><label class="u-field-label">ค่าใช้จ่าย (฿) <span style="font-weight:400;color:var(--text-muted);font-size:.85em;">(ไม่บังคับ)</span></label>
+        <input type="number" id="mx-cost-modal" placeholder="เช่น 500" min="0" class="u-input-md"></div>
     </div>
-    <div style="display:flex;gap:10px;">
+    <div class="u-flex-gap-sm">
       <button data-action="addMaintenanceRequestFromModal" style="flex:1;background:linear-gradient(135deg, ${DashColors.GREEN_ACTIVE} 0%, ${DashColors.GREEN_DARK} 100%);color:${DashColors.WHITE};border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกงานซ่อม</button>
       <button data-action="closeAddMaintenanceModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">ยกเลิก</button>
     </div>
@@ -559,10 +559,10 @@ function showAssignModal(id){
   content.innerHTML=`
     <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">👤 อัปเดตผู้รับผิดชอบ</h2>
     <div style="margin-bottom:20px;">
-      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">ชื่อช่าง/ชื่อคน</label>
+      <label class="u-label-block">ชื่อช่าง/ชื่อคน</label>
       <input type="text" id="assigned-name" placeholder="เช่น สมชาย, นายช่างสมบูรณ์" value="${_escReq(item.assignedTo||'')}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
     </div>
-    <div style="display:flex;gap:10px;">
+    <div class="u-flex-gap-sm">
       <button data-action="assignMaintenanceWorker" data-id="${id}" style="flex:1;background:var(--green);color:${DashColors.WHITE};border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ ยืนยัน</button>
       <button data-action="closeAssignModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
     </div>
@@ -589,10 +589,10 @@ function showNotesModal(id){
   content.innerHTML=`
     <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">📝 หมายเหตุการทำงาน</h2>
     <div style="margin-bottom:20px;">
-      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">รายละเอียดการทำงาน</label>
-      <textarea id="work-notes" placeholder="อธิบายสิ่งที่ทำแล้ว เช่น ซ่อมแซมไฟฟ้า เปลี่ยนสวิตช์..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;resize:vertical;min-height:100px;">${_escReq(item.workNotes||'')}</textarea>
+      <label class="u-label-block">รายละเอียดการทำงาน</label>
+      <textarea id="work-notes" placeholder="อธิบายสิ่งที่ทำแล้ว เช่น ซ่อมแซมไฟฟ้า เปลี่ยนสวิตช์..." class="u-ta-md" style="min-height:100px;">${_escReq(item.workNotes||'')}</textarea>
     </div>
-    <div style="display:flex;gap:10px;">
+    <div class="u-flex-gap-sm">
       <button data-action="saveWorkNotes" data-id="${id}" style="flex:1;background:var(--green);color:${DashColors.WHITE};border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
       <button data-action="closeNotesModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
     </div>
@@ -619,16 +619,16 @@ function showPhotosModal(id){
   content.innerHTML=`
     <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">📷 แนบรูปภาพ</h2>
     <div style="margin-bottom:16px;">
-      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">📸 ถ่ายรูปก่อน (Before)</label>
+      <label class="u-label-block">📸 ถ่ายรูปก่อน (Before)</label>
       <input type="file" id="before-photo-input" accept="image/*" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;">
       ${(item.beforePhoto && (item.beforePhoto.startsWith('data:') || item.beforePhoto.startsWith('https://')))?'<div style="margin-top:8px;">\x3cimg src="'+item.beforePhoto+'" style="max-width:100%;height:120px;object-fit:cover;border-radius:6px;"></div>':''}
     </div>
     <div style="margin-bottom:20px;">
-      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">📸 ถ่ายรูปหลัง (After)</label>
+      <label class="u-label-block">📸 ถ่ายรูปหลัง (After)</label>
       <input type="file" id="after-photo-input" accept="image/*" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;">
       ${(item.afterPhoto && (item.afterPhoto.startsWith('data:') || item.afterPhoto.startsWith('https://')))?'<div style="margin-top:8px;">\x3cimg src="'+item.afterPhoto+'" style="max-width:100%;height:120px;object-fit:cover;border-radius:6px;"></div>':''}
     </div>
-    <div style="display:flex;gap:10px;">
+    <div class="u-flex-gap-sm">
       <button data-action="closePhotosModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ เสร็จ</button>
     </div>
   `;
@@ -740,17 +740,17 @@ function showProviderModal(id){
   content.innerHTML=`
     <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">🏗️ ระบุผู้รับเหมา</h2>
     <div style="margin-bottom:16px;">
-      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">ผู้รับเหมา</label>
+      <label class="u-label-block">ผู้รับเหมา</label>
       <select id="pv-provider" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
         <option value="">— ไม่ระบุ —</option>
         ${opts}
       </select>
     </div>
     <div style="margin-bottom:20px;">
-      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">ค่าใช้จ่าย (บาท)</label>
+      <label class="u-label-block">ค่าใช้จ่าย (บาท)</label>
       <input type="number" id="pv-cost" placeholder="เช่น 500" min="0" value="${item.costThb||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
     </div>
-    <div style="display:flex;gap:10px;">
+    <div class="u-flex-gap-sm">
       <button data-action="saveProviderAssignment" data-id="${id}" style="flex:1;background:var(--green);color:${DashColors.WHITE};border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
       <button data-action="closeProviderModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
     </div>
@@ -1147,28 +1147,28 @@ function showAddHousekeepingModal(){
   modal.className='u-modal-overlay';
   modal.innerHTML=`<div style="background:${DashColors.WHITE};border-radius:12px;padding:2rem;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
     <div style="font-size:1.3rem;font-weight:700;margin-bottom:1.5rem;color:var(--text);">➕ ขอบริการทำความสะอาดใหม่</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
-      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ห้อง</label><input type="text" id="hk-room-modal" placeholder="เช่น 15ก, 22, Amazon" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
-      <div><label style="font-weight:600;display:block;margin-bottom:6px;">วันที่ขอ</label><input type="date" id="hk-date-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
+    <div class="u-grid-2col">
+      <div><label class="u-field-label">ห้อง</label><input type="text" id="hk-room-modal" placeholder="เช่น 15ก, 22, Amazon" class="u-input-md"></div>
+      <div><label class="u-field-label">วันที่ขอ</label><input type="date" id="hk-date-modal" class="u-input-md"></div>
     </div>
-    <div style="margin-bottom:1.5rem;"><label style="font-weight:600;display:block;margin-bottom:6px;">หมายเหตุพิเศษ</label><textarea id="hk-desc-modal" placeholder="เช่น ฝังหนามความสะอาด, บริเวณให้ความสำคัญ..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;min-height:80px;resize:vertical;"></textarea></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
-      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ประเภทบริการ</label>
-        <select id="hk-service-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+    <div style="margin-bottom:1.5rem;"><label class="u-field-label">หมายเหตุพิเศษ</label><textarea id="hk-desc-modal" placeholder="เช่น ฝังหนามความสะอาด, บริเวณให้ความสำคัญ..." class="u-ta-md" style="min-height:80px;"></textarea></div>
+    <div class="u-grid-2col">
+      <div><label class="u-field-label">ประเภทบริการ</label>
+        <select id="hk-service-modal" class="u-input-md">
           <option value="standard">🧹 Standard</option>
           <option value="deep-clean">🧼 Deep-Clean</option>
           <option value="linen-change">🛏️ Linen Change</option>
           <option value="urgent">⚡ Urgent</option>
         </select>
       </div>
-      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ความสำคัญ</label>
-        <select id="hk-priority-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+      <div><label class="u-field-label">ความสำคัญ</label>
+        <select id="hk-priority-modal" class="u-input-md">
           <option value="normal">🟡 ปกติ</option>
           <option value="urgent">🔴 ด่วน</option>
         </select>
       </div>
     </div>
-    <div style="display:flex;gap:10px;">
+    <div class="u-flex-gap-sm">
       <button data-action="addHousekeepingRequestFromModal" style="flex:1;background:linear-gradient(135deg, ${DashColors.GREEN_ACTIVE} 0%, ${DashColors.GREEN_DARK} 100%);color:${DashColors.WHITE};border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกการขอบริการ</button>
       <button data-action="closeAddHousekeepingModal" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">ยกเลิก</button>
     </div>
@@ -1739,17 +1739,17 @@ function renderFacilityBookings() {
         cancelled: 'background:#fee2e2;color:#991b1b;',
       };
       list.innerHTML = `
-        <div style="overflow-x:auto;">
+        <div class="u-scroll-x">
           <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
             <thead>
               <tr style="border-bottom:2px solid var(--border);">
-                <th style="padding:8px 10px;text-align:left;">ประเภท</th>
-                <th style="padding:8px 10px;text-align:left;">Slot</th>
-                <th style="padding:8px 10px;text-align:left;">ช่วงเวลา</th>
-                <th style="padding:8px 10px;text-align:left;">ห้อง / ชื่อ</th>
-                <th style="padding:8px 10px;text-align:left;">วันที่</th>
-                <th style="padding:8px 10px;text-align:left;">สถานะ</th>
-                <th style="padding:8px 10px;text-align:left;"></th>
+                <th class="u-td-l" style="padding:8px 10px;">ประเภท</th>
+                <th class="u-td-l" style="padding:8px 10px;">Slot</th>
+                <th class="u-td-l" style="padding:8px 10px;">ช่วงเวลา</th>
+                <th class="u-td-l" style="padding:8px 10px;">ห้อง / ชื่อ</th>
+                <th class="u-td-l" style="padding:8px 10px;">วันที่</th>
+                <th class="u-td-l" style="padding:8px 10px;">สถานะ</th>
+                <th class="u-td-l" style="padding:8px 10px;"></th>
               </tr>
             </thead>
             <tbody>

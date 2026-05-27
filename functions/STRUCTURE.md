@@ -1,6 +1,6 @@
 # functions/ — Cloud Function Domain Map
 
-85 CFs are physically flat in `functions/` (one file per CF or small cohesive group).
+86 CFs are physically flat in `functions/` (one file per CF or small cohesive group).
 Subfolders were not used because every unit test in `__tests__/` imports via `require('../X')` —
 moving files would require updating every test path with no functional benefit.
 

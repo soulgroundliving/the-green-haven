@@ -524,6 +524,35 @@ button:not(:disabled):not([aria-disabled="true"]):hover {
   flex-shrink: 0;
 }
 
+/* ── Phase 4 — admin analytics / template utilities ─────────────────────── */
+/* Empty / error states */
+.u-empty-state  { text-align:center; color:var(--muted, #666); padding:2rem; }
+.u-empty-icon   { font-size:2rem; opacity:.4; margin-bottom:.5rem; }
+.u-empty-msg    { font-size:.85rem; }
+.u-error-state  { text-align:center; padding:1.5rem; }
+.u-hint-text    { color:var(--muted, #666); font-size:.72rem; margin-bottom:.6rem; }
+/* Overflow */
+.u-scroll-x     { overflow-x:auto; }
+/* List / flex helpers */
+.u-list-reset   { list-style:none; padding:0; margin:0; }
+.u-flex-sb      { display:flex; justify-content:space-between; align-items:center; }
+.u-flex-gap-sm  { display:flex; gap:10px; }
+/* Table helpers — for JS-generated HTML tables */
+.u-table-sm     { width:100%; border-collapse:collapse; font-size:.82rem; }
+.u-th-l         { padding:.55rem .7rem; text-align:left;  font-weight:700; }
+.u-th-r         { padding:.55rem .7rem; text-align:right; font-weight:700; }
+.u-td-l         { padding:.3rem .5rem; text-align:left; }
+.u-td-r         { padding:.3rem .5rem; text-align:right; }
+.u-td-num       { padding:.3rem .5rem; text-align:right; font-variant-numeric:tabular-nums; }
+/* Form template helpers */
+.u-grid-2col    { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem; }
+.u-field-label  { font-weight:600; display:block; margin-bottom:6px; }
+.u-label-block  { display:block; margin-bottom:8px; font-weight:600; font-size:.95rem; }
+.u-input-md     { width:100%; padding:10px; border:1px solid var(--border-base, #d1d5db); border-radius:8px; font-family:inherit; box-sizing:border-box; }
+.u-ta-md        { width:100%; padding:10px; border:1px solid var(--border-base, #d1d5db); border-radius:8px; font-family:inherit; box-sizing:border-box; resize:vertical; }
+/* Insight refresh button — small pill */
+.u-btn-insight  { font-size:.72rem; padding:2px 10px; background:var(--green-pale); color:var(--green-dark); border:1px solid var(--green); border-radius:999px; cursor:pointer; font-family:inherit; }
+
 /* ─── Skeleton loading ────────────────────────────── */
 @keyframes skeleton-shimmer {
   0%   { background-position: -400px 0; }
