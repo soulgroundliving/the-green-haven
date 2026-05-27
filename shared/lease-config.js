@@ -9,7 +9,7 @@ class LeaseAgreementManager {
 
   static saveLeases(data) {
     localStorage.setItem('lease_agreements_data', JSON.stringify(data));
-    console.log('✅ Lease data saved');
+    console.info('✅ Lease data saved');
   }
 
   static createLease(leaseData) {
@@ -48,7 +48,7 @@ class LeaseAgreementManager {
     };
 
     this.saveLeases(leases);
-    console.log(`✅ Lease created: ${leaseId}`);
+    console.info(`✅ Lease created: ${leaseId}`);
     return leaseId;
   }
 
@@ -125,7 +125,7 @@ class LeaseAgreementManager {
       });
       Object.assign(all, fresh);
       this.saveLeases(all);
-      console.log(`✅ Refreshed ${Object.keys(fresh).length} leases for ${building} from Firestore`);
+      console.info(`✅ Refreshed ${Object.keys(fresh).length} leases for ${building} from Firestore`);
     } catch (e) {
       console.warn('Lease refresh failed:', e.message);
     }
@@ -150,7 +150,7 @@ class LeaseAgreementManager {
 
     leases[leaseId] = { ...leases[leaseId], ...updates };
     this.saveLeases(leases);
-    console.log(`✅ Lease ${leaseId} updated`);
+    console.info(`✅ Lease ${leaseId} updated`);
     return true;
   }
 
@@ -171,7 +171,7 @@ class LeaseAgreementManager {
 
     delete leases[leaseId];
     this.saveLeases(leases);
-    console.log(`✅ Lease ${leaseId} deleted`);
+    console.info(`✅ Lease ${leaseId} deleted`);
     return true;
   }
 
@@ -250,7 +250,7 @@ class LeaseAgreementManager {
         roomId: String(roomId),
         updatedAt: new Date().toISOString(),
       }, { merge: true });
-      console.log(`✅ Lease projected to tenants/${building}/list/${roomId}.lease (reduced mirror)`);
+      console.info(`✅ Lease projected to tenants/${building}/list/${roomId}.lease (reduced mirror)`);
     } catch (e) {
       console.warn(`⚠️ Lease SSoT sync failed for ${roomId}:`, e.message);
     }
@@ -278,7 +278,7 @@ class LeaseAgreementManager {
         createdDate: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }, { merge: false });
-      console.log(`✅ Lease ${leaseId} archived at leases/${leaseData.building}/list/${leaseId}`);
+      console.info(`✅ Lease ${leaseId} archived at leases/${leaseData.building}/list/${leaseId}`);
     } catch (error) {
       console.warn(`⚠️ Firebase sync failed for lease:`, error.message);
     }
@@ -313,7 +313,7 @@ class LeaseAgreementManager {
         ...updates,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      console.log(`✅ Lease ${leaseId} updated at leases/${building}/list/${leaseId}`);
+      console.info(`✅ Lease ${leaseId} updated at leases/${building}/list/${leaseId}`);
     } catch (error) {
       console.warn(`⚠️ Firebase update failed for lease ${leaseId}:`, error.message);
     }
@@ -381,7 +381,7 @@ class LeaseAgreementManager {
         });
         Object.assign(all, leases);
         this.saveLeases(all);
-        console.log(`✅ Leases for ${building} loaded from Firebase (${querySnap.size} items)`);
+        console.info(`✅ Leases for ${building} loaded from Firebase (${querySnap.size} items)`);
         return leases;
       }
     } catch (error) {
@@ -409,7 +409,7 @@ class LeaseAgreementManager {
         leaseId
       );
       await window.firebase.firestoreFunctions.deleteDoc(docRef);
-      console.log(`✅ Lease ${leaseId} deleted from Firebase`);
+      console.info(`✅ Lease ${leaseId} deleted from Firebase`);
     } catch (error) {
       console.warn(`⚠️ Firebase delete failed for lease ${leaseId}:`, error.message);
     }

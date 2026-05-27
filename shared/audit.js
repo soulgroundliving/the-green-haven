@@ -36,7 +36,7 @@ const AuditLogger = {
     };
 
     this.addLog(log);
-    console.log('📝 Audit:', action, details);
+    console.info('📝 Audit:', action, details);
     return log;
   },
 
@@ -165,7 +165,7 @@ const AuditLogger = {
   clearLogs() {
     if (confirm('⚠️ ต้องการลบประวัติการดำเนินการทั้งหมดใช่หรือไม่?\n\nการกระทำนี้ไม่สามารถเลิกทำได้')) {
       localStorage.removeItem(this.storageKey);
-      console.log('✅ All audit logs cleared');
+      console.info('✅ All audit logs cleared');
       return true;
     }
     return false;
@@ -226,7 +226,7 @@ const AuditLogger = {
         count: logs.length
       });
 
-      console.log('✅ Audit logs synced to Firebase');
+      console.info('✅ Audit logs synced to Firebase');
     } catch (error) {
       console.warn('⚠️ Failed to sync audit logs to Firebase:', error);
     }
@@ -364,7 +364,7 @@ function logError(errorType, errorMessage, errorStack = '') {
 
 // ===== INITIALIZATION =====
 
-console.log('✅ Audit Logger initialized');
+console.info('✅ Audit Logger initialized');
 
 // Export for use in other scripts
 window.AuditLogger = AuditLogger;

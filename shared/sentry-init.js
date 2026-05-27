@@ -146,6 +146,6 @@
       }
     } catch (_) { /* sessionStorage might be blocked */ }
 
-    console.log(`🛡️ Sentry initialized for ${appName}`);
+    console.info(`🛡️ Sentry initialized for ${appName}`);
   });
 })();

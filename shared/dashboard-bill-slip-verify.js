@@ -97,7 +97,7 @@ async function verifySlip(file){
         });
         if (slipFile !== file) {
           const saved = ((file.size - slipFile.size) / 1024).toFixed(0);
-          console.log(`🗜️ Slip compressed: saved ${saved}KB`);
+          console.info(`🗜️ Slip compressed: saved ${saved}KB`);
         }
       } catch(e) { /* fall through with original file */ slipFile = file; }
     }

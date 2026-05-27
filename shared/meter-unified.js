@@ -109,7 +109,7 @@ class FirebaseMeterHelper {
         updatedAt: new Date().toISOString()
       }, { merge: true });
 
-      console.log(`✅ Meter reading saved for ${building}/${yearMonth}/${roomId}`);
+      console.info(`✅ Meter reading saved for ${building}/${yearMonth}/${roomId}`);
       return true;
     } catch (error) {
       console.warn(`⚠️ Failed to save meter reading:`, error);
@@ -172,7 +172,7 @@ class FirebaseMeterHelper {
 
     data = this.getCachedMeterData(building, yearMonth);
     if (data) {
-      console.log(`⏳ Using cached meter data for ${building}/${yearMonth}`);
+      console.info(`⏳ Using cached meter data for ${building}/${yearMonth}`);
       return data;
     }
 
@@ -192,7 +192,7 @@ class MeterDataManager {
    */
   static async loadFromFirebase(building, years = [2567, 2568, 2569]) {
     if (this.isLoadingFromFirebase) {
-      console.log('⏳ Firebase meter data load already in progress...');
+      console.info('⏳ Firebase meter data load already in progress...');
       return false;
     }
 
@@ -206,7 +206,7 @@ class MeterDataManager {
       const db = window.firebase.firestore();
       const fs = window.firebase.firestoreFunctions;
 
-      console.log(`🔄 Loading meter data from Firebase for building='${building}'...`);
+      console.info(`🔄 Loading meter data from Firebase for building='${building}'...`);
 
       let totalLoaded = 0;
 
@@ -265,18 +265,18 @@ class MeterDataManager {
               localStorage.setItem(dataKey, JSON.stringify(existingData));
               const monthCount = Object.keys(yearData).length;
               const readingCount = Object.values(yearData).reduce((sum, month) => sum + Object.keys(month).length, 0);
-              console.log(`  ✅ Loaded ${readingCount} readings across ${monthCount} months for year ${year}`);
+              console.info(`  ✅ Loaded ${readingCount} readings across ${monthCount} months for year ${year}`);
               totalLoaded += readingCount;
             }
           } else {
-            console.log(`  ℹ️ No meter data found for year ${year}`);
+            console.info(`  ℹ️ No meter data found for year ${year}`);
           }
         } catch (error) {
           console.warn(`  ⚠️ Error loading year ${year}:`, error.message);
         }
       }
 
-      console.log(`✅ Firebase meter data sync complete - ${totalLoaded} readings loaded`);
+      console.info(`✅ Firebase meter data sync complete - ${totalLoaded} readings loaded`);
       this.firebaseLoadComplete = true;
       return true;
     } catch (error) {
@@ -329,7 +329,7 @@ class MeterDataManager {
     };
 
     localStorage.setItem(dataKey, JSON.stringify(yearData));
-    console.log(`✅ Stored meter reading for ${roomId} on ${monthKey}`);
+    console.info(`✅ Stored meter reading for ${roomId} on ${monthKey}`);
 
     return yearData[monthKey][roomId];
   }
@@ -646,7 +646,7 @@ function matchMeterDataWithPrevious(importedData) {
   const buildingKey = building || 'rooms';
   const isFirstImport = Object.keys(previousData).length === 0;
 
-  console.log(`🔍 matchMeterDataWithPrevious: building=${buildingKey}, month=${month}, totalRooms=${Object.keys(allRooms).length}, isFirstImport=${isFirstImport}`);
+  console.info(`🔍 matchMeterDataWithPrevious: building=${buildingKey}, month=${month}, totalRooms=${Object.keys(allRooms).length}, isFirstImport=${isFirstImport}`);
 
   const results = {
     summary: {
@@ -814,4 +814,4 @@ if (typeof window !== 'undefined') {
   window.matchMeterDataWithPrevious = matchMeterDataWithPrevious;
 }
 
-console.log('✅ Meter System Unified Module loaded');
+console.info('✅ Meter System Unified Module loaded');

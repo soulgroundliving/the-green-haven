@@ -494,7 +494,7 @@ async function markBillPaid(roomId, month, year, billId) {
           verifiedBy: 'admin_manual'
         });
       }
-      console.log(`✅ markBillPaid: synced bill ${billId} status to RTDB`);
+      console.info(`✅ markBillPaid: synced bill ${billId} status to RTDB`);
     }
   } catch (e) { console.warn('⚠️ markBillPaid RTDB sync failed:', e.message); }
 

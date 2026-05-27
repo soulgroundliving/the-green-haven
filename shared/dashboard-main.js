@@ -605,7 +605,7 @@ window.addEventListener('resize',function(){
 document.addEventListener('DOMContentLoaded', async ()=>{
   // Wait for Firebase to be initialized (max 2 seconds, not 10)
   if (!window.firebaseReady) {
-    console.log('⏳ Waiting for Firebase...');
+    console.info('⏳ Waiting for Firebase...');
     let waitCount = 0;
     while (!window.firebaseReady && waitCount < 20) {  // 20 × 100ms = 2s max (was 10s)
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -639,7 +639,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   // becomes the primary identity source — must be warm at first render.
   if (typeof TenantLookup !== 'undefined' && typeof TenantLookup.prefetchAllPeople === 'function') {
     TenantLookup.prefetchAllPeople()
-      .then(n => { if (n > 0) console.log(`✅ PersonManager cache warmed: ${n} person docs`); })
+      .then(n => { if (n > 0) console.info(`✅ PersonManager cache warmed: ${n} person docs`); })
       .catch(e => console.warn('PersonManager prefetch failed:', e.message));
   }
 

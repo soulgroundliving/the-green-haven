@@ -884,7 +884,7 @@ async function uploadLeaseDocuments(leaseId, building, roomId, documents) {
       const file = await _compressImageIfLarge(originalFile);
       if (file !== originalFile) {
         const savedMB = ((originalFile.size - file.size) / 1024 / 1024).toFixed(2);
-        console.log(`🗜️ Compressed ${docType}: saved ${savedMB}MB`);
+        console.info(`🗜️ Compressed ${docType}: saved ${savedMB}MB`);
       }
 
       const ext = file.name.split('.').pop();
@@ -895,11 +895,11 @@ async function uploadLeaseDocuments(leaseId, building, roomId, documents) {
       sUploadBytes(fileRef, file)
         .then((snapshot) => {
           uploadCount++;
-          console.log(`✅ Document uploaded: ${docType} (${uploadCount}/${totalFiles})`);
+          console.info(`✅ Document uploaded: ${docType} (${uploadCount}/${totalFiles})`);
           return sGetDownloadURL(snapshot.ref);
         })
         .then((downloadURL) => {
-          console.log(`📄 Download URL: ${downloadURL}`);
+          console.info(`📄 Download URL: ${downloadURL}`);
           // Persist URL to lease record so Document Hub can render instantly without listAll()
           try {
             if (typeof LeaseAgreementManager.updateLeaseWithFirebase === 'function') {
@@ -931,7 +931,7 @@ async function uploadLeaseDocuments(leaseId, building, roomId, documents) {
         });
     }
 
-    console.log(`📁 Uploading ${totalFiles} documents for lease ${leaseId}...`);
+    console.info(`📁 Uploading ${totalFiles} documents for lease ${leaseId}...`);
   } catch (err) {
     console.warn('⚠️ Firebase Storage not available, documents will be uploaded later');
   }

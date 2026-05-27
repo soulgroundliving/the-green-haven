@@ -170,7 +170,7 @@ function showGeneratedInvoices(building, invoiceIds) {
     invoiceList += `\n... และอีก ${invoiceIds.length - 10} ใบ`;
   }
 
-  console.log(invoiceList);
+  console.info(invoiceList);
 }
 
 /**
@@ -230,7 +230,7 @@ window._resolveBillRecipient = _resolveBillRecipient;
  */
 function listenForInvoiceNotifications() {
   window.addEventListener('new_invoices_generated', function() {
-    console.log('🔔 New invoices generated!');
+    console.info('🔔 New invoices generated!');
     showNotification('📄 สร้างใบวางบิลใหม่เข้ามา', 'success');
   });
 
@@ -272,14 +272,14 @@ listenForPaymentNotifications();
 function listenForPaymentNotifications() {
   // Listen for payment verified event
   window.addEventListener('payment_verified', function() {
-    console.log('🔔 Payment verified from tenant app!');
+    console.info('🔔 Payment verified from tenant app!');
     showNotification('✅ ได้รับเงินจากผู้เช่า', 'success');
     loadPaymentNotifications();
   });
 
   // Listen for receipt generated event
   window.addEventListener('receipt_generated', function() {
-    console.log('🔔 Receipt generated!');
+    console.info('🔔 Receipt generated!');
     showNotification('📄 ใบเสร็จรับเงินถูกสร้าง', 'success');
     loadPaymentNotifications();
   });
@@ -311,7 +311,7 @@ function loadPaymentNotifications() {
     const notifications = JSON.parse(localStorage.getItem('payment_notifications') || '[]');
 
     if (notifications.length === 0) {
-      console.log('📭 No payment notifications');
+      console.info('📭 No payment notifications');
       const notifPanel = document.getElementById('paymentNotificationsList');
       if (notifPanel) {
         notifPanel.innerHTML = `<div style="text-align: center; color: ${DashColors.TEXT_LIGHTER}; padding: 2rem;">📭 ยังไม่มีการชำระเงิน</div>`;
@@ -324,9 +324,9 @@ function loadPaymentNotifications() {
 
     // Display latest 5 notifications in console
     const recent = notifications.slice(-5).reverse();
-    console.log('💳 Recent Payment Notifications:');
+    console.info('💳 Recent Payment Notifications:');
     recent.forEach((notif, idx) => {
-      console.log(`${idx + 1}. [${notif.type}] ห้อง ${notif.room} - ฿${notif.amount?.toLocaleString('th-TH')} (${new Date(notif.timestamp).toLocaleString('th-TH')})`);
+      console.info(`${idx + 1}. [${notif.type}] ห้อง ${notif.room} - ฿${notif.amount?.toLocaleString('th-TH')} (${new Date(notif.timestamp).toLocaleString('th-TH')})`);
 
       // Update dashboard UI if payment verification section exists
       if (notif.type === 'payment_verified') {
@@ -609,14 +609,14 @@ function handleBillingImportFileProcess(file) {
         try {
           // STEP 4: Read and parse Excel file
           const data = new Uint8Array(e.target.result);
-          console.log('📥 Reading Excel file...', data.length, 'bytes');
+          console.info('📥 Reading Excel file...', data.length, 'bytes');
 
           // XLSX library reads binary data and returns workbook object
           const workbook = XLSX.read(data, { type: 'array' });
-          console.log('✅ Excel loaded:', workbook.SheetNames.length, 'sheets');
+          console.info('✅ Excel loaded:', workbook.SheetNames.length, 'sheets');
 
           const year = yearInput;
-          console.log(`📊 Parsing billing data for year: ${year}`);
+          console.info(`📊 Parsing billing data for year: ${year}`);
 
           // STEP 5: Detect file format version based on year
           // Year >= 70 (Thai year 2570+) = V2 format
@@ -680,7 +680,7 @@ function handleBillingImportFileProcess(file) {
 function finalizeBillingImport(monthlyData, year, forceV2) {
   try {
     const parserMode = forceV2 ? '(V2 only)' : '(mixed V1/V2)';
-    console.log(`📌 Year ${year}: Parsed ${monthlyData.length} months ${parserMode}`);
+    console.info(`📌 Year ${year}: Parsed ${monthlyData.length} months ${parserMode}`);
 
     if (!monthlyData || monthlyData.length === 0) {
       showBillingImportStatus('❌ ไม่พบข้อมูลบิล H32 ในไฟล์', 'error');
@@ -1025,7 +1025,7 @@ function displayBillingImportPreview(monthlyData, year) {
 
 // Handle billing import data that comes from meter import flow (V1/V2 billing format)
 async function approveBillingImportDataFromMeter(importData, matchResults) {
-  console.log('💾 Processing billing data import to localStorage', { importData, matchResults });
+  console.info('💾 Processing billing data import to localStorage', { importData, matchResults });
 
   try {
     const year = importData.year;
@@ -1183,16 +1183,16 @@ async function approveBillingImportData() {
 
       // Reload dashboard charts (await for completion)
       if (typeof initDashboardCharts === 'function') {
-        console.log('🔄 Updating dashboard charts...');
+        console.info('🔄 Updating dashboard charts...');
         await initDashboardCharts();
-        console.log('✅ Dashboard charts updated');
+        console.info('✅ Dashboard charts updated');
       }
 
       // Refresh historical data display
       if (typeof initHistoricalDataDisplay === 'function') {
-        console.log('🔄 Updating historical data display...');
+        console.info('🔄 Updating historical data display...');
         initHistoricalDataDisplay();
-        console.log('✅ Historical data display updated');
+        console.info('✅ Historical data display updated');
       }
 
       // Navigate to HISTORICAL_DATA page to show the imported data
@@ -1200,12 +1200,12 @@ async function approveBillingImportData() {
 
       // Navigate to meter page to show the imported data in HISTORICAL_DATA
       setTimeout(() => {
-        console.log('🔄 Navigating to HISTORICAL_DATA page...');
+        console.info('🔄 Navigating to HISTORICAL_DATA page...');
         // Find the meter page button and click it to navigate
         const meterPageBtn = document.querySelector('[onclick*="\'meter\'"]');
         if (meterPageBtn) {
           meterPageBtn.click();
-          console.log('✅ Navigated to meter page');
+          console.info('✅ Navigated to meter page');
         } else {
           console.warn('⚠️ Could not find meter page button, using window.showPage');
           if (typeof window.showPage === 'function') {

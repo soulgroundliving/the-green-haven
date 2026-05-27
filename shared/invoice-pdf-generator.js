@@ -324,9 +324,9 @@ class InvoicePDFGenerator {
   static downloadPDF(doc, filename) {
     if (doc) {
       doc.save(filename);
-      console.log(`✅ PDF downloaded: ${filename}`);
+      console.info(`✅ PDF downloaded: ${filename}`);
     }
   }
 }
 
-console.log('✅ InvoicePDFGenerator loaded');
+console.info('✅ InvoicePDFGenerator loaded');

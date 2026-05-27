@@ -730,7 +730,7 @@ function deleteDocument(id) {
 
 // ===== GAMIFICATION PAGE =====
 async function initGamificationPage() {
-  console.log('✅ Gamification page initialized');
+  console.info('✅ Gamification page initialized');
   subscribeGamificationConfig();
 
   const tbody = document.getElementById('leaderboardTable');

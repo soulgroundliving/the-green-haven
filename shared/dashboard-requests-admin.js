@@ -25,7 +25,7 @@ function autoCleanupOldCompletedTickets(tickets) {
       if (ageMs <= THIRTY_DAYS_MS) return true;
 
       // Delete old completed ticket from storage
-      console.log(`🗑️ Deleting old maintenance ticket: ${ticket.id} (${Math.floor(ageMs / (24 * 60 * 60 * 1000))} days old)`);
+      console.info(`🗑️ Deleting old maintenance ticket: ${ticket.id} (${Math.floor(ageMs / (24 * 60 * 60 * 1000))} days old)`);
 
       // Remove from Firebase if available
       if (typeof TenantFirebaseSync !== 'undefined' && TenantFirebaseSync.deleteMaintenanceTicket) {
@@ -47,7 +47,7 @@ function autoCleanupOldCompletedTickets(tickets) {
 
   // Update localStorage with filtered tickets
   if (filtered.length !== tickets.length) {
-    console.log(`✅ Cleaned up ${tickets.length - filtered.length} old maintenance tickets`);
+    console.info(`✅ Cleaned up ${tickets.length - filtered.length} old maintenance tickets`);
   }
 
   return filtered;
@@ -56,7 +56,7 @@ function autoCleanupOldCompletedTickets(tickets) {
 function loadMaintenance(){
   // ✅ Load from localStorage (admin dashboard primary source)
   let localData = JSON.parse(localStorage.getItem('maintenance_data')||'[]');
-  console.log(`📋 Loaded ${localData.length} maintenance requests from localStorage`);
+  console.info(`📋 Loaded ${localData.length} maintenance requests from localStorage`);
 
   // Auto-cleanup old completed tickets (30+ days old)
   localData = autoCleanupOldCompletedTickets(localData);
@@ -72,7 +72,7 @@ function loadMaintenance(){
 }
 function saveMaintenance(d){
   localStorage.setItem('maintenance_data',JSON.stringify(d));
-  console.log('✅ Maintenance saved to localStorage');
+  console.info('✅ Maintenance saved to localStorage');
 }
 
 function initMaintenancePage(){
@@ -320,7 +320,7 @@ function addMaintenanceRequest(){
   const tenantTickets=JSON.parse(localStorage.getItem('tenant_maintenance_tickets')||'[]');
   tenantTickets.unshift({...newTicket});
   localStorage.setItem('tenant_maintenance_tickets',JSON.stringify(tenantTickets));
-  console.log('💾 Added new ticket to tenant_maintenance_tickets:', ticketId);
+  console.info('💾 Added new ticket to tenant_maintenance_tickets:', ticketId);
 
   // ===== AUDIT LOGGING =====
   if (window.logMaintenanceCreated) {
@@ -452,11 +452,11 @@ function updateMaintenanceStatus(id,newStatus){
 
   // Sync to tenant's maintenance tickets
   const tenantTickets=JSON.parse(localStorage.getItem('tenant_maintenance_tickets')||'[]');
-  console.log('🔍 Looking for ticket',id,'in tenant_maintenance_tickets:', tenantTickets.map(t=>t.id));
+  console.info('🔍 Looking for ticket',id,'in tenant_maintenance_tickets:', tenantTickets.map(t=>t.id));
   let tenantTicket=tenantTickets.find(t=>t.id===id);
 
   if(tenantTicket){
-    console.log('✅ Found ticket, updating status from',tenantTicket.status,'to',item.status);
+    console.info('✅ Found ticket, updating status from',tenantTicket.status,'to',item.status);
     tenantTicket.status=item.status;
     tenantTicket.updatedAt=item.updatedAt;
     // Push admin data when marked as done
@@ -466,11 +466,11 @@ function updateMaintenanceStatus(id,newStatus){
       tenantTicket.afterPhoto=item.afterPhoto;
       tenantTicket.workNotes=item.workNotes;
       tenantTicket.completedAt=item.completedAt;
-      console.log('📤 Sending admin completion data to tenant:', {assignedTo: item.assignedTo, beforePhoto: !!item.beforePhoto, afterPhoto: !!item.afterPhoto, workNotes: item.workNotes});
+      console.info('📤 Sending admin completion data to tenant:', {assignedTo: item.assignedTo, beforePhoto: !!item.beforePhoto, afterPhoto: !!item.afterPhoto, workNotes: item.workNotes});
     }
   } else {
     // If not found, add it with current data (for tickets that existed before tenant_maintenance_tickets)
-    console.log('⚠️ Ticket not found in tenant_maintenance_tickets, adding it now');
+    console.info('⚠️ Ticket not found in tenant_maintenance_tickets, adding it now');
     tenantTicket={
       id: item.id,
       room: item.room,
@@ -490,7 +490,7 @@ function updateMaintenanceStatus(id,newStatus){
   }
 
   localStorage.setItem('tenant_maintenance_tickets',JSON.stringify(tenantTickets));
-  console.log('🔄 Synced ticket',id,'to tenant_maintenance_tickets with status:',tenantTicket.status);
+  console.info('🔄 Synced ticket',id,'to tenant_maintenance_tickets with status:',tenantTicket.status);
 
   // Sync to Firebase for tenant app to see
   if(window.firebaseRef && window.firebaseUpdate && window.firebaseDatabase) {
@@ -510,9 +510,9 @@ function updateMaintenanceStatus(id,newStatus){
         firebaseData.workNotes = item.workNotes || null;
       }
       window.firebaseUpdate(maintenanceRef, firebaseData);
-      console.log('🔥 Updated Firebase maintenance ticket:', id);
+      console.info('🔥 Updated Firebase maintenance ticket:', id);
     } catch(e) {
-      console.log('⚠️ Firebase update failed (fallback to localStorage only):', e.message);
+      console.info('⚠️ Firebase update failed (fallback to localStorage only):', e.message);
     }
   }
 
@@ -1105,7 +1105,7 @@ function subscribeHousekeepingRTDB(){
           });
         });
       });
-      console.log(`📥 RTDB housekeeping snapshot: ${fromRTDB.length} items`);
+      console.info(`📥 RTDB housekeeping snapshot: ${fromRTDB.length} items`);
       const local = loadHousekeeping();
       const byId = new Map();
       local.forEach(t => byId.set(t.id, t));

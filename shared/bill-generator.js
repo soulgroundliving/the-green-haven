@@ -12,7 +12,7 @@ class BillGenerator {
    */
   static generateMonthlyBills(building, year, month) {
     try {
-      console.log(`🔄 Generating invoices for ${building} building, ${month}/${year}...`);
+      console.info(`🔄 Generating invoices for ${building} building, ${month}/${year}...`);
 
       if (typeof RoomConfigManager === 'undefined') {
         console.error('❌ RoomConfigManager not loaded');
@@ -65,7 +65,7 @@ class BillGenerator {
           if (invoice) {
             invoiceCount++;
             invoiceIds.push(invoice.id);
-            console.log(`✅ Invoice created: ${invoice.id} for room ${room.id}`);
+            console.info(`✅ Invoice created: ${invoice.id} for room ${room.id}`);
           }
         } catch (error) {
           console.warn(`⚠️ Error creating invoice for room ${room.id}:`, error);
@@ -75,7 +75,7 @@ class BillGenerator {
       // 3. Notify tenants
       this.notifyTenantsOfNewInvoices(building, invoiceIds);
 
-      console.log(`✅ Generated ${invoiceCount}/${activeRooms.length} invoices`);
+      console.info(`✅ Generated ${invoiceCount}/${activeRooms.length} invoices`);
 
       return {
         success: true,
@@ -123,7 +123,7 @@ class BillGenerator {
       // Trigger event for all listeners
       window.dispatchEvent(new Event('new_invoices_generated'));
 
-      console.log(`📢 Notified of ${invoiceIds.length} new invoices`);
+      console.info(`📢 Notified of ${invoiceIds.length} new invoices`);
     } catch (error) {
       console.warn('⚠️ Error notifying tenants:', error);
     }
@@ -141,4 +141,4 @@ class BillGenerator {
   }
 }
 
-console.log('✅ BillGenerator loaded');
+console.info('✅ BillGenerator loaded');
