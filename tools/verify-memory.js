@@ -593,6 +593,132 @@ function runComputedAssertions() {
   //    2026-05-26 — every new CF written for facility bookings / PDPA / lease
   //    transitions etc. used the registry from day 1.
   const featureStateDoc = path.join(MEMORY_DIR, 'feature_state_canonical.md');
+  // 3. lifecycle_marketplace.md — "5 marketplace CFs live SE1"
+  //    Counts exports.X = require('./X') lines in functions/index.js where X is one
+  //    of the 5 known marketplace CFs. Catches a new CF being added/removed without
+  //    updating the lifecycle doc.
+  const marketplaceDoc = path.join(MEMORY_DIR, 'lifecycle_marketplace.md');
+  if (fs.existsSync(marketplaceDoc)) {
+    try {
+      const content = fs.readFileSync(marketplaceDoc, 'utf8');
+      const m = content.match(/(\d+) marketplace CFs live SE1/);
+      if (m) {
+        const docCount = parseInt(m[1], 10);
+        const indexJs = path.join(REPO_ROOT, 'functions', 'index.js');
+        let actual = 0;
+        if (fs.existsSync(indexJs)) {
+          const src = fs.readFileSync(indexJs, 'utf8');
+          const marketplaceCFs = [
+            'cleanupMarketplaceChat',
+            'notifyMarketplaceChat',
+            'unsendMarketplaceMessage',
+            'hideMarketplaceChat',
+            'marketplaceStatsAggregator',
+          ];
+          for (const cf of marketplaceCFs) {
+            if (new RegExp(`^exports\\.${cf}\\s*=`, 'm').test(src)) actual++;
+          }
+        }
+        const ok = actual === docCount;
+        results.push({
+          comment: `lifecycle_marketplace: doc says ${docCount} marketplace CFs live SE1, code has ${actual}`,
+          command: '[computed: count exports.X = in functions/index.js for the 5 known marketplace CFs]',
+          ok,
+          stdout: ok
+            ? `${actual} marketplace CF export(s) — count matches lifecycle_marketplace`
+            : `MISMATCH: doc=${docCount} actual=${actual} — update "${actual} marketplace CFs live SE1" in lifecycle_marketplace.md`,
+        });
+      }
+    } catch (e) {
+      // Non-fatal.
+    }
+  }
+
+  // 4. lifecycle_marketplace_chat.md — shared/marketplace-chat.js exports
+  //    key window globals (window.MarketplaceChat object + window.sendChatMessage).
+  //    Catches accidental removal/rename of the public API during a refactor.
+  const marketplaceChatDoc = path.join(MEMORY_DIR, 'lifecycle_marketplace_chat.md');
+  if (fs.existsSync(marketplaceChatDoc)) {
+    try {
+      const chatJs = path.join(REPO_ROOT, 'shared', 'marketplace-chat.js');
+      if (fs.existsSync(chatJs)) {
+        const src = fs.readFileSync(chatJs, 'utf8');
+        const requiredExports = ['window.MarketplaceChat', 'window.sendChatMessage'];
+        const missing = requiredExports.filter(e => !src.includes(e + ' =') && !src.includes(e + '='));
+        const ok = missing.length === 0;
+        results.push({
+          comment: 'lifecycle_marketplace_chat: shared/marketplace-chat.js exports window.MarketplaceChat + window.sendChatMessage',
+          command: '[computed: grep window.MarketplaceChat= and window.sendChatMessage= in shared/marketplace-chat.js]',
+          ok,
+          stdout: ok
+            ? 'marketplace-chat.js exports both required window globals'
+            : `MISSING window globals in marketplace-chat.js: ${missing.join(', ')}`,
+        });
+      }
+    } catch (e) {
+      // Non-fatal.
+    }
+  }
+
+  // 5. lifecycle_auth_login_gate.md — §7-Z: setCustomUserClaims must appear in
+  //    functions/liffSignIn.js alongside createCustomToken (claims persistence).
+  //    If someone rewrites liffSignIn and drops setCustomUserClaims, the ~1h
+  //    claim-expiry bug returns silently.
+  const authDoc = path.join(MEMORY_DIR, 'lifecycle_auth_login_gate.md');
+  if (fs.existsSync(authDoc)) {
+    try {
+      const liffSignInJs = path.join(REPO_ROOT, 'functions', 'liffSignIn.js');
+      if (fs.existsSync(liffSignInJs)) {
+        const src = fs.readFileSync(liffSignInJs, 'utf8');
+        const hasSetClaims = src.includes('setCustomUserClaims');
+        const hasCreateToken = src.includes('createCustomToken');
+        const ok = hasSetClaims && hasCreateToken;
+        results.push({
+          comment: 'lifecycle_auth_login_gate: §7-Z — liffSignIn.js has both createCustomToken AND setCustomUserClaims',
+          command: '[computed: grep createCustomToken + setCustomUserClaims in functions/liffSignIn.js]',
+          ok,
+          stdout: ok
+            ? 'liffSignIn.js has both createCustomToken + setCustomUserClaims (§7-Z compliant)'
+            : `MISSING in liffSignIn.js: ${!hasCreateToken ? 'createCustomToken' : ''} ${!hasSetClaims ? 'setCustomUserClaims' : ''} — §7-Z fix missing`,
+        });
+      }
+    } catch (e) {
+      // Non-fatal.
+    }
+  }
+
+  // 6. lifecycle_checklist.md — "31 unit tests (4 describe blocks)"
+  //    Counts `it(` calls in functions/__tests__/checklist.test.js.
+  //    Catches a future test deletion going unnoticed.
+  const checklistDoc = path.join(MEMORY_DIR, 'lifecycle_checklist.md');
+  if (fs.existsSync(checklistDoc)) {
+    try {
+      const content = fs.readFileSync(checklistDoc, 'utf8');
+      const m = content.match(/(\d+) unit tests/);
+      if (m) {
+        const docCount = parseInt(m[1], 10);
+        const testFile = path.join(REPO_ROOT, 'functions', '__tests__', 'checklist.test.js');
+        let actual = 0;
+        if (fs.existsSync(testFile)) {
+          const src = fs.readFileSync(testFile, 'utf8');
+          actual = (src.match(/^\s*it\(/gm) || []).length;
+        }
+        const ok = actual === docCount;
+        results.push({
+          comment: `lifecycle_checklist: doc says ${docCount} unit tests, code has ${actual}`,
+          command: '[computed: count it( lines in functions/__tests__/checklist.test.js]',
+          ok,
+          stdout: ok
+            ? `checklist.test.js has ${actual} unit test(s) — matches lifecycle doc`
+            : `MISMATCH: doc=${docCount} actual=${actual} — update "${actual} unit tests" in lifecycle_checklist.md`,
+        });
+      }
+    } catch (e) {
+      // Non-fatal.
+    }
+  }
+
+  // (assertion block end — now the original #2 continues below)
   if (fs.existsSync(featureStateDoc)) {
     try {
       const content = fs.readFileSync(featureStateDoc, 'utf8');
