@@ -90,7 +90,9 @@ async function markBillPaidInRTDB(slipData, params) {
     const billYearBE = bkk.getUTCFullYear() + 543;
     const billMonth = bkk.getUTCMonth() + 1;
     const ref = rtdb.ref(`bills/${buildingRaw}/${room}`);
-    const snap = await ref.once('value');
+    // Read only the 12 most-recent bills (≈1 yr). The current month's unpaid
+    // bill is always within the last 12 since bills are monthly.
+    const snap = await ref.orderByKey().limitToLast(12).once('value');
     const bills = snap.val() || {};
     const updates = {};
     let matched = 0;

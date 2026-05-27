@@ -117,8 +117,8 @@ async function loadDashboardDataFromFirebase() {
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
 
-    // Query all meter_data documents from both buildings
-    const meterDocsSnapshot = await fs.getDocs(fs.collection(db, 'meter_data'));
+    // Query all meter_data documents from both buildings (capped at 120 = 5yr × 2 buildings × 12mo)
+    const meterDocsSnapshot = await fs.getDocs(fs.query(fs.collection(db, 'meter_data'), fs.limit(120)));
 
     // Initialize data structure
     const aggregated = {};
