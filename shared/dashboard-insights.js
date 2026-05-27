@@ -41,9 +41,9 @@
     return '<div style="padding:1rem 0 .5rem;">' + bars + '</div>';
   }
   function emptyHTML(msg) {
-    return `<div style="text-align:center;color:var(--text-muted);padding:2rem;">
-      <div style="font-size:2rem;opacity:.4;margin-bottom:.5rem;">📭</div>
-      <div style="font-size:.85rem;">${msg}</div>
+    return `<div class="u-empty-state">
+      <div class="u-empty-icon">📭</div>
+      <div class="u-empty-msg">${msg}</div>
     </div>`;
   }
   function errorHTML(target, err) {
@@ -199,10 +199,10 @@
           const rate = totalRooms ? Math.round(r.roomCount / totalRooms * 100) : 0;
           const rateColor = rate >= 40 ? 'var(--green-dark)' : rate >= 20 ? 'var(--moss,#5a7a5a)' : 'var(--text-muted)';
           tableRows += `<tr data-action="showWellnessRooms" data-article="${esc(r.id)}" style="cursor:pointer;">
-            <td style="padding:.5rem .7rem;">${esc(r.title)}</td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.roomCount} / ${totalRooms}</td>
+            <td class="u-td-l">${esc(r.title)}</td>
+            <td class="u-td-num">${r.roomCount} / ${totalRooms}</td>
             <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${rateColor};font-weight:600;">${rate}%</td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.totalReward}</td>
+            <td class="u-td-num">${r.totalReward}</td>
           </tr>`;
         });
       }
@@ -213,20 +213,20 @@
 
       container.innerHTML = `
         <div class="card" style="border-left:4px solid var(--green);">
-          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-title u-flex-sb">
             <span>📚 Wellness Engagement</span>
             <button data-action="refreshInsight" data-target="wellness" aria-label="รีเฟรช Wellness"
                     style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
           </div>
           <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.7rem;">${summary}</div>
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+          <div class="u-scroll-x">
+            <table class="u-table-sm">
               <thead>
                 <tr style="background:var(--green-pale);color:var(--green-dark);">
-                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">บทความ</th>
-                  <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">ห้องอ่าน</th>
-                  <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">อัตรา</th>
-                  <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">รวมแต้ม</th>
+                  <th class="u-th-l">บทความ</th>
+                  <th class="u-th-r">ห้องอ่าน</th>
+                  <th class="u-th-r">อัตรา</th>
+                  <th class="u-th-r">รวมแต้ม</th>
                 </tr>
               </thead>
               <tbody>${tableRows}</tbody>
@@ -344,8 +344,8 @@
         : wRows.map(r => {
             const rateColor = r.rate >= 70 ? 'var(--green-dark)' : r.rate >= 40 ? 'var(--moss,#5a7a5a)' : '#92400e';
             return `<tr>
-              <td style="padding:.5rem .7rem;">${esc(r.title)}</td>
-              <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.passes} / ${r.total}</td>
+              <td class="u-td-l">${esc(r.title)}</td>
+              <td class="u-td-num">${r.passes} / ${r.total}</td>
               <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${rateColor};font-weight:600;">${r.rate}%</td>
             </tr>`;
           }).join('');
@@ -363,15 +363,15 @@
         : cRows.map(r => {
             const rateColor = r.rate >= 70 ? 'var(--green-dark)' : r.rate >= 40 ? 'var(--moss,#5a7a5a)' : '#92400e';
             return `<tr>
-              <td style="padding:.5rem .7rem;">${esc(r.ym)}</td>
-              <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.passes} / ${r.total}</td>
+              <td class="u-td-l">${esc(r.ym)}</td>
+              <td class="u-td-num">${r.passes} / ${r.total}</td>
               <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${rateColor};font-weight:600;">${r.rate}%</td>
             </tr>`;
           }).join('');
 
       container.innerHTML = `
         <div class="card" style="border-left:4px solid var(--accent-gold,#D4AF37);">
-          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-title u-flex-sb">
             <span>🎯 Quiz Engagement</span>
             <button data-action="refreshInsight" data-target="quizEngagement" aria-label="รีเฟรช Quiz"
                     style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
@@ -383,12 +383,12 @@
           <div style="display:grid;grid-template-columns:1fr;gap:.8rem;">
             <div>
               <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.3rem;">📚 บทความ Wellness</div>
-              <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+              <div class="u-scroll-x">
+                <table class="u-table-sm">
                   <thead><tr style="background:var(--green-pale);color:var(--green-dark);">
-                    <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">บทความ</th>
-                    <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">ผ่าน / รวม</th>
-                    <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">อัตรา</th>
+                    <th class="u-th-l">บทความ</th>
+                    <th class="u-th-r">ผ่าน / รวม</th>
+                    <th class="u-th-r">อัตรา</th>
                   </tr></thead>
                   <tbody>${wellnessTable}</tbody>
                 </table>
@@ -396,12 +396,12 @@
             </div>
             <div>
               <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.3rem;">📜 Contract Quiz (รายเดือน)</div>
-              <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+              <div class="u-scroll-x">
+                <table class="u-table-sm">
                   <thead><tr style="background:var(--green-pale);color:var(--green-dark);">
-                    <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">เดือน</th>
-                    <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">ผ่าน / รวม</th>
-                    <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">อัตรา</th>
+                    <th class="u-th-l">เดือน</th>
+                    <th class="u-th-r">ผ่าน / รวม</th>
+                    <th class="u-th-r">อัตรา</th>
                   </tr></thead>
                   <tbody>${contractTable}</tbody>
                 </table>
@@ -480,7 +480,7 @@
 
       container.innerHTML = `
         <div class="card" style="border-left:4px solid var(--accent-gold,#D4AF37);">
-          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-title u-flex-sb">
             <span>🔥 Streak Leaderboard</span>
             <button data-action="refreshInsight" data-target="streak" aria-label="รีเฟรช Streak"
                     style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
@@ -595,7 +595,7 @@
           tableRows += `<tr style="border-left:3px solid ${r.tier.color};">
             <td style="padding:.5rem .7rem;font-weight:600;">${esc(r.room)} <span style="color:var(--text-muted);font-size:.72rem;font-weight:400;">(${buildingLabel(r.building)})</span></td>
             <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${r.tier.color};font-weight:600;">${avgStr}</td>
-            <td style="padding:.5rem .7rem;">${bars} <span style="color:var(--text-muted);font-size:.72rem;margin-left:6px;">${r.paidCount}/6</span></td>
+            <td class="u-td-l">${bars} <span style="color:var(--text-muted);font-size:.72rem;margin-left:6px;">${r.paidCount}/6</span></td>
             <td style="padding:.5rem .7rem;text-align:center;">${stars}</td>
             <td style="padding:.5rem .7rem;color:${r.tier.color};font-size:.78rem;font-weight:600;">${r.tier.label}</td>
           </tr>`;
@@ -604,7 +604,7 @@
 
       container.innerHTML = `
         <div class="card" style="border-left:4px solid var(--green);">
-          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-title u-flex-sb">
             <span>💳 พฤติกรรมการชำระเงิน (6 เดือนล่าสุด)</span>
             <button data-action="refreshInsight" data-target="payment" aria-label="รีเฟรช Payment Behavior"
                     style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
@@ -623,15 +623,15 @@
               <option value="nest" ${_pbState.buildingFilter==='nest'?'selected':''}>🏢 Nest</option>
             </select>
           </div>
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+          <div class="u-scroll-x">
+            <table class="u-table-sm">
               <thead>
                 <tr style="background:var(--green-pale);color:var(--green-dark);">
-                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">ห้อง</th>
-                  <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">เฉลี่ย</th>
-                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">ประวัติ</th>
+                  <th class="u-th-l">ห้อง</th>
+                  <th class="u-th-r">เฉลี่ย</th>
+                  <th class="u-th-l">ประวัติ</th>
                   <th style="padding:.55rem .7rem;text-align:center;font-weight:700;">Tier</th>
-                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">สถานะ</th>
+                  <th class="u-th-l">สถานะ</th>
                 </tr>
               </thead>
               <tbody>${tableRows}</tbody>
@@ -692,7 +692,7 @@
       </li>`;
     }).join('');
     openModal(`📚 ${article?.title || 'บทความ'} — ${claims.length} ห้อง`,
-      `<ul style="list-style:none;padding:0;margin:0;">${rows}</ul>`);
+      `<ul class="u-list-reset">${rows}</ul>`);
   }
 
   function showHealthDetailModal(key) {
@@ -754,7 +754,7 @@
       <span style="color:var(--alert,${DashColors.TERRACOTTA});font-size:.82rem;">last: ${esc(r.lastClaim || '—')}</span>
     </li>`).join('');
     openModal(`💤 Inactive >7 days — ${inactive.length} ห้อง`,
-      `<ul style="list-style:none;padding:0;margin:0;">${rows}</ul>`);
+      `<ul class="u-list-reset">${rows}</ul>`);
   }
 
   // ============================================================
@@ -1080,7 +1080,7 @@
 
       container.innerHTML = `
         <div class="card">
-          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-title u-flex-sb">
             <span>👥 Tenant Health</span>
             <button data-action="refreshInsight" data-target="tenant" aria-label="รีเฟรช"
                     style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
@@ -1172,7 +1172,7 @@
 
       container.innerHTML = `
         <div class="card" style="border-left:4px solid var(--alert,${DashColors.TERRACOTTA});">
-          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-title u-flex-sb">
             <span>📌 ค่าเช่าค้างชำระ</span>
             <button data-action="refreshInsight" data-target="overdue" aria-label="รีเฟรช"
                     style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
@@ -1532,7 +1532,7 @@
         const moreHTML = spikes.length > TOP_N
           ? `<div style="font-size:.73rem;color:var(--text-muted);padding:.35rem .7rem;">+${spikes.length - TOP_N} ห้องเพิ่มเติม</div>`
           : '';
-        bodyHTML = `<table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+        bodyHTML = `<table class="u-table-sm">
             <thead><tr style="background:var(--mist,#f2f1ec);">
               <th style="padding:.3rem .5rem;text-align:left;">ห้อง</th>
               <th style="padding:.3rem .5rem;text-align:right;">ล่าสุด</th>
@@ -1624,7 +1624,7 @@
             <td style="padding:.3rem .5rem;text-align:right;font-variant-numeric:tabular-nums;">${r.avgDays != null ? r.avgDays + ' วัน' : '—'}</td>
           </tr>`;
         }).join('');
-        bodyHTML = `<table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+        bodyHTML = `<table class="u-table-sm">
             <thead><tr style="background:var(--mist,#f2f1ec);">
               <th style="padding:.3rem .5rem;text-align:left;">ผู้รับเหมา</th>
               <th style="padding:.3rem .5rem;text-align:right;">งาน</th>
