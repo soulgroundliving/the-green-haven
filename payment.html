@@ -20,7 +20,7 @@
     --green:var(--brand-primary);
     --green-light:var(--brand-primary-light);
     --green-pale:var(--brand-primary-soft);
-    --accent:#ff8f00;--accent-light:#fff8e1;--blue:#1976d2;--blue-pale:#e3f2fd;
+    --accent:#ff8f00;--accent-light:#fff8e1;--blue:#1976d2;--blue-dark:#1565c0;--blue-pale:#e3f2fd;
     --red:#c62828;--red-pale:#ffebee;
     --bg:#f4f6f8;--card:#fff;--text:#1a2332;--text-muted:#6b7a8d;
     --border:#e0e6ed;--radius:14px;--radius-sm:8px;
@@ -85,7 +85,7 @@
   .btn-primary:hover{background:var(--green-dark);}
   .btn-primary:active{transform:scale(.98);}
   .btn-secondary{background:var(--blue);color:#fff;}
-  .btn-secondary:hover{background:#1565c0;}
+  .btn-secondary:hover{background:var(--blue-dark);}
 
   .success-box{background:var(--green-pale);border-left:4px solid var(--green);padding:1rem;border-radius:var(--radius-sm);
     color:var(--green-dark);line-height:1.6;margin:1rem 0;}
@@ -763,7 +763,7 @@ function showUploadStatus(message, type = 'info') {
   const statusDiv = document.getElementById('uploadStatus');
   statusDiv.style.display = 'block';
   statusDiv.textContent = message;
-  statusDiv.style.background = type === 'error' ? '#ffebee' : type === 'success' ? 'var(--green-pale)' : '#e3f2fd';
+  statusDiv.style.background = type === 'error' ? '#ffebee' : type === 'success' ? 'var(--green-pale)' : 'var(--blue-pale)';
   statusDiv.style.color = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green-dark)' : 'var(--blue)';
 }
 
