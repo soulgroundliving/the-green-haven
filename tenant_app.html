@@ -40,18 +40,18 @@
     <!-- Sentry error monitoring (~5KB loader stub; full SDK pulls only on first error) -->
     <script>window.SENTRY_APP_NAME = 'tenant_app';</script>
     <script src="https://js.sentry-cdn.com/70de55e358255ab981939b708a743b1d.min.js" crossorigin="anonymous"></script>
-    <script src="./shared/sentry-init.js"></script>
+    <script src="./shared/sentry-init.js" defer></script>
     <!-- Component library + modal helper (Phase 1 design system) -->
     <link rel="stylesheet" href="./shared/components.css">
-    <!-- Theme toggle: applied BEFORE first paint to avoid flash -->
+    <!-- Theme toggle: applied BEFORE first paint to avoid flash — must NOT be deferred -->
     <script src="./shared/theme-toggle.js"></script>
-    <script src="./shared/modal.js"></script>
-    <script src="./shared/empty-states.js"></script>
-    <script src="./shared/haptics.js"></script>
-    <script src="./shared/onboarding-tour.js"></script>
-    <script src="./shared/thai-date.js"></script>
+    <script src="./shared/modal.js" defer></script>
+    <script src="./shared/empty-states.js" defer></script>
+    <script src="./shared/haptics.js" defer></script>
+    <script src="./shared/onboarding-tour.js" defer></script>
+    <script src="./shared/thai-date.js" defer></script>
     <!-- Modal a11y bridge: ESC + backdrop close + focus restore for legacy modals -->
-    <script src="./shared/modal-a11y-bridge.js"></script>
+    <script src="./shared/modal-a11y-bridge.js" defer></script>
     <!-- html2canvas: lazy-loaded on first receipt download (≈150KB).
          jsPDF was previously loaded eagerly but is never invoked in this
          page — receipts are PNG via canvas.toDataURL — so we drop it. -->
@@ -93,23 +93,25 @@
     </script>
     <!-- LINE LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <!-- Shared logic scripts -->
-    <script src="./shared/firebase-config-loader.js"></script>
-    <script src="./shared/rich-text-policy.js"></script>
-    <script src="./shared/year-utils.js"></script>
-    <script src="./shared/config-unified.js"></script>
-    <script src="./shared/building-config.js"></script>
-    <script src="./shared/building-registry.js"></script>
-    <script src="./shared/facility-booking.js"></script>
-    <script src="./shared/checklist-manager.js"></script>
-    <script src="./shared/marketplace-chat.js"></script>
+    <!-- Shared logic scripts — all deferred except gamification-rules.js which has a
+         top-level alias in the inline script (window.GamificationRules.BADGE_CATALOG,
+         .badgeId at lines ~9888-9889) that must be resolved during parse, not post-parse. -->
+    <script src="./shared/firebase-config-loader.js" defer></script>
+    <script src="./shared/rich-text-policy.js" defer></script>
+    <script src="./shared/year-utils.js" defer></script>
+    <script src="./shared/config-unified.js" defer></script>
+    <script src="./shared/building-config.js" defer></script>
+    <script src="./shared/building-registry.js" defer></script>
+    <script src="./shared/facility-booking.js" defer></script>
+    <script src="./shared/checklist-manager.js" defer></script>
+    <script src="./shared/marketplace-chat.js" defer></script>
     <script src="./shared/gamification-rules.js"></script>
-    <script src="./shared/room-config.js"></script>
-    <script src="./shared/tenant-system.js"></script>
-    <script src="./shared/person-ssot.js"></script>
-    <script src="./shared/lease-config.js"></script>
-    <script src="./shared/billing-system.js"></script>
-    <script src="./shared/invoice-receipt-manager.js"></script>
+    <script src="./shared/room-config.js" defer></script>
+    <script src="./shared/tenant-system.js" defer></script>
+    <script src="./shared/person-ssot.js" defer></script>
+    <script src="./shared/lease-config.js" defer></script>
+    <script src="./shared/billing-system.js" defer></script>
+    <script src="./shared/invoice-receipt-manager.js" defer></script>
     <!-- Firebase init -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
@@ -14790,10 +14792,10 @@
     </script>
 
     <!-- ===== FACILITY BOOKING JS (Tier 3G) ===== -->
-    <script src="./shared/facility-booking-ui.js"></script>
+    <script src="./shared/facility-booking-ui.js" defer></script>
 
     <!-- ===== CHECKLIST (Tier 3I) — Move-In/Out ===== -->
-    <script src="./shared/checklist-page.js"></script>
+    <script src="./shared/checklist-page.js" defer></script>
 
     <!-- ported from tenant.html: photo modal -->
     <div id="photoModal" role="dialog" aria-modal="true" aria-labelledby="photoModal-title" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:20px;">
