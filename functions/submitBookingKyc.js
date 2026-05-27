@@ -120,7 +120,7 @@ exports.submitBookingKyc = functions.region('asia-southeast1').https.onCall(asyn
     throw new functions.https.HttpsError('internal', 'Could not update booking status');
   }
 
-  console.log(`📋 submitBookingKyc: ${bookingId} → kyc_pending (${uploadedList.length} docs: ${uploadedList.join(', ')})`);
+  console.info(`📋 submitBookingKyc: ${bookingId} → kyc_pending (${uploadedList.length} docs: ${uploadedList.join(', ')})`);
   return {
     success: true,
     bookingId,

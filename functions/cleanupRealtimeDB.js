@@ -25,7 +25,7 @@ exports.verifyMigrationComplete = functions.region('asia-southeast1').https.onRe
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    console.log('🔍 Verifying migration completeness...');
+    console.info('🔍 Verifying migration completeness...');
 
     const stats = {
       firestoreRooms: 0,
@@ -47,7 +47,7 @@ exports.verifyMigrationComplete = functions.region('asia-southeast1').https.onRe
         stats.firestoreRooms += roomsSnapshot.size;
       }
 
-      console.log(`✅ Found ${stats.firestoreRooms} rooms in Firestore across ${stats.firestoreBuildings.length} buildings`);
+      console.info(`✅ Found ${stats.firestoreRooms} rooms in Firestore across ${stats.firestoreBuildings.length} buildings`);
     } catch (e) {
       stats.warnings.push(`Error checking Firestore: ${e.message}`);
       console.error('❌ Error checking Firestore:', e);
@@ -58,7 +58,7 @@ exports.verifyMigrationComplete = functions.region('asia-southeast1').https.onRe
       const realtimeSnapshot = await db.ref('data/rooms').get();
       if (realtimeSnapshot.exists()) {
         stats.realtimeRooms = Object.keys(realtimeSnapshot.val() || {}).length;
-        console.log(`⚠️  Found ${stats.realtimeRooms} rooms in Realtime DB (old data)`);
+        console.info(`⚠️  Found ${stats.realtimeRooms} rooms in Realtime DB (old data)`);
       }
     } catch (e) {
       stats.warnings.push(`Error checking Realtime DB: ${e.message}`);
@@ -68,7 +68,7 @@ exports.verifyMigrationComplete = functions.region('asia-southeast1').https.onRe
     // Ready for cleanup?
     if (stats.firestoreRooms >= 43 && stats.realtimeRooms > 0) {
       stats.readyForCleanup = true;
-      console.log('✅ Migration looks complete. Safe to delete old data.');
+      console.info('✅ Migration looks complete. Safe to delete old data.');
     } else {
       stats.warnings.push(`Expected 43+ Firestore rooms, got ${stats.firestoreRooms}`);
       console.warn('⚠️  Verification incomplete - check numbers before cleanup');
@@ -105,7 +105,7 @@ exports.deleteRealtimeDBData = functions.region('asia-southeast1').https.onReque
 
     const action = req.query.action || 'preview';
 
-    console.log(`🗑️  Cleanup action: ${action}`);
+    console.info(`🗑️  Cleanup action: ${action}`);
 
     const stats = {
       dataPath: 'data/rooms',
@@ -121,7 +121,7 @@ exports.deleteRealtimeDBData = functions.region('asia-southeast1').https.onReque
       if (snapshot.exists()) {
         const rooms = snapshot.val();
         stats.roomsDeleted = Object.keys(rooms).length;
-        console.log(`📋 Preview: Would delete ${stats.roomsDeleted} rooms from data/rooms`);
+        console.info(`📋 Preview: Would delete ${stats.roomsDeleted} rooms from data/rooms`);
       }
 
       stats.otherDataPreserved = ['meter_data', 'bills', 'payments', 'services', 'community'];
@@ -136,11 +136,11 @@ exports.deleteRealtimeDBData = functions.region('asia-southeast1').https.onReque
     } else if (action === 'delete') {
       // Actually delete the data
       try {
-        console.log('🔥 Deleting data/rooms from Realtime Database...');
+        console.info('🔥 Deleting data/rooms from Realtime Database...');
         await db.ref('data/rooms').remove();
 
         stats.roomsDeleted = 43; // We know we had 43 rooms
-        console.log('✅ Successfully deleted data/rooms');
+        console.info('✅ Successfully deleted data/rooms');
 
         return res.json({
           success: true,

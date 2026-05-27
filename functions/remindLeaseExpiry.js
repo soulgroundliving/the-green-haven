@@ -286,7 +286,7 @@ async function runExpirySweep() {
           lastExpiryAlertAt: new Date().toISOString(),
           lastExpiryTier: tier.key
         });
-        console.log(`📅 [${tier.key}] ${building}/${lease.roomId} d${daysLeft} → ${ok} user(s)`);
+        console.info(`📅 [${tier.key}] ${building}/${lease.roomId} d${daysLeft} → ${ok} user(s)`);
       }
       adminSummary.push(entry);
     }
@@ -335,7 +335,7 @@ async function runExpirySweep() {
             staleAt: admin.firestore.FieldValue.serverTimestamp(),
           });
           staleMarked++;
-          console.log(`🪦 stale ${notifDoc.id}: ${reason}`);
+          console.info(`🪦 stale ${notifDoc.id}: ${reason}`);
         } catch (e) {
           console.warn(`⚠️ stale update failed ${notifDoc.id}: ${e.message}`);
         }
@@ -347,12 +347,12 @@ async function runExpirySweep() {
   }
 
   if (adminSummary.length > 0) {
-    console.log('📋 Lease-expiry sweep summary:');
-    adminSummary.forEach(e => console.log(
+    console.info('📋 Lease-expiry sweep summary:');
+    adminSummary.forEach(e => console.info(
       `   ${e.building}/${e.room} (${e.tenant}) — tier=${e.tier} daysLeft=${e.daysLeft} notified=${e.notified}`
     ));
   }
-  console.log(`🗓️ Lease-expiry sweep: scanned=${scanned} sent=${sent} bellWrites=${bellWrites} staleMarked=${staleMarked} skipped=${skipped} errors=${errors}`);
+  console.info(`🗓️ Lease-expiry sweep: scanned=${scanned} sent=${sent} bellWrites=${bellWrites} staleMarked=${staleMarked} skipped=${skipped} errors=${errors}`);
   return { scanned, sent, bellWrites, staleMarked, skipped, errors, summary: adminSummary };
 }
 

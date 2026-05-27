@@ -81,7 +81,7 @@ exports.grantBuildingManager = functions
     await admin.auth().setCustomUserClaims(targetUid, next);
 
     const action = buildings.length === 0 ? 'revoked' : `granted [${buildings.join(', ')}]`;
-    console.log(`✅ grantBuildingManager: uid=${targetUid} managedBuildings ${action} by admin=${context.auth.uid}`);
+    console.info(`✅ grantBuildingManager: uid=${targetUid} managedBuildings ${action} by admin=${context.auth.uid}`);
 
     return {
       uid: targetUid,

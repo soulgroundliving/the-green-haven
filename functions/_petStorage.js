@@ -92,7 +92,7 @@ async function deletePetStorageForRoom(building, roomId, opts = {}) {
   }
 
   if (!files.length) {
-    console.log(`[_petStorage] no files under ${prefix} (reason=${reason})`);
+    console.info(`[_petStorage] no files under ${prefix} (reason=${reason})`);
     return { deletedCount: 0, totalFiles: 0, errors: [] };
   }
 
@@ -113,7 +113,7 @@ async function deletePetStorageForRoom(building, roomId, opts = {}) {
     }
   });
 
-  console.log(
+  console.info(
     `[_petStorage] ${prefix} (reason=${reason}): ` +
     `deleted=${deletedCount}/${files.length} errors=${errors.length}`
   );
@@ -165,7 +165,7 @@ async function deletePetStorageForPet(building, roomId, petId, opts = {}) {
   }
 
   if (!files.length) {
-    console.log(`[_petStorage] no files under ${prefix} (reason=${reason})`);
+    console.info(`[_petStorage] no files under ${prefix} (reason=${reason})`);
     return { deletedCount: 0, totalFiles: 0, errors: [] };
   }
 
@@ -186,7 +186,7 @@ async function deletePetStorageForPet(building, roomId, petId, opts = {}) {
     }
   });
 
-  console.log(
+  console.info(
     `[_petStorage] ${prefix} (reason=${reason}): ` +
     `deleted=${deletedCount}/${files.length} errors=${errors.length}`
   );

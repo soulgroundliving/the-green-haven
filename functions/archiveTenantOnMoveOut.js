@@ -328,7 +328,7 @@ exports.archiveTenantOnMoveOut = functions
         e.message || 'Archive batch commit failed');
     }
 
-    console.log(`archiveTenantOnMoveOut: ${building}/${roomId} → archive/${contractId} ` +
+    console.info(`archiveTenantOnMoveOut: ${building}/${roomId} → archive/${contractId} ` +
       `(tenantId=${tenantId}, subdocs=${copiedSubdocs}, reason=${archiveReason}, by=${callerEmail || callerUid})`);
 
     // ── Post-batch: Storage cleanup (§7-DD analogue for Storage) ───────────

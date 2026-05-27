@@ -427,7 +427,7 @@ async function _runRenewalMode(input, callerUid, callerEmail, firestore) {
     actorUid: callerUid,
   };
 
-  console.log(`renewLease[renewal]: ${building}/${roomId} ${oldLeaseId} → ${newLeaseId} ` +
+  console.info(`renewLease[renewal]: ${building}/${roomId} ${oldLeaseId} → ${newLeaseId} ` +
     `(rent ${auditPayload.oldRent}→${resolvedRent}, by=${auditPayload.actor})`);
 
   return {
@@ -560,7 +560,7 @@ async function _runExtensionMode(input, callerUid, callerEmail, firestore) {
     actorUid: callerUid,
   };
 
-  console.log(`renewLease[extension]: ${building}/${roomId} ${leaseId} ${startIso} → ${endIso} ` +
+  console.info(`renewLease[extension]: ${building}/${roomId} ${leaseId} ${startIso} → ${endIso} ` +
     `(entry #${auditPayload.extensionCountAfter}, by=${auditPayload.actor})`);
 
   return {

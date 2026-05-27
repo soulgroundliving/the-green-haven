@@ -65,11 +65,11 @@ Live URL: <https://the-green-haven.vercel.app>
 
 ## 7. Cloud Functions deployment
 
-- [ ] `firebase deploy --only functions` สำเร็จ ครบ:
-  - [ ] `verifySlip` (asia-southeast1)
-  - [ ] `redeemReward` (asia-southeast1) — **NEW**
-  - [ ] `checkAndAwardBadges`, `getLeaderboard`, `calculateTenantRank`
-  - [ ] `cleanupResolvedComplaints` (pubsub), `awardComplaintFreeMonth` (pubsub)
+- [ ] CI `deploy-functions.yml` workflow ✅ green (auto-deploys on push to `main` touching `functions/`)
+- [ ] Firebase Console → Functions → ≥ 85 functions deployed, all `asia-southeast1`
+- [ ] Key CFs respond (HTTP 400 = running but rejected empty body — that's fine):
+  - [ ] `curl -s -o /dev/null -w "%{http_code}" -X GET https://asia-southeast1-the-green-haven.cloudfunctions.net/liffSignIn` → non-000, non-5xx
+  - [ ] `curl -s -o /dev/null -w "%{http_code}" -X GET https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip` → non-000, non-5xx
 - [x] ~~รัน seedRewards ครั้งเดียว~~ — done at launch; CF removed 2026-04-28 (admin CRUD via dashboard)
 - [x] ~~ตรวจ Firestore `rewards/` มี 7 docs~~ — verified at launch
 
@@ -95,11 +95,24 @@ Live URL: <https://the-green-haven.vercel.app>
 
 ## Scheduled monitoring
 
-มี 4 scheduled tasks ที่ตั้งไว้แล้ว — ตรวจว่ายัง active:
-- `gh-auto-billing-monthly` (วันที่ 1, 06:03)
-- `gh-firebase-health-daily` (08:07)
-- `gh-meter-import-reminder` (ศุกร์ 17:14)
-- `gh-prelaunch-smoke-test` (09:20) — **เปลี่ยนเป็นรายสัปดาห์หลัง launch**
+มี 11 Firebase Cloud Scheduler jobs + 2 interval jobs — ตรวจว่ายัง active ใน Cloud Console → Cloud Scheduler:
+
+| BKK time | Export | Purpose |
+|----------|--------|---------|
+| 02:00 daily | `archiveSlipLogsScheduled` | Move slip logs → BigQuery |
+| 02:07 1st/month | `aggregateMonthlyRevenueScheduled` | Roll up RTDB bills → `taxSummary/{BE}` |
+| 02:30 daily | `archiveAuthEventsScheduled` | Move auth_events → BigQuery |
+| 03:00 daily | `backupFirestoreScheduled` | Full Firestore export → GCS |
+| 03:05 daily | `cleanupChecklistsScheduled` | PDPA retention sweep (checklists) |
+| 04:00 daily | `cleanupRateLimitsScheduled` | Prune stale `rateLimits/*` docs |
+| 04:20 Sun weekly | `cleanupLiffUsersRejectedScheduled` | Delete rejected liffUsers > 90 days |
+| 05:00 daily | `cleanupPlayersOver1YearScheduled` | Delete expired player docs |
+| 08:00 daily | `remindLeaseExpiryScheduled` | LINE push + in-app bell for expiring leases |
+| 09:00 daily | `remindLatePaymentsScheduled` | LINE push for overdue bills |
+| every 5 min | `keepLiffWarm` | Keep liffSignIn/verifySlip instances warm |
+| every 15 min | `lineRetryQueue` | Drain failed LINE push retry queue |
+
+(verify: `grep -c "pubsub.schedule" functions/{archiveSlipLogs,aggregateMonthlyRevenue,archiveAuthEvents,backupFirestore,cleanupChecklistsScheduled,cleanupOldDocs,cleanupPlayersOver1Year,remindLeaseExpiry,remindLatePayments,keepLiffWarm,lineRetryQueue}.js`)
 
 ## Known TODOs (post-launch ทำได้)
 

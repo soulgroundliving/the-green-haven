@@ -65,7 +65,7 @@ exports.cleanupAnonymousUsers = functions
         }
       }
 
-      console.log(`✅ cleanupAnonymousUsers: deleted=${deleted} scanned candidate=${anonUids.length} caller=${decoded.email}`);
+      console.info(`✅ cleanupAnonymousUsers: deleted=${deleted} scanned candidate=${anonUids.length} caller=${decoded.email}`);
       return res.status(200).json({
         success: true,
         scanned: anonUids.length,

@@ -98,7 +98,7 @@ exports.liffBookingSignIn = functions
       role: 'prospect',
       lineUserId,
     });
-    console.log(`✅ liffBookingSignIn: uid=${uid} (LINE ${lineUserId})`);
+    console.info(`✅ liffBookingSignIn: uid=${uid} (LINE ${lineUserId})`);
   } catch (e) {
     console.error('liffBookingSignIn: createCustomToken failed:', e.message);
     return res.status(500).json({ error: 'Failed to create custom token' });

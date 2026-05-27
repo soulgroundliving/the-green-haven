@@ -33,9 +33,9 @@ exports.keepLiffWarm = functions
     results.forEach(r => {
       const v = r.value || r.reason;
       if (v?.status === 200) {
-        console.log(`✅ keepLiffWarm: ${v.url} → 200 ok`);
+        console.info(`✅ keepLiffWarm: ${v.url} → 200 ok`);
       } else if (v?.status === 405 && v?.callable) {
-        console.log(`✅ keepLiffWarm: ${v.url} → 405 callable warm ok`);
+        console.info(`✅ keepLiffWarm: ${v.url} → 405 callable warm ok`);
       } else {
         console.warn(`⚠️ keepLiffWarm: ${v?.url} → ${v?.status || v?.error}`);
       }

@@ -43,7 +43,7 @@ async function _notifyTenantAdminSigned(instance, instanceId) {
     return 0;
   }
   if (usersSnap.empty) {
-    console.log(`ℹ️ No approved LINE-linked tenant for ${building}/${roomId} — skip`);
+    console.info(`ℹ️ No approved LINE-linked tenant for ${building}/${roomId} — skip`);
     return 0;
   }
 
@@ -137,7 +137,7 @@ async function _notifyTenantAdminSigned(instance, instanceId) {
     console.warn(`⚠️ LINE checklist-signed notify failures for ${building}/${roomId} inst ${instanceId}:`, failures.length);
   }
   if (sent > 0) {
-    console.log(`📨 checklist-signed notify sent to ${sent} user(s) — ${building}/${roomId}/${instanceId}`);
+    console.info(`📨 checklist-signed notify sent to ${sent} user(s) — ${building}/${roomId}/${instanceId}`);
   }
   return sent;
 }
@@ -188,7 +188,7 @@ exports.adminSignChecklist = functions
       updatedAt:          admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`✅ adminSignChecklist: ${instanceId} signed by admin uid=${context.auth.uid}`);
+    console.info(`✅ adminSignChecklist: ${instanceId} signed by admin uid=${context.auth.uid}`);
 
     // ── Notify tenant (fire-and-await, but never block the write) ──────────
     // Failures are enqueued for retry inside _notifyTenantAdminSigned, so we

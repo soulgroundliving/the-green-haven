@@ -65,6 +65,6 @@ exports.cancelFacilityBooking = functions
       updatedAt:   admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`✅ cancelFacilityBooking: ${bookingId} cancelled by ${isAdmin ? 'admin' : 'tenant'} uid=${callerUid}`);
+    console.info(`✅ cancelFacilityBooking: ${bookingId} cancelled by ${isAdmin ? 'admin' : 'tenant'} uid=${callerUid}`);
     return { cancelled: true };
   });

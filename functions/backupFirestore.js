@@ -71,12 +71,12 @@ async function ensureBackupBucket() {
   const [exists] = await bucket.exists();
   if (exists) return BACKUP_BUCKET;
 
-  console.log(`📦 Creating backup bucket gs://${BACKUP_BUCKET} in ${BACKUP_BUCKET_LOCATION}...`);
+  console.info(`📦 Creating backup bucket gs://${BACKUP_BUCKET} in ${BACKUP_BUCKET_LOCATION}...`);
   await storage.createBucket(BACKUP_BUCKET, {
     location: BACKUP_BUCKET_LOCATION,
     storageClass: 'STANDARD'
   });
-  console.log(`✅ Created bucket gs://${BACKUP_BUCKET}`);
+  console.info(`✅ Created bucket gs://${BACKUP_BUCKET}`);
   return BACKUP_BUCKET;
 }
 
@@ -91,7 +91,7 @@ async function runBackup() {
   const databaseName = firestoreClient.databasePath(PROJECT_ID, '(default)');
   const startedAt = new Date().toISOString();
 
-  console.log(`📦 Starting Firestore export → ${outputUriPrefix}`);
+  console.info(`📦 Starting Firestore export → ${outputUriPrefix}`);
 
   // Kick off the long-running export operation.
   const [operation] = await firestoreClient.exportDocuments({
@@ -99,7 +99,7 @@ async function runBackup() {
     outputUriPrefix,
     collectionIds: []  // empty = all collections
   });
-  console.log(`✅ Export operation queued: ${operation.name}`);
+  console.info(`✅ Export operation queued: ${operation.name}`);
 
   // Persist 'queued' status immediately so admin can verify the cron
   // actually fired. Without this, a silent cron failure (mis-scheduled,
@@ -200,7 +200,7 @@ async function pruneOldBackups(bucketName) {
         deleted++;
       }
     }
-    if (deleted > 0) console.log(`🗑️ Pruned ${deleted}/${scanned} files older than ${RETENTION_DAYS}d`);
+    if (deleted > 0) console.info(`🗑️ Pruned ${deleted}/${scanned} files older than ${RETENTION_DAYS}d`);
   } catch (e) {
     console.warn(`⚠️ Prune step failed (backup still succeeded): ${e.message}`);
   }
@@ -219,7 +219,7 @@ exports.backupFirestoreScheduled = functions
   .onRun(async () => {
     try {
       const result = await runBackup();
-      console.log('🗂️ Firestore backup complete:', JSON.stringify(result));
+      console.info('🗂️ Firestore backup complete:', JSON.stringify(result));
       return null;
     } catch (e) {
       console.error('backupFirestoreScheduled failed:', e);

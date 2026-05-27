@@ -122,7 +122,7 @@ exports.cleanupMarketplaceChat = onCall(
     try {
       const result = await cleanupChatsForPost(firestore, postId);
       if (result.chatsDeleted > 0 || result.messagesDeleted > 0) {
-        console.log(
+        console.info(
           `[cleanupMarketplaceChat] post=${postId} caller=${request.auth.uid} cleared chats=${result.chatsDeleted} messages=${result.messagesDeleted}`
         );
       }

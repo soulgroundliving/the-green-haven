@@ -71,7 +71,7 @@ async function _cleanupBatch(query, label, results) {
       await doc.ref.delete();
       results.deletedDocs++;
       results.deletedFiles += storageDeleted;
-      console.log(`[cleanupChecklistsScheduled] ${label} deleted ${doc.id} (${building}/${roomId}) +${storageDeleted} files`);
+      console.info(`[cleanupChecklistsScheduled] ${label} deleted ${doc.id} (${building}/${roomId}) +${storageDeleted} files`);
     } catch (err) {
       results.errors.push({ instanceId: doc.id, error: err.message });
       console.warn(`[cleanupChecklistsScheduled] doc delete failed ${doc.id}:`, err.message);
@@ -105,7 +105,7 @@ async function _run() {
     results,
   );
 
-  console.log(`✅ cleanupChecklistsScheduled: deleted ${results.deletedDocs} docs + ${results.deletedFiles} files, errors=${results.errors.length}`);
+  console.info(`✅ cleanupChecklistsScheduled: deleted ${results.deletedDocs} docs + ${results.deletedFiles} files, errors=${results.errors.length}`);
   return results;
 }
 

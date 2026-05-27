@@ -133,7 +133,7 @@ exports.claimWellnessQuizPoints = functions.region('asia-southeast1').https.onCa
         }
         return { pointsBefore: currentPoints, pointsAfter, reward };
       });
-      console.log(`🎯 Player wellness quiz: ${tenantId}/${aid} passed=${grade.passed} +${result.reward}`);
+      console.info(`🎯 Player wellness quiz: ${tenantId}/${aid} passed=${grade.passed} +${result.reward}`);
       return {
         success: true,
         passed: grade.passed,
@@ -203,7 +203,7 @@ exports.claimWellnessQuizPoints = functions.region('asia-southeast1').https.onCa
       return { pointsBefore: currentPoints, pointsAfter, reward };
     });
 
-    console.log(`🎯 Wellness quiz: ${canonicalBuilding}/${roomId}/${aid} passed=${grade.passed} +${result.reward}`);
+    console.info(`🎯 Wellness quiz: ${canonicalBuilding}/${roomId}/${aid} passed=${grade.passed} +${result.reward}`);
     return {
       success: true,
       passed: grade.passed,

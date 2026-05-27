@@ -305,7 +305,7 @@ async function markBillPaidInRTDB(slipData, params) {
     });
     if (matched > 0) {
       await ref.update(updates);
-      console.log(`💸 RTDB bill(s) marked paid: ${buildingRaw}/${room} × ${matched} (${billMonth}/${billYearBE})`);
+      console.info(`💸 RTDB bill(s) marked paid: ${buildingRaw}/${room} × ${matched} (${billMonth}/${billYearBE})`);
     }
 
     // Mirror payment record into payments/{b}/{r}/{pushId} for admin
@@ -433,7 +433,7 @@ async function recordPaymentAndAwardPoints(slipData, params) {
     });
   });
 
-  console.log(`🎮 Awarded ${points}pts to nest/${roomId} (${status}, daysDiff=${daysDiff}, month=${monthKey})`);
+  console.info(`🎮 Awarded ${points}pts to nest/${roomId} (${status}, daysDiff=${daysDiff}, month=${monthKey})`);
   return { roomId, points, status, daysDiff, monthKey };
 }
 
@@ -492,7 +492,7 @@ async function sendReceiptNotification(slipData, params) {
     })
   ));
 
-  console.log(`🧾 Receipt notification sent: ${building}/${room} → ${usersSnap.size} user(s)`);
+  console.info(`🧾 Receipt notification sent: ${building}/${room} → ${usersSnap.size} user(s)`);
 }
 
 // ==================== MAIN CLOUD FUNCTION ====================
@@ -701,7 +701,7 @@ exports.verifySlip = functions
     // ===== RETURN SUCCESS =====
     // amountDiff is guaranteed ≤1 by the validation above; amountValid kept
     // in response for backward compat with any caller that reads it.
-    console.log(`✅ Slip verified: ${identifier}, Amount: ฿${slipData.amount}`);
+    console.info(`✅ Slip verified: ${identifier}, Amount: ฿${slipData.amount}`);
 
     return res.status(200).json({
       success: true,
