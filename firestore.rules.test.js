@@ -736,6 +736,27 @@ describe('marketplace_chats — participant-only chat (Sprint 1)', () => {
     });
     await assertFails(deleteDoc(doc(ANON(OWNER).firestore(), 'marketplace_chats/c1/messages/m1')));
   });
+
+  it('unauthenticated user CANNOT read a chat (isSignedIn guard)', async () => {
+    await seedChat();
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'marketplace_chats/c1')));
+  });
+
+  it('unauthenticated user CANNOT create a chat', async () => {
+    await assertFails(addDoc(collection(UNAUTH().firestore(), 'marketplace_chats'), {
+      participants: [OWNER, BUYER],
+      postId: 'post-001',
+      createdAt: new Date().toISOString(),
+    }));
+  });
+
+  it('admin can delete a message (mirrors CF cleanupMarketplaceChat bypass)', async () => {
+    await seedChat();
+    await seedDoc('marketplace_chats/c1/messages/m1', {
+      senderId: OWNER, text: 'hello', timestamp: new Date().toISOString(), isRead: false,
+    });
+    await assertSucceeds(deleteDoc(doc(EMAIL_ADMIN().firestore(), 'marketplace_chats/c1/messages/m1')));
+  });
 });
 
 describe('auth_events — failed-login audit log (Phase 4B)', () => {
