@@ -125,20 +125,20 @@ function _lrBuildModalHtml(ctx) {
 
   return `
   <div id="${_LR_MODAL_ID}" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;">
-    <div style="background:#fff;width:100%;max-width:620px;max-height:92vh;overflow-y:auto;border-radius:var(--radius,12px);box-shadow:0 24px 60px rgba(0,0,0,.3);font-family:var(--font-brand);display:flex;flex-direction:column;">
-      <div style="padding:1.5rem 2rem;background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);color:#fff;border-radius:var(--radius,12px) var(--radius,12px) 0 0;">
+    <div style="background:${DashColors.WHITE};width:100%;max-width:620px;max-height:92vh;overflow-y:auto;border-radius:var(--radius,12px);box-shadow:0 24px 60px rgba(0,0,0,.3);font-family:var(--font-brand);display:flex;flex-direction:column;">
+      <div style="padding:1.5rem 2rem;background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);color:${DashColors.WHITE};border-radius:var(--radius,12px) var(--radius,12px) 0 0;">
         <h2 style="margin:0;font-size:1.15rem;font-weight:700;">📝 ต่อสัญญา / ย้ายห้อง</h2>
         <div style="margin-top:6px;font-size:.85rem;opacity:.92;">${_escLR(buildingLabel)} · ห้อง ${_escLR(roomId)} · ${_escLR(tenantName)}</div>
       </div>
 
-      <div style="padding:1.25rem 2rem;background:#fafafa;border-bottom:1px solid var(--border,#e5e7eb);">
-        <div style="font-size:.78rem;color:var(--text-muted,#6b7280);font-weight:600;margin-bottom:6px;">สัญญาปัจจุบัน</div>
+      <div style="padding:1.25rem 2rem;background:${DashColors.SURFACE_FAINT};border-bottom:1px solid var(--border,${DashColors.BORDER_LIGHT});">
+        <div style="font-size:.78rem;color:var(--text-muted,${DashColors.TEXT_SECONDARY});font-weight:600;margin-bottom:6px;">สัญญาปัจจุบัน</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.88rem;">
           <div><strong>เริ่ม:</strong> ${oldStartIso || '—'}</div>
           <div><strong>สิ้นสุด:</strong> ${oldEndIso || '—'}</div>
           <div><strong>ค่าเช่า:</strong> ฿${oldRent.toLocaleString()}</div>
           <div><strong>มัดจำ:</strong> ฿${oldDeposit.toLocaleString()}</div>
-          <div style="grid-column:1/-1;font-size:.72rem;color:var(--text-muted,#6b7280);">leaseId: ${_escLR(lease.id || lease.leaseId || '')}</div>
+          <div style="grid-column:1/-1;font-size:.72rem;color:var(--text-muted,${DashColors.TEXT_SECONDARY});">leaseId: ${_escLR(lease.id || lease.leaseId || '')}</div>
         </div>
       </div>
 
@@ -146,28 +146,28 @@ function _lrBuildModalHtml(ctx) {
 
         <div>
           <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;">ห้องที่จะอยู่ต่อ</label>
-          <div role="radiogroup" style="display:flex;gap:0;border:1.5px solid var(--border,#e5e7eb);border-radius:var(--radius-sm,8px);overflow:hidden;">
+          <div role="radiogroup" style="display:flex;gap:0;border:1.5px solid var(--border,${DashColors.BORDER_LIGHT});border-radius:var(--radius-sm,8px);overflow:hidden;">
             <label style="flex:1;cursor:pointer;">
               <input type="radio" name="gh-lr-room-mode" value="same" checked style="display:none;">
-              <div data-room-tab="same" style="padding:10px 12px;text-align:center;background:var(--green-pale,#e8f5e9);color:var(--green-dark,#1b5e20);font-weight:700;font-size:.85rem;">📄 ห้องเดิม<br><span style="font-weight:400;font-size:.72rem;opacity:.8;">ต่อสัญญาห้อง ${_escLR(roomId)}</span></div>
+              <div data-room-tab="same" style="padding:10px 12px;text-align:center;background:var(--green-pale,${DashColors.GREEN_BG});color:var(--green-dark,${DashColors.GREEN_DEEP});font-weight:700;font-size:.85rem;">📄 ห้องเดิม<br><span style="font-weight:400;font-size:.72rem;opacity:.8;">ต่อสัญญาห้อง ${_escLR(roomId)}</span></div>
             </label>
-            <label style="flex:1;cursor:pointer;border-left:1px solid var(--border,#e5e7eb);">
+            <label style="flex:1;cursor:pointer;border-left:1px solid var(--border,${DashColors.BORDER_LIGHT});">
               <input type="radio" name="gh-lr-room-mode" value="new" style="display:none;">
-              <div data-room-tab="new" style="padding:10px 12px;text-align:center;background:#fff;color:var(--text-muted,#6b7280);font-weight:600;font-size:.85rem;">🚪 ย้ายไปห้องใหม่<br><span style="font-weight:400;font-size:.72rem;opacity:.8;">เลือกห้องว่างในระบบ</span></div>
+              <div data-room-tab="new" style="padding:10px 12px;text-align:center;background:${DashColors.WHITE};color:var(--text-muted,${DashColors.TEXT_SECONDARY});font-weight:600;font-size:.85rem;">🚪 ย้ายไปห้องใหม่<br><span style="font-weight:400;font-size:.72rem;opacity:.8;">เลือกห้องว่างในระบบ</span></div>
             </label>
           </div>
         </div>
 
         <div data-same-room-only>
           <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;">รูปแบบ</label>
-          <div role="radiogroup" style="display:flex;gap:0;border:1.5px solid var(--border,#e5e7eb);border-radius:var(--radius-sm,8px);overflow:hidden;">
+          <div role="radiogroup" style="display:flex;gap:0;border:1.5px solid var(--border,${DashColors.BORDER_LIGHT});border-radius:var(--radius-sm,8px);overflow:hidden;">
             <label style="flex:1;cursor:pointer;">
               <input type="radio" name="gh-lr-action-mode" value="renewal" checked style="display:none;">
-              <div data-mode-tab="renewal" style="padding:8px 10px;text-align:center;background:var(--green-pale,#e8f5e9);color:var(--green-dark,#1b5e20);font-weight:700;font-size:.82rem;">📄 ต่อสัญญาใหม่<br><span style="font-weight:400;font-size:.7rem;opacity:.8;">เซ็นใหม่ · เปลี่ยนค่าเช่า/มัดจำได้</span></div>
+              <div data-mode-tab="renewal" style="padding:8px 10px;text-align:center;background:var(--green-pale,${DashColors.GREEN_BG});color:var(--green-dark,${DashColors.GREEN_DEEP});font-weight:700;font-size:.82rem;">📄 ต่อสัญญาใหม่<br><span style="font-weight:400;font-size:.7rem;opacity:.8;">เซ็นใหม่ · เปลี่ยนค่าเช่า/มัดจำได้</span></div>
             </label>
-            <label style="flex:1;cursor:pointer;border-left:1px solid var(--border,#e5e7eb);">
+            <label style="flex:1;cursor:pointer;border-left:1px solid var(--border,${DashColors.BORDER_LIGHT});">
               <input type="radio" name="gh-lr-action-mode" value="extension" style="display:none;">
-              <div data-mode-tab="extension" style="padding:8px 10px;text-align:center;background:#fff;color:var(--text-muted,#6b7280);font-weight:600;font-size:.82rem;">⏩ ขยายระยะเวลา<br><span style="font-weight:400;font-size:.7rem;opacity:.8;">สัญญาเดิม · ขยาย endDate เท่านั้น</span></div>
+              <div data-mode-tab="extension" style="padding:8px 10px;text-align:center;background:${DashColors.WHITE};color:var(--text-muted,${DashColors.TEXT_SECONDARY});font-weight:600;font-size:.82rem;">⏩ ขยายระยะเวลา<br><span style="font-weight:400;font-size:.7rem;opacity:.8;">สัญญาเดิม · ขยาย endDate เท่านั้น</span></div>
             </label>
           </div>
         </div>
@@ -176,13 +176,13 @@ function _lrBuildModalHtml(ctx) {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
             <div>
               <label for="gh-lr-new-building" style="display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;">อาคารใหม่</label>
-              <select id="gh-lr-new-building" style="width:100%;padding:10px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.92rem;background:#fff;">
+              <select id="gh-lr-new-building" style="width:100%;padding:10px 12px;border:1.5px solid var(--border,${DashColors.BORDER_LIGHT});border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.92rem;background:${DashColors.WHITE};">
                 ${buildingOpts}
               </select>
             </div>
             <div>
               <label for="gh-lr-new-room" style="display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;">ห้องใหม่</label>
-              <select id="gh-lr-new-room" style="width:100%;padding:10px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.92rem;background:#fff;">
+              <select id="gh-lr-new-room" style="width:100%;padding:10px 12px;border:1.5px solid var(--border,${DashColors.BORDER_LIGHT});border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.92rem;background:${DashColors.WHITE};">
                 <option value="">กำลังโหลด…</option>
               </select>
             </div>
@@ -197,14 +197,14 @@ function _lrBuildModalHtml(ctx) {
           <div data-start-area>
             <label for="gh-lr-start" style="display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;">วันเริ่มสัญญาใหม่</label>
             <input type="date" id="gh-lr-start" value="${_escLR(oldEndIso)}"
-              style="width:100%;padding:10px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.95rem;">
-            <div data-start-hint style="font-size:.7rem;color:var(--text-muted,#6b7280);margin-top:4px;">เว้นว่าง = ใช้วันสิ้นสุดเดิม</div>
+              style="width:100%;padding:10px 12px;border:1.5px solid var(--border,${DashColors.BORDER_LIGHT});border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.95rem;">
+            <div data-start-hint style="font-size:.7rem;color:var(--text-muted,${DashColors.TEXT_SECONDARY});margin-top:4px;">เว้นว่าง = ใช้วันสิ้นสุดเดิม</div>
           </div>
           <div data-end-area>
-            <label for="gh-lr-end" style="display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;">วันสิ้นสุดสัญญาใหม่ <span style="color:var(--red,#c62828);">*</span></label>
+            <label for="gh-lr-end" style="display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;">วันสิ้นสุดสัญญาใหม่ <span style="color:var(--red,${DashColors.RED_DEEP});">*</span></label>
             <input type="date" id="gh-lr-end" required value="${_escLR(suggestedEnd)}"
               min="${_escLR(oldEndIso)}"
-              style="width:100%;padding:10px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.95rem;">
+              style="width:100%;padding:10px 12px;border:1.5px solid var(--border,${DashColors.BORDER_LIGHT});border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.95rem;">
           </div>
         </div>
 
@@ -213,37 +213,37 @@ function _lrBuildModalHtml(ctx) {
             <div>
               <label for="gh-lr-rent" style="display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;">ค่าเช่าใหม่ (฿)</label>
               <input type="number" id="gh-lr-rent" placeholder="${oldRent}" min="1"
-                style="width:100%;padding:10px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.95rem;">
-              <div data-rent-hint style="font-size:.72rem;color:var(--text-muted,#6b7280);margin-top:4px;">เว้นว่างหากไม่เปลี่ยน</div>
+                style="width:100%;padding:10px 12px;border:1.5px solid var(--border,${DashColors.BORDER_LIGHT});border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.95rem;">
+              <div data-rent-hint style="font-size:.72rem;color:var(--text-muted,${DashColors.TEXT_SECONDARY});margin-top:4px;">เว้นว่างหากไม่เปลี่ยน</div>
             </div>
             <div>
               <label for="gh-lr-deposit" style="display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;">มัดจำใหม่ (฿)</label>
               <input type="number" id="gh-lr-deposit" placeholder="${oldDeposit}" min="0"
-                style="width:100%;padding:10px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.95rem;">
-              <div data-deposit-hint style="font-size:.72rem;color:var(--text-muted,#6b7280);margin-top:4px;">เว้นว่างหากไม่เปลี่ยน</div>
+                style="width:100%;padding:10px 12px;border:1.5px solid var(--border,${DashColors.BORDER_LIGHT});border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.95rem;">
+              <div data-deposit-hint style="font-size:.72rem;color:var(--text-muted,${DashColors.TEXT_SECONDARY});margin-top:4px;">เว้นว่างหากไม่เปลี่ยน</div>
             </div>
           </div>
 
           <div>
             <label for="gh-lr-doc-file" style="display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;">เอกสารสัญญาใหม่ (PDF / JPG / PNG)</label>
             <input type="file" id="gh-lr-doc-file" accept=".pdf,.jpg,.jpeg,.png"
-              style="width:100%;padding:8px;border:1.5px dashed var(--border,#e5e7eb);border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.85rem;background:#fafafa;">
-            <div id="gh-lr-doc-status" style="font-size:.72rem;color:var(--text-muted,#6b7280);margin-top:4px;">เลือกไฟล์เพื่ออัพโหลด (ไม่เกิน 5MB) — หรือเว้นว่างเพื่อใช้สัญญาเดิม</div>
+              style="width:100%;padding:8px;border:1.5px dashed var(--border,${DashColors.BORDER_LIGHT});border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.85rem;background:${DashColors.SURFACE_FAINT};">
+            <div id="gh-lr-doc-status" style="font-size:.72rem;color:var(--text-muted,${DashColors.TEXT_SECONDARY});margin-top:4px;">เลือกไฟล์เพื่ออัพโหลด (ไม่เกิน 5MB) — หรือเว้นว่างเพื่อใช้สัญญาเดิม</div>
           </div>
         </div>
 
         <div>
           <label for="gh-lr-notes" style="display:block;font-weight:600;font-size:.85rem;margin-bottom:6px;">หมายเหตุ</label>
           <textarea id="gh-lr-notes" rows="2" placeholder="เช่น ตกลงค่าเช่าใหม่กับผู้เช่าแล้ว, แนบใบเสร็จมัดจำเพิ่ม..."
-            style="width:100%;padding:10px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.85rem;resize:vertical;"></textarea>
+            style="width:100%;padding:10px 12px;border:1.5px solid var(--border,${DashColors.BORDER_LIGHT});border-radius:var(--radius-sm,8px);font-family:inherit;font-size:.85rem;resize:vertical;"></textarea>
         </div>
 
-        <div id="gh-lr-error" style="display:none;color:var(--red-dark,#b71c1c);font-size:.85rem;font-weight:600;padding:8px 12px;background:#ffebee;border-radius:var(--radius-sm,8px);"></div>
+        <div id="gh-lr-error" style="display:none;color:var(--red-dark,${DashColors.RED_DARKEST});font-size:.85rem;font-weight:600;padding:8px 12px;background:${DashColors.RED_BG};border-radius:var(--radius-sm,8px);"></div>
       </form>
 
-      <div style="padding:1rem 2rem;background:#f9fafb;border-top:1px solid var(--border,#e5e7eb);display:flex;gap:12px;flex-shrink:0;">
-        <button type="button" data-lr-cancel style="flex:1;padding:12px 20px;background:var(--border,#e5e7eb);color:var(--text,#1f2937);border:none;border-radius:var(--radius-sm,8px);font-family:inherit;font-weight:700;cursor:pointer;font-size:.92rem;">ยกเลิก</button>
-        <button type="button" data-lr-submit style="flex:2;padding:12px 20px;background:linear-gradient(135deg, var(--green,#2d8653) 0%, var(--green-dark,#1b5e20) 100%);color:#fff;border:none;border-radius:var(--radius-sm,8px);font-family:inherit;font-weight:700;cursor:pointer;font-size:.92rem;">📝 ต่อสัญญา</button>
+      <div style="padding:1rem 2rem;background:#f9fafb;border-top:1px solid var(--border,${DashColors.BORDER_LIGHT});display:flex;gap:12px;flex-shrink:0;">
+        <button type="button" data-lr-cancel style="flex:1;padding:12px 20px;background:var(--border,${DashColors.BORDER_LIGHT});color:var(--text,#1f2937);border:none;border-radius:var(--radius-sm,8px);font-family:inherit;font-weight:700;cursor:pointer;font-size:.92rem;">ยกเลิก</button>
+        <button type="button" data-lr-submit style="flex:2;padding:12px 20px;background:linear-gradient(135deg, var(--green,#2d8653) 0%, var(--green-dark,${DashColors.GREEN_DEEP}) 100%);color:${DashColors.WHITE};border:none;border-radius:var(--radius-sm,8px);font-family:inherit;font-weight:700;cursor:pointer;font-size:.92rem;">📝 ต่อสัญญา</button>
       </div>
     </div>
   </div>`;
@@ -258,8 +258,8 @@ function _lrClose() {
 function _lrSwitchRoomMode(modal, roomMode) {
   modal.querySelectorAll('[data-room-tab]').forEach((tab) => {
     const active = tab.getAttribute('data-room-tab') === roomMode;
-    tab.style.background = active ? 'var(--green-pale, #e8f5e9)' : '#fff';
-    tab.style.color = active ? 'var(--green-dark, #1b5e20)' : 'var(--text-muted, #6b7280)';
+    tab.style.background = active ? `var(--green-pale, ${DashColors.GREEN_BG})` : DashColors.WHITE;
+    tab.style.color = active ? `var(--green-dark, ${DashColors.GREEN_DEEP})` : `var(--text-muted, ${DashColors.TEXT_SECONDARY})`;
     tab.style.fontWeight = active ? '700' : '600';
   });
   const sameOnly = modal.querySelector('[data-same-room-only]');
@@ -274,8 +274,8 @@ function _lrSwitchRoomMode(modal, roomMode) {
 function _lrSwitchActionMode(modal, actionMode) {
   modal.querySelectorAll('[data-mode-tab]').forEach((tab) => {
     const active = tab.getAttribute('data-mode-tab') === actionMode;
-    tab.style.background = active ? 'var(--green-pale, #e8f5e9)' : '#fff';
-    tab.style.color = active ? 'var(--green-dark, #1b5e20)' : 'var(--text-muted, #6b7280)';
+    tab.style.background = active ? `var(--green-pale, ${DashColors.GREEN_BG})` : DashColors.WHITE;
+    tab.style.color = active ? `var(--green-dark, ${DashColors.GREEN_DEEP})` : `var(--text-muted, ${DashColors.TEXT_SECONDARY})`;
     tab.style.fontWeight = active ? '700' : '600';
   });
   const renewalOnly = modal.querySelector('[data-renewal-only]');

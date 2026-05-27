@@ -31,9 +31,9 @@ let _leaseNotifsCache = [];
 
 // Tier metadata — colors match the LINE Flex + tenant_app bell.
 const LEASE_TIER_META = [
-  { key: 'expired', label: '⛔ หมดอายุแล้ว',          color: '#b71c1c' },
-  { key: '14',      label: '🚨 เหลือไม่ถึง 14 วัน',   color: '#c62828' },
-  { key: '30',      label: '⚠️ ใกล้หมดอายุ (30 วัน)', color: '#e65100' },
+  { key: 'expired', label: '⛔ หมดอายุแล้ว',          color: DashColors.RED_DARKEST },
+  { key: '14',      label: '🚨 เหลือไม่ถึง 14 วัน',   color: DashColors.RED_DEEP },
+  { key: '30',      label: '⚠️ ใกล้หมดอายุ (30 วัน)', color: DashColors.ORANGE_DEEP },
   { key: '60',      label: '📅 ใกล้หมดอายุ (60 วัน)', color: '#f57f17' }
 ];
 
@@ -66,16 +66,16 @@ function _renderLeaseAlertCard(listEl, notifs) {
           ? n.leaseEndDate.toDate().toLocaleDateString('th-TH')
           : '—';
         const readMark = n.status === 'read'
-          ? '<span style="font-size:.7rem;color:#999;margin-left:8px;">(อ่านแล้ว)</span>'
+          ? `<span style="font-size:.7rem;color:${DashColors.TEXT_LIGHTER};margin-left:8px;">(อ่านแล้ว)</span>`
           : '<span style="font-size:.7rem;color:#dc3545;margin-left:8px;font-weight:bold;" title="ลูกบ้านยังไม่ได้อ่าน">●</span>';
         return `<div style="background:white;padding:10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid ${t.color};margin-bottom:6px;">
             <div>
               <div style="font-weight:600;color:#333;">ห้อง ${esc(n.room)} — ${esc(n.tenantName)}${readMark}</div>
-              <div style="font-size:.85rem;color:#666;margin-top:4px;">หมดสัญญา ${endDateStr}</div>
+              <div style="font-size:.85rem;color:${DashColors.TEXT_MUTED};margin-top:4px;">หมดสัญญา ${endDateStr}</div>
             </div>
             <div style="text-align:right;">
               <div style="font-weight:700;color:${t.color};font-size:1.1rem;">${n.daysRemainingAtEmit != null ? n.daysRemainingAtEmit : '—'} วัน</div>
-              <div style="font-size:.75rem;color:#999;">เหลือเวลา</div>
+              <div style="font-size:.75rem;color:${DashColors.TEXT_LIGHTER};">เหลือเวลา</div>
             </div>
           </div>`;
       }).join('');
@@ -181,7 +181,7 @@ function initLeaseRequestsPage() {
     updateLeaseRequestsBadge();
   }, err => {
     console.warn('lease requests onSnapshot failed:', err);
-    document.getElementById('leaseRequestsList').innerHTML = `<div style="text-align:center;padding:30px;color:#c62828;">โหลดไม่สำเร็จ: ${_esc(err.message)}</div>`;
+    document.getElementById('leaseRequestsList').innerHTML = `<div style="text-align:center;padding:30px;color:${DashColors.RED_DEEP};">โหลดไม่สำเร็จ: ${_esc(err.message)}</div>`;
   });
 }
 
@@ -219,9 +219,9 @@ function renderLeaseRequestsList() {
   }
   items.forEach(r => {
     const card = document.createElement('div');
-    const statusColor = r.status === 'pending' ? '#f57c00'
-                      : r.status === 'approved' ? '#388e3c'
-                      : r.status === 'rejected' ? '#c62828' : '#999';
+    const statusColor = r.status === 'pending' ? DashColors.ORANGE_DARK
+                      : r.status === 'approved' ? DashColors.GREEN_MED
+                      : r.status === 'rejected' ? DashColors.RED_DEEP : DashColors.TEXT_LIGHTER;
     const statusLabel = r.status === 'pending' ? '⏳ รอดำเนินการ'
                       : r.status === 'approved' ? '✅ อนุมัติแล้ว'
                       : r.status === 'rejected' ? '❌ ปฏิเสธ' : r.status;
@@ -244,8 +244,8 @@ function renderLeaseRequestsList() {
       ${r.adminNote ? `<div style="margin-top:.75rem;padding:.5rem;background:#fff8e1;border-radius:4px;font-size:.82rem;"><strong>บันทึกแอดมิน:</strong> ${_esc(r.adminNote)}</div>` : ''}
       ${r.status === 'pending' ? `
         <div style="margin-top:1rem;display:flex;gap:.5rem;">
-          <button data-action="actLeaseRequest" data-id="${r.id}" data-arg="approve" style="flex:1;padding:8px;background:#388e3c;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun;">✅ อนุมัติ</button>
-          <button data-action="actLeaseRequest" data-id="${r.id}" data-arg="reject" style="flex:1;padding:8px;background:#c62828;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun;">❌ ปฏิเสธ</button>
+          <button data-action="actLeaseRequest" data-id="${r.id}" data-arg="approve" style="flex:1;padding:8px;background:${DashColors.GREEN_MED};color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun;">✅ อนุมัติ</button>
+          <button data-action="actLeaseRequest" data-id="${r.id}" data-arg="reject" style="flex:1;padding:8px;background:${DashColors.RED_DEEP};color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun;">❌ ปฏิเสธ</button>
         </div>
       ` : ''}
     `;
@@ -298,14 +298,14 @@ function renderTenantMasterPage() {
       <!-- Building Selector -->
       <div style="margin-bottom: 1.5rem;">
         <label class="dx-label">เลือกอาคาร</label>
-        <select id="tenantMasterBuilding" data-action="setTenantMasterBuilding" style="padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px;">
+        <select id="tenantMasterBuilding" data-action="setTenantMasterBuilding" style="padding: 0.7rem; border: 1px solid ${DashColors.BORDER}; border-radius: 4px;">
           <option value="rooms" ${(window.currentTenantMasterBuilding || 'rooms') === 'rooms' ? 'selected' : ''}>ห้องแถว (Rooms)</option>
           <option value="nest" ${(window.currentTenantMasterBuilding || 'rooms') === 'nest' ? 'selected' : ''}>Nest</option>
         </select>
       </div>
 
       <!-- Add Tenant Form -->
-      <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+      <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; border: 1px solid ${DashColors.BORDER}; margin-bottom: 2rem;">
         <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">➕ เพิ่มผู้เช่าใหม่</div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
@@ -327,7 +327,7 @@ function renderTenantMasterPage() {
           <div>
             <label class="dx-label">เบอร์โทรศัพท์</label>
             <input type="tel" id="newTenantPhone" placeholder="เบอร์โทรศัพท์" maxlength="10" class="dx-field">
-            <small id="newTenantPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
+            <small id="newTenantPhoneError" style="display:none;color:${DashColors.RED_TEXT};font-size:0.85rem;margin-top:4px;"></small>
           </div>
         </div>
 
@@ -342,35 +342,35 @@ function renderTenantMasterPage() {
           </div>
         </div>
 
-        <button data-action="addNewTenant" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+        <button data-action="addNewTenant" style="padding: 0.8rem 1.5rem; background: ${DashColors.GREEN_ACTIVE}; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
           ➕ เพิ่มผู้เช่า
         </button>
       </div>
 
       <!-- Tenant List -->
       <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">📋 รายชื่อผู้เช่า (${tenants.length} คน)</div>
-      ${tenants.length === 0 ? '<div style="padding: 1.5rem; text-align: center; color: #999;">ยังไม่มีผู้เช่า</div>' : ''}
+      ${tenants.length === 0 ? `<div style="padding: 1.5rem; text-align: center; color: ${DashColors.TEXT_LIGHTER};">ยังไม่มีผู้เช่า</div>` : ''}
       <div style="overflow-x: auto;">
         <table style="width: 100%; border-collapse: collapse;">
           <thead>
-            <tr style="background: #f0f0f0;">
+            <tr style="background: ${DashColors.SURFACE_GRAY};">
               <th class="dx-th-plain">รหัส</th>
               <th class="dx-th-plain">ชื่อ</th>
               <th class="dx-th-plain">เบอร์โทร</th>
               <th class="dx-th-plain">อีเมล</th>
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">การกระทำ</th>
+              <th style="border: 1px solid ${DashColors.BORDER}; padding: 0.8rem; text-align: center;">การกระทำ</th>
             </tr>
           </thead>
           <tbody>
             ${tenants.map(tenant => `
-              <tr style="border-bottom: 1px solid #ddd;">
+              <tr style="border-bottom: 1px solid ${DashColors.BORDER};">
                 <td class="dx-td-plain">${tenant.id}</td>
                 <td class="dx-td-plain">${tenant.name}</td>
                 <td class="dx-td-plain">${tenant.phone || '-'}</td>
                 <td class="dx-td-plain">${tenant.email || '-'}</td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">
+                <td style="border: 1px solid ${DashColors.BORDER}; padding: 0.8rem; text-align: center;">
                   <button data-action="editTenant" data-id="${tenant.id}" style="padding: 0.4rem 0.8rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">📝</button>
-                  <button data-action="deleteTenant" data-id="${tenant.id}" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
+                  <button data-action="deleteTenant" data-id="${tenant.id}" style="padding: 0.4rem 0.8rem; background: ${DashColors.RED_MED}; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
                 </td>
               </tr>
             `).join('')}
@@ -575,12 +575,12 @@ function renderLeaseAgreementsPage() {
   container.innerHTML = `
     <div style="margin-top: 1.5rem;">
       <!-- Add Lease Form — SSoT: tenant data from Tab ผู้เช่า, rent from Tab จัดการห้อง -->
-      <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+      <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; border: 1px solid ${DashColors.BORDER}; margin-bottom: 2rem;">
         <div style="font-weight: 600; margin-bottom: 0.3rem; font-size: 1.1rem;">📎 แนบเอกสารสัญญา</div>
-        <div style="font-size: 0.82rem; color: #666; margin-bottom: 1rem;">
+        <div style="font-size: 0.82rem; color: ${DashColors.TEXT_MUTED}; margin-bottom: 1rem;">
           ข้อมูลลูกบ้านและค่าเช่าดึงจาก SSoT อัตโนมัติ — ต้องแก้ที่ต้นทาง:
-          <a href="#" data-action="showPage" data-page="tenant" style="color: #2e7d32; font-weight: 600; text-decoration: underline;">Tab ผู้เช่า</a> ·
-          <a href="#" data-action="showPage" data-page="meter" style="color: #2e7d32; font-weight: 600; text-decoration: underline;">Tab จัดการห้อง</a>
+          <a href="#" data-action="showPage" data-page="tenant" style="color: ${DashColors.GREEN_DARK}; font-weight: 600; text-decoration: underline;">Tab ผู้เช่า</a> ·
+          <a href="#" data-action="showPage" data-page="meter" style="color: ${DashColors.GREEN_DARK}; font-weight: 600; text-decoration: underline;">Tab จัดการห้อง</a>
         </div>
 
         <div style="margin-bottom: 1rem;">
@@ -592,7 +592,7 @@ function renderLeaseAgreementsPage() {
         </div>
 
         <!-- Auto-filled info card (populated by _updateLeasePreview on change) -->
-        <div id="leasePreviewCard" style="display: none; padding: 12px 14px; background: #e8f5e9; border-left: 3px solid #4caf50; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; line-height: 1.6;"></div>
+        <div id="leasePreviewCard" style="display: none; padding: 12px 14px; background: ${DashColors.GREEN_BG}; border-left: 3px solid ${DashColors.GREEN_ACTIVE}; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; line-height: 1.6;"></div>
 
         <!-- FILE UPLOADS SECTION -->
         <div style="background: #f0f9ff; padding: 1rem; border-radius: 6px; border: 1px solid #b3e5fc; margin-bottom: 1rem;">
@@ -601,10 +601,10 @@ function renderLeaseAgreementsPage() {
             <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">📋 ไฟล์สัญญาเช่า</label>
             <input type="file" id="leaseFileAgreement" accept=".pdf,.jpg,.png" class="dx-field-upload">
           </div>
-          <small style="color: #666; margin-top: 0.5rem; display: block;">📁 สนับสนุน: PDF, JPG, PNG · ขนาดสูงสุด: 5MB</small>
+          <small style="color: ${DashColors.TEXT_MUTED}; margin-top: 0.5rem; display: block;">📁 สนับสนุน: PDF, JPG, PNG · ขนาดสูงสุด: 5MB</small>
         </div>
 
-        <button data-action="createNewLease" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+        <button data-action="createNewLease" style="padding: 0.8rem 1.5rem; background: ${DashColors.GREEN_ACTIVE}; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
           💾 บันทึกสัญญา & แนบเอกสาร
         </button>
       </div>
@@ -612,30 +612,30 @@ function renderLeaseAgreementsPage() {
       <!-- Lease List -->
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; flex-wrap:wrap; gap:8px;">
         <div style="font-weight: 600; font-size: 1.1rem;">📋 สัญญาเช่าทั้งหมด (${leases.length})</div>
-        ${_hiddenDupCount > 0 ? `<div style="font-size:.78rem; color:#e65100; background:#fff3e0; padding:4px 10px; border-radius:6px; border:1px solid #ffb74d;">🔁 ซ่อน ${_hiddenDupCount} รายการซ้ำ (legacy/duplicate)</div>` : ''}
+        ${_hiddenDupCount > 0 ? `<div style="font-size:.78rem; color:${DashColors.ORANGE_DEEP}; background:${DashColors.ORANGE_BG}; padding:4px 10px; border-radius:6px; border:1px solid #ffb74d;">🔁 ซ่อน ${_hiddenDupCount} รายการซ้ำ (legacy/duplicate)</div>` : ''}
       </div>
-      ${leases.length === 0 ? '<div style="padding: 1.5rem; text-align: center; color: #999;">ยังไม่มีสัญญาเช่า</div>' : ''}
+      ${leases.length === 0 ? `<div style="padding: 1.5rem; text-align: center; color: ${DashColors.TEXT_LIGHTER};">ยังไม่มีสัญญาเช่า</div>` : ''}
       <div style="overflow-x: auto;">
         <table style="width: 100%; border-collapse: collapse;">
           <thead>
-            <tr style="background: #f0f0f0;">
+            <tr style="background: ${DashColors.SURFACE_GRAY};">
               <th class="dx-th-plain">อาคาร</th>
               <th class="dx-th-plain">ห้อง</th>
               <th class="dx-th-plain">ผู้เช่า</th>
               <th class="dx-th-plain">วันเข้า</th>
               <th class="dx-th-plain">ค่าเช่า</th>
               <th class="dx-th-plain">สถานะ</th>
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">การกระทำ</th>
+              <th style="border: 1px solid ${DashColors.BORDER}; padding: 0.8rem; text-align: center;">การกระทำ</th>
             </tr>
           </thead>
           <tbody>
             ${leases.map(lease => `
-              <tr style="border-bottom: 1px solid #ddd;">
+              <tr style="border-bottom: 1px solid ${DashColors.BORDER};">
                 <td class="dx-td-plain">${lease.building === 'rooms' ? 'ห้องแถว' : 'Nest'}</td>
                 <td class="dx-td-plain">${lease.roomId}</td>
                 <td class="dx-td-plain">${lease.tenantName || lease.tenantId}</td>
                 <td class="dx-td-plain">${new Date(lease.moveInDate).toLocaleDateString('th-TH')}</td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: right;">${(() => {
+                <td style="border: 1px solid ${DashColors.BORDER}; padding: 0.8rem; text-align: right;">${(() => {
                   // Live rent from RoomConfigManager (current source of truth). Falls back to frozen lease.rentAmount.
                   const live = (typeof RoomConfigManager !== 'undefined')
                     ? (RoomConfigManager.getRentPrice(lease.building, lease.roomId) || 0) : 0;
@@ -643,14 +643,14 @@ function renderLeaseAgreementsPage() {
                   return v ? '฿' + v.toLocaleString() : '-';
                 })()}</td>
                 <td class="dx-td-plain">
-                  <span style="padding: 0.3rem 0.8rem; border-radius: 4px; background: ${lease.status === 'active' ? '#c8e6c9' : '#f5f5f5'}; color: ${lease.status === 'active' ? '#2e7d32' : '#999'}; font-weight: 600;">
+                  <span style="padding: 0.3rem 0.8rem; border-radius: 4px; background: ${lease.status === 'active' ? DashColors.GREEN_BORDER : '#f5f5f5'}; color: ${lease.status === 'active' ? DashColors.GREEN_DARK : DashColors.TEXT_LIGHTER}; font-weight: 600;">
                     ${lease.status === 'active' ? '✅ กำลังเช่า' : '❌ เลิกเช่า'}
                   </span>
                 </td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: center; white-space: nowrap;">
-                  <button data-action="viewLeaseDocuments" data-id="${lease.id}" style="padding: 0.4rem 0.8rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;" title="ดูเอกสาร">📁</button>
-                  ${lease.status === 'active' ? `<button data-action="endLease" data-id="${lease.id}" style="padding: 0.4rem 0.8rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;" title="สิ้นสุดสัญญา">🚪</button>` : ''}
-                  <button data-action="deleteLease" data-id="${lease.id}" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;" title="ลบ">🗑️</button>
+                <td style="border: 1px solid ${DashColors.BORDER}; padding: 0.8rem; text-align: center; white-space: nowrap;">
+                  <button data-action="viewLeaseDocuments" data-id="${lease.id}" style="padding: 0.4rem 0.8rem; background: ${DashColors.BLUE_MED}; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;" title="ดูเอกสาร">📁</button>
+                  ${lease.status === 'active' ? `<button data-action="endLease" data-id="${lease.id}" style="padding: 0.4rem 0.8rem; background: ${DashColors.ORANGE_MED}; color: white; border: none; border-radius: 4px; cursor: pointer;" title="สิ้นสุดสัญญา">🚪</button>` : ''}
+                  <button data-action="deleteLease" data-id="${lease.id}" style="padding: 0.4rem 0.8rem; background: ${DashColors.RED_MED}; color: white; border: none; border-radius: 4px; cursor: pointer;" title="ลบ">🗑️</button>
                 </td>
               </tr>
             `).join('')}
@@ -789,14 +789,14 @@ function _updateLeasePreview() {
 
   card.classList.remove('u-hidden');
   card.innerHTML = `
-    <div style="font-weight: 700; color: #1b5e20; margin-bottom: 6px;">📋 ข้อมูลจาก SSoT (read-only)</div>
+    <div style="font-weight: 700; color: ${DashColors.GREEN_DEEP}; margin-bottom: 6px;">📋 ข้อมูลจาก SSoT (read-only)</div>
     <div>🏠 <b>${buildingLabel} ${roomId ? 'ห้อง ' + _escapeHTML(roomId) : '(ยังไม่ผูกห้อง)'}</b></div>
     <div>👤 ${_escapeHTML(tenant.name || '-')} ${tenant.phone ? '· 📱 ' + _escapeHTML(tenant.phone) : ''}</div>
-    <div>📅 วันเข้าเช่า: ${_escapeHTML(moveIn)} <span style="color:#666;font-size:.78rem;">(จาก Tab ผู้เช่า)</span></div>
-    <div>💰 ค่าเช่า: ฿${rent.toLocaleString()}/เดือน <span style="color:#666;font-size:.78rem;">(จาก Tab จัดการห้อง)</span></div>
-    <div>💵 มัดจำ: ฿${deposit.toLocaleString()} <span style="color:#666;font-size:.78rem;">(จาก Tab ผู้เช่า)</span></div>
-    ${existingFileName ? `<div style="margin-top:8px; padding:6px 10px; background:#fff3e0; border-left:3px solid #f57c00; border-radius:4px; font-size:.85rem;">📎 เอกสารปัจจุบัน: <b>${_escapeHTML(existingFileName)}</b> — อัพโหลดใหม่เพื่อเปลี่ยน</div>` : ''}
-    ${!roomId ? '<div style="color:#c62828;margin-top:6px;">⚠️ ต้องกำหนดห้องใน Tab ผู้เช่าก่อนบันทึกสัญญา</div>' : ''}
+    <div>📅 วันเข้าเช่า: ${_escapeHTML(moveIn)} <span style="color:${DashColors.TEXT_MUTED};font-size:.78rem;">(จาก Tab ผู้เช่า)</span></div>
+    <div>💰 ค่าเช่า: ฿${rent.toLocaleString()}/เดือน <span style="color:${DashColors.TEXT_MUTED};font-size:.78rem;">(จาก Tab จัดการห้อง)</span></div>
+    <div>💵 มัดจำ: ฿${deposit.toLocaleString()} <span style="color:${DashColors.TEXT_MUTED};font-size:.78rem;">(จาก Tab ผู้เช่า)</span></div>
+    ${existingFileName ? `<div style="margin-top:8px; padding:6px 10px; background:${DashColors.ORANGE_BG}; border-left:3px solid ${DashColors.ORANGE_DARK}; border-radius:4px; font-size:.85rem;">📎 เอกสารปัจจุบัน: <b>${_escapeHTML(existingFileName)}</b> — อัพโหลดใหม่เพื่อเปลี่ยน</div>` : ''}
+    ${!roomId ? `<div style="color:${DashColors.RED_DEEP};margin-top:6px;">⚠️ ต้องกำหนดห้องใน Tab ผู้เช่าก่อนบันทึกสัญญา</div>` : ''}
   `;
 }
 
@@ -982,13 +982,13 @@ async function viewLeaseDocuments(leaseId) {
     <div data-modal style="background:white;border-radius:12px;max-width:720px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
       <div style="padding:20px 24px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <h2 id="leaseDocumentsTitle" style="font-size:1.3rem;margin:0;color:#1b5e20;">📁 เอกสารสัญญา — ${buildingLabel} ห้อง ${lease.roomId}</h2>
-          <div style="font-size:.85rem;color:#666;margin-top:4px;">${lease.tenantName || lease.tenantId} · เข้า ${moveIn} · ฿${lease.rentAmount?.toLocaleString() || '-'}</div>
+          <h2 id="leaseDocumentsTitle" style="font-size:1.3rem;margin:0;color:${DashColors.GREEN_DEEP};">📁 เอกสารสัญญา — ${buildingLabel} ห้อง ${lease.roomId}</h2>
+          <div style="font-size:.85rem;color:${DashColors.TEXT_MUTED};margin-top:4px;">${lease.tenantName || lease.tenantId} · เข้า ${moveIn} · ฿${lease.rentAmount?.toLocaleString() || '-'}</div>
         </div>
-        <button data-action="closeNearestDataModal" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;">✕</button>
+        <button data-action="closeNearestDataModal" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:${DashColors.TEXT_LIGHTER};">✕</button>
       </div>
       <div id="leaseDocumentsBody" style="padding:20px 24px;">
-        <div style="text-align:center;padding:30px;color:#999;">⏳ กำลังโหลดเอกสาร...</div>
+        <div style="text-align:center;padding:30px;color:${DashColors.TEXT_LIGHTER};">⏳ กำลังโหลดเอกสาร...</div>
       </div>
     </div>
   `;
@@ -1020,14 +1020,14 @@ async function viewLeaseDocuments(leaseId) {
     const fname = lease.contractFileName || 'lease-contract';
     const href = await _resolveContractHref(lease.contractDocument);
     const linkInner = href
-      ? `<a href="${_escapeAttr(href)}" download="${_escapeAttr(fname)}" target="_blank" rel="noopener noreferrer" style="color:#2e7d32;font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>`
-      : `<span style="color:#c62828;font-weight:600;">⚠️ ${_escapeHTML(fname)} (โหลดไฟล์ไม่สำเร็จ)</span>`;
+      ? `<a href="${_escapeAttr(href)}" download="${_escapeAttr(fname)}" target="_blank" rel="noopener noreferrer" style="color:${DashColors.GREEN_DARK};font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>`
+      : `<span style="color:${DashColors.RED_DEEP};font-weight:600;">⚠️ ${_escapeHTML(fname)} (โหลดไฟล์ไม่สำเร็จ)</span>`;
     sections.push(`
       <div class="dx-mb">
-        <div style="font-weight:700;color:#1b5e20;margin-bottom:.5rem;font-size:.95rem;">📋 สัญญาเช่า (อัพโหลดผ่าน Tab ผู้เช่า)</div>
-        <div style="padding:10px 12px;background:#e8f5e9;border-left:3px solid #4caf50;border-radius:4px;font-size:.88rem;">
+        <div style="font-weight:700;color:${DashColors.GREEN_DEEP};margin-bottom:.5rem;font-size:.95rem;">📋 สัญญาเช่า (อัพโหลดผ่าน Tab ผู้เช่า)</div>
+        <div style="padding:10px 12px;background:${DashColors.GREEN_BG};border-left:3px solid ${DashColors.GREEN_ACTIVE};border-radius:4px;font-size:.88rem;">
           ${linkInner}
-          ${lease.contractUploadedAt ? `<div style="font-size:.75rem;color:#999;margin-top:3px;">อัพโหลด: ${new Date(lease.contractUploadedAt).toLocaleString('th-TH')}</div>` : ''}
+          ${lease.contractUploadedAt ? `<div style="font-size:.75rem;color:${DashColors.TEXT_LIGHTER};margin-top:3px;">อัพโหลด: ${new Date(lease.contractUploadedAt).toLocaleString('th-TH')}</div>` : ''}
         </div>
       </div>
     `);
@@ -1037,7 +1037,7 @@ async function viewLeaseDocuments(leaseId) {
   const leaseDocsHTML = await _renderLeaseStorageDocs(lease);
   sections.push(`
     <div class="dx-mb">
-      <div style="font-weight:700;color:#1b5e20;margin-bottom:.5rem;font-size:.95rem;">📎 เอกสารแนบสัญญา (อัพโหลดผ่าน Tab สัญญา)</div>
+      <div style="font-weight:700;color:${DashColors.GREEN_DEEP};margin-bottom:.5rem;font-size:.95rem;">📎 เอกสารแนบสัญญา (อัพโหลดผ่าน Tab สัญญา)</div>
       ${leaseDocsHTML}
     </div>
   `);
@@ -1047,14 +1047,14 @@ async function viewLeaseDocuments(leaseId) {
     const fname = tenant.contractFileName || 'contract-legacy';
     const href = await _resolveContractHref(tenant.contractDocument);
     const linkInner = href
-      ? `<a href="${_escapeAttr(href)}" download="${_escapeAttr(fname)}" target="_blank" rel="noopener noreferrer" style="color:#e65100;font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>`
-      : `<span style="color:#c62828;font-weight:600;">⚠️ ${_escapeHTML(fname)} (โหลดไฟล์ไม่สำเร็จ)</span>`;
+      ? `<a href="${_escapeAttr(href)}" download="${_escapeAttr(fname)}" target="_blank" rel="noopener noreferrer" style="color:${DashColors.ORANGE_DEEP};font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>`
+      : `<span style="color:${DashColors.RED_DEEP};font-weight:600;">⚠️ ${_escapeHTML(fname)} (โหลดไฟล์ไม่สำเร็จ)</span>`;
     sections.push(`
       <div class="dx-mb">
         <div style="font-weight:700;color:#bf360c;margin-bottom:.5rem;font-size:.95rem;">📄 สัญญาเช่า (Legacy — อยู่ใน tenant record, รอย้าย)</div>
-        <div style="padding:10px 12px;background:#fff3e0;border-left:3px solid #ff9800;border-radius:4px;font-size:.88rem;">
+        <div style="padding:10px 12px;background:${DashColors.ORANGE_BG};border-left:3px solid ${DashColors.ORANGE_MED};border-radius:4px;font-size:.88rem;">
           ${linkInner}
-          <div style="font-size:.75rem;color:#999;margin-top:3px;">ข้อมูลเก่าก่อน Phase 3 — จะย้ายไป lease SSoT อัตโนมัติเมื่อมีการแก้ไขผ่าน Tab ผู้เช่า</div>
+          <div style="font-size:.75rem;color:${DashColors.TEXT_LIGHTER};margin-top:3px;">ข้อมูลเก่าก่อน Phase 3 — จะย้ายไป lease SSoT อัตโนมัติเมื่อมีการแก้ไขผ่าน Tab ผู้เช่า</div>
         </div>
       </div>
     `);
@@ -1080,7 +1080,7 @@ async function viewLeaseDocuments(leaseId) {
     sections.push(`
       <div>
         <div style="font-weight:700;color:#4a148c;margin-bottom:.5rem;font-size:.95rem;">👤 ข้อมูลผู้เช่า (SSoT: Tab ผู้เช่า)</div>
-        <div style="padding:10px 12px;background:#f3e5f5;border-left:3px solid #7b1fa2;border-radius:4px;font-size:.88rem;line-height:1.6;">
+        <div style="padding:10px 12px;background:${DashColors.PURPLE_BG};border-left:3px solid #7b1fa2;border-radius:4px;font-size:.88rem;line-height:1.6;">
           <div><b>ชื่อ:</b> ${_escapeHTML(tenant.name || '-')}</div>
           ${tenant.phone ? `<div><b>เบอร์:</b> ${_escapeHTML(tenant.phone)}</div>` : ''}
           ${tenant.lineID ? `<div><b>LINE ID:</b> ${_escapeHTML(tenant.lineID)}</div>` : ''}
@@ -1105,24 +1105,24 @@ async function _renderLeaseStorageDocs(lease) {
       const fname = (typeof v === 'object' && v?.fileName) || `${key}`;
       if (!url) return '';
       return `
-        <div style="padding:10px 12px;background:#e8f5e9;border-left:3px solid #4caf50;border-radius:4px;margin-bottom:6px;font-size:.88rem;display:flex;justify-content:space-between;align-items:center;">
-          <span>${meta.icon} <b>${meta.label}</b> <span style="color:#999;font-size:.78rem;">(${_escapeHTML(fname)})</span></span>
-          <a href="${_escapeAttr(url)}" target="_blank" rel="noopener noreferrer" style="color:#2e7d32;font-weight:600;text-decoration:none;">⬇️ ดาวน์โหลด</a>
+        <div style="padding:10px 12px;background:${DashColors.GREEN_BG};border-left:3px solid ${DashColors.GREEN_ACTIVE};border-radius:4px;margin-bottom:6px;font-size:.88rem;display:flex;justify-content:space-between;align-items:center;">
+          <span>${meta.icon} <b>${meta.label}</b> <span style="color:${DashColors.TEXT_LIGHTER};font-size:.78rem;">(${_escapeHTML(fname)})</span></span>
+          <a href="${_escapeAttr(url)}" target="_blank" rel="noopener noreferrer" style="color:${DashColors.GREEN_DARK};font-weight:600;text-decoration:none;">⬇️ ดาวน์โหลด</a>
         </div>`;
-    }).join('') || '<div style="color:#999;font-size:.85rem;">ยังไม่มีเอกสาร</div>';
+    }).join('') || `<div style="color:${DashColors.TEXT_LIGHTER};font-size:.85rem;">ยังไม่มีเอกสาร</div>`;
   }
 
   // Fallback: list Storage folder (for legacy leases without documentURLs)
   try {
     if (!window.firebase?.storage) {
-      return '<div style="color:#999;font-size:.85rem;">Firebase Storage ไม่พร้อมใช้งาน</div>';
+      return `<div style="color:${DashColors.TEXT_LIGHTER};font-size:.85rem;">Firebase Storage ไม่พร้อมใช้งาน</div>`;
     }
     const storage = window.firebase.storage();
     const { ref: sRef, listAll: sListAll, getDownloadURL: sGetDownloadURL } = window.firebase.storageFunctions;
     const folderRef = sRef(storage, `leases/${building}/${roomId}/${leaseId}`);
     const result = await sListAll(folderRef);
     if (!result.items.length) {
-      return '<div style="color:#999;font-size:.85rem;padding:8px;">ยังไม่มีไฟล์เอกสาร (admin ยังไม่ได้อัพโหลด)</div>';
+      return `<div style="color:${DashColors.TEXT_LIGHTER};font-size:.85rem;padding:8px;">ยังไม่มีไฟล์เอกสาร (admin ยังไม่ได้อัพโหลด)</div>`;
     }
     const urls = await Promise.all(result.items.map(async (item) => ({
       name: item.name,
@@ -1139,14 +1139,14 @@ async function _renderLeaseStorageDocs(lease) {
       }).find(([prefix]) => name.startsWith(prefix))?.[1] || 'other';
       const meta = LEASE_DOC_LABELS[docType] || { label: 'เอกสารอื่น', icon: '📄' };
       return `
-        <div style="padding:10px 12px;background:#e8f5e9;border-left:3px solid #4caf50;border-radius:4px;margin-bottom:6px;font-size:.88rem;display:flex;justify-content:space-between;align-items:center;">
-          <span>${meta.icon} <b>${meta.label}</b> <span style="color:#999;font-size:.78rem;">(${_escapeHTML(name)})</span></span>
-          <a href="${_escapeAttr(url)}" target="_blank" rel="noopener noreferrer" style="color:#2e7d32;font-weight:600;text-decoration:none;">⬇️ ดาวน์โหลด</a>
+        <div style="padding:10px 12px;background:${DashColors.GREEN_BG};border-left:3px solid ${DashColors.GREEN_ACTIVE};border-radius:4px;margin-bottom:6px;font-size:.88rem;display:flex;justify-content:space-between;align-items:center;">
+          <span>${meta.icon} <b>${meta.label}</b> <span style="color:${DashColors.TEXT_LIGHTER};font-size:.78rem;">(${_escapeHTML(name)})</span></span>
+          <a href="${_escapeAttr(url)}" target="_blank" rel="noopener noreferrer" style="color:${DashColors.GREEN_DARK};font-weight:600;text-decoration:none;">⬇️ ดาวน์โหลด</a>
         </div>`;
     }).join('');
   } catch (e) {
     console.warn('⚠️ listAll failed:', e.message);
-    return '<div style="color:#c62828;font-size:.85rem;padding:8px;">โหลดเอกสารล้มเหลว: ' + _escapeHTML(e.message) + '</div>';
+    return `<div style="color:${DashColors.RED_DEEP};font-size:.85rem;padding:8px;">โหลดเอกสารล้มเหลว: ` + _escapeHTML(e.message) + '</div>';
   }
 }
 
@@ -1271,7 +1271,7 @@ function loadAndRenderPetApprovals() {
 
   list.innerHTML = allPets.map(p => {
     const statusBadge = p.status === 'approved' ? '✅ Approved' : p.status === 'rejected' ? '❌ Rejected' : '⏳ Pending';
-    const statusColor = p.status === 'approved' ? '#4caf50' : p.status === 'rejected' ? '#f44336' : '#ff9800';
+    const statusColor = p.status === 'approved' ? DashColors.GREEN_ACTIVE : p.status === 'rejected' ? DashColors.RED_MED : DashColors.ORANGE_MED;
 
     const photoBlock = p.photoURL
       ? `<img src="${p.photoURL}" alt="${p.name}" style="width:64px; height:64px; border-radius:14px; object-fit:cover; border:1px solid #eee;">`
