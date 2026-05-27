@@ -132,7 +132,7 @@ const sweepAll = args.includes('--all');
 
 const files = sweepAll
   ? fs.readdirSync('shared')
-      .filter(f => /^dashboard-/.test(f) && f.endsWith('.js'))
+      .filter(f => /^dashboard-/.test(f) && f.endsWith('.js') && f !== 'dashboard-colors.js')
       .map(f => path.join('shared', f))
   : args.filter(a => !a.startsWith('--'));
 

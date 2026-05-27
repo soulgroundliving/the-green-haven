@@ -186,7 +186,7 @@
     let html = '';
     const statusColor = status === 'completed' ? '#166534' : '#92400e';
     html += `<div style="margin-bottom:10px;"><b>สถานะ:</b> <span style="color:${statusColor};font-weight:600;">${_esc(status)}</span></div>`;
-    html += `<div style="margin-bottom:10px; font-size:.78rem; color:#6b7280;">requestId: <code>${_esc(requestId)}</code></div>`;
+    html += `<div style="margin-bottom:10px; font-size:.78rem; color:${DashColors.TEXT_SECONDARY};">requestId: <code>${_esc(requestId)}</code></div>`;
 
     if (Object.keys(deleted).length) {
       html += '<div style="margin-top:10px; padding:10px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;">';

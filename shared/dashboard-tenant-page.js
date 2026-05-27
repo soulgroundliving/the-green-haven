@@ -373,14 +373,14 @@ function renderTenantPage(){
     let daysLeft='—',expiryColor='var(--text-muted)';
     if(t?.contractEnd){
       const days=Math.ceil((new Date(t.contractEnd)-today)/86400000);
-      if(days>0){daysLeft=days;expiryColor=days<=30?'var(--red)':days<=60?'#f57c00':'var(--green-dark)';}
+      if(days>0){daysLeft=days;expiryColor=days<=30?'var(--red)':days<=60?DashColors.ORANGE_DARK:'var(--green-dark)';}
       else{daysLeft='❌ หมดแล้ว';expiryColor='var(--red)';}
     }
-    return`<div class="compact-card${!isOcc?' vacant':''}" style="border-left-color:${isCom?'var(--blue)':isOcc?'var(--green)':'#ff9800'}">
+    return`<div class="compact-card${!isOcc?' vacant':''}" style="border-left-color:${isCom?'var(--blue)':isOcc?'var(--green)':DashColors.ORANGE_MED}">
       <div class="compact-card-header">
         <div class="compact-card-id">${r.id}</div>
         <span class="compact-card-type">${isCom?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
-        <span style="margin-left:auto;font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOcc?'var(--green-pale)':'#fff3e0'};color:${isOcc?'var(--green-dark)':'#e65100'};font-weight:600;">${isOcc?'มีผู้เช่า':'ว่าง'}</span>
+        <span style="margin-left:auto;font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOcc?'var(--green-pale)':DashColors.ORANGE_BG};color:${isOcc?'var(--green-dark)':DashColors.ORANGE_DEEP};font-weight:600;">${isOcc?'มีผู้เช่า':'ว่าง'}</span>
       </div>
       <div class="compact-card-info">
         <span style="font-size:.8rem;color:var(--text-muted);">${isCom?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
@@ -398,10 +398,10 @@ function renderTenantPage(){
       ${t.deposit?`<div class="compact-card-info"><span style="font-size:.75rem;color:var(--text-muted);">มัดจำ</span><span style="font-weight:700;color:var(--green-dark);">฿${Number(t.deposit).toLocaleString()}</span></div>`:''}
       `:`<div class="compact-card-info" style="text-align:center;padding:1rem 0;color:var(--text-muted);"><span>🚪 ไม่มีผู้เช่า</span></div>`}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
-        <button data-action="openTenantModal" data-building="${_getTenantBuildingCanonical()}" data-room="${r.id}" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">📄 สัญญา</button>
-        <button data-action="showBillingModal" data-room="${r.id}" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">💰 ชำระ</button>
-        <button data-action="showBillingHistoryModal" data-room="${r.id}" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🧾 บิล</button>
-        <button data-action="showPage" data-page="requests-approvals" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #7b1fa2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🔧 ซ่อม</button>
+        <button data-action="openTenantModal" data-building="${_getTenantBuildingCanonical()}" data-room="${r.id}" style="background:${DashColors.BLUE_BG};color:${DashColors.BLUE_MED};border:1px solid ${DashColors.BLUE_MED};padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">📄 สัญญา</button>
+        <button data-action="showBillingModal" data-room="${r.id}" style="background:${DashColors.GREEN_BG};color:${DashColors.GREEN_MED};border:1px solid ${DashColors.GREEN_MED};padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">💰 ชำระ</button>
+        <button data-action="showBillingHistoryModal" data-room="${r.id}" style="background:${DashColors.ORANGE_BG};color:${DashColors.ORANGE_DARK};border:1px solid ${DashColors.ORANGE_DARK};padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🧾 บิล</button>
+        <button data-action="showPage" data-page="requests-approvals" style="background:${DashColors.PURPLE_BG};color:#7b1fa2;border:1px solid #7b1fa2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🔧 ซ่อม</button>
       </div>
     </div>`;
   }).join('');
@@ -494,7 +494,7 @@ function updateTenantAlertBlock(){
     alertBlock.classList.add('u-hidden');
   }else{
     alertBlock.classList.remove('u-hidden');
-    if(alertList) alertList.innerHTML=expiring.map(r=>`<div style="background:#fff;padding:6px 12px;border-radius:6px;border-left:3px solid #f57c00;font-size:.85rem;">🚪 ห้อง ${r.id}</div>`).join('');
+    if(alertList) alertList.innerHTML=expiring.map(r=>`<div style="background:${DashColors.WHITE};padding:6px 12px;border-radius:6px;border-left:3px solid ${DashColors.ORANGE_DARK};font-size:.85rem;">🚪 ห้อง ${r.id}</div>`).join('');
   }
 }
 
@@ -509,7 +509,7 @@ function updateRoomTypeCards(){
     types[room.type].rooms++;
   });
   container.innerHTML=Object.values(types).map(typeInfo=>`
-    <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem;">
+    <div style="background:${DashColors.WHITE};border:1px solid var(--border);border-radius:8px;padding:1rem;">
       <div style="font-weight:700;color:var(--green);margin-bottom:0.5rem;">${typeInfo.type}</div>
       <div style="font-size:.9rem;color:var(--text-muted);">
         <div>🏠 ${typeInfo.rooms} ห้อง</div>
@@ -858,9 +858,9 @@ function renderTenantMaintenanceList(){
   };
 
   const priorityColor={
-    'low':'#4caf50',
-    'medium':'#ff9800',
-    'high':'#f44336'
+    'low':DashColors.GREEN_ACTIVE,
+    'medium':DashColors.ORANGE_MED,
+    'high':DashColors.RED_MED
   };
 
   list.innerHTML=data.map(item=>`
@@ -870,7 +870,7 @@ function renderTenantMaintenanceList(){
           <div style="font-weight:700;color:var(--text);">ห้อง ${item.room}</div>
           <div style="font-size:.8rem;color:var(--text-muted);">${typeLabel[item.type]||item.type}</div>
         </div>
-        <span style="background:${item.status==='pending'?'#ff9800':item.status==='done'?'#4caf50':'#2196f3'};color:#fff;padding:3px 10px;border-radius:12px;font-size:.75rem;font-weight:700;">
+        <span style="background:${item.status==='pending'?DashColors.ORANGE_MED:item.status==='done'?DashColors.GREEN_ACTIVE:'#2196f3'};color:${DashColors.WHITE};padding:3px 10px;border-radius:12px;font-size:.75rem;font-weight:700;">
           ${item.status==='pending'?'⏳ รอดำเนินการ':item.status==='done'?'✅ เสร็จแล้ว':'🔨 กำลังดำเนินการ'}
         </span>
       </div>

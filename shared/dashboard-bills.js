@@ -314,7 +314,7 @@ function loadPaymentNotifications() {
       console.log('📭 No payment notifications');
       const notifPanel = document.getElementById('paymentNotificationsList');
       if (notifPanel) {
-        notifPanel.innerHTML = '<div style="text-align: center; color: #999; padding: 2rem;">📭 ยังไม่มีการชำระเงิน</div>';
+        notifPanel.innerHTML = `<div style="text-align: center; color: ${DashColors.TEXT_LIGHTER}; padding: 2rem;">📭 ยังไม่มีการชำระเงิน</div>`;
       }
       return;
     }
@@ -360,18 +360,18 @@ function updatePaymentNotificationsPanel(notifications) {
 
       if (notif.type === 'payment_verified') {
         return `
-          <div style="background: white; border-left: 4px solid #4caf50; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.9rem;">
-            <div style="font-weight: 600; color: #2e7d32;">✅ ห้อง ${notif.room} - โอนเงิน ฿${notif.amount?.toLocaleString('th-TH')}</div>
-            <div style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+          <div style="background: white; border-left: 4px solid ${DashColors.GREEN_ACTIVE}; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.9rem;">
+            <div style="font-weight: 600; color: ${DashColors.GREEN_DARK};">✅ ห้อง ${notif.room} - โอนเงิน ฿${notif.amount?.toLocaleString('th-TH')}</div>
+            <div style="font-size: 0.8rem; color: ${DashColors.TEXT_MUTED}; margin-top: 0.3rem;">
               ${dateStr} ${timeStr} | SlipID: ${notif.slipId?.substring(0, 10) || 'N/A'}...
             </div>
           </div>
         `;
       } else if (notif.type === 'receipt_generated') {
         return `
-          <div style="background: white; border-left: 4px solid #1976d2; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.9rem;">
-            <div style="font-weight: 600; color: #1565c0;">📄 ห้อง ${notif.room} - ใบเสร็จ ฿${notif.amount?.toLocaleString('th-TH')}</div>
-            <div style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+          <div style="background: white; border-left: 4px solid ${DashColors.BLUE_MED}; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.9rem;">
+            <div style="font-weight: 600; color: ${DashColors.BLUE_DARK};">📄 ห้อง ${notif.room} - ใบเสร็จ ฿${notif.amount?.toLocaleString('th-TH')}</div>
+            <div style="font-size: 0.8rem; color: ${DashColors.TEXT_MUTED}; margin-top: 0.3rem;">
               ${dateStr} ${timeStr} | ReceiptID: ${notif.receiptId?.substring(0, 10) || 'N/A'}... | Verified: ${notif.verified ? '✅' : '❌'}
             </div>
           </div>
@@ -399,10 +399,10 @@ function updatePaymentVerificationUI(notification) {
 
     const timeStr = new Date(notification.timestamp).toLocaleTimeString('th-TH');
     notifItem.innerHTML = `
-      <div style="font-weight: 600; color: #2e7d32;">
+      <div style="font-weight: 600; color: ${DashColors.GREEN_DARK};">
         ✅ ห้อง ${_esc(notification.room)} - โอนเงิน ฿${notification.amount?.toLocaleString('th-TH')}
       </div>
-      <div style="font-size: 12px; color: #666; margin-top: 4px;">
+      <div style="font-size: 12px; color: ${DashColors.TEXT_MUTED}; margin-top: 4px;">
         เวลา: ${timeStr} | SlipID: ${_esc(notification.slipId || 'N/A')}
       </div>
     `;
@@ -440,10 +440,10 @@ function updateReceiptGenerationUI(notification) {
 
     const timeStr = new Date(notification.timestamp).toLocaleTimeString('th-TH');
     receiptItem.innerHTML = `
-      <div style="font-weight: 600; color: #1565c0;">
+      <div style="font-weight: 600; color: ${DashColors.BLUE_DARK};">
         📄 ใบเสร็จ ห้อง ${notification.room} - ฿${notification.amount?.toLocaleString('th-TH')}
       </div>
-      <div style="font-size: 12px; color: #666; margin-top: 4px;">
+      <div style="font-size: 12px; color: ${DashColors.TEXT_MUTED}; margin-top: 4px;">
         เวลา: ${timeStr} | ReceiptID: ${notification.receiptId || 'N/A'} | Verified: ${notification.verified ? '✅' : '❌'}
       </div>
     `;
@@ -917,9 +917,9 @@ function displayBillingImportPreview(monthlyData, year) {
   html += `<thead>
     <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
       <th style="padding:0.8rem;text-align:left;border-right:1px solid var(--border);">เดือน</th>
-      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms</th>
-      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest</th>
-      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#fff9c4;color:#f57f17;font-weight:700;">📦 Amazon</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:${DashColors.GREEN_BG};color:${DashColors.GREEN_DEEP};font-weight:700;">🏠 Rooms</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:${DashColors.PURPLE_BG};color:#4a148c;font-weight:700;">🏢 Nest</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:${DashColors.YELLOW_BG};color:#f57f17;font-weight:700;">📦 Amazon</th>
       <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวม</th>
     </tr>
     <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
@@ -958,21 +958,21 @@ function displayBillingImportPreview(monthlyData, year) {
     const monthName = monthNames[m.month - 1] || `เดือน${m.month}`;
     html += `<tr style="border-bottom:1px solid var(--border);">`;
     html += `<td style="padding:0.5rem;text-align:left;border-right:1px solid var(--border);">${monthName}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.rent||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.elec||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.water||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.trash||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;font-weight:600;">฿${(rooms.total||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.rent||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.elec||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.water||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.trash||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;font-weight:600;">฿${(nest.total||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.rent||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.elec||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.water||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.trash||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;font-weight:600;">฿${(amazon.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.GREEN_BG};">฿${(rooms.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.GREEN_BG};">฿${(rooms.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.GREEN_BG};">฿${(rooms.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.GREEN_BG};">฿${(rooms.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.GREEN_BG};font-weight:600;">฿${(rooms.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.PURPLE_BG};">฿${(nest.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.PURPLE_BG};">฿${(nest.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.PURPLE_BG};">฿${(nest.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.PURPLE_BG};">฿${(nest.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.PURPLE_BG};font-weight:600;">฿${(nest.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.YELLOW_BG};">฿${(amazon.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.YELLOW_BG};">฿${(amazon.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.YELLOW_BG};">฿${(amazon.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.YELLOW_BG};">฿${(amazon.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.YELLOW_BG};font-weight:600;">฿${(amazon.total||0).toLocaleString()}</td>`;
     html += `<td style="padding:0.5rem;text-align:right;font-weight:600;color:var(--green);">฿${m.total.toLocaleString()}</td>`;
     html += `</tr>`;
 
@@ -1244,11 +1244,11 @@ function showBillingImportStatus(message, type) {
   let borderColor = 'var(--accent)';
 
   if (type === 'success') {
-    bgColor = '#e8f5e9';
-    borderColor = '#2e7d32';
+    bgColor = DashColors.GREEN_BG;
+    borderColor = DashColors.GREEN_DARK;
   } else if (type === 'error') {
-    bgColor = '#ffebee';
-    borderColor = '#c62828';
+    bgColor = DashColors.RED_BG;
+    borderColor = DashColors.RED_DEEP;
   }
 
   statusDiv.innerHTML = `<div style="padding:0.8rem;background:${bgColor};border:1px solid ${borderColor};border-radius:var(--radius-sm);color:var(--text);">${message}</div>`;

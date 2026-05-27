@@ -462,10 +462,10 @@ function loadAndRenderCommunityEvents() {
     const isPast = new Date(e.date) < today;
     const bldgLabel = e.building === 'nest' ? '🏢 Nest' : e.building === 'rooms' ? '🏠 ห้องแถว' : '🌐 ทุกตึก';
     return `
-    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${isPast ? '#999' : '#ff8f00'};">
+    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${isPast ? DashColors.TEXT_LIGHTER : '#ff8f00'};">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
         <div style="flex: 1;">
-          <div style="font-weight: 700; font-size: 1rem;">📅 ${esc(e.title)} ${isPast ? '<span style="font-size:.7rem;color:#999;">(ผ่านแล้ว)</span>' : ''}</div>
+          <div style="font-weight: 700; font-size: 1rem;">📅 ${esc(e.title)} ${isPast ? `<span style="font-size:.7rem;color:${DashColors.TEXT_LIGHTER};">(ผ่านแล้ว)</span>` : ''}</div>
           <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
             ${bldgLabel} | 📍 ${esc(e.location)} | 🕐 ${esc(e.time)}
           </div>
@@ -679,16 +679,16 @@ function renderComplaints(complaints){
     return;
   }
 
-  const statusColor = { 'open': '#f57c00', 'in-progress': '#1976d2', 'resolved': '#388e3c' };
+  const statusColor = { 'open': DashColors.ORANGE_DARK, 'in-progress': DashColors.BLUE_MED, 'resolved': DashColors.GREEN_MED };
   const statusLabel = { 'open': '🔴 Open', 'in-progress': '🟡 In Progress', 'resolved': '🟢 Resolved' };
 
   const sorted = complaints.slice().sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
   list.innerHTML = sorted.map(c => {
-    const color = statusColor[c.status] || '#999';
+    const color = statusColor[c.status] || DashColors.TEXT_LIGHTER;
     const label = statusLabel[c.status] || c.status;
     const date  = c.createdAt ? new Date(c.createdAt).toLocaleDateString('th-TH') : '-';
     return `
-      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.2rem;margin-bottom:.6rem;">
+      <div style="background:${DashColors.WHITE};border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.2rem;margin-bottom:.6rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
           <span style="font-weight:700;">${c.title || '(ไม่มีหัวข้อ)'}</span>
           <span style="font-size:0.8rem;color:${color};font-weight:600;">${label}</span>
@@ -696,8 +696,8 @@ function renderComplaints(complaints){
         <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">ห้อง ${c.room || '-'} · ${date}</div>
         <div style="font-size:0.9rem;">${c.desc || ''}</div>
         <div style="margin-top:0.8rem;display:flex;gap:0.5rem;">
-          ${c.status !== 'resolved' ? `<button data-action="updateComplaintStatus" data-id="${c.id}" data-arg="resolved" style="padding:0.3rem 0.7rem;font-size:0.8rem;background:#e8f5e9;color:#388e3c;border:1px solid #c8e6c9;border-radius:4px;cursor:pointer;">✅ Resolve</button>` : ''}
-          ${c.status === 'open' ? `<button data-action="updateComplaintStatus" data-id="${c.id}" data-arg="in-progress" style="padding:0.3rem 0.7rem;font-size:0.8rem;background:#e3f2fd;color:#1976d2;border:1px solid #bbdefb;border-radius:4px;cursor:pointer;">🔄 In Progress</button>` : ''}
+          ${c.status !== 'resolved' ? `<button data-action="updateComplaintStatus" data-id="${c.id}" data-arg="resolved" style="padding:0.3rem 0.7rem;font-size:0.8rem;background:${DashColors.GREEN_BG};color:${DashColors.GREEN_MED};border:1px solid ${DashColors.GREEN_BORDER};border-radius:4px;cursor:pointer;">✅ Resolve</button>` : ''}
+          ${c.status === 'open' ? `<button data-action="updateComplaintStatus" data-id="${c.id}" data-arg="in-progress" style="padding:0.3rem 0.7rem;font-size:0.8rem;background:${DashColors.BLUE_BG};color:${DashColors.BLUE_MED};border:1px solid #bbdefb;border-radius:4px;cursor:pointer;">🔄 In Progress</button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -945,9 +945,9 @@ function displayHistoricalDataForYear(year) {
   html += `<thead>
     <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
       <th style="padding:0.8rem;text-align:left;border-right:1px solid var(--border);rowspan:2;">เดือน</th>
-      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms</th>
-      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest</th>
-      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#fff9c4;color:#f57f17;font-weight:700;">📦 Amazon</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:${DashColors.GREEN_BG};color:${DashColors.GREEN_DEEP};font-weight:700;">🏠 Rooms</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:${DashColors.PURPLE_BG};color:#4a148c;font-weight:700;">🏢 Nest</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:${DashColors.YELLOW_BG};color:#f57f17;font-weight:700;">📦 Amazon</th>
       <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวม</th>
     </tr>
     <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
@@ -1034,21 +1034,21 @@ function displayHistoricalDataForYear(year) {
 
     html += `<tr style="border-bottom:1px solid var(--border);">
               <td style="padding:0.8rem;border-right:1px solid var(--border);font-weight:600;">${monthName}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;">฿${(roomsData[0] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;">฿${(roomsData[1] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;">฿${(roomsData[2] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;">฿${(roomsData[3] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;color:#2d8653;font-weight:600;">฿${(roomsData[4] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;">฿${(nestData[0] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;">฿${(nestData[1] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;">฿${(nestData[2] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;">฿${(nestData[3] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;color:#7b1fa2;font-weight:600;">฿${(nestData[4] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#fff9c4;">฿${(amazonData[0] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#fff9c4;">฿${(amazonData[1] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#fff9c4;">฿${(amazonData[2] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#fff9c4;">฿${(amazonData[3] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#fff9c4;color:#f57f17;font-weight:600;">฿${(amazonData[4] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.GREEN_BG};">฿${(roomsData[0] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.GREEN_BG};">฿${(roomsData[1] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.GREEN_BG};">฿${(roomsData[2] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.GREEN_BG};">฿${(roomsData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.GREEN_BG};color:#2d8653;font-weight:600;">฿${(roomsData[4] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.PURPLE_BG};">฿${(nestData[0] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.PURPLE_BG};">฿${(nestData[1] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.PURPLE_BG};">฿${(nestData[2] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.PURPLE_BG};">฿${(nestData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.PURPLE_BG};color:#7b1fa2;font-weight:600;">฿${(nestData[4] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.YELLOW_BG};">฿${(amazonData[0] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.YELLOW_BG};">฿${(amazonData[1] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.YELLOW_BG};">฿${(amazonData[2] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.YELLOW_BG};">฿${(amazonData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:${DashColors.YELLOW_BG};color:#f57f17;font-weight:600;">฿${(amazonData[4] || 0).toLocaleString()}</td>
               <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${(total || 0).toLocaleString()}</td>
             </tr>`;
   });
@@ -1078,17 +1078,17 @@ function displayHistoricalDataForYear(year) {
             <td class="dx-td-rooms">฿${totalRoomsElec.toLocaleString()}</td>
             <td class="dx-td-rooms">฿${totalRoomsWater.toLocaleString()}</td>
             <td class="dx-td-rooms">฿${totalRoomsTrash.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;color:#2d8653;font-weight:700;">฿${totalRoomsAll.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.GREEN_BG};color:#2d8653;font-weight:700;">฿${totalRoomsAll.toLocaleString()}</td>
             <td class="dx-td-nest">฿${totalNestRent.toLocaleString()}</td>
             <td class="dx-td-nest">฿${totalNestElec.toLocaleString()}</td>
             <td class="dx-td-nest">฿${totalNestWater.toLocaleString()}</td>
             <td class="dx-td-nest">฿${totalNestTrash.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;color:#7b1fa2;font-weight:700;">฿${totalNestAll.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.PURPLE_BG};color:#7b1fa2;font-weight:700;">฿${totalNestAll.toLocaleString()}</td>
             <td class="dx-td-amazon">฿${totalAmazonRent.toLocaleString()}</td>
             <td class="dx-td-amazon">฿${totalAmazonElec.toLocaleString()}</td>
             <td class="dx-td-amazon">฿${totalAmazonWater.toLocaleString()}</td>
             <td class="dx-td-amazon">฿${totalAmazonTrash.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;color:#f57f17;font-weight:700;">฿${totalAmazonAll.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:${DashColors.YELLOW_BG};color:#f57f17;font-weight:700;">฿${totalAmazonAll.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${totalAll.toLocaleString()}</td>
           </tr>`;
 

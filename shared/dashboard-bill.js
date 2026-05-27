@@ -105,7 +105,7 @@ function checkVacant(){
   let html=`<div style="margin-bottom:.5rem;font-size:.85rem;color:var(--text-muted);">ข้อมูลปี ${yy+2500} ${monthNames[month]} — มิเตอร์จาก Excel</div>`;
   if(vacant.length){
     html+=`<div style="margin-bottom:.6rem;"><span style="font-size:.8rem;font-weight:700;color:var(--red);margin-right:8px;">🚪 อาจว่าง (ไฟ=0) ${vacant.length} ห้อง</span>`;
-    vacant.forEach(({r})=>{ html+=pill(r,'background:#ffebee;color:var(--red);border:1px solid #ffcdd2;'); });
+    vacant.forEach(({r})=>{ html+=pill(r,`background:${DashColors.RED_BG};color:var(--red);border:1px solid #ffcdd2;`); });
     html+='</div>';
   }
   if(occupied.length){
@@ -783,7 +783,7 @@ function generateReceipt(){
   }
   // Attach slip verification result if available
   const slipNote = slipVerified && slipData
-    ? `<div style="margin-top:10px;padding:8px;background:#e8f5e9;border-radius:6px;font-size:.78rem;color:var(--green-dark);">✅ ยืนยันด้วย SlipOK · ผู้โอน: ${slipData.sender} · ฿${slipData.amount.toLocaleString()} · ${slipData.tDate}</div>`
+    ? `<div style="margin-top:10px;padding:8px;background:${DashColors.GREEN_BG};border-radius:6px;font-size:.78rem;color:var(--green-dark);">✅ ยืนยันด้วย SlipOK · ผู้โอน: ${slipData.sender} · ฿${slipData.amount.toLocaleString()} · ${slipData.tDate}</div>`
     : '';
   document.getElementById('receiptPanel').innerHTML=buildDocHTML(d,'receipt',null,payDate)+slipNote;
   document.getElementById('step2').className='step done';
@@ -823,7 +823,7 @@ function buildDocHTML(d,type,dueDate,payDate){
   const qrSection = PROMPTPAY_NUMBER ? `
     <div class="qr-section">
       <div class="qr-title">📲 สแกน QR เพื่อชำระเงิน</div>
-      <img id="qr-payment" src="" alt="QR PromptPay" style="width:160px;height:160px;border-radius:8px;border:4px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.15);">
+      <img id="qr-payment" src="" alt="QR PromptPay" style="width:160px;height:160px;border-radius:8px;border:4px solid ${DashColors.WHITE};box-shadow:0 3px 10px rgba(0,0,0,.15);">
       <div><div class="qr-amount-badge">฿${d.total.toLocaleString()}</div></div>
       <div class="qr-footer-text">พร้อมเพย์: ${PROMPTPAY_NUMBER}<br>สแกนแล้วยอดขึ้นอัตโนมัติ ไม่ต้องพิมพ์ตัวเลข</div>
     </div>` : '';
@@ -860,7 +860,7 @@ function buildDocHTML(d,type,dueDate,payDate){
 
   // Recipient block — only shown when tenant opted for company format with filled info
   const recipientBlockHTML = _useCompanyLogo
-    ? `<div style="margin:10px 0;padding:10px;background:#f8faf9;border:1px dashed #c8e6c9;border-radius:6px;font-size:.85rem;">
+    ? `<div style="margin:10px 0;padding:10px;background:#f8faf9;border:1px dashed ${DashColors.GREEN_BORDER};border-radius:6px;font-size:.85rem;">
          <div style="font-weight:600;color:var(--green-dark);margin-bottom:6px;">📄 ออกในนาม (นิติบุคคล)</div>
          <div class="d-row"><span>ชื่อบริษัท:</span><strong>${_recipientCo.name || '-'}</strong></div>
          <div class="d-row"><span>เลขผู้เสียภาษี:</span><strong>${_recipientCo.taxId || '-'}</strong></div>
@@ -888,7 +888,7 @@ function buildDocHTML(d,type,dueDate,payDate){
       <div class="d-row" style="font-size:.8rem;color:var(--text-muted);padding-left:10px;"><span>มิเตอร์น้ำ: ${d.wOld||0} → ${d.wNew||0} (${d.wUnits||0} หน่วย × ฿${d.wRate||0})</span></div>`:''}
       ${d.trash>0?`<div class="d-row"><span>ค่าขยะ</span><span>฿${d.trash.toLocaleString()}</span></div>`:''}
       ${d.other>0?`<div class="d-row"><span>ค่าบริการอื่นๆ</span><span>฿${d.other.toLocaleString()}</span></div>`:''}
-      ${d.lateFee>0?`<div class="d-row" style="color:#c62828;"><span>⚠️ ค่าปรับ</span><span>฿${d.lateFee.toLocaleString()}</span></div>`:''}
+      ${d.lateFee>0?`<div class="d-row" style="color:${DashColors.RED_DEEP};"><span>⚠️ ค่าปรับ</span><span>฿${d.lateFee.toLocaleString()}</span></div>`:''}
       ${d.note?`<div class="d-row" style="font-size:.78rem;color:var(--accent);"><span>หมายเหตุ:</span><span>${d.note}</span></div>`:''}
       <div class="d-total ${type}"><span>รวมทั้งสิ้น</span><span>฿${d.total.toLocaleString()}</span></div>
     </div>
@@ -952,7 +952,7 @@ ${styles}
 @page{margin:10mm;}
 @media print{
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  body{background:#fff!important;padding:0;margin:0;}
+  body{background:${DashColors.WHITE}!important;padding:0;margin:0;}
   .doc-body{max-width:100%!important;box-shadow:none!important;padding:15mm;}
   .btn-doc-action{display:none!important;}
 }
@@ -1053,7 +1053,7 @@ function showPayDetail(roomId, year, month){
       <button class="pm-btn gray" data-action="closePayModal">ปิด</button>`;
   } else {
     body.innerHTML=`
-      <div style="background:#fff3e0;border-radius:8px;padding:.75rem;font-size:.84rem;color:#e65100;margin-bottom:.5rem;">
+      <div style="background:${DashColors.ORANGE_BG};border-radius:8px;padding:.75rem;font-size:.84rem;color:${DashColors.ORANGE_DEEP};margin-bottom:.5rem;">
         ⏳ ยังไม่ได้ชำระ — ${monthName} ${year2}
       </div>
       <div style="font-size:.86rem;color:var(--text-muted);text-align:center;padding:.9rem 0;">

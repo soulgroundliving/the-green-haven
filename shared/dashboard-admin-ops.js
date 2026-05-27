@@ -61,7 +61,7 @@ async function grantAdminRole() {
   const email = (emailEl.value || '').trim();
   const role = roleEl.value || 'admin';
   if (!email || !email.includes('@')) {
-    out.innerHTML = '<span style="color:#c62828;">❌ ใส่ email ที่ถูกต้อง</span>';
+    out.innerHTML = `<span style="color:${DashColors.RED_DEEP};">❌ ใส่ email ที่ถูกต้อง</span>`;
     return;
   }
   out.innerHTML = '⏳ กำลัง grant...';
@@ -79,13 +79,13 @@ async function grantAdminRole() {
     );
     const json = await res.json();
     if (!res.ok || !json.success) {
-      out.innerHTML = `<span style="color:#c62828;">❌ ${json.error || res.statusText}</span>`;
+      out.innerHTML = `<span style="color:${DashColors.RED_DEEP};">❌ ${json.error || res.statusText}</span>`;
       return;
     }
     out.innerHTML = `<span style="color:var(--green-dark);">✅ Granted <strong>${role}</strong> to <strong>${json.email}</strong> (uid: ${json.uid.slice(0, 12)}...)</span><br><span style="color:var(--text-muted);">⚠️ User ต้อง logout/login ใหม่ เพื่อรับ token ที่มี claim ใหม่</span>`;
     emailEl.value = '';
   } catch (e) {
-    out.innerHTML = `<span style="color:#c62828;">❌ ${e.message}</span>`;
+    out.innerHTML = `<span style="color:${DashColors.RED_DEEP};">❌ ${e.message}</span>`;
   }
 }
 window.grantAdminRole = grantAdminRole;
@@ -110,12 +110,12 @@ async function cleanupAnonUsers() {
     );
     const json = await res.json();
     if (!res.ok || !json.success) {
-      out.innerHTML = `<span style="color:#c62828;">❌ ${json.error || res.statusText}</span>`;
+      out.innerHTML = `<span style="color:${DashColors.RED_DEEP};">❌ ${json.error || res.statusText}</span>`;
       return;
     }
     out.innerHTML = `<span style="color:var(--green-dark);">✅ ลบ ${json.deleted} anonymous user records (สแกน ${json.scanned} users)</span>`;
   } catch (e) {
-    out.innerHTML = `<span style="color:#c62828;">❌ ${e.message}</span>`;
+    out.innerHTML = `<span style="color:${DashColors.RED_DEEP};">❌ ${e.message}</span>`;
   }
 }
 window.cleanupAnonUsers = cleanupAnonUsers;

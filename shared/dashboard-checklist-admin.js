@@ -48,8 +48,8 @@
   }
 
   function _statusBadge(status) {
-    if (status === 'admin_signed') return '<span style="background:#c8e6c9;color:#1b5e20;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;">✅ เสร็จ</span>';
-    if (status === 'submitted')    return '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;">📝 รอเซ็น</span>';
+    if (status === 'admin_signed') return `<span style="background:${DashColors.GREEN_BORDER};color:${DashColors.GREEN_DEEP};padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;">✅ เสร็จ</span>`;
+    if (status === 'submitted')    return `<span style="background:${DashColors.ORANGE_BG};color:${DashColors.ORANGE_DEEP};padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;">📝 รอเซ็น</span>`;
     return '<span style="background:#eee;color:#555;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;">⏳ รอกรอก</span>';
   }
 
@@ -108,7 +108,7 @@
       const msg = err.code === 'failed-precondition'
         ? 'Firestore index ยังไม่พร้อม — รอสักครู่แล้วรีเฟรช'
         : _esc(err.message || 'ไม่สามารถโหลดได้');
-      el.innerHTML = `<div style="color:#c62828;text-align:center;padding:1.5rem;">⚠️ ${msg}</div>`;
+      el.innerHTML = `<div style="color:${DashColors.RED_DEEP};text-align:center;padding:1.5rem;">⚠️ ${msg}</div>`;
     });
   }
 
@@ -125,7 +125,7 @@
     list.innerHTML = `
       <div style="display:flex;flex-direction:column;gap:.4rem;">
         ${filtered.map(i => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem .9rem;background:#fafafa;border:1px solid #eee;border-radius:8px;gap:.5rem;flex-wrap:wrap;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem .9rem;background:${DashColors.SURFACE_FAINT};border:1px solid #eee;border-radius:8px;gap:.5rem;flex-wrap:wrap;">
             <div style="display:flex;flex-direction:column;gap:.15rem;min-width:0;flex:1;">
               <div style="font-weight:600;font-size:.95rem;">
                 ห้อง ${_esc(i.roomId || i.tenantRoom || '?')} · ${_esc(i.tenantName || '—')}
@@ -136,8 +136,8 @@
             </div>
             <div style="display:flex;gap:.4rem;align-items:center;">
               ${_statusBadge(i.status)}
-              <button data-action="openChecklistInstanceViewer" data-id="${_esc(i.id)}" style="padding:5px 12px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;">ดู</button>
-              <button data-action="deleteChecklistInstanceFromRow" data-id="${_esc(i.id)}" style="padding:5px 9px;background:#fff;color:#c62828;border:1px solid #ef9a9a;border-radius:6px;font-size:.82rem;cursor:pointer;" title="ลบถาวร">🗑️</button>
+              <button data-action="openChecklistInstanceViewer" data-id="${_esc(i.id)}" style="padding:5px 12px;background:var(--green-dark);color:${DashColors.WHITE};border:none;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;">ดู</button>
+              <button data-action="deleteChecklistInstanceFromRow" data-id="${_esc(i.id)}" style="padding:5px 9px;background:${DashColors.WHITE};color:${DashColors.RED_DEEP};border:1px solid #ef9a9a;border-radius:6px;font-size:.82rem;cursor:pointer;" title="ลบถาวร">🗑️</button>
             </div>
           </div>
         `).join('')}
@@ -205,20 +205,20 @@
       if (!slot) return;
       const url = _photoUrls[it.id];
       if (url) {
-        slot.innerHTML = `<a href="${_esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:.3rem;"><img src="${_esc(url)}" alt="photo" style="max-width:120px;max-height:120px;border:1px solid #ddd;border-radius:6px;object-fit:cover;"></a>`;
+        slot.innerHTML = `<a href="${_esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:.3rem;"><img src="${_esc(url)}" alt="photo" style="max-width:120px;max-height:120px;border:1px solid ${DashColors.BORDER};border-radius:6px;object-fit:cover;"></a>`;
       } else {
-        slot.innerHTML = '<div style="font-size:.75rem;color:#c62828;margin-top:.25rem;">⚠️ โหลดรูปไม่สำเร็จ</div>';
+        slot.innerHTML = `<div style="font-size:.75rem;color:${DashColors.RED_DEEP};margin-top:.25rem;">⚠️ โหลดรูปไม่สำเร็จ</div>`;
       }
     });
 
     const tslot = body.querySelector('[data-tenant-sig-slot]');
     if (tslot && _tenantSigUrl) {
-      tslot.innerHTML = `<div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นผู้เช่า:</div><img src="${_esc(_tenantSigUrl)}" alt="tenant sig" style="max-width:240px;border:1px solid #ddd;border-radius:6px;background:#fff;">`;
+      tslot.innerHTML = `<div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นผู้เช่า:</div><img src="${_esc(_tenantSigUrl)}" alt="tenant sig" style="max-width:240px;border:1px solid ${DashColors.BORDER};border-radius:6px;background:${DashColors.WHITE};">`;
     }
 
     const aslot = body.querySelector('[data-admin-sig-slot]');
     if (aslot && _adminSigUrl) {
-      aslot.innerHTML = `<div style="margin-top:.8rem;"><div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นแอดมิน:</div><img src="${_esc(_adminSigUrl)}" alt="admin sig" style="max-width:240px;border:1px solid #ddd;border-radius:6px;background:#fff;"></div>`;
+      aslot.innerHTML = `<div style="margin-top:.8rem;"><div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นแอดมิน:</div><img src="${_esc(_adminSigUrl)}" alt="admin sig" style="max-width:240px;border:1px solid ${DashColors.BORDER};border-radius:6px;background:${DashColors.WHITE};"></div>`;
     }
   }
 
@@ -232,13 +232,13 @@
       : items.map((it) => {
           const photoUrl = _photoUrls[it.id];
           const photoInner = photoUrl
-            ? `<a href="${_esc(photoUrl)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:.3rem;"><img src="${_esc(photoUrl)}" alt="photo" style="max-width:120px;max-height:120px;border:1px solid #ddd;border-radius:6px;object-fit:cover;"></a>`
+            ? `<a href="${_esc(photoUrl)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:.3rem;"><img src="${_esc(photoUrl)}" alt="photo" style="max-width:120px;max-height:120px;border:1px solid ${DashColors.BORDER};border-radius:6px;object-fit:cover;"></a>`
             : '<div style="font-size:.75rem;color:#888;margin-top:.25rem;">⏳ โหลดรูป...</div>';
           const photoBlock = it.photoPath
             ? `<div data-photo-slot="${_esc(it.id)}">${photoInner}</div>`
             : '';
           return `
-            <div style="padding:.6rem .8rem;background:#fafafa;border:1px solid #eee;border-radius:8px;margin-bottom:.4rem;">
+            <div style="padding:.6rem .8rem;background:${DashColors.SURFACE_FAINT};border:1px solid #eee;border-radius:8px;margin-bottom:.4rem;">
               <div style="display:flex;align-items:flex-start;gap:.5rem;">
                 <span style="font-size:1.1rem;">${it.checked ? '✅' : '⬜'}</span>
                 <div style="flex:1;min-width:0;">
@@ -252,22 +252,22 @@
         }).join('');
 
     const tenantSigInner = _tenantSigUrl
-      ? `<div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นผู้เช่า:</div><img src="${_esc(_tenantSigUrl)}" alt="tenant sig" style="max-width:240px;border:1px solid #ddd;border-radius:6px;background:#fff;">`
+      ? `<div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นผู้เช่า:</div><img src="${_esc(_tenantSigUrl)}" alt="tenant sig" style="max-width:240px;border:1px solid ${DashColors.BORDER};border-radius:6px;background:${DashColors.WHITE};">`
       : '<div style="font-size:.82rem;color:#888;">⏳ โหลดลายเซ็นผู้เช่า...</div>';
     const tenantSigBlock = _viewer.tenantSignaturePath
       ? `<div data-tenant-sig-slot style="margin-top:1rem;">${tenantSigInner}</div>`
       : '';
 
     const adminSigInner = _adminSigUrl
-      ? `<div style="margin-top:.8rem;"><div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นแอดมิน:</div><img src="${_esc(_adminSigUrl)}" alt="admin sig" style="max-width:240px;border:1px solid #ddd;border-radius:6px;background:#fff;"></div>`
+      ? `<div style="margin-top:.8rem;"><div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นแอดมิน:</div><img src="${_esc(_adminSigUrl)}" alt="admin sig" style="max-width:240px;border:1px solid ${DashColors.BORDER};border-radius:6px;background:${DashColors.WHITE};"></div>`
       : '';
     const adminSigBlock = `<div data-admin-sig-slot>${adminSigInner}</div>`;
 
     const signPad = (_viewer.status === 'submitted' && !_adminSigUrl)
       ? `
-        <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed #ddd;">
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed ${DashColors.BORDER};">
           <div style="font-size:.88rem;font-weight:600;margin-bottom:.4rem;">✍️ เซ็นที่นี่ (admin):</div>
-          <canvas id="clv-admin-canvas" style="width:100%;height:160px;border:1px solid #ddd;border-radius:8px;touch-action:none;background:#fafafa;display:block;"></canvas>
+          <canvas id="clv-admin-canvas" style="width:100%;height:160px;border:1px solid ${DashColors.BORDER};border-radius:8px;touch-action:none;background:${DashColors.SURFACE_FAINT};display:block;"></canvas>
           <button data-action="clearAdminSignature" style="margin-top:.4rem;font-size:.8rem;color:#888;background:none;border:none;cursor:pointer;">🔄 ล้างลายเซ็น</button>
         </div>
       `
@@ -292,7 +292,7 @@
     `;
 
     body.innerHTML = `
-      <div id="clv-printable" style="background:#fff;">
+      <div id="clv-printable" style="background:${DashColors.WHITE};">
         <div style="margin-bottom:.75rem;">
           <div style="font-weight:700;font-size:1.1rem;">📋 Checklist — ${_typeLabel(_viewer.type)}</div>
           <div style="font-size:.85rem;color:var(--text-muted);margin-top:.25rem;">
@@ -320,9 +320,9 @@
     const canExport = _viewer.status === 'admin_signed' || _viewer.status === 'submitted';
     footer.innerHTML = `
       <button data-action="closeChecklistInstanceViewer" style="flex:1;min-width:100px;padding:10px 16px;background:var(--border);color:var(--text);border:none;border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer;">ปิด</button>
-      <button data-action="deleteChecklistInstanceFromViewer" style="flex:0 0 auto;padding:10px 14px;background:#fff;color:#c62828;border:1px solid #ef9a9a;border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer;" title="ลบ checklist นี้ถาวร (รวมรูปและลายเซ็น)">🗑️ ลบ</button>
-      ${canExport ? `<button data-action="exportChecklistPng" style="flex:1;min-width:120px;padding:10px 16px;background:#1565c0;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer;">⬇️ ดาวน์โหลด PNG</button>` : ''}
-      ${canSign ? `<button id="clv-sign-btn" data-action="adminSignChecklistSubmit" style="flex:2;min-width:160px;padding:10px 16px;background:var(--green-dark);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;">✍️ บันทึกลายเซ็น</button>` : ''}
+      <button data-action="deleteChecklistInstanceFromViewer" style="flex:0 0 auto;padding:10px 14px;background:${DashColors.WHITE};color:${DashColors.RED_DEEP};border:1px solid #ef9a9a;border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer;" title="ลบ checklist นี้ถาวร (รวมรูปและลายเซ็น)">🗑️ ลบ</button>
+      ${canExport ? `<button data-action="exportChecklistPng" style="flex:1;min-width:120px;padding:10px 16px;background:${DashColors.BLUE_DARK};color:${DashColors.WHITE};border:none;border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer;">⬇️ ดาวน์โหลด PNG</button>` : ''}
+      ${canSign ? `<button id="clv-sign-btn" data-action="adminSignChecklistSubmit" style="flex:2;min-width:160px;padding:10px 16px;background:var(--green-dark);color:${DashColors.WHITE};border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;">✍️ บันทึกลายเซ็น</button>` : ''}
     `;
   }
 
@@ -473,7 +473,7 @@
       return;
     }
     const tmp = document.createElement('div');
-    tmp.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;padding:2rem;width:680px;font-family:inherit;';
+    tmp.style.cssText = `position:fixed;left:-9999px;top:0;background:${DashColors.WHITE};padding:2rem;width:680px;font-family:inherit;`;
     tmp.innerHTML = src.innerHTML;
     document.body.appendChild(tmp);
     try {

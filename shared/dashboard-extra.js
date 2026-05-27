@@ -209,7 +209,7 @@ function getRoomColorStatus(roomId, room) {
   // Check payment status
   const paymentStatus = getPaymentStatus(roomId);
   if (paymentStatus === 'overdue') {
-    return { color: '#d32f2f', icon: '🔴', label: 'ค้าง' };
+    return { color: DashColors.RED_TEXT, icon: '🔴', label: 'ค้าง' };
   }
 
   // Check contract expiry (within 30 days)
@@ -223,7 +223,7 @@ function getRoomColorStatus(roomId, room) {
   }
 
   // Occupied with good payment = green
-  return { color: '#4caf50', icon: '🟢', label: 'มี' };
+  return { color: DashColors.GREEN_ACTIVE, icon: '🟢', label: 'มี' };
 }
 
 // ===== Get Payment Info Function =====
@@ -423,7 +423,7 @@ function showContractDocument(roomId, tenant) {
   header.className = 'u-modal-doc-head';
   header.innerHTML = `
     <h2 style="margin:0;color:#333;">📄 สัญญาเช่า - ห้อง ${_esc(roomId)} (${_esc(tenant.name)})</h2>
-    <button data-action="closeNearestDataModal" style="background:#f0f0f0;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:600;">✕ ปิด</button>
+    <button data-action="closeNearestDataModal" style="background:${DashColors.SURFACE_GRAY};border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:600;">✕ ปิด</button>
   `;
 
   // Content
@@ -453,7 +453,7 @@ function showContractDocument(roomId, tenant) {
       content.appendChild(img);
     } else {
       // Unknown extension — give the user a working link rather than a dead-end.
-      content.innerHTML = `<p style="color:#666;">ไม่สามารถแสดงตัวอย่างไฟล์ชนิดนี้ — ใช้ปุ่ม "ดาวน์โหลด" ด้านล่าง</p>
+      content.innerHTML = `<p style="color:${DashColors.TEXT_MUTED};">ไม่สามารถแสดงตัวอย่างไฟล์ชนิดนี้ — ใช้ปุ่ม "ดาวน์โหลด" ด้านล่าง</p>
         <p style="margin-top:8px;"><a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#2d8653;font-weight:600;">เปิดในแท็บใหม่ →</a></p>`;
     }
   };
@@ -465,7 +465,7 @@ function showContractDocument(roomId, tenant) {
   } else if (typeof docRef === 'string' && docRef.length > 0) {
     // Storage path (case d) — resolve via Firebase Storage SDK. Admin's read
     // grant on storage.rules lets getDownloadURL return a long-lived token URL.
-    content.innerHTML = '<p style="color:#666;">⏳ กำลังโหลดเอกสาร...</p>';
+    content.innerHTML = `<p style="color:${DashColors.TEXT_MUTED};">⏳ กำลังโหลดเอกสาร...</p>`;
     try {
       const storage = window.firebase.storage();
       const { ref: sRef, getDownloadURL } = window.firebase.storageFunctions;
@@ -480,14 +480,14 @@ function showContractDocument(roomId, tenant) {
         })
         .catch((e) => {
           console.error('getDownloadURL failed for', docRef, e);
-          content.innerHTML = `<p style="color:#c62828;">โหลดเอกสารไม่สำเร็จ: ${_esc(e.message || String(e))}</p>`;
+          content.innerHTML = `<p style="color:${DashColors.RED_DEEP};">โหลดเอกสารไม่สำเร็จ: ${_esc(e.message || String(e))}</p>`;
         });
     } catch (e) {
       console.error('Firebase Storage SDK not available:', e);
-      content.innerHTML = '<p style="color:#c62828;">Firebase Storage ยังไม่พร้อม</p>';
+      content.innerHTML = `<p style="color:${DashColors.RED_DEEP};">Firebase Storage ยังไม่พร้อม</p>`;
     }
   } else {
-    content.innerHTML = '<p style="color:#666;">ไม่สามารถแสดงไฟล์นี้</p>';
+    content.innerHTML = `<p style="color:${DashColors.TEXT_MUTED};">ไม่สามารถแสดงไฟล์นี้</p>`;
   }
 
   // Footer
@@ -900,7 +900,7 @@ function showDuplicateConfirmDialog(title, message) {
     header.className = 'u-confirm-head';
     header.innerHTML = `
       <span style="font-size: 1.5rem;">⚠️</span>
-      <div style="font-size: 0.95rem; font-weight: 700; color: #e65100;">${title}</div>
+      <div style="font-size: 0.95rem; font-weight: 700; color: ${DashColors.ORANGE_DEEP};">${title}</div>
     `;
 
     // Modal body
@@ -1034,7 +1034,7 @@ async function initInsightsPage() {
       <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem;">
         <div style="font-weight:600;font-size:.85rem;margin-bottom:.5rem;">🎯 awardComplaintFreeMonth — Manual Dry Run</div>
         <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.6rem;">รัน dry-run ก่อน schedule 1 พ.ค. เพื่อตรวจสอบว่าจะ award ใครบ้างโดยไม่เขียน DB จริง</div>
-        <button data-action="runAwardDryRun" style="padding:6px 14px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">🧪 Run Dry Run</button>
+        <button data-action="runAwardDryRun" style="padding:6px 14px;background:var(--green-dark);color:${DashColors.WHITE};border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">🧪 Run Dry Run</button>
         <pre id="ins-award-dryrun-output" style="margin-top:.7rem;padding:.7rem;background:#f5f5f5;border-radius:6px;font-size:.75rem;max-height:240px;overflow:auto;display:none;white-space:pre-wrap;"></pre>
       </div>
     </div>
@@ -1050,14 +1050,14 @@ async function initInsightsPage() {
             <option value="admin">admin</option>
             <option value="accountant">accountant</option>
           </select>
-          <button data-action="grantAdminRole" style="padding:8px 14px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">Grant</button>
+          <button data-action="grantAdminRole" style="padding:8px 14px;background:var(--green-dark);color:${DashColors.WHITE};border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">Grant</button>
         </div>
         <div id="ins-grant-output" style="margin-top:.6rem;font-size:.78rem;"></div>
       </div>
       <div style="border:1px solid var(--border);border-radius:6px;padding:1rem;">
         <div style="font-weight:600;font-size:.85rem;margin-bottom:.5rem;">🧹 Cleanup Anonymous Users</div>
         <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.6rem;">ลบ anonymous user records ที่ไม่มี custom claims (guest ที่ยังไม่ link LINE) — ลูกบ้านที่ link LIFF แล้วมี claims {room,building} ไม่กระทบ ⚠️ ห้ามปิด Anonymous auth ใน Firebase Console เพราะ LIFF ยังต้องใช้</div>
-        <button data-action="cleanupAnonUsers" style="padding:6px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">🗑️ Delete Anonymous Users</button>
+        <button data-action="cleanupAnonUsers" style="padding:6px 14px;background:${DashColors.ORANGE_DEEP};color:${DashColors.WHITE};border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">🗑️ Delete Anonymous Users</button>
         <div id="ins-anon-output" style="margin-top:.6rem;font-size:.78rem;"></div>
       </div>
     </div>`;
@@ -1186,8 +1186,8 @@ function _insightsRenderCollection(bills) {
     _insightsKpiCard('อัตรารวม 6 เดือน', overallRate !== null ? overallRate + '%' : '—', `${overallPaid}/${allLast6.length} บิล`) +
     _insightsKpiCard('เดือนนี้', currRate !== null ? currRate + '%' : '—',
       `${currPaid}/${currBills.length} ห้อง`,
-      currRate === null ? undefined : currRate >= 90 ? 'var(--green-dark)' : currRate >= 70 ? '#e65100' : '#c62828') +
-    _insightsKpiCard('ค้างชำระ (เดือนนี้)', '฿' + overdueAmt.toLocaleString(), `${overdue.length} ห้อง`, overdue.length > 0 ? '#c62828' : 'var(--green-dark)');
+      currRate === null ? undefined : currRate >= 90 ? 'var(--green-dark)' : currRate >= 70 ? DashColors.ORANGE_DEEP : DashColors.RED_DEEP) +
+    _insightsKpiCard('ค้างชำระ (เดือนนี้)', '฿' + overdueAmt.toLocaleString(), `${overdue.length} ห้อง`, overdue.length > 0 ? DashColors.RED_DEEP : 'var(--green-dark)');
 
   const ctx = document.getElementById('ins-chart-collection');
   if (!ctx) return;
@@ -1205,7 +1205,7 @@ function _insightsRenderCollection(bills) {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: '#f0f0f0' } } },
+      scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: DashColors.SURFACE_GRAY } } },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: c => c.raw !== null ? c.raw + '%' : 'ไม่มีข้อมูล' } }
@@ -1238,8 +1238,8 @@ function _insightsRenderCashFlow(tenants) {
 
   document.getElementById('ins-cashflow-kpis').innerHTML =
     _insightsKpiCard('รายรับที่คาด (เดือนนี้)', '฿' + projected[0].toLocaleString(), `${tenants.length} ห้องที่มีผู้เช่า`) +
-    _insightsKpiCard('หมดสัญญา ≤30 วัน', exp30.length + ' ห้อง', exp30.map(t => (t._building === 'nest' ? 'N' : '') + t._roomId).join(', ') || '—', exp30.length > 0 ? '#c62828' : 'var(--green-dark)') +
-    _insightsKpiCard('หมดสัญญา 31–90 วัน', exp90.length + ' ห้อง', exp90.map(t => (t._building === 'nest' ? 'N' : '') + t._roomId).join(', ') || '—', exp90.length > 0 ? '#e65100' : 'var(--green-dark)');
+    _insightsKpiCard('หมดสัญญา ≤30 วัน', exp30.length + ' ห้อง', exp30.map(t => (t._building === 'nest' ? 'N' : '') + t._roomId).join(', ') || '—', exp30.length > 0 ? DashColors.RED_DEEP : 'var(--green-dark)') +
+    _insightsKpiCard('หมดสัญญา 31–90 วัน', exp90.length + ' ห้อง', exp90.map(t => (t._building === 'nest' ? 'N' : '') + t._roomId).join(', ') || '—', exp90.length > 0 ? DashColors.ORANGE_DEEP : 'var(--green-dark)');
 
   const ctx = document.getElementById('ins-chart-cashflow');
   if (ctx) {
@@ -1257,7 +1257,7 @@ function _insightsRenderCashFlow(tenants) {
         responsive: true, maintainAspectRatio: false,
         scales: {
           x: { stacked: true },
-          y: { stacked: true, ticks: { callback: v => '฿' + v.toLocaleString() }, grid: { color: '#f0f0f0' } }
+          y: { stacked: true, ticks: { callback: v => '฿' + v.toLocaleString() }, grid: { color: DashColors.SURFACE_GRAY } }
         },
         plugins: {
           legend: { position: 'bottom', labels: { font: { size: 11 } } },
@@ -1274,7 +1274,7 @@ function _insightsRenderCashFlow(tenants) {
   if (expiring.length) {
     const rows = expiring.map(t => {
       const diff = Math.ceil((new Date(t.contractEnd) - now) / 86400000);
-      const color = diff <= 0 ? '#c62828' : diff <= 30 ? '#e65100' : '#1976d2';
+      const color = diff <= 0 ? DashColors.RED_DEEP : diff <= 30 ? DashColors.ORANGE_DEEP : DashColors.BLUE_MED;
       const badge = diff <= 0 ? '⚠️ หมดแล้ว' : diff + ' วัน';
       return `<tr>
         <td style="padding:5px 10px;font-weight:600;">${t._building === 'nest' ? 'N' : ''}${t._roomId}</td>
@@ -1312,11 +1312,11 @@ function _insightsRenderMTTR(complaints) {
   document.getElementById('ins-mttr-kpis').innerHTML =
     _insightsKpiCard('MTTR เฉลี่ย', avgMttr !== null ? avgMttr + ' วัน' : '—',
       `จาก ${resolved.length} เคสที่แก้แล้ว`,
-      avgMttr === null ? undefined : avgMttr <= 3 ? 'var(--green-dark)' : avgMttr <= 7 ? '#e65100' : '#c62828') +
-    _insightsKpiCard('เปิดอยู่', open.length + ' เคส', 'open + in-progress', open.length > 0 ? '#e65100' : 'var(--green-dark)') +
+      avgMttr === null ? undefined : avgMttr <= 3 ? 'var(--green-dark)' : avgMttr <= 7 ? DashColors.ORANGE_DEEP : DashColors.RED_DEEP) +
+    _insightsKpiCard('เปิดอยู่', open.length + ' เคส', 'open + in-progress', open.length > 0 ? DashColors.ORANGE_DEEP : 'var(--green-dark)') +
     _insightsKpiCard('ห้องที่มีปัญหาซ้ำ', hotspots.length + ' ห้อง',
       hotspots.slice(0, 3).map(([r, n]) => `${r}(${n})`).join(' · ') || '—',
-      hotspots.length > 0 ? '#e65100' : 'var(--green-dark)');
+      hotspots.length > 0 ? DashColors.ORANGE_DEEP : 'var(--green-dark)');
 
   const months = _insightsMonthLabels(6, false);
   const monthlyMttr = months.map(({ year, month }) => {
@@ -1344,7 +1344,7 @@ function _insightsRenderMTTR(complaints) {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        scales: { y: { min: 0, ticks: { callback: v => v + 'd' }, grid: { color: '#f0f0f0' } } },
+        scales: { y: { min: 0, ticks: { callback: v => v + 'd' }, grid: { color: DashColors.SURFACE_GRAY } } },
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { label: c => c.raw !== null ? c.raw + ' วัน' : 'ไม่มีข้อมูล' } }
@@ -1357,7 +1357,7 @@ function _insightsRenderMTTR(complaints) {
     const rows = hotspots.slice(0, 10).map(([room, count]) => {
       const latest = complaints.filter(c => String(c.room) === room).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0];
       const s = latest?.status || '—';
-      const color = s === 'resolved' ? 'var(--green-dark)' : s === 'in-progress' ? '#1976d2' : '#e65100';
+      const color = s === 'resolved' ? 'var(--green-dark)' : s === 'in-progress' ? DashColors.BLUE_MED : DashColors.ORANGE_DEEP;
       return `<tr>
         <td style="padding:5px 10px;font-weight:600;">ห้อง ${room}</td>
         <td class="dx-td-sm">${count} เคส</td>
@@ -1428,9 +1428,9 @@ function _insightsRenderProfit(bills, tenants) {
 
   document.getElementById('ins-profit-kpis').innerHTML =
     _insightsKpiCard('รายรับ (เดือนนี้)', '฿' + totalRev.toLocaleString(), `${rows.filter(x => x.rev > 0).length} ห้องชำระแล้ว`) +
-    _insightsKpiCard('ค่าใช้จ่าย', '฿' + totalCost.toLocaleString(), unattributed > 0 ? `รวมไม่ระบุห้อง ฿${unattributed.toLocaleString()}` : 'แยกตามห้อง', '#e65100') +
+    _insightsKpiCard('ค่าใช้จ่าย', '฿' + totalCost.toLocaleString(), unattributed > 0 ? `รวมไม่ระบุห้อง ฿${unattributed.toLocaleString()}` : 'แยกตามห้อง', DashColors.ORANGE_DEEP) +
     _insightsKpiCard('กำไรสุทธิ', '฿' + netProfit.toLocaleString(), margin !== null ? `Margin ${margin}%` : '—',
-      netProfit < 0 ? '#c62828' : netProfit < totalRev * 0.3 ? '#e65100' : 'var(--green-dark)');
+      netProfit < 0 ? DashColors.RED_DEEP : netProfit < totalRev * 0.3 ? DashColors.ORANGE_DEEP : 'var(--green-dark)');
 
   const ctx = document.getElementById('ins-chart-profit');
   if (ctx) {
@@ -1447,7 +1447,7 @@ function _insightsRenderProfit(bills, tenants) {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        scales: { y: { ticks: { callback: v => '฿' + v.toLocaleString() }, grid: { color: '#f0f0f0' } } },
+        scales: { y: { ticks: { callback: v => '฿' + v.toLocaleString() }, grid: { color: DashColors.SURFACE_GRAY } } },
         plugins: {
           legend: { position: 'bottom', labels: { font: { size: 11 } } },
           tooltip: { callbacks: { label: c => c.dataset.label + ': ฿' + Number(c.raw || 0).toLocaleString() } }
@@ -1464,8 +1464,8 @@ function _insightsRenderProfit(bills, tenants) {
       return `<tr>
         <td style="padding:5px 10px;font-weight:600;">ห้อง ${x.room}</td>
         <td class="dx-td-sm">฿${x.rev.toLocaleString()}</td>
-        <td style="padding:5px 10px;color:#c62828;">฿${x.cost.toLocaleString()}</td>
-        <td style="padding:5px 10px;font-weight:600;color:${mgn < 0 ? '#c62828' : '#e65100'};">${mgn}%</td>
+        <td style="padding:5px 10px;color:${DashColors.RED_DEEP};">฿${x.cost.toLocaleString()}</td>
+        <td style="padding:5px 10px;font-weight:600;color:${mgn < 0 ? DashColors.RED_DEEP : DashColors.ORANGE_DEEP};">${mgn}%</td>
       </tr>`;
     }).join('');
     document.getElementById('ins-profit-table').innerHTML = `
@@ -1532,7 +1532,7 @@ function _insightsRenderCohort(tenants) {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true, grid: { color: '#f0f0f0' } } },
+        scales: { y: { beginAtZero: true, grid: { color: DashColors.SURFACE_GRAY } } },
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: {
@@ -1612,21 +1612,21 @@ function _insightsRenderMeterAnomaly(bills, tenants) {
 
   document.getElementById('ins-meter-kpis').innerHTML =
     _insightsKpiCard('ห้องที่วิเคราะห์ได้', totalRoomsAnalyzed + ' ห้อง', '≥3 เดือนใน 6 เดือนล่าสุด') +
-    _insightsKpiCard('ไฟใช้สูงผิดปกติ', elecHigh + ' ห้อง', 'z > 2 (เดือนนี้)', elecHigh > 0 ? '#e65100' : 'var(--green-dark)') +
-    _insightsKpiCard('น้ำใช้สูงผิดปกติ', waterHigh + ' ห้อง', 'z > 2 (เดือนนี้) — เช็คน้ำรั่ว', waterHigh > 0 ? '#c62828' : 'var(--green-dark)');
+    _insightsKpiCard('ไฟใช้สูงผิดปกติ', elecHigh + ' ห้อง', 'z > 2 (เดือนนี้)', elecHigh > 0 ? DashColors.ORANGE_DEEP : 'var(--green-dark)') +
+    _insightsKpiCard('น้ำใช้สูงผิดปกติ', waterHigh + ' ห้อง', 'z > 2 (เดือนนี้) — เช็คน้ำรั่ว', waterHigh > 0 ? DashColors.RED_DEEP : 'var(--green-dark)');
 
   const tEl = document.getElementById('ins-meter-table');
   if (anomalies.length) {
     const trs = anomalies.slice(0, 10).map(a => {
       const icon = a.metric === 'elec' ? '⚡' : '💧';
       const dirIcon = a.direction === 'spike' ? '📈' : '📉';
-      const color = a.direction === 'spike' ? '#c62828' : '#1976d2';
+      const color = a.direction === 'spike' ? DashColors.RED_DEEP : DashColors.BLUE_MED;
       const tn = tenants.find(t => String(t._roomId) === a.room && t._building === a.building);
       const roomLabel = (a.building === 'nest' ? 'N' : '') + a.room;
       return `<tr>
         <td style="padding:5px 10px;font-weight:600;">${icon} ${roomLabel}</td>
         <td class="dx-td-sm">${tn?.name || '—'}</td>
-        <td class="dx-td-sm">${a.current} <span style="color:#999;">(ปกติ ~${a.baseline})</span></td>
+        <td class="dx-td-sm">${a.current} <span style="color:${DashColors.TEXT_LIGHTER};">(ปกติ ~${a.baseline})</span></td>
         <td style="padding:5px 10px;color:${color};font-weight:600;">${dirIcon} z=${a.z.toFixed(1)}</td>
       </tr>`;
     }).join('');
@@ -1661,7 +1661,7 @@ async function _insightsRenderCFHealth() {
   try {
     snap = await fs.getDocs(fs.collection(db, 'lineRetryQueue'));
   } catch(e) {
-    kEl.innerHTML = _insightsKpiCard('CF Health', '—', 'อ่านไม่ได้: ' + (e.code || e.message), '#c62828');
+    kEl.innerHTML = _insightsKpiCard('CF Health', '—', 'อ่านไม่ได้: ' + (e.code || e.message), DashColors.RED_DEEP);
     return;
   }
 
@@ -1684,8 +1684,8 @@ async function _insightsRenderCFHealth() {
   kEl.innerHTML =
     _insightsKpiCard('Success rate (7 วัน)', successRate !== null ? successRate + '%' : '—',
       `${sent} sent / ${abandoned} abandoned`,
-      successRate === null ? undefined : successRate >= 95 ? 'var(--green-dark)' : successRate >= 80 ? '#e65100' : '#c62828') +
-    _insightsKpiCard('Queue depth', pending + ' items', 'pending ตอนนี้', pending > 50 ? '#c62828' : pending > 10 ? '#e65100' : 'var(--green-dark)') +
+      successRate === null ? undefined : successRate >= 95 ? 'var(--green-dark)' : successRate >= 80 ? DashColors.ORANGE_DEEP : DashColors.RED_DEEP) +
+    _insightsKpiCard('Queue depth', pending + ' items', 'pending ตอนนี้', pending > 50 ? DashColors.RED_DEEP : pending > 10 ? DashColors.ORANGE_DEEP : 'var(--green-dark)') +
     _insightsKpiCard('Attempts ก่อน success', avgAttempts, sentItems.length ? `จาก ${sentItems.length} รายการ` : '—');
 
   // Detail: oldest pending + recent abandoned

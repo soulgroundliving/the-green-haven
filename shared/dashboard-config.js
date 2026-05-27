@@ -35,41 +35,41 @@ function renderOwnerInfoPage() {
       <div style="font-weight:700; color:var(--green-dark); margin-bottom:.6rem;">🏢 ข้อมูลบริษัท / นิติบุคคล (สำหรับใบเสร็จ + รายงานภาษี)</div>
 
       <!-- Company logo (B2B — used when tenant chooses "นิติบุคคล") -->
-      <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed #c8e6c9; border-radius:6px;">
-        <div id="logoPreviewBox" style="width:80px; height:80px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden; flex-shrink:0;">
+      <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed ${DashColors.GREEN_BORDER}; border-radius:6px;">
+        <div id="logoPreviewBox" style="width:80px; height:80px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:${DashColors.SURFACE_FAINT}; overflow:hidden; flex-shrink:0;">
           ${safeLogoUrl ? `<img src="${safeLogoUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" alt="company logo">` : `<span style="font-size:2rem; color:#ccc;">🏢</span>`}
         </div>
         <div style="flex:1;">
           <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">โลโก้บริษัท (ใช้บนบิลที่ลูกบ้านเลือก "นิติบุคคล" + รายงานภาษี)</label>
           <input type="file" id="ownerLogoInput" accept="image/png,image/jpeg" data-action="uploadOwnerLogo" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: PNG โปร่งแสง, สี่เหลี่ยมจัตุรัส, ≤ 512px</div>
-          ${safeLogoUrl ? `<button type="button" data-action="removeOwnerLogo" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้</button>` : ''}
+          ${safeLogoUrl ? `<button type="button" data-action="removeOwnerLogo" style="margin-top:.4rem; padding:.3rem .7rem; background:${DashColors.RED_BG}; color:${DashColors.RED_DEEP}; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้</button>` : ''}
         </div>
       </div>
 
       <!-- Apartment logo (B2C / default — used when tenant chooses "บุคคลธรรมดา") -->
-      <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed #c8e6c9; border-radius:6px;">
-        <div id="apartmentLogoPreviewBox" style="width:80px; height:80px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden; flex-shrink:0;">
+      <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed ${DashColors.GREEN_BORDER}; border-radius:6px;">
+        <div id="apartmentLogoPreviewBox" style="width:80px; height:80px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:${DashColors.SURFACE_FAINT}; overflow:hidden; flex-shrink:0;">
           ${safeApartmentLogoUrl ? `<img src="${safeApartmentLogoUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" alt="apartment logo">` : `<span style="font-size:2rem; color:#ccc;">🌿</span>`}
         </div>
         <div style="flex:1;">
           <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">โลโก้อพาร์ทเม้น (ใช้บนบิลที่ลูกบ้านเลือก "บุคคลธรรมดา" — default)</label>
           <input type="file" id="ownerApartmentLogoInput" accept="image/png,image/jpeg" data-action="uploadApartmentLogo" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: โลโก้แบรนด์ Nature Haven — PNG โปร่งแสง, สี่เหลี่ยมจัตุรัส, ≤ 512px. ถ้าไม่อัพ → fallback เป็น "🌿 Nature Haven"</div>
-          ${safeApartmentLogoUrl ? `<button type="button" data-action="removeApartmentLogo" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้อพาร์ทเม้น</button>` : ''}
+          ${safeApartmentLogoUrl ? `<button type="button" data-action="removeApartmentLogo" style="margin-top:.4rem; padding:.3rem .7rem; background:${DashColors.RED_BG}; color:${DashColors.RED_DEEP}; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้อพาร์ทเม้น</button>` : ''}
         </div>
       </div>
 
       <!-- Favicon upload -->
-      <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed #c8e6c9; border-radius:6px;">
-        <div id="faviconPreviewBox" style="width:48px; height:48px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden; flex-shrink:0;">
+      <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed ${DashColors.GREEN_BORDER}; border-radius:6px;">
+        <div id="faviconPreviewBox" style="width:48px; height:48px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:${DashColors.SURFACE_FAINT}; overflow:hidden; flex-shrink:0;">
           ${safeFaviconUrl ? `<img src="${safeFaviconUrl}" style="width:32px; height:32px; object-fit:contain;" alt="favicon">` : `<span style="font-size:1.4rem; color:#ccc;">🌐</span>`}
         </div>
         <div style="flex:1;">
           <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">ไอคอนแท็บเบราว์เซอร์ (Favicon)</label>
           <input type="file" id="ownerFaviconInput" accept="image/png,image/jpeg,image/x-icon" data-action="uploadOwnerFavicon" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: PNG สี่เหลี่ยมจัตุรัส — จะย่อเป็น 64×64 อัตโนมัติ</div>
-          ${safeFaviconUrl ? `<button type="button" data-action="removeOwnerFavicon" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบ favicon</button>` : ''}
+          ${safeFaviconUrl ? `<button type="button" data-action="removeOwnerFavicon" style="margin-top:.4rem; padding:.3rem .7rem; background:${DashColors.RED_BG}; color:${DashColors.RED_DEEP}; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบ favicon</button>` : ''}
         </div>
       </div>
 
@@ -103,7 +103,7 @@ function renderOwnerInfoPage() {
     </div>
 
     <!-- 👤 Owner personal info — grouped card -->
-    <div style="background:#fff; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.5rem;">
+    <div style="background:${DashColors.WHITE}; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.5rem;">
       <div style="font-weight:700; font-size:1.05rem; color:var(--green-dark); margin-bottom:1rem; padding-bottom:.6rem; border-bottom:1px solid var(--border);">
         👤 ข้อมูลเจ้าของ / ผู้จัดทำ
       </div>
@@ -119,7 +119,7 @@ function renderOwnerInfoPage() {
         <div>
           <label class="dx-label" style="font-size:1rem; font-weight:600;">เบอร์โทรศัพท์</label>
           <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" maxlength="10" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
-          <small id="ownerPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
+          <small id="ownerPhoneError" style="display:none;color:${DashColors.RED_TEXT};font-size:0.85rem;margin-top:4px;"></small>
         </div>
         <div>
           <label class="dx-label" style="font-size:1rem; font-weight:600;">อีเมล</label>
@@ -129,7 +129,7 @@ function renderOwnerInfoPage() {
     </div>
 
     <!-- 🏠 Address — grouped card -->
-    <div style="background:#fff; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.2rem;">
+    <div style="background:${DashColors.WHITE}; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.2rem;">
       <div style="font-weight:700; font-size:1.05rem; color:var(--green-dark); margin-bottom:1rem; padding-bottom:.6rem; border-bottom:1px solid var(--border);">
         🏠 ที่อยู่ตามทะเบียน
       </div>
@@ -158,7 +158,7 @@ function renderOwnerInfoPage() {
     </div>
 
     <!-- 🏦 Bank + tax — grouped card -->
-    <div style="background:#fff; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.2rem;">
+    <div style="background:${DashColors.WHITE}; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.2rem;">
       <div style="font-weight:700; font-size:1.05rem; color:var(--green-dark); margin-bottom:1rem; padding-bottom:.6rem; border-bottom:1px solid var(--border);">
         🏦 ธนาคาร & ภาษี
       </div>
@@ -184,7 +184,7 @@ function renderOwnerInfoPage() {
       <button data-action="saveOwnerInfo" style="padding: 0.9rem 2.2rem; background: var(--green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 1.05rem; box-shadow: 0 2px 8px rgba(76,175,80,.25);">
         💾 บันทึกข้อมูล
       </button>
-      <button data-action="clearOwnerInfo" style="padding: 0.9rem 1.5rem; background: transparent; color: #d32f2f; border: 1.5px solid #ef9a9a; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: .95rem;">
+      <button data-action="clearOwnerInfo" style="padding: 0.9rem 1.5rem; background: transparent; color: ${DashColors.RED_TEXT}; border: 1.5px solid #ef9a9a; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: .95rem;">
         🗑️ ลบข้อมูล
       </button>
       <small style="color:var(--text-muted); font-size:.85rem; margin-left:auto;">* คือฟิลด์ที่จำเป็นสำหรับรายงานภาษี</small>
@@ -216,7 +216,7 @@ async function renderBuildingInternetConfig() {
   const container = document.getElementById('buildingInternetConfigContainer');
   if (!container) return;
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-    container.innerHTML = '<div style="color:#c62828;text-align:center;padding:1rem;grid-column:span 2;">Firestore unavailable</div>';
+    container.innerHTML = `<div style="color:${DashColors.RED_DEEP};text-align:center;padding:1rem;grid-column:span 2;">Firestore unavailable</div>`;
     return;
   }
   const fs = window.firebase.firestoreFunctions;
@@ -230,13 +230,13 @@ async function renderBuildingInternetConfig() {
   const esc = s => String(s ?? '').replace(/"/g, '&quot;');
   const statusOpt = (cur, v, lbl) => `<option value="${v}"${cur === v ? ' selected' : ''}>${lbl}</option>`;
   const cardHtml = (label, fsId, data) => `
-    <div style="border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.25rem; background: #fafafa;">
+    <div style="border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.25rem; background: ${DashColors.SURFACE_FAINT};">
       <div style="font-weight: 700; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
         <span>${label}</span>
         <span style="font-size: .72rem; color: var(--text-muted); font-family: monospace;">buildings/${fsId}.internet</span>
       </div>
       <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">สถานะ</label>
-      <select id="bi-${fsId}-status" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.8rem;font-family:Sarabun,sans-serif;">
+      <select id="bi-${fsId}-status" style="width:100%;padding:.6rem;border:1px solid ${DashColors.BORDER};border-radius:4px;box-sizing:border-box;margin-bottom:.8rem;font-family:Sarabun,sans-serif;">
         ${statusOpt(data.status, 'online', '🟢 เชื่อมต่อแล้ว')}
         ${statusOpt(data.status, 'maintenance', '🟡 กำลังบำรุงรักษา')}
         ${statusOpt(data.status, 'offline', '🔴 ไม่เชื่อมต่อ')}
@@ -248,14 +248,14 @@ async function renderBuildingInternetConfig() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1rem;">
         <div>
           <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">Download</label>
-          <input type="text" id="bi-${fsId}-download" value="${esc(data.downloadSpeed)}" placeholder="500 Mbps" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;">
+          <input type="text" id="bi-${fsId}-download" value="${esc(data.downloadSpeed)}" placeholder="500 Mbps" style="width:100%;padding:.6rem;border:1px solid ${DashColors.BORDER};border-radius:4px;box-sizing:border-box;">
         </div>
         <div>
           <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">Upload</label>
-          <input type="text" id="bi-${fsId}-upload" value="${esc(data.uploadSpeed)}" placeholder="500 Mbps" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;">
+          <input type="text" id="bi-${fsId}-upload" value="${esc(data.uploadSpeed)}" placeholder="500 Mbps" style="width:100%;padding:.6rem;border:1px solid ${DashColors.BORDER};border-radius:4px;box-sizing:border-box;">
         </div>
       </div>
-      <button data-action="saveBuildingInternetConfig" data-id="${fsId}" style="width:100%;padding:.65rem;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun,sans-serif;">💾 บันทึก ${label}</button>
+      <button data-action="saveBuildingInternetConfig" data-id="${fsId}" style="width:100%;padding:.65rem;background:${DashColors.GREEN_ACTIVE};color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun,sans-serif;">💾 บันทึก ${label}</button>
     </div>
   `;
   container.innerHTML = cardHtml('🏠 ห้องแถว', 'rooms', rr) + cardHtml('🏢 Nest', 'nest', nest);
@@ -595,7 +595,7 @@ function loadAndRenderCommunityDocs() {
     <div style="margin-bottom: 2rem;">
       <div style="font-weight: 700; font-size: 0.95rem; color: var(--green-dark); margin-bottom: 1rem; border-bottom: 2px solid var(--green-pale); padding-bottom: 0.5rem;">📑 ${category}</div>
       ${items.map(d => `
-        <div class="card" style="margin-bottom: 1rem; border-left: 4px solid #1976d2;">
+        <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${DashColors.BLUE_MED};">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div style="flex: 1;">
               <div style="font-weight: 700;">📄 ${d.title}</div>
@@ -860,7 +860,7 @@ function renderGamificationToggle(live) {
   if (!btn || !status) return;
   btn.dataset.state = live ? 'on' : 'off';
   btn.textContent = live ? '⏸ ปิด Gamification' : '🚀 เปิด Gamification';
-  btn.style.background = live ? '#c62828' : 'var(--green-dark)';
+  btn.style.background = live ? DashColors.RED_DEEP : 'var(--green-dark)';
   status.textContent = live
     ? '🟢 Live — ลูกบ้าน Nest เห็น gamification แล้ว'
     : '🔴 ปิดอยู่ (Pre-launch) — Coming Soon badges แสดงอยู่';
@@ -1040,7 +1040,7 @@ function loadRewardsAdmin() {
     renderRewardsAdminTable();
   }, err => {
     console.warn('rewards admin onSnapshot failed:', err);
-    document.getElementById('rewardsAdminTable').innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828;padding:20px;">Failed to load: ${_esc(err.message)}</td></tr>`;
+    document.getElementById('rewardsAdminTable').innerHTML = `<tr><td colspan="7" style="text-align:center;color:${DashColors.RED_DEEP};padding:20px;">Failed to load: ${_esc(err.message)}</td></tr>`;
   });
 }
 
@@ -1064,14 +1064,14 @@ function renderRewardsAdminTable() {
     const tdCost = document.createElement('td'); tdCost.textContent = Number(r.cost || 0).toLocaleString(); tr.appendChild(tdCost);
     const tdActive = document.createElement('td');
     tdActive.innerHTML = r.active === false
-      ? '<span style="color:#c62828;font-weight:600;">No</span>'
+      ? `<span style="color:${DashColors.RED_DEEP};font-weight:600;">No</span>`
       : '<span style="color:var(--green-dark);font-weight:600;">Yes</span>';
     tr.appendChild(tdActive);
     const tdQuota = document.createElement('td');
     tdQuota.className = 'u-text-sm u-color-muted';
     if (Number(r.monthlyQuota) > 0) {
       const quotaSpan = document.createElement('span');
-      quotaSpan.style.cssText = 'display:inline-block;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;border-radius:4px;padding:1px 6px;font-size:.78rem;font-weight:700;';
+      quotaSpan.style.cssText = `display:inline-block;background:${DashColors.ORANGE_BG};color:${DashColors.ORANGE_DEEP};border:1px solid #ffb74d;border-radius:4px;padding:1px 6px;font-size:.78rem;font-weight:700;`;
       quotaSpan.textContent = `🎯 ${r.monthlyQuota} ครั้ง/เดือน`;
       tdQuota.appendChild(quotaSpan);
     } else {

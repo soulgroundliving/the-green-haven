@@ -63,7 +63,7 @@ async function verifySlip(file){
   const validationErrors = validateSlipFileAdmin(file);
   if (validationErrors.length > 0) {
     const resultEl = document.getElementById('slipResult');
-    resultEl.innerHTML = `<div style="color: #d32f2f; padding: 1rem; background: #ffebee; border-radius: 6px;">${validationErrors.join('<br>')}</div>`;
+    resultEl.innerHTML = `<div style="color: ${DashColors.RED_TEXT}; padding: 1rem; background: ${DashColors.RED_BG}; border-radius: 6px;">${validationErrors.join('<br>')}</div>`;
     return;
   }
 
@@ -171,7 +171,7 @@ async function verifySlip(file){
     const _escBill = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
     resultEl.innerHTML = `<div class="slip-result-err">⚠️ เชื่อมต่อ Cloud Function ไม่ได้<br>
       <small>${_escBill(err.message || 'Network error')}</small><br>
-      <button data-action="skipSlipVerify" style="margin-top:6px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:.8rem;background:#fff;">ออกใบเสร็จโดยไม่ตรวจสลิป</button>
+      <button data-action="skipSlipVerify" style="margin-top:6px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:.8rem;background:${DashColors.WHITE};">ออกใบเสร็จโดยไม่ตรวจสลิป</button>
     </div>`;
   }
 }
