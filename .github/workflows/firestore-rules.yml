@@ -1,26 +1,32 @@
-# Firestore security rules unit tests.
+# Firebase security rules unit tests (Firestore + Storage).
 #
 # Why this exists: a single bad allow rule is a silent catastrophe — no
 # error in CI, no console warning, the rule just deploys and someone
 # exploits it. This workflow encodes the invariants we never want to
 # lose (anon tenant can't bump their gamification points, taxSummary is
-# CF-only, default deny works, etc.) and blocks PRs that violate them.
+# CF-only, default deny works, tenants can't read other rooms' vaccine
+# books, etc.) and blocks PRs that violate them.
 #
 # Trigger:
-#   - PRs that touch firestore.rules or the test file → fail-fast review gate
-#   - Pushes to main that touch the same files → catch direct pushes
+#   - PRs that touch firestore.rules / storage.rules or their test files
+#   - Pushes to main that touch the same files
 #   - Manual via Actions UI (workflow_dispatch)
 #
-# Cost: free on every GitHub plan. Run is ~90 seconds (emulator boot ~30s,
-# tests ~20s, the rest is Node / Java setup).
+# Cost: free on every GitHub plan. Run is ~2 minutes (emulator boot ~30s,
+# Firestore tests ~25s, Storage tests ~20s, Node / Java setup the rest).
+# Storage tests require BOTH emulators because storage.rules cross-reference
+# Firestore via firestore.get() (booking owner check, marketplace ownerUid,
+# checklist instance path-integrity gate, isLinkedTenant SoT fallback).
 
-name: Firestore Rules
+name: Firebase Rules
 
 on:
   pull_request:
     paths:
       - 'firestore.rules'
       - 'firestore.rules.test.js'
+      - 'storage.rules'
+      - 'storage.rules.test.js'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/firestore-rules.yml'
@@ -29,6 +35,8 @@ on:
     paths:
       - 'firestore.rules'
       - 'firestore.rules.test.js'
+      - 'storage.rules'
+      - 'storage.rules.test.js'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/firestore-rules.yml'
@@ -48,8 +56,8 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      # Firestore emulator JAR runs on the JVM. Ubuntu runners ship with
-      # OpenJDK already, but pin a known major version so a runner image
+      # Firestore + Storage emulators run on the JVM. Ubuntu runners ship
+      # with OpenJDK already, but pin a known major version so a runner image
       # bump can't surprise us. firebase-tools as of late-2025 requires
       # Java 21+ — pin Temurin 21 explicitly.
       - uses: actions/setup-java@v4
@@ -65,3 +73,9 @@ jobs:
 
       - name: Run Firestore rules tests
         run: firebase emulators:exec --only firestore --project=demo-test 'npm run test:rules'
+
+      # Storage tests need BOTH emulators (storage.rules calls firestore.get).
+      # Run them in a separate emulators:exec so a Firestore test failure
+      # doesn't mask a Storage test failure.
+      - name: Run Storage rules tests
+        run: firebase emulators:exec --only storage,firestore --project=demo-test 'npm run test:storage'
