@@ -24,7 +24,7 @@ jobs:
             exit 1
           fi
           # Only check closing </style> if file has opening <style>
-          if grep -q "<style" "$file" && ! grep -q "</style>" "$file"; then
+          if grep -qE "^\s*<style" "$file" && ! grep -q "</style>" "$file"; then
             echo "ERROR: $file missing closing </style>"
             exit 1
           fi
@@ -94,7 +94,7 @@ jobs:
         for file in "${files[@]}"; do
           if [ -f "$file" ]; then
             # Check for matching style tags
-            opening=$(grep -o "<style" "$file" | wc -l)
+            opening=$(grep -cE "^\s*<style" "$file" || echo 0)
             closing=$(grep -c "</style>" "$file" || echo 0)
             if [ "$opening" -ne "$closing" ]; then
               echo "ERROR: $file has $opening <style> but $closing </style>"
