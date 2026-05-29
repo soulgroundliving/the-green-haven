@@ -2362,6 +2362,11 @@
         .ta-preview-wrap  { padding: 1rem; }
         .ta-err-danger    { text-align: center; color: var(--danger); padding: 16px; }
         .ta-spinner-icon  { font-size: 22px; }
+        .u-anim-delay-2  { animation-delay: 0.2s; }
+        .u-anim-delay-3  { animation-delay: 0.3s; }
+        .u-anim-delay-4  { animation-delay: 0.4s; }
+        .u-anim-delay-6  { animation-delay: 0.6s; }
+        .u-color-999     { color: #999; }
         /* display:none → classList migration */
         .accordion-content      { display: none; }          /* default hidden; JS adds .is-open */
         .accordion-content.is-open { display: block; }      /* accordion open state */
@@ -2488,28 +2493,28 @@
                 aria-label="ไปหน้าชุมชน"
                 style="position:absolute;top:55%;left:65%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #E67E22;">ชุมชน</div>
-                <div class="map-icon-bounce" style="animation-delay: 0.2s;">🛒</div>
+                <div class="map-icon-bounce u-anim-delay-2" >🛒</div>
             </button>
 
             <button type="button" id="home-petpark-tile" data-action="showSubPage" data-page="pet-park-page"
                 aria-label="ไปหน้า Pet Park"
                 style="position:absolute;top:35%;left:60%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #9B59B6;">PET PARK</div>
-                <div class="map-icon-bounce" style="animation-delay: 0.4s;">🐾</div>
+                <div class="map-icon-bounce u-anim-delay-4" >🐾</div>
             </button>
 
             <button type="button" id="home-quest-tile" data-action="showSubPage" data-page="quest-page"
                 aria-label="ไปหน้า Quest Ecosystem"
                 style="position:absolute;top:25%;left:30%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #D4AF37;">QUEST</div>
-                <div class="map-icon-bounce" style="animation-delay: 0.3s;">🎮</div>
+                <div class="map-icon-bounce u-anim-delay-3" >🎮</div>
             </button>
 
             <button type="button" data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3"
                 aria-label="ไปหน้าชำระบิล"
                 style="position:absolute;top:70%;left:18%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #0EA5E9;">PAY BILL</div>
-                <div class="map-icon-bounce" style="animation-delay: 0.6s;">💳</div>
+                <div class="map-icon-bounce u-anim-delay-6" >💳</div>
             </button>
 
             <!-- Relink pin — only visible to community members in unlinked mode
@@ -2523,7 +2528,7 @@
                 aria-label="ขอเชื่อมห้องใหม่"
                 style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background:#2d8653;">ต่อสัญญาใหม่</div>
-                <div class="map-icon-bounce" style="animation-delay: 0.2s;">🔄</div>
+                <div class="map-icon-bounce u-anim-delay-2" >🔄</div>
             </button>
         </div>
     </div>
