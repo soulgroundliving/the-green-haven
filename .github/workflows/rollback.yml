@@ -1,0 +1,139 @@
+# Manual Cloud Functions rollback.
+#
+# Why: the 9-dim audit flagged "CF rollback is manual" (copy git SHA, checkout,
+# deploy by hand from local terminal). This workflow makes rollback a one-click
+# GitHub Actions dispatch — no local tooling needed.
+#
+# Usage:
+#   GitHub → Actions → "Rollback Cloud Functions" → Run workflow
+#   git_sha: the commit you want to roll back to (leave blank = re-deploy HEAD)
+#   confirm: type ROLLBACK (prevents accidental triggers)
+#
+# What it does:
+#   1. Checks out the specified SHA (or HEAD if omitted)
+#   2. Runs unit tests from that revision — if tests fail the rollback aborts
+#   3. Deploys CFs from that revision (same frozen-CF exclusion as forward deploy)
+#   4. Runs post-deploy smoke to confirm CFs respond
+#
+# Safety:
+#   - Requires explicit "ROLLBACK" confirmation text
+#   - Tests run before deploy — rolls back to a broken SHA is blocked
+#   - generateBillsOnMeterUpdate is excluded (frozen — cannot be rolled back either)
+#   - Only people with write access to the repo can trigger workflow_dispatch
+
+name: Rollback Cloud Functions
+
+on:
+  workflow_dispatch:
+    inputs:
+      git_sha:
+        description: 'Git SHA to roll back to (leave blank to re-deploy current HEAD)'
+        required: false
+        default: ''
+      confirm:
+        description: 'Type ROLLBACK to confirm (prevents accidental triggers)'
+        required: true
+        default: ''
+
+jobs:
+  rollback:
+    name: rollback-cf
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Hard guard — workflow silently no-ops if confirm text is wrong
+    if: ${{ github.event.inputs.confirm == 'ROLLBACK' }}
+
+    env:
+      SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN }}
+      SLIPOK_API_URL: ${{ secrets.SLIPOK_API_URL }}
+      TARGET_SHA: ${{ github.event.inputs.git_sha }}
+
+    steps:
+      - name: Validate inputs
+        run: |
+          if [ -z "$SA_KEY" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN secret missing"
+            exit 1
+          fi
+          if [ -n "$TARGET_SHA" ]; then
+            echo "Rolling back to SHA: ${TARGET_SHA}"
+          else
+            echo "Re-deploying HEAD (no SHA specified)"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.git_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Show rollback target
+        run: |
+          echo "Rollback target commit:"
+          git log -1 --format='%H %s (%ai)' HEAD
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install function dependencies
+        working-directory: functions
+        run: npm ci --no-audit --no-fund
+
+      # Run tests from the rollback SHA. Abort if tests fail — do not roll
+      # back to a broken revision. This is the key safety gate.
+      - name: Run unit tests (rollback safety gate)
+        working-directory: functions
+        run: npm test
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN }}
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools@15.13.0
+
+      - name: Write functions/.env
+        run: |
+          if [ -z "$SLIPOK_API_URL" ]; then
+            echo "::error::SLIPOK_API_URL secret missing"
+            exit 1
+          fi
+          echo "SLIPOK_API_URL=$SLIPOK_API_URL" > functions/.env
+
+      - name: Deploy (rollback)
+        run: |
+          FROZEN="generateBillsOnMeterUpdate"
+          CF_LIST=$(grep -oP '^exports\.\K\w+' functions/index.js \
+            | grep -v "^${FROZEN}$" \
+            | sed 's/^/functions:/' \
+            | paste -sd,)
+          CF_COUNT=$(echo "${CF_LIST}" | tr ',' '\n' | wc -l)
+          echo "Rolling back ${CF_COUNT} CFs to $(git rev-parse --short HEAD)"
+          firebase deploy \
+            --only "${CF_LIST}" \
+            --project the-green-haven \
+            --force \
+            --non-interactive
+
+      - name: Post-rollback smoke check
+        run: |
+          CF_BASE="https://asia-southeast1-the-green-haven.cloudfunctions.net"
+          for CF in liffSignIn verifySlip; do
+            for ATTEMPT in 1 2 3; do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 -X GET "${CF_BASE}/${CF}")
+              if [ "$STATUS" != "000" ] && [ "${STATUS:0:1}" != "5" ]; then
+                echo "✅ ${CF} → HTTP ${STATUS} (attempt ${ATTEMPT})"
+                break
+              fi
+              if [ "$ATTEMPT" = "3" ]; then
+                echo "::error::Post-rollback smoke FAILED: ${CF} returned ${STATUS}"
+                exit 1
+              fi
+              sleep 15
+            done
+          done
+          echo ""
+          echo "Rollback complete. Deployed SHA: $(git rev-parse HEAD)"

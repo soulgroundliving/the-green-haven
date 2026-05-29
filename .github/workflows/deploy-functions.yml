@@ -148,29 +148,66 @@ jobs:
         # google-github-actions/auth writes the SA key path to
         # GOOGLE_APPLICATION_CREDENTIALS — firebase-tools picks it up
         # automatically when no FIREBASE_TOKEN is set.
+        #
+        # generateBillsOnMeterUpdate is a frozen Gen1 Firestore trigger on SE3
+        # (Eventarc does not support asia-southeast3). It CANNOT be updated via
+        # CI — any runtime or package.json change causes a fatal deploy error.
+        # We exclude it from every CI deploy; it continues running on GCP at its
+        # current Node version. See: CLAUDE.md §7-NN + generate_bills_cf_frozen.md
         run: |
+          FROZEN="generateBillsOnMeterUpdate"
+          CF_LIST=$(grep -oP '^exports\.\K\w+' functions/index.js \
+            | grep -v "^${FROZEN}$" \
+            | sed 's/^/functions:/' \
+            | paste -sd,)
+          CF_COUNT=$(echo "${CF_LIST}" | tr ',' '\n' | wc -l)
+          echo "Deploying ${CF_COUNT} CFs (${FROZEN} frozen/excluded)"
           firebase deploy \
-            --only functions \
+            --only "${CF_LIST}" \
             --project the-green-haven \
             --force \
             --non-interactive
 
       - name: Post-deploy smoke check
-        # Verify key onRequest CFs respond after deploy. A 4xx is fine — the CF
-        # is running but rejected the empty GET body. Fail only on 000 (unreachable)
-        # or 5xx (server error). Retries 3× with 15s gaps for cold-start.
+        # Verify key CF endpoints and Vercel pages respond after deploy.
+        # For CFs: a 4xx is fine — CF is running but rejected the empty GET.
+        # Fail only on 000 (unreachable) or 5xx (server error).
+        # For Vercel: expect 200 on static pages.
+        # Retries 3× with 15s gaps for CF cold-start.
         run: |
           CF_BASE="https://asia-southeast1-the-green-haven.cloudfunctions.net"
-          for ATTEMPT in 1 2 3; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 -X GET "${CF_BASE}/liffSignIn")
-            if [ "$STATUS" != "000" ] && [ "${STATUS:0:1}" != "5" ]; then
-              echo "✅ Post-deploy smoke: liffSignIn responded HTTP $STATUS (attempt $ATTEMPT)"
-              break
-            fi
-            if [ "$ATTEMPT" = "3" ]; then
-              echo "::error::Post-deploy smoke FAILED: liffSignIn returned $STATUS after 3 attempts"
-              exit 1
-            fi
-            echo "⏳ Attempt $ATTEMPT: status $STATUS — retrying in 15s..."
-            sleep 15
+          VERCEL_BASE="https://the-green-haven.vercel.app"
+          ALL_OK=true
+
+          # --- CF endpoints ---
+          for CF in liffSignIn verifySlip; do
+            for ATTEMPT in 1 2 3; do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 -X GET "${CF_BASE}/${CF}")
+              if [ "$STATUS" != "000" ] && [ "${STATUS:0:1}" != "5" ]; then
+                echo "✅ CF smoke: ${CF} → HTTP ${STATUS} (attempt ${ATTEMPT})"
+                break
+              fi
+              if [ "$ATTEMPT" = "3" ]; then
+                echo "::error::CF smoke FAILED: ${CF} returned ${STATUS} after 3 attempts"
+                ALL_OK=false
+              else
+                echo "⏳ ${CF} attempt ${ATTEMPT}: HTTP ${STATUS} — retrying in 15s..."
+                sleep 15
+              fi
+            done
           done
+
+          # --- Vercel pages (no retry needed — CDN is synchronous) ---
+          for PAGE in "" "login.html" "api/config"; do
+            URL="${VERCEL_BASE}/${PAGE}"
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "${URL}")
+            if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "204" ]; then
+              echo "✅ Vercel smoke: /${PAGE} → HTTP ${STATUS}"
+            else
+              echo "::warning::Vercel smoke: /${PAGE} returned HTTP ${STATUS}"
+            fi
+          done
+
+          if [ "${ALL_OK}" = "false" ]; then
+            exit 1
+          fi
