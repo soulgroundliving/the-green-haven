@@ -164,6 +164,11 @@ const MIGRATIONS = [
   ['style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; font-family: inherit;"', 'ta-input-lg-plain'],
   ['style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; background: white; font-family: inherit;"', 'ta-input-lg-white'],
   ['style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; border:2px solid #ddd; color:#6b7280; background:#f9fafb; cursor:pointer;"', 'ta-tab-alt'],
+  // ── Pass 5 (final clean-up) ───────────────────────────────────────────────
+  ['style="animation-delay: 0.2s;"', 'u-anim-delay-2'],
+  ['style="animation-delay: 0.3s;"', 'u-anim-delay-3'],
+  ['style="animation-delay: 0.4s;"', 'u-anim-delay-4'],
+  ['style="animation-delay: 0.6s;"', 'u-anim-delay-6'],
 ];
 
 function esc(s) {
