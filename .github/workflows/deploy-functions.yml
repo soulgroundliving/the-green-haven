@@ -75,6 +75,9 @@ jobs:
       # CFs read SLIPOK_API_URL at deploy time. Locally it lives in
       # functions/.env (gitignored). For CI we write it from a GitHub secret.
       SLIPOK_API_URL: ${{ secrets.SLIPOK_API_URL }}
+      # Opt actions/checkout@v4 + google-github-actions/auth@v2 into Node.js 24
+      # runtime ahead of the forced migration on 2026-06-02.
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Verify required secret is configured
@@ -102,7 +105,7 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: 'npm'
