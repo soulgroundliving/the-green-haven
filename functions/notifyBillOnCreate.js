@@ -33,6 +33,7 @@ const rtdb = admin.database();
 const firestore = admin.firestore();
 
 const { buildBillFlex } = require('./_billFlex');
+const { lookupApprovedRoomUsers, pushAndRetry } = require('./_notifyHelper');
 
 exports.notifyBillOnCreate = functions.region('asia-southeast1')
   .runWith({ secrets: ['LINE_CHANNEL_ACCESS_TOKEN'] })
@@ -74,59 +75,28 @@ exports.notifyBillOnCreate = functions.region('asia-southeast1')
       return null;
     }
 
-    let usersSnap;
-    try {
-      usersSnap = await firestore.collection('liffUsers')
-        .where('building', '==', building)
-        .where('room', '==', String(roomId))
-        .where('status', '==', 'approved')
-        .get();
-    } catch (e) {
-      console.error(`❌ liffUsers query failed for ${building}/${roomId}:`, e.message);
+    const { docs: userDocs, error: lookupErr } = await lookupApprovedRoomUsers(firestore, building, roomId);
+    if (lookupErr) {
+      console.error(`❌ liffUsers query failed for ${building}/${roomId}:`, lookupErr);
       return null;
     }
-
-    if (usersSnap.empty) {
-      return null;
-    }
+    if (!userDocs.length) return null;
 
     const tenantSnap = await firestore.collection('tenants').doc(building).collection('list').doc(String(roomId)).get();
     const tenantName = tenantSnap.exists ? (tenantSnap.data()?.name || '') : '';
 
     const flexMsg = buildBillFlex(bill, { tenantName });
-    const { enqueueLineRetry } = require('./_lineRetry');
-    const results = await Promise.allSettled(usersSnap.docs.map(doc => {
-      const lineUserId = doc.id;
-      return fetch('https://api.line.me/v2/bot/message/push', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ to: lineUserId, messages: [flexMsg] })
-      }).then(r => r.ok
-        ? Promise.resolve(lineUserId)
-        : r.text().then(t => Promise.reject({ lineUserId, error: new Error(`LINE ${r.status}: ${t}`) }))
-      );
-    }));
-
-    const pushed = results.filter(r => r.status === 'fulfilled').length;
-    const failures = results.filter(r => r.status === 'rejected').map(r => r.reason);
-    for (const f of failures) {
-      const userId = f?.lineUserId || 'unknown';
-      const errMsg = f?.error?.message || String(f);
-      await enqueueLineRetry({
-        lineUserId: userId,
-        message: flexMsg,
-        context: { source: 'notifyBillOnCreate', building, roomId, billId },
-        idempotencyKey: `bill-${building}-${roomId}-${billId}-${userId}`,
-        error: errMsg
-      });
-    }
-    if (failures.length) console.warn(`⚠️ notify failures for ${building}/${roomId} (queued for retry):`, failures.length);
+    const { pushed, failed } = await pushAndRetry({
+      docs: userDocs,
+      message: flexMsg,
+      token,
+      source: 'notifyBillOnCreate',
+      context: { building, roomId, billId },
+      idempotencyKeyFn: (userId) => `bill-${building}-${roomId}-${billId}-${userId}`,
+    });
 
     if (pushed > 0) {
       await rtdb.ref(`bills/${building}/${roomId}/${billId}/billNotifiedAt`).set(new Date().toISOString());
     }
-    return { pushed, failed: failures.length };
+    return { pushed, failed };
   });

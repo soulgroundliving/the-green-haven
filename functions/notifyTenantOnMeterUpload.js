@@ -53,6 +53,7 @@ if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
 const { loadRoomConfig, computeBill, buildBillFlex } = require('./_billFlex');
+const { lookupApprovedRoomUsers, pushAndRetry } = require('./_notifyHelper');
 
 const LINE_TOKEN = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
 
@@ -103,18 +104,10 @@ async function notifyOne({ docId, force = false }) {
   const tenantSnap = await firestore.collection('tenants').doc(building).collection('list').doc(String(roomId)).get();
   const tenantName = tenantSnap.exists ? (tenantSnap.data()?.name || '') : '';
 
-  let usersSnap;
-  try {
-    usersSnap = await firestore.collection('liffUsers')
-      .where('building', '==', building)
-      .where('room',     '==', String(roomId))
-      .where('status',   '==', 'approved')
-      .get();
-  } catch (e) {
-    return { docId, error: `liffUsers_query_failed: ${e.message}` };
-  }
+  const { docs: userDocs, error: lookupErr } = await lookupApprovedRoomUsers(firestore, building, roomId);
+  if (lookupErr) return { docId, error: lookupErr };
 
-  if (usersSnap.empty) {
+  if (!userDocs.length) {
     await docRef.update({
       notifiedAt: admin.firestore.FieldValue.serverTimestamp(),
       notifiedSkipReason: 'no_approved_tenant',
@@ -124,33 +117,14 @@ async function notifyOne({ docId, force = false }) {
   }
 
   const flexMsg = buildBillFlex(bill, { tenantName });
-  const { enqueueLineRetry } = require('./_lineRetry');
-  const results = await Promise.allSettled(usersSnap.docs.map(udoc => {
-    const lineUserId = udoc.id;
-    return fetch('https://api.line.me/v2/bot/message/push', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ to: lineUserId, messages: [flexMsg] })
-    }).then(r => r.ok
-      ? Promise.resolve(lineUserId)
-      : r.text().then(t => Promise.reject({ lineUserId, error: new Error(`LINE ${r.status}: ${t}`) }))
-    );
-  }));
-
-  const pushed   = results.filter(r => r.status === 'fulfilled').length;
-  const failures = results.filter(r => r.status === 'rejected').map(r => r.reason);
-
-  for (const f of failures) {
-    const userId = f?.lineUserId || 'unknown';
-    const errMsg = f?.error?.message || String(f);
-    await enqueueLineRetry({
-      lineUserId: userId,
-      message: flexMsg,
-      context: { source: 'notifyTenantOnMeterUpload', building, roomId, docId, year, month },
-      idempotencyKey: `meter-${building}-${roomId}-${year}-${month}-${userId}`,
-      error: errMsg
-    });
-  }
+  const { pushed, failed: failedCount } = await pushAndRetry({
+    docs: userDocs,
+    message: flexMsg,
+    token,
+    source: 'notifyTenantOnMeterUpload',
+    context: { building, roomId, docId, year, month },
+    idempotencyKeyFn: (userId) => `meter-${building}-${roomId}-${year}-${month}-${userId}`,
+  });
 
   if (pushed > 0) {
     await docRef.update({
@@ -160,7 +134,7 @@ async function notifyOne({ docId, force = false }) {
     });
   }
 
-  return { docId, pushed, failed: failures.length };
+  return { docId, pushed, failed: failedCount };
 }
 
 exports.notifyTenantOnMeterUpload = onCall(
