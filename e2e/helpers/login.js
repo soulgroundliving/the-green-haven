@@ -24,9 +24,9 @@ async function loginAsAdmin(page) {
   await page.fill('#loginPassword', password);
   await page.click('#loginBtn');
 
-  // Wait for the dashboard redirect — Firebase Auth rejects localhost
-  // so the production URL is the only valid redirect target.
-  await page.waitForURL('**/dashboard.html', { timeout: 25_000 });
+  // Wait for the dashboard redirect — Vercel serves /dashboard (no .html extension)
+  // but also accepts /dashboard.html, so match both.
+  await page.waitForURL(/\/dashboard(\.html)?([?#]|$)/, { timeout: 25_000 });
   // Sidebar presence confirms the dashboard rendered successfully
   await expect(
     page.locator('button[data-action="showPage"][data-page="bill"]')
