@@ -8306,56 +8306,8 @@
         // Implementation extracted to shared/tenant-subscriptions.js.
 
         // ===== PAYMENT CONFIG SUBSCRIBE (PromptPay # + company name) =====
-        // Firestore: buildings/{rooms|nest} doc fields { promptPayId, companyName,
-        // ownerName }. Admin sets this in dashboard.html → Buildings → ✏️ แก้ไข.
-        // All buildings/* docs are canonical-only as of 2026-05-18 migration.
-        // localStorage mirror keeps legacy callers (buildPromptPayPayload,
-        // getOwnerName) working.
-        let _paymentCfgUnsub = null;
-        function _subscribePaymentConfig() {
-            if (_paymentCfgUnsub) return;
-            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-            // Wait until building is known — same pattern as _subscribeBroadcasts.
-            // Without this, Nest tenants subscribe to buildings/rooms in the anonymous
-            // phase and the idempotency guard prevents a retry when claims arrive.
-            if (!_taBuilding) return;
-            try {
-                const fs = window.firebase.firestoreFunctions;
-                const db = window.firebase.firestore();
-                const fsBuilding = window.CONFIG.getFirestoreBuilding(_taBuilding);
-                const ref = fs.doc(db, 'buildings', fsBuilding);
-                _paymentCfgUnsub = fs.onSnapshot(ref, snap => {
-                    if (!snap.exists()) return;
-                    const data = snap.data() || {};
-                    const pp = data.promptPayId;
-                    const cn = data.companyName || data.payment?.companyName;
-                    const on = data.ownerName   || data.payment?.ownerName;
-                    if (pp) try { localStorage.setItem('promptpay', String(pp)); } catch(e) {}
-                    if (cn) try { localStorage.setItem('company_name', String(cn)); } catch(e) {}
-                    if (on) try { localStorage.setItem('owner_name', String(on)); } catch(e) {}
-                    // Update visible footer label without waiting for re-render
-                    const ownerEl = document.getElementById('receipt-owner-name');
-                    if (ownerEl && (cn || on)) ownerEl.textContent = cn || on;
-                    // Re-render visible payment screens so changes appear without reload
-                    if (document.getElementById('pay-qr-canvas') && _taCurrentBill) {
-                        if (typeof renderPaymentInvoice === 'function') renderPaymentInvoice(_taCurrentBill);
-                    }
-                    // Render building-info page from same doc
-                    const info = data.info || {};
-                    const setBld = (id, v) => { const el = document.getElementById(id); if (el && v != null && v !== '') el.textContent = v; };
-                    setBld('bld-name', info.name);
-                    setBld('bld-tagline', info.tagline);
-                    setBld('bld-units', info.units ? `${info.units} ห้อง` : null);
-                    setBld('bld-petzone', info.petZone);
-                    setBld('bld-elec-status', info.electricStatus);
-                    setBld('bld-water-status', info.waterStatus);
-                }, err => {
-                    console.error('[paymentConfig] subscribe failed:', err?.message);
-                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') _paymentCfgUnsub = null;
-                });
-            } catch (e) { console.warn('payment config subscribe init failed:', e.message); }
-        }
-        _onLiffClaimsReady(_subscribePaymentConfig);
+        // Implementation extracted to shared/tenant-subscriptions.js.
+        // Reads window._taCurrentBill (mirrored at each write site above).
 
         // ===== REWARDS COLLECTION SUBSCRIBE =====
         // Implementation extracted to shared/tenant-subscriptions.js.
@@ -8770,6 +8722,7 @@
         // so the binding is fully hoisted and callable from earlier-defined functions.
         function _isBillPaid(b) { return window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid'); }
         let _taBills = [], _taPayments = [], _taCurrentBill = null;
+        window._taCurrentBill = null; // mirror for tenant-subscriptions.js (payment config)
         let _slipBase64 = null;
         // Default true so checkDailyLogin() is always suppressed until applyBuildingVisibility()
         // confirms a Nest tenant. Prevents race where detectRoomBuilding() returns false but
@@ -9268,7 +9221,7 @@
             // but no status field, and is case-insensitive on the status string.
             const _isPaid = _isBillPaid;
             const latest = _taBills[0];
-            _taCurrentBill = latest;
+            _taCurrentBill = latest; window._taCurrentBill = _taCurrentBill;
             const amtEl = document.getElementById('current-bill-amount');
             if (amtEl && latest) {
                 const total = Number(latest.totalAmount || latest.total || latest.totalCharge || latest.rentAmount) || 0;
@@ -10575,10 +10528,11 @@
             _payIsReceipt = isReceipt;
             if (billId) {
                 const found = _taBills.find(b => (b.id||b.billId) === billId);
-                if (found) _taCurrentBill = found;
+                if (found) { _taCurrentBill = found; window._taCurrentBill = _taCurrentBill; }
             } else if (!_taCurrentBill) {
                 const _isPaid = _isBillPaid;
                 _taCurrentBill = _taBills.find(b => !_isPaid(b)) || _taBills[0] || null;
+                window._taCurrentBill = _taCurrentBill;
             }
             // Auto-redirect to receipt if bill already paid
             if (!isReceipt && _taCurrentBill?.status === 'paid') {
