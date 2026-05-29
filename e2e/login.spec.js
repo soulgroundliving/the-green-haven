@@ -31,9 +31,9 @@ test.describe('Login page', () => {
     await page.fill('#loginPassword', 'wrong-password-123');
     await page.click('#loginBtn');
 
-    // Must NOT redirect to dashboard
+    // Must NOT redirect to dashboard (Vercel serves /dashboard, not /dashboard.html)
     await page.waitForTimeout(5_000);
-    await expect(page).not.toHaveURL(/dashboard\.html/);
+    await expect(page).not.toHaveURL(/\/dashboard/);
     // Login button must still be present (didn't navigate away)
     await expect(page.locator('#loginBtn')).toBeVisible();
   });
@@ -52,9 +52,9 @@ test.describe('Login page', () => {
     await page.fill('#loginPassword', password);
     await page.click('#loginBtn');
 
-    // Redirect to dashboard — Firebase Auth + custom-claim check must pass
-    await page.waitForURL('**/dashboard.html', { timeout: 25_000 });
-    await expect(page).toHaveURL(/dashboard\.html/);
+    // Redirect to dashboard — Vercel serves /dashboard (no .html extension)
+    await page.waitForURL(/\/dashboard(\.html)?([?#]|$)/, { timeout: 25_000 });
+    await expect(page).toHaveURL(/\/dashboard/);
 
     // Sidebar is the canonical "dashboard rendered" indicator
     const billNav = page.locator('button[data-action="showPage"][data-page="bill"]');
