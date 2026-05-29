@@ -2234,6 +2234,70 @@
         @media (prefers-reduced-motion: reduce) {
             .faq-details summary::after { transition: none; }
         }
+        /* ── Phase 4: inline-style → CSS class migration ─────────────────────── */
+        /* Color utilities */
+        .u-color-green   { color: var(--primary-green); }
+        .u-color-sub     { color: #888; }
+        .u-color-lighter { color: #aaa; }
+        .u-color-red     { color: red; }
+        .u-color-gold    { color: var(--accent-gold, #D4AF37); }
+        .u-bg-base       { background: var(--bg-color); }
+        /* Layout utilities */
+        .u-flex          { display: flex; }
+        .u-flex-1        { flex: 1; }
+        .u-flex-2        { flex: 2; }
+        .u-pos-rel       { position: relative; }
+        /* Spacing utilities */
+        .u-m0            { margin: 0; }
+        .u-mb-8          { margin-bottom: 8px; }
+        .u-mb-15         { margin-bottom: 15px; }
+        .u-mb-20         { margin-bottom: 20px; }
+        .u-mb-50         { margin-bottom: 50px; }
+        .u-mt-8          { margin-top: 8px; }
+        .u-mt-10         { margin-top: 10px; }
+        .u-mt-15         { margin-top: 15px; }
+        .u-mt-16         { margin-top: 16px; }
+        .u-pb-nav        { padding-bottom: 80px; }
+        /* Typography utilities */
+        .u-bold          { font-weight: 700; }
+        .u-fs-md         { font-size: var(--fs-md); }
+        .u-fs-lg         { font-size: var(--fs-lg); }
+        .u-fs-3rem       { font-size: 3rem; }
+        /* tenant_app.html component classes */
+        .ta-icon-circle    { width: 44px; height: 44px; background: var(--soft-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .ta-icon-circle-sm { width: 36px; height: 36px; background: var(--soft-green); border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+        .ta-page-top     { display: flex; align-items: center; gap: 15px; padding-bottom: 25px; }
+        .ta-card-title   { margin: 0; font-size: var(--fs-lg); }
+        .ta-row-split    { display: flex; justify-content: space-between; padding: 4px 0; }
+        .ta-row-split-3  { display: flex; justify-content: space-between; padding: 3px 0; }
+        .ta-row-split-5  { display: flex; justify-content: space-between; padding: 5px 0; }
+        .ta-row-split-mb { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .ta-flex-ac-12   { display: flex; align-items: center; gap: 12px; }
+        .ta-sk-img       { height: 96px; border-radius: 14px; }
+        .ta-icon-box     { padding: 10px; background: var(--soft-green); border-radius: 10px; text-align: center; }
+        .ta-sub-label    { display: block; color: #888; font-weight: 400; font-size: var(--fs-xs); margin-top: 2px; }
+        .ta-field-label  { font-weight: 700; margin-bottom: 0.3rem; color: var(--text-dark); font-size: var(--fs-md); display: block; }
+        .ta-md-600       { font-size: var(--fs-md); font-weight: 600; }
+        .ta-md-600-sub   { font-size: var(--fs-md); font-weight: 600; color: #555; }
+        .ta-sub-text     { font-size: var(--fs-sm); color: #666; }
+        .ta-stat-val     { font-size: 1.8rem; margin-bottom: 4px; }
+        .ta-muted-6      { margin: 6px 0; color: var(--text-muted); }
+        .ta-sub-desc     { color: var(--text-muted); margin: 0 0 8px; font-size: var(--fs-sm); }
+        .ta-lighter-sm   { color: #aaa; font-size: var(--fs-sm); }
+        .ta-stat-label   { font-weight: 700; font-size: var(--fs-md); margin: 0 0 4px; }
+        .ta-mb-0-8       { margin: 0 0 8px; }
+        .ta-my-10        { margin: 10px 0; }
+        /* second-pass patterns (2–3× each) */
+        .ta-flex-gap-8   { display: flex; gap: 8px; }
+        .ta-flex-ac-6    { display: flex; align-items: center; gap: 6px; }
+        .ta-grid-2col    { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .u-text-right    { text-align: right; }
+        .u-fs-1-5rem     { font-size: 1.5rem; }
+        .ta-block-bold   { display: block; font-weight: 700; margin-bottom: 4px; }
+        .ta-note-sm      { display: block; margin-top: 6px; padding: 0 4px; font-size: var(--fs-sm); color: var(--text-muted); }
+        .ta-color-sm     { color: #666; font-size: var(--fs-sm); }
+        .ta-icon-narrow  { width: 25px; color: var(--primary-green); }
+        .ta-text-ctr-muted { text-align: center; color: #9ca3af; font-size: var(--fs-md); padding: 20px; }
     </style>
 </head>
 
@@ -2255,7 +2319,7 @@
     </div>
     <!-- APP INIT SPLASH: covers screen while LIFF auth resolves so world-map never flashes -->
     <div id="app-loading-splash" style="display:flex;position:fixed;inset:0;background:#f0fdf4;z-index:999999;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
-        <div style="font-size:3rem;">🌿</div>
+        <div class="u-fs-3rem">🌿</div>
         <div style="font-weight:700;font-size:1.1rem;color:var(--primary-dark);">กำลังโหลด...</div>
     </div>
 
@@ -2404,7 +2468,7 @@
                     border-radius:0; padding:0; display:flex; flex-direction:column; overflow:hidden;">
             <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px;
                         border-bottom:1px solid var(--border); background:#fff;">
-                <strong id="broadcasts-panel-title" style="font-size:var(--fs-lg);">📣 ประกาศ</strong>
+                <strong id="broadcasts-panel-title" class="u-fs-lg">📣 ประกาศ</strong>
                 <button type="button" data-action="closeBroadcastsPanel"
                     aria-label="ปิด"
                     style="border:none; background:transparent; font-size:1.4rem; cursor:pointer; padding:4px 10px;">✕</button>
@@ -2417,7 +2481,7 @@
     <div id="quiz-modal" role="dialog" aria-modal="true" aria-labelledby="quiz-title" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1500; align-items:center; justify-content:center; padding:20px;">
         <div style="background:#fff; border-radius:24px; max-width:420px; width:100%; padding:24px; box-shadow:var(--shadow);">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-                <strong id="quiz-title" style="font-size:var(--fs-lg);">Contract Quiz</strong>
+                <strong id="quiz-title" class="u-fs-lg">Contract Quiz</strong>
                 <div id="quiz-progress" style="font-size:var(--fs-sm); color:var(--text-muted);">1/3</div>
             </div>
             <div id="quiz-question" style="font-size:var(--fs-md); font-weight:600; margin-bottom:14px;"></div>
@@ -2425,7 +2489,7 @@
             <div id="quiz-result" style="display:none; text-align:center; padding:12px 0;"></div>
             <div style="display:flex; gap:10px;">
                 <button id="quiz-cancel-btn" data-action="closeContractQuiz" style="flex:1; padding:12px; border-radius:12px; border:1px solid var(--border); background:#fff; font-family:inherit; cursor:pointer;">ยกเลิก</button>
-                <button id="quiz-submit-btn" data-action="submitContractQuiz" disabled class="btn-main" style="flex:2;">ส่งคำตอบ</button>
+                <button id="quiz-submit-btn" data-action="submitContractQuiz" disabled class="btn-main u-flex-2" >ส่งคำตอบ</button>
             </div>
         </div>
     </div>
@@ -2474,29 +2538,29 @@
                     <div id="scm-title" style="font-size:var(--fs-lg); font-weight:800; color:var(--primary-green); margin-bottom:4px;">
                         Standard Clean เดือนนี้ฟรี!
                     </div>
-                    <div style="color:#666; font-size:var(--fs-sm);">
+                    <div class="ta-color-sm">
                         อาคารกำลังเก็บคำขอ แจ้งเวลาที่สะดวกได้เลย
                     </div>
                 </div>
                 <div style="background:var(--soft-green); border-radius:14px; padding:14px; font-size:var(--fs-sm); display:flex; flex-direction:column; gap:10px;">
                     <div>
-                        <label style="display:block; font-weight:700; margin-bottom:4px;">📅 วันที่ต้องการ</label>
+                        <label class="ta-block-bold">📅 วันที่ต้องการ</label>
                         <input type="date" id="scm-date" data-thai-date style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd; font-family:inherit; box-sizing:border-box;">
                     </div>
                     <div>
-                        <label style="display:block; font-weight:700; margin-bottom:4px;">⏰ ช่วงเวลา</label>
+                        <label class="ta-block-bold">⏰ ช่วงเวลา</label>
                         <select id="scm-time" style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd; font-family:inherit; background:white; box-sizing:border-box;">
                             <option>09:00 - 12:00 น.</option>
                             <option>13:00 - 16:00 น.</option>
                         </select>
                     </div>
                     <div>
-                        <label style="display:block; font-weight:700; margin-bottom:4px;">📝 หมายเหตุ (ไม่บังคับ)</label>
+                        <label class="ta-block-bold">📝 หมายเหตุ (ไม่บังคับ)</label>
                         <input type="text" id="scm-note" placeholder="เช่น มีสัตว์เลี้ยง เน้นระเบียง..."
                             style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd; font-family:inherit; box-sizing:border-box;">
                     </div>
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="ta-grid-2col">
                     <button data-action="dismissStandardCleanModal"
                         style="padding:13px; border-radius:12px; border:1px solid #ddd; background:white; color:#666; font-family:inherit; font-weight:700; cursor:pointer;">ไว้คราวหลัง</button>
                     <button id="scm-book-btn" data-action="bookStandardCleanFromModal"
@@ -2518,7 +2582,7 @@
                     <div id="cpm-title" style="font-size:var(--fs-lg); font-weight:800; color:var(--primary-green); margin-bottom:4px;">
                         🧼 ชำระค่า Deep Cleaning
                     </div>
-                    <div style="color:#666; font-size:var(--fs-sm);">
+                    <div class="ta-color-sm">
                         โอน ฿500 ก่อน ระบบจะบันทึกคำขอพร้อมสลิป
                     </div>
                 </div>
@@ -2541,16 +2605,16 @@
                     style="border:2px dashed #ccc; border-radius:14px; padding:18px; text-align:center; cursor:pointer;">
                     <i class="fas fa-cloud-upload-alt" style="font-size:var(--fs-lg); color:var(--primary-green);"></i>
                     <p style="margin:6px 0 2px; font-size:var(--fs-md); color:#666;">แตะเพื่ออัปโหลดสลิป</p>
-                    <small style="color:#aaa;">JPG / PNG / WEBP ไม่เกิน 10MB</small>
+                    <small class="u-color-lighter">JPG / PNG / WEBP ไม่เกิน 10MB</small>
                 </div>
                 <div id="cpm-slip-preview" style="display:none; text-align:center;">
                     <img id="cpm-slip-img" src="" alt="slip preview" style="max-width:100%; max-height:220px; border-radius:14px;">
                 </div>
-                <input type="file" id="cpm-slip-input" accept="image/*" style="display:none;" data-action-change="handleCleaningSlipUpload">
+                <input type="file" id="cpm-slip-input" accept="image/*" class="u-hidden" data-action-change="handleCleaningSlipUpload">
                 <!-- Status line (shown only when active) -->
                 <div id="cpm-status" style="display:none; padding:10px; border-radius:10px; font-size:var(--fs-sm); text-align:center;"></div>
                 <!-- Actions: equal width for symmetry -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="ta-grid-2col">
                     <button data-action="closeCleaningPaymentModal"
                         style="padding:13px; border-radius:12px; border:1px solid #ddd; background:white; color:#666; font-family:inherit; font-weight:700; cursor:pointer;">ยกเลิก</button>
                     <button id="cpm-confirm-btn" data-action="confirmCleaningPayment" disabled
@@ -2563,7 +2627,7 @@
     </div>
 
     <div id="home" class="page">
-        <div class="app-bar" style="position:relative;">
+        <div class="app-bar u-pos-rel" >
             <button type="button" data-action="showSubPage" data-page="world-map-page" aria-label="กลับไปหน้าแผนที่"
                 style="position:absolute; left:16px; top:24px; width:36px; height:36px; background:transparent; color:var(--primary-green); border:1px solid var(--border); border-radius:50%; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; z-index:2;">
                 <i class="fas fa-map" aria-hidden="true"></i>
@@ -2608,15 +2672,15 @@
             </div>
             <hr style="border:0; border-top:1px solid rgba(0,0,0,0.12); margin:12px 0 10px;">
             <div style="display:flex; justify-content:space-around; align-items:center; font-size:.95rem; color:#1F2937; gap:10px;">
-                <span style="display:flex; align-items:center; gap:6px;">
+                <span class="ta-flex-ac-6">
                     <span id="weather-emoji" style="font-size:1.25rem;">🌤️</span>
                     <strong id="temp-display">—°</strong>
                 </span>
-                <span style="display:flex; align-items:center; gap:6px;">
+                <span class="ta-flex-ac-6">
                     <i class="fas fa-wind" style="color:#374151;"></i>
                     <strong id="wind-display">—</strong> km/h
                 </span>
-                <span style="display:flex; align-items:center; gap:6px;">
+                <span class="ta-flex-ac-6">
                     <i class="fas fa-tint" style="color:#3B82F6;"></i>
                     <strong id="humidity-display">—</strong>%
                 </span>
@@ -2657,11 +2721,11 @@
     </div>
 
     <!-- Wellness Article Reader Subpage -->
-    <div id="wellness-article" class="page" style="background: var(--bg-color);">
+    <div id="wellness-article" class="page u-bg-base" >
         <div class="app-bar" style="display:flex; align-items:center; gap:15px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+            <div class="ta-icon-circle"
                 data-action="showPage--updateNavActiveIndex" data-page="home" data-nav-index="0">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
             <h1 id="wellness-article-title" style="margin:0; flex:1;">บทความ</h1>
         </div>
@@ -2670,7 +2734,7 @@
                 <div id="wellness-article-icon" style="width:48px; height:48px; border-radius:12px; background:var(--soft-green); color:var(--primary-green); display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
                     <i class="fas fa-leaf"></i>
                 </div>
-                <div style="flex:1;">
+                <div class="u-flex-1">
                     <div id="wellness-article-category" style="font-size:var(--fs-sm); color:var(--primary-green); font-weight:600;">Wellness</div>
                     <div id="wellness-article-readtime" style="font-size:var(--fs-sm); color:var(--text-muted);">อ่าน 3 นาที</div>
                 </div>
@@ -2680,7 +2744,7 @@
             <div id="wellness-quiz-prompt" style="display:none; margin-top:24px; padding:16px; background:var(--soft-green, #e8f5e9); border-radius:14px; text-align:center;">
                 <div style="font-size:var(--fs-md); font-weight:700; margin-bottom:6px;">🎯 ทดสอบความเข้าใจ</div>
                 <div id="wellness-quiz-prompt-desc" style="font-size:var(--fs-sm); color:var(--text-muted); margin-bottom:12px;">
-                    ตอบถูก 2/3 รับ <strong style="color:var(--accent-gold,#D4AF37);">+10 bonus pts</strong> (1 ครั้ง/เดือน/บทความ)
+                    ตอบถูก 2/3 รับ <strong class="u-color-gold">+10 bonus pts</strong> (1 ครั้ง/เดือน/บทความ)
                 </div>
                 <button id="wellness-quiz-start-btn" class="btn-main" data-action="startWellnessQuiz" style="width:100%; padding:12px; background:linear-gradient(135deg, var(--accent-gold,#D4AF37) 0%, #b8941f 100%);">
                     📝 เริ่มทำ Quiz
@@ -2716,13 +2780,13 @@
                 </div>
                 <div class="accordion-content" style="display:none;">
                     <div id="internetSpeedSection" style="display:none; grid-template-columns:1fr 1fr; gap:10px;">
-                        <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
-                            <small style="color:#666;">⬇️ Download</small>
-                            <div id="internetDownloadSpeed" style="font-weight:700;">-</div>
+                        <div class="ta-icon-box">
+                            <small class="u-color-muted">⬇️ Download</small>
+                            <div id="internetDownloadSpeed" class="u-bold">-</div>
                         </div>
-                        <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
-                            <small style="color:#666;">⬆️ Upload</small>
-                            <div id="internetUploadSpeed" style="font-weight:700;">-</div>
+                        <div class="ta-icon-box">
+                            <small class="u-color-muted">⬆️ Upload</small>
+                            <div id="internetUploadSpeed" class="u-bold">-</div>
                         </div>
                     </div>
                     <div id="internetProviderSection" style="display:none; margin-top:10px; font-size:var(--fs-sm);">
@@ -2744,13 +2808,13 @@
                 </div>
                 <div class="accordion-content" style="display:none;">
                     <div id="roomInternetSpeedSection" style="display:none; grid-template-columns:1fr 1fr; gap:10px;">
-                        <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
-                            <small style="color:#666;">⬇️ ความเร็วประมาณ</small>
-                            <div id="roomInternetDownloadSpeed" style="font-weight:700;">-</div>
+                        <div class="ta-icon-box">
+                            <small class="u-color-muted">⬇️ ความเร็วประมาณ</small>
+                            <div id="roomInternetDownloadSpeed" class="u-bold">-</div>
                         </div>
-                        <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
-                            <small style="color:#666;">🕐 Latency</small>
-                            <div id="roomInternetUploadSpeed" style="font-weight:700;">-</div>
+                        <div class="ta-icon-box">
+                            <small class="u-color-muted">🕐 Latency</small>
+                            <div id="roomInternetUploadSpeed" class="u-bold">-</div>
                         </div>
                     </div>
                     <div id="roomInternetProviderSection" style="display:none; margin-top:10px; font-size:var(--fs-sm);">
@@ -2762,11 +2826,11 @@
                         <div style="font-weight:700; margin-bottom:8px; color:#1b5e20;">🚀 ทดสอบความเร็วเน็ตห้องคุณ</div>
                         <div id="speedTestResult" style="display:none; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
                             <div style="padding:8px; background:white; border-radius:6px; text-align:center;">
-                                <small style="color:#666;">ดาวน์โหลด</small>
+                                <small class="u-color-muted">ดาวน์โหลด</small>
                                 <div id="speedTestMbps" style="font-weight:700; font-size:1.1rem; color:#1b5e20;">-</div>
                             </div>
                             <div style="padding:8px; background:white; border-radius:6px; text-align:center;">
-                                <small style="color:#666;">Latency</small>
+                                <small class="u-color-muted">Latency</small>
                                 <div id="speedTestPing" style="font-weight:700; font-size:1.1rem; color:#1b5e20;">-</div>
                             </div>
                         </div>
@@ -2814,7 +2878,7 @@
                 <div class="icon-box icon-red"><i class="fas fa-triangle-exclamation"></i></div>
                 <span>
                     ขั้นตอนเมื่อเกิดเหตุฉุกเฉิน
-                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">ไฟไหม้ · น้ำท่วม · แผ่นดินไหว · อุบัติเหตุ</small>
+                    <small class="ta-sub-label">ไฟไหม้ · น้ำท่วม · แผ่นดินไหว · อุบัติเหตุ</small>
                 </span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
@@ -2827,7 +2891,7 @@
                 <div class="icon-box" style="background:#e8f5e9; color:var(--primary-green);">🅿️</div>
                 <span>
                     ที่จอดรถ
-                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">จองล่วงหน้า</small>
+                    <small class="ta-sub-label">จองล่วงหน้า</small>
                 </span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
@@ -2835,7 +2899,7 @@
                 <div class="icon-box icon-box-blue">👕</div>
                 <span>
                     ห้องซักผ้า
-                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">จองล่วงหน้า</small>
+                    <small class="ta-sub-label">จองล่วงหน้า</small>
                 </span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
@@ -2843,7 +2907,7 @@
                 <div class="icon-box" style="background:#f3e8ff; color:#7c3aed;">🌿</div>
                 <span>
                     ดาดฟ้า
-                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">จองล่วงหน้า</small>
+                    <small class="ta-sub-label">จองล่วงหน้า</small>
                 </span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
@@ -2852,7 +2916,7 @@
                 <div class="icon-box icon-box-blue"><i class="fas fa-clipboard-check"></i></div>
                 <span>
                     ตรวจสภาพห้อง
-                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">Move-In / Move-Out Checklist</small>
+                    <small class="ta-sub-label">Move-In / Move-Out Checklist</small>
                 </span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
@@ -2884,7 +2948,7 @@
             <div class="section-title" role="heading" aria-level="2">ประวัติการแจ้งเรื่องล่าสุด</div>
             <div id="records-container" style="padding: 0 15px;"></div>
         </div>
-        <div class="suggest-card" style="margin-bottom: 50px;">
+        <div class="suggest-card u-mb-50" >
             <strong><i class="fas fa-comment-dots"></i> กระซิบถึงเจ้าของตึก</strong>
             <p style="font-size: var(--fs-sm); opacity: 0.7; margin: 8px 0;">พบปัญหาหรือมีไอเดียพัฒนาตึก? บอกแบบไม่ระบุตัวตนสิ
             </p>
@@ -2894,12 +2958,12 @@
 
 
     <div id="maintenance" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="goBackToService">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">แจ้งซ่อมใหม่</h1>
+            <h1 class="ta-card-title">แจ้งซ่อมใหม่</h1>
         </div>
         <div class="card">
             <form data-action-submit="submitMaintenance">
@@ -2925,7 +2989,7 @@
                 <label>อธิบายรายละเอียด *</label>
                 <textarea id="maintenanceDescription" required placeholder="โปรดอธิบายรายละเอียด เช่น ตำแหน่ง อาการ ..."></textarea>
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
+                <label class="ta-field-label">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
                 <input type="file" id="maintenancePhoto" accept="image/*"
                     style="width:100%; margin-bottom:8px; font-size:var(--fs-md);"
                     data-action-change="handleMaintenancePhotoChange">
@@ -2935,7 +2999,7 @@
                         style="display:block; margin:6px auto 0; font-size:var(--fs-sm); color:var(--alert); background:none; border:none; cursor:pointer;">✕ ลบรูป</button>
                 </div>
 
-                <button type="submit" class="btn-main" style="margin-top:10px;" id="maintenanceSubmitBtn">📤 ส่งแจ้งปัญหา</button>
+                <button type="submit" class="btn-main u-mt-10"  id="maintenanceSubmitBtn">📤 ส่งแจ้งปัญหา</button>
             </form>
         </div>
 
@@ -2946,12 +3010,12 @@
 
 
     <div id="cleaning-service" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="goBackToService">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">จองบริการทำความสะอาด</h1>
+            <h1 class="ta-card-title">จองบริการทำความสะอาด</h1>
         </div>
 
         <div class="section-title" role="heading" aria-level="2"><span>จองใหม่ — เลือกประเภทบริการ</span></div>
@@ -3009,7 +3073,7 @@
             <button data-action="submitCleaning" class="btn-main mt-4">ยืนยันการจองบริการ</button>
         </div>
 
-        <div class="section-title" role="heading" aria-level="2" style="margin-top:16px;"><span>ประวัติการรับบริการ</span></div>
+        <div class="section-title u-mt-16" role="heading" aria-level="2" ><span>ประวัติการรับบริการ</span></div>
         <div id="cleaning-records" class="px-4" style="padding-bottom:10px;">
             <div class="gh-empty-state">
                 <div class="gh-empty-state__illust">
@@ -3028,11 +3092,11 @@
 
     <div id="cleaning-terms-page" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom:25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+            <div class="ta-icon-circle"
                 data-action="showSubPage" data-page="cleaning-service">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size:var(--fs-lg);">ข้อตกลงการใช้บริการ</h1>
+            <h1 class="ta-card-title">ข้อตกลงการใช้บริการ</h1>
         </div>
 
         <div class="card" style="margin-bottom:80px;">
@@ -3078,18 +3142,18 @@
     </div>
 
     <div id="complaint" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="goBackToService">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">แจ้งนิติโดยตรง</h1>
+            <h1 class="ta-card-title">แจ้งนิติโดยตรง</h1>
         </div>
 
         <div class="section-title" role="heading" aria-level="2"><span>แจ้งเรื่องใหม่</span></div>
         <div id="complaint-form-tab" class="card">
             <form data-action-submit="submitComplaint">
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">ประเภท *</label>
+                <label class="ta-field-label">ประเภท *</label>
                 <select id="complaintCategory" required
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
                     <option value="">เลือกประเภท</option>
@@ -3120,23 +3184,23 @@
                 </div>
                 <input type="hidden" id="complaintSeverity" value="low">
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">สถานที่เกิดเหตุ</label>
+                <label class="ta-field-label">สถานที่เกิดเหตุ</label>
                 <input type="text" id="complaintLocation" placeholder="เช่น ลานจอดรถ B2, ลิฟต์หลัก..."
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">วันที่เกิดเหตุ</label>
+                <label class="ta-field-label">วันที่เกิดเหตุ</label>
                 <input type="date" id="complaintStartDate"
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">รายละเอียด *</label>
+                <label class="ta-field-label">รายละเอียด *</label>
                 <textarea id="complaintDescription" required placeholder="อธิบายปัญหา..."
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px; min-height:80px;"></textarea>
 
-                <button type="submit" class="btn-main" style="margin-top:10px;">✈️ ส่งแจ้ง</button>
+                <button type="submit" class="btn-main u-mt-10" >✈️ ส่งแจ้ง</button>
             </form>
         </div>
 
-        <div class="section-title" role="heading" aria-level="2" style="margin-top:16px;"><span>ประวัติการแจ้ง</span></div>
+        <div class="section-title u-mt-16" role="heading" aria-level="2" ><span>ประวัติการแจ้ง</span></div>
         <div id="complaint-list" style="padding:0 16px 10px;">
             <div class="gh-empty-state">
                 <div class="gh-empty-state__illust">
@@ -3154,13 +3218,13 @@
     </div>
 
     <div id="community" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:12px;">
+        <div class="app-bar ta-flex-ac-12" >
             <button type="button" data-action="showSubPage" data-page="world-map-page" aria-label="กลับไปหน้าแผนที่"
-                style="width:36px; height:36px; background:var(--soft-green); border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                class="ta-icon-circle-sm">
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </button>
             <div style="flex:1; min-width:0;">
-                <h1 class="page-title-top" style="margin:0;">Quiz Center 🎯</h1>
+                <h1 class="page-title-top u-m0" >Quiz Center 🎯</h1>
                 <p style="margin:4px 0 0;">ทบทวนความเข้าใจ — รับ pts รายเดือน</p>
             </div>
         </div>
@@ -3192,18 +3256,18 @@
          Nav-bar hidden (showPage hides it for 'marketplace') — back chevron is the only exit.
          Back chevron matches Quest Ecosystem pattern (button, 36px). -->
     <div id="marketplace" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:12px;">
+        <div class="app-bar ta-flex-ac-12" >
             <button type="button" data-action="showSubPage" data-page="world-map-page" aria-label="กลับไปหน้าแผนที่"
-                style="width:36px; height:36px; background:var(--soft-green); border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                class="ta-icon-circle-sm">
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </button>
-            <div style="flex:1;">
-                <h1 style="margin:0; font-size:var(--fs-lg);">ชุมชน 🛒</h1>
+            <div class="u-flex-1">
+                <h1 class="ta-card-title">ชุมชน 🛒</h1>
                 <p style="margin:4px 0 0; font-size:var(--fs-sm); color:var(--text-muted);">ตลาดของชุมชน — ของมือสอง บริการ และของแจกฟรี</p>
             </div>
             <button type="button" data-action="showSubPage" data-page="market-chat-list-page" aria-label="ข้อความ"
                 style="position:relative; width:36px; height:36px; background:var(--soft-green); border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; touch-action:manipulation;">
-                <i class="fas fa-comment-dots" style="color:var(--primary-green);"></i>
+                <i class="fas fa-comment-dots u-color-green" ></i>
                 <span id="market-chat-unread-badge"
                     style="display:none; position:absolute; top:-3px; right:-3px; min-width:18px; height:18px; padding:0 5px; background:#dc2626; color:#fff; font-size:10px; font-weight:700; border-radius:9px; line-height:18px; text-align:center;"></span>
             </button>
@@ -3255,7 +3319,7 @@
     <div id="usage" class="page">
         <div class="app-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
             <div>
-                <h1 class="page-title-top" style="margin:0;">การใช้งาน</h1>
+                <h1 class="page-title-top u-m0" >การใช้งาน</h1>
                 <p style="margin:4px 0 0; color: var(--text-muted);">สรุปบิล &amp; การใช้ประจำเดือน</p>
             </div>
             <div id="usage-room-badge"
@@ -3291,7 +3355,7 @@
                 </span>
             </div>
             <button id="service-pay-btn" data-action="openPaymentFlow" data-arg="false" class="btn-main"
-                style="margin-top:15px;">ชำระบิล</button>
+                class="u-mt-15">ชำระบิล</button>
         </div>
 
         </div><!-- end usage flex wrapper -->
@@ -3321,7 +3385,7 @@
     <div id="payment-page" class="page">
         <div class="app-bar" style="padding-bottom: 12px;">
             <div>
-                <h1 style="margin:0; font-size: var(--fs-lg);"><i class="fas fa-credit-card" style="color:var(--primary-green); margin-right:6px;"></i>ชำระเงิน</h1>
+                <h1 class="ta-card-title"><i class="fas fa-credit-card" style="color:var(--primary-green); margin-right:6px;"></i>ชำระเงิน</h1>
                 <p style="margin:4px 0 0; color: var(--text-muted); font-size:var(--fs-sm);">ทำตามขั้นตอนด้านล่างเพื่อชำระเงินค่าบิล</p>
             </div>
         </div>
@@ -3349,20 +3413,20 @@
                     <h2 class="receipt-title" style="margin-bottom:2px;">ใบวางบิล / Invoice</h2>
                     <p style="text-align:center; color:#888; font-size:var(--fs-sm); margin:0 0 10px;">เลขที่: <span id="inv-bill-no">—</span></p>
                     <!-- Info rows -->
-                    <div style="font-size:var(--fs-md);">
-                        <div style="display:flex; justify-content:space-between; padding:3px 0;">
-                            <span style="color:#666;">ห้องเลขที่:</span><strong id="inv-room">—</strong>
+                    <div class="u-fs-md">
+                        <div class="ta-row-split-3">
+                            <span class="u-color-muted">ห้องเลขที่:</span><strong id="inv-room">—</strong>
                         </div>
-                        <div style="display:flex; justify-content:space-between; padding:3px 0;">
-                            <span style="color:#666;">ประจำเดือน:</span><strong id="inv-period">—</strong>
+                        <div class="ta-row-split-3">
+                            <span class="u-color-muted">ประจำเดือน:</span><strong id="inv-period">—</strong>
                         </div>
-                        <div style="display:flex; justify-content:space-between; padding:3px 0;">
-                            <span style="color:#666;">วันที่ออกบิล:</span><strong id="inv-date">—</strong>
+                        <div class="ta-row-split-3">
+                            <span class="u-color-muted">วันที่ออกบิล:</span><strong id="inv-date">—</strong>
                         </div>
                     </div>
                     <hr style="border:none; border-top:1px dashed #ddd; margin:8px 0;">
                     <!-- Line items (populated by renderPaymentInvoice) -->
-                    <div id="inv-items" style="font-size:var(--fs-md);"></div>
+                    <div id="inv-items" class="u-fs-md"></div>
                     <hr style="border:none; border-top:1px dashed #ddd; margin:8px 0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0;">
                         <span style="color:#666; font-size:var(--fs-md);">รวมทั้งสิ้น</span>
@@ -3407,9 +3471,9 @@
                          data-action="triggerInput" data-target="slip-file-input">
                         <i class="fas fa-cloud-upload-alt" style="font-size:var(--fs-lg); color:var(--primary-green);"></i>
                         <p style="margin:8px 0 0; font-size:var(--fs-md); color:#666;">แตะเพื่อเลือกรูปสลิป</p>
-                        <small style="color:#aaa;">JPG / PNG / WEBP ไม่เกิน 5MB</small>
+                        <small class="u-color-lighter">JPG / PNG / WEBP ไม่เกิน 5MB</small>
                     </div>
-                    <input type="file" id="slip-file-input" accept="image/*" style="display:none;" data-action-change="handleSlipFileUpload">
+                    <input type="file" id="slip-file-input" accept="image/*" class="u-hidden" data-action-change="handleSlipFileUpload">
                     <div id="slip-verify-status" style="display:none; margin-top:10px; padding:10px; border-radius:10px; font-size:var(--fs-md); text-align:center;"></div>
                 </div>
             </div>
@@ -3435,20 +3499,20 @@
                     <h2 class="receipt-title" style="margin-bottom:2px;" id="card-main-title">ใบเสร็จรับเงิน / Receipt</h2>
                     <p style="text-align:center; color:#888; font-size:var(--fs-sm); margin:0 0 18px;">เลขที่: <span id="rcpt-bill-no">—</span></p>
                     <!-- Info rows -->
-                    <div style="font-size:var(--fs-md);">
-                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
-                            <span style="color:#666;">ห้องเลขที่:</span><strong id="rcpt-room">—</strong>
+                    <div class="u-fs-md">
+                        <div class="ta-row-split-5">
+                            <span class="u-color-muted">ห้องเลขที่:</span><strong id="rcpt-room">—</strong>
                         </div>
-                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
-                            <span style="color:#666;">ประจำเดือน:</span><strong id="rcpt-period">—</strong>
+                        <div class="ta-row-split-5">
+                            <span class="u-color-muted">ประจำเดือน:</span><strong id="rcpt-period">—</strong>
                         </div>
-                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
-                            <span style="color:#666;">วันที่ชำระ:</span><strong id="rcpt-paid-date">—</strong>
+                        <div class="ta-row-split-5">
+                            <span class="u-color-muted">วันที่ชำระ:</span><strong id="rcpt-paid-date">—</strong>
                         </div>
                     </div>
                     <hr style="border:none; border-top:1px dashed #ddd; margin:12px 0;">
                     <!-- Line items (populated by renderPaymentReceipt) -->
-                    <div id="rcpt-items" style="font-size:var(--fs-md);"></div>
+                    <div id="rcpt-items" class="u-fs-md"></div>
                     <hr style="border:none; border-top:1px dashed #ddd; margin:12px 0;">
                     <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.15rem; color:var(--primary-green); padding:6px 0;">
                         <span>รวมทั้งสิ้น</span><span id="rcpt-total">฿—</span>
@@ -3462,9 +3526,9 @@
                     <div id="rcpt-method-note" style="display:none; text-align:center; font-size:var(--fs-sm); color:#6b7280; margin-top:6px;"></div>
                     <!-- Company info (for tax receipt, shown only when tenant receiptType==='company') -->
                     <div id="receipt-company-info-block" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #ddd; font-size:var(--fs-sm);">
-                        <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:#666;">ออกในนาม:</span><strong id="display-comp-name" style="color:var(--primary-green);">-</strong></div>
-                        <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:#666;">เลขผู้เสียภาษี:</span><strong id="display-comp-tax">-</strong></div>
-                        <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:#666;">ที่อยู่:</span><strong id="display-comp-addr" style="text-align:right;">-</strong></div>
+                        <div class="ta-row-split-3"><span class="u-color-muted">ออกในนาม:</span><strong id="display-comp-name" class="u-color-green">-</strong></div>
+                        <div class="ta-row-split-3"><span class="u-color-muted">เลขผู้เสียภาษี:</span><strong id="display-comp-tax">-</strong></div>
+                        <div class="ta-row-split-3"><span class="u-color-muted">ที่อยู่:</span><strong id="display-comp-addr" class="u-text-right">-</strong></div>
                     </div>
                     <p style="text-align:center; font-size:var(--fs-sm); color:#888; margin:12px 0 0;">ขอบคุณที่ใช้บริการ <span id="receipt-owner-name">The Green Haven</span></p>
                     <p style="text-align:center; font-size:var(--fs-sm); color:#888; margin:2px 0 0;">กรุณาเก็บใบเสร็จไว้เป็นหลักฐาน</p>
@@ -3487,27 +3551,27 @@
             <div id="current-avatar"
                 style="width:80px; height:80px; background:var(--soft-green); border-radius:50%; margin:0 auto 10px; border:3px solid white; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg);">
                 🌿</div>
-            <h1 id="display-name" class="page-title-top" style="margin:0;">คุณลูกบ้าน</h1>
+            <h1 id="display-name" class="page-title-top u-m0" >คุณลูกบ้าน</h1>
             <p id="profile-room-display" style="margin:5px 0; font-size:var(--fs-md); opacity:0.6;">ห้อง — | —</p>
         </div>
 
         <!-- Shortcut grid — all tenants (rooms + Nest) -->
         <div id="profile-shortcuts" style="padding:0 16px; margin-bottom:16px;">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="ta-grid-2col">
                 <div data-action="showSubPage" data-page="contract-action-page" style="background:var(--soft-green); padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
-                    <div style="font-size:1.8rem; margin-bottom:4px;">📄</div>
+                    <div class="ta-stat-val">📄</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:var(--primary-dark);">สัญญาเช่า</div>
                 </div>
                 <div data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3" style="background:#FFF9E6; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
-                    <div style="font-size:1.8rem; margin-bottom:4px;">💳</div>
+                    <div class="ta-stat-val">💳</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:#8B6F00;">ชำระบิล</div>
                 </div>
                 <div data-action="showSubPage" data-page="maintenance" style="background:#FFF0F0; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
-                    <div style="font-size:1.8rem; margin-bottom:4px;">🔧</div>
+                    <div class="ta-stat-val">🔧</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:#B00020;">แจ้งซ่อม</div>
                 </div>
                 <div data-action="showSubPage" data-page="complaint" style="background:#F0F4FF; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
-                    <div style="font-size:1.8rem; margin-bottom:4px;">💬</div>
+                    <div class="ta-stat-val">💬</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:#003D99;">ร้องเรียน</div>
                 </div>
             </div>
@@ -3516,12 +3580,12 @@
 
     <!-- Quest Ecosystem sector — accessed from world map, not nav bar -->
     <div id="quest-page" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:12px;">
+        <div class="app-bar ta-flex-ac-12" >
             <button type="button" data-action="showSubPage" data-page="world-map-page" aria-label="กลับไปหน้าแผนที่"
-                style="width:36px; height:36px; background:var(--soft-green); border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                class="ta-icon-circle-sm">
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </button>
-            <h1 style="margin:0; font-size:var(--fs-lg);">🎮 Quest Ecosystem</h1>
+            <h1 class="ta-card-title">🎮 Quest Ecosystem</h1>
         </div>
 
         <!-- Points Banner -->
@@ -3531,12 +3595,12 @@
                     <p style="font-size:9px; opacity:0.8; font-weight:700; text-transform:uppercase; margin:0 0 2px; letter-spacing:.06em;">ระดับปัจจุบัน</p>
                     <h2 id="eco-level-name" style="font-size:1.25rem; font-weight:800; margin:0;">— 🌱</h2>
                 </div>
-                <div style="text-align:right;">
+                <div class="u-text-right">
                     <p style="font-size:9px; opacity:0.8; font-weight:700; text-transform:uppercase; margin:0 0 2px; letter-spacing:.06em;">อันดับในตึก</p>
                     <h2 id="eco-rank" style="font-size:1.25rem; font-weight:800; margin:0;">#—</h2>
                 </div>
             </div>
-            <div style="margin-top:10px;">
+            <div class="u-mt-10">
                 <div style="display:flex; justify-content:space-between; font-size:9px; margin-bottom:4px; opacity:0.85;">
                     <span id="eco-points-display">— Pts</span>
                     <span id="eco-next-goal"></span>
@@ -3588,12 +3652,12 @@
         <div id="eco-panel-achievements" style="display:none;" class="px-4">
             <h3 class="font-bold text-sm mb-3">🏅 เหรียญที่ได้รับ</h3>
             <div id="badge-grid-container" class="grid grid-cols-3 gap-3 mb-6">
-                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
-                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
-                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
-                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
-                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
-                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
+                <div class="gh-skeleton ta-sk-img" ></div>
+                <div class="gh-skeleton ta-sk-img" ></div>
+                <div class="gh-skeleton ta-sk-img" ></div>
+                <div class="gh-skeleton ta-sk-img" ></div>
+                <div class="gh-skeleton ta-sk-img" ></div>
+                <div class="gh-skeleton ta-sk-img" ></div>
             </div>
             <h3 class="font-bold text-sm mb-3">💡 วิธีสะสมคะแนน</h3>
             <!-- Rendered by _renderEarningGuide() from EARNING_SOURCES + RENT_POINT_TIERS (SSoT) -->
@@ -3639,12 +3703,12 @@
 
     <!-- Pet Park sector — accessed from world map, not nav bar -->
     <div id="pet-park-page" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:12px;">
+        <div class="app-bar ta-flex-ac-12" >
             <button type="button" data-action="showSubPage" data-page="world-map-page" aria-label="กลับไปหน้าแผนที่"
-                style="width:36px; height:36px; background:var(--soft-green); border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                class="ta-icon-circle-sm">
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </button>
-            <h1 style="margin:0; font-size:var(--fs-lg);">🐾 Pet Park</h1>
+            <h1 class="ta-card-title">🐾 Pet Park</h1>
         </div>
 
         <div id="pet-list-container" style="padding:0 16px 24px;">
@@ -3695,7 +3759,7 @@
                 data-action="goBackToHome">
                 <i class="fas fa-chevron-left" style="color:white;"></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">Smart Access</h1>
+            <h1 class="ta-card-title">Smart Access</h1>
         </div>
         <div class="tabs" style="background: rgba(255,255,255,0.1); margin: 0 15px 20px;">
             <button class="tab-btn active" style="color: white; background: rgba(255,255,255,0.2);">My Key
@@ -3717,11 +3781,11 @@
     <!-- ===== FACILITY BOOKING PAGE (Tier 3G) ===== -->
     <div id="facility-booking" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom:20px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+            <div class="ta-icon-circle"
                 data-action="goBackToService">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size:var(--fs-lg);">จองพื้นที่ส่วนกลาง 🏛️</h1>
+            <h1 class="ta-card-title">จองพื้นที่ส่วนกลาง 🏛️</h1>
         </div>
 
         <!-- Facility type tabs -->
@@ -3742,7 +3806,7 @@
         </div>
 
         <!-- My upcoming bookings -->
-        <div style="margin-top:8px;">
+        <div class="u-mt-8">
             <div style="font-weight:700; font-size:.9rem; margin-bottom:8px; color:var(--text-muted);">การจองของฉัน</div>
             <div id="fb-my-bookings" style="display:flex; flex-direction:column; gap:8px;">
                 <div style="text-align:center;color:var(--text-muted);font-size:.85rem;padding:1rem;">—</div>
@@ -3765,11 +3829,11 @@
     <!-- ===== CHECKLIST — Move-In / Move-Out (Tier 3I) ===== -->
     <div id="checklist" class="page" style="display:none;">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom:20px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+            <div class="ta-icon-circle"
                 data-action="goBackToService">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size:var(--fs-lg);">🗒️ ตรวจสภาพห้อง</h1>
+            <h1 class="ta-card-title">🗒️ ตรวจสภาพห้อง</h1>
         </div>
 
         <!-- Status area -->
@@ -3810,21 +3874,21 @@
     </div>
 
     <div id="laundry-page" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="goBackToService">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">Smart Laundry 👕</h1>
+            <h1 class="ta-card-title">Smart Laundry 👕</h1>
         </div>
         <div style="padding: 15px;">
             <div class="section-title" style="padding: 0 0 10px;"><span>เครื่องซักผ้า (Washers)</span></div>
             <div class="card"
                 style="margin: 0 0 15px; display: flex; align-items: center; gap: 15px; border-left: 6px solid #22c55e;">
                 <div style="font-size: var(--fs-lg); color: #ccc;"><i class="fas fa-block-brick"></i> <span
-                        style="font-size:var(--fs-md);">W1</span></div>
-                <div style="flex: 1;">
-                    <strong style="font-size: var(--fs-lg);">เครื่อง 1 (10kg)</strong>
+                        class="u-fs-md">W1</span></div>
+                <div class="u-flex-1">
+                    <strong class="u-fs-lg">เครื่อง 1 (10kg)</strong>
                     <div style="color: #22c55e; font-weight: 600; font-size: var(--fs-md);"><i
                             class="fas fa-check-circle"></i> ว่างพร้อมใช้งาน</div>
                 </div>
@@ -3835,12 +3899,12 @@
             <div class="card"
                 style="margin: 0 0 15px; display: flex; align-items: center; gap: 15px; border-left: 6px solid var(--warn); background: #fffcf5;">
                 <div style="font-size: var(--fs-lg); color: var(--warn);"><i class="fas fa-spinner fa-spin"></i> <span
-                        style="font-size:var(--fs-md);">W2</span></div>
-                <div style="flex: 1;">
-                    <strong style="font-size: var(--fs-lg);">เครื่อง 2 (15kg)</strong>
+                        class="u-fs-md">W2</span></div>
+                <div class="u-flex-1">
+                    <strong class="u-fs-lg">เครื่อง 2 (15kg)</strong>
                     <div style="color: var(--warn); font-weight: 600; font-size: var(--fs-md);"><i
                             class="fas fa-hourglass-half"></i> กำลังทำงาน</div>
-                    <small style="color:#888;">เหลือเวลาอีกประมาณ 24 นาที</small>
+                    <small class="u-color-sub">เหลือเวลาอีกประมาณ 24 นาที</small>
                 </div>
                 <i class="fas fa-bell" style="color:#ccc; font-size: var(--fs-lg); cursor:pointer;"
                     data-action="alertLaundryNotify"></i>
@@ -3849,12 +3913,12 @@
     </div>
 
     <div id="settings" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="goBackToProfile">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">Settings</h1>
+            <h1 class="ta-card-title">Settings</h1>
         </div>
 
         <div class="menu-list">
@@ -3873,7 +3937,7 @@
         <div class="section-title" style="padding-top: 5px;"><span>ตั้งค่าระบบ (System Preferences)</span></div>
         <div class="card" style="margin-top: 0;">
             <div class="setting-row">
-                <span><i class="fas fa-adjust" style="width:25px; color:var(--primary-green);"></i> ธีม (Theme)</span>
+                <span><i class="fas fa-adjust ta-icon-narrow" ></i> ธีม (Theme)</span>
                 <button type="button" class="gh-theme-toggle" data-action="toggle-theme" aria-label="สลับธีม">
                     <span data-theme-icon>🌓</span>
                     <span data-theme-label>อัตโนมัติ</span>
@@ -3885,7 +3949,7 @@
                         class="slider"></span></label>
             </div>
             <div class="setting-row">
-                <span><i class="fas fa-leaf" style="width:25px; color:var(--primary-green);"></i> โหมดประหยัด (Eco
+                <span><i class="fas fa-leaf ta-icon-narrow" ></i> โหมดประหยัด (Eco
                     Mode)</span>
                 <label class="switch"><input type="checkbox" id="eco-switch" data-action-change="toggleEcoMode"><span
                         class="slider"></span></label>
@@ -3894,7 +3958,7 @@
                 จะปิดภาพเคลื่อนไหวเพื่อประหยัดแบตเตอรี่</small>
         </div>
 
-        <div class="menu-list" style="margin-bottom: 50px;">
+        <div class="menu-list u-mb-50" >
             <div class="menu-item" data-action="showSubPage" data-page="page-privacy">
                 <div class="icon-box icon-gray"><i class="fas fa-shield-alt"></i></div>
                 <span>นโยบายความเป็นส่วนตัว (Privacy Policy)</span>
@@ -3922,7 +3986,7 @@
             </div>
         </div>
 
-        <div class="menu-list" style="margin-bottom: 50px;">
+        <div class="menu-list u-mb-50" >
             <div class="menu-item" style="border:none;" data-action="logoutTenantApp">
                 <div class="icon-box icon-red"><i class="fas fa-sign-out-alt"></i></div>
                 <span style="color: var(--danger); font-weight:bold;">ออกจากระบบ (Logout)</span>
@@ -3936,9 +4000,9 @@
 
     <div id="add-pet-page" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding: 20px 20px 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+            <div class="ta-icon-circle"
                 data-action="showSubPage" data-page="pet-park-page">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg); color: var(--text-dark);">ข้อมูลเพื่อนตัวป่วน 🐾</h1>
         </div>
@@ -3957,14 +4021,14 @@
                     style="color: var(--primary-green); font-weight: 600; cursor: pointer;">อัปโหลดรูปภาพโปรไฟล์</small>
             </div>
 
-            <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">ชื่อน้อง <span
-                    style="color:red;">*</span></label>
+            <label class="ta-md-600-sub">ชื่อน้อง <span
+                    class="u-color-red">*</span></label>
             <input type="text" id="pet-name" placeholder="เช่น น้องมะลิ, ลาเต้"
                 style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-bottom: 12px; font-family: inherit;">
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                 <div>
-                    <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">ประเภทสัตว์เลี้ยง</label>
+                    <label class="ta-md-600-sub">ประเภทสัตว์เลี้ยง</label>
                     <select id="pet-type"
                         style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; background: white; font-family: inherit;">
                         <option value="🐶">สุนัข (Dog)</option>
@@ -3975,7 +4039,7 @@
                     </select>
                 </div>
                 <div>
-                    <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">สายพันธุ์</label>
+                    <label class="ta-md-600-sub">สายพันธุ์</label>
                     <input type="text" id="pet-breed" placeholder="เช่น โกลเด้น"
                         style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; font-family: inherit;">
                 </div>
@@ -3983,7 +4047,7 @@
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
                 <div>
-                    <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">เพศ</label>
+                    <label class="ta-md-600-sub">เพศ</label>
                     <select id="pet-gender"
                         style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; background: white; font-family: inherit;">
                         <option>ผู้</option>
@@ -3991,7 +4055,7 @@
                     </select>
                 </div>
                 <div>
-                    <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">วันเกิด</label>
+                    <label class="ta-md-600-sub">วันเกิด</label>
                     <input type="date" id="pet-dob"
                         style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; font-family: inherit;">
                 </div>
@@ -4049,13 +4113,13 @@
     </div>
 
 
-    <div id="add-market-page" class="page" style="background: var(--bg-color);">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
+    <div id="add-market-page" class="page u-bg-base" >
+        <div class="app-bar ta-page-top" >
             <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; touch-action:manipulation;"
                 data-action="goBackToMarketplace">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 id="add-market-page-title" style="margin:0; font-size: var(--fs-lg);">ลงประกาศ 📢</h1>
+            <h1 id="add-market-page-title" class="ta-card-title">ลงประกาศ 📢</h1>
         </div>
 
         <div class="card">
@@ -4068,10 +4132,10 @@
                     <div style="font-size:var(--fs-sm); color:#888; margin-top:4px;">กดเพื่อเลือกรูปจากคลัง</div>
                 </div>
             </div>
-            <input type="file" id="market-image-input" accept="image/*" style="display:none;">
+            <input type="file" id="market-image-input" accept="image/*" class="u-hidden">
 
             <!-- Category pills -->
-            <label style="font-size:var(--fs-md); font-weight:600; display:block; margin-bottom:10px;">หมวดหมู่ <span style="color:red;">*</span></label>
+            <label style="font-size:var(--fs-md); font-weight:600; display:block; margin-bottom:10px;">หมวดหมู่ <span class="u-color-red">*</span></label>
             <div style="display:flex; gap:8px; margin-bottom:20px;">
                 <label class="cat-radio-pill"><input type="radio" name="mcat" value="item" checked data-action-change="_onMarketCatChange"> 🛍️ ของมือสอง</label>
                 <label class="cat-radio-pill"><input type="radio" name="mcat" value="service" data-action-change="_onMarketCatChange"> 💅 บริการ</label>
@@ -4080,17 +4144,17 @@
             </div>
 
             <!-- Title -->
-            <label style="font-size:var(--fs-md); font-weight:600;">ชื่อสินค้า / บริการ <span style="color:red;">*</span></label>
-            <input type="text" id="market-title" placeholder="เช่น รับทำเล็บ · ขายหนังสือ · ตามหาตู้เย็นมือสอง" style="margin-bottom:15px;">
+            <label class="ta-md-600">ชื่อสินค้า / บริการ <span class="u-color-red">*</span></label>
+            <input type="text" id="market-title" placeholder="เช่น รับทำเล็บ · ขายหนังสือ · ตามหาตู้เย็นมือสอง" class="u-mb-15">
 
             <!-- Price (hidden when free) -->
-            <div id="market-price-row" style="margin-bottom:15px;">
-                <label style="font-size:var(--fs-md); font-weight:600;">ราคา (บาท) <span style="color:red;">*</span></label>
+            <div id="market-price-row" class="u-mb-15">
+                <label class="ta-md-600">ราคา (บาท) <span class="u-color-red">*</span></label>
                 <input type="number" id="market-price" style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:10px; font-family:inherit;" placeholder="เช่น 150">
             </div>
 
             <!-- Description -->
-            <label style="font-size:var(--fs-md); font-weight:600;">รายละเอียดเพิ่มเติม</label>
+            <label class="ta-md-600">รายละเอียดเพิ่มเติม</label>
             <textarea id="market-desc" placeholder="บอกรายละเอียด สภาพสินค้า หรือเงื่อนไข..." rows="3"
                 style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:10px; font-family:inherit;"></textarea>
 
@@ -4099,7 +4163,7 @@
                 <span><i class="fas fa-door-open" style="color:#888; width:25px;"></i> แสดงเลขห้องให้ผู้ซื้อติดต่อ</span>
                 <label class="switch"><input type="checkbox" id="market-show-room"><span class="slider"></span></label>
             </div>
-            <small style="display:block; margin-top:6px; padding:0 4px; font-size:var(--fs-sm); color:var(--text-muted);">เปิดเฉพาะเมื่อสะดวกให้เพื่อนบ้านรู้ห้อง — ปิดไว้จะติดต่อผ่าน LINE หรือ chat แทน</small>
+            <small class="ta-note-sm">เปิดเฉพาะเมื่อสะดวกให้เพื่อนบ้านรู้ห้อง — ปิดไว้จะติดต่อผ่าน LINE หรือ chat แทน</small>
 
             <!-- Sprint 3 — Sky Hook: vertical-delivery tag for Nest 3F/4F tenants
                  who use the pulley-rope system to receive items from below. -->
@@ -4107,7 +4171,7 @@
                 <span>📦 ส่งผ่านรอก (ชั้น 3 หรือ 4)</span>
                 <label class="switch"><input type="checkbox" id="market-skyhook"><span class="slider"></span></label>
             </div>
-            <small style="display:block; margin-top:6px; padding:0 4px; font-size:var(--fs-sm); color:var(--text-muted);">เปิดถ้ารับ–ส่งของผ่านระบบรอกได้ ผู้ซื้อชั้น 3–4 จะเห็นแท็กนี้ง่ายขึ้น</small>
+            <small class="ta-note-sm">เปิดถ้ารับ–ส่งของผ่านระบบรอกได้ ผู้ซื้อชั้น 3–4 จะเห็นแท็กนี้ง่ายขึ้น</small>
 
             <!-- Sprint 4 — Pet-Friendly Filter: 1-boolean ergonomic tag for the
                  pet-owner sub-community (foundation for Sprint 6 Pet Whisperer badge). -->
@@ -4115,7 +4179,7 @@
                 <span>🐾 เกี่ยวกับสัตว์เลี้ยง</span>
                 <label class="switch"><input type="checkbox" id="market-pet"><span class="slider"></span></label>
             </div>
-            <small style="display:block; margin-top:6px; padding:0 4px; font-size:var(--fs-sm); color:var(--text-muted);">เปิดถ้าเป็นอาหาร–ของใช้–บริการเกี่ยวกับสัตว์เลี้ยง เพื่อนบ้านที่เลี้ยงสัตว์จะหาเจอง่ายขึ้น</small>
+            <small class="ta-note-sm">เปิดถ้าเป็นอาหาร–ของใช้–บริการเกี่ยวกับสัตว์เลี้ยง เพื่อนบ้านที่เลี้ยงสัตว์จะหาเจอง่ายขึ้น</small>
         </div>
 
         <div style="padding:10px 15px 50px;">
@@ -4129,13 +4193,13 @@
 
     <!-- Sprint 1 — Privacy-First Chat: list of 1:1 conversations the
          current user is a participant in. Populated by _subscribeChatList. -->
-    <div id="market-chat-list-page" class="page" style="background: var(--bg-color);">
+    <div id="market-chat-list-page" class="page u-bg-base" >
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 18px;">
             <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; touch-action:manipulation;"
                 data-action="goBackToMarketplace">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">
+            <h1 class="ta-card-title">
                 💬 ข้อความ
             </h1>
         </div>
@@ -4158,11 +4222,11 @@
          post being closed or deleted. cleanupMarketplaceChat CF deletes the
          chat doc + messages subcollection when the post transitions to
          status=COMPLETED. -->
-    <div id="market-chat-page" class="page" style="background: var(--bg-color);">
+    <div id="market-chat-page" class="page u-bg-base" >
         <div class="app-bar" style="display:flex; align-items:center; gap:12px; padding-bottom: 12px;">
             <button type="button" data-action="showSubPage" data-page="market-chat-list-page" aria-label="กลับไปรายการแชท"
                 style="width:36px; height:36px; background:var(--soft-green); border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; touch-action:manipulation;">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </button>
             <div id="market-chat-header" style="flex:1; min-width:0; display:flex; align-items:center; gap:10px;">
                 <div id="market-chat-header-img" style="width:42px; height:42px; border-radius:10px; background:#f3f4f6; flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center;"></div>
@@ -4215,12 +4279,12 @@
     </div>
 
     <div id="building" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="goBackToUsage">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">ข้อมูลอาคาร</h1>
+            <h1 class="ta-card-title">ข้อมูลอาคาร</h1>
         </div>
         <!-- Rendered dynamically by _renderBuildingInfo() from Firestore buildings/{Firestore name}.info
              Defaults shown until first snapshot. Admin manages via dashboard buildings doc. -->
@@ -4251,12 +4315,12 @@
 
 
     <div id="preference" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="showSubPage" data-page="settings">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">ตั้งค่าความชอบ</h1>
+            <h1 class="ta-card-title">ตั้งค่าความชอบ</h1>
         </div>
 
         <div class="section-title" role="heading" aria-level="2"><span>Avatar Default</span></div>
@@ -4273,7 +4337,7 @@
                 <!-- Upload from device -->
                 <label class="avatar-option" for="avatar-upload-input" title="อัปโหลดรูปจากเครื่อง"
                     style="background: var(--soft-green); color: var(--primary-green); border: 2px dashed var(--primary-green); cursor: pointer; font-size:1.5rem;">📸</label>
-                <input type="file" id="avatar-upload-input" accept="image/*" style="display:none;" data-action-change="handleAvatarUpload">
+                <input type="file" id="avatar-upload-input" accept="image/*" class="u-hidden" data-action-change="handleAvatarUpload">
             </div>
             <p style="font-size: var(--fs-sm); color: var(--text-muted); margin: 6px 0 0;">📸 = แตะเพื่ออัปโหลดรูปถ่ายจากเครื่อง (ระบบจะย่อให้อัตโนมัติ)</p>
             <p id="avatar-upload-status" style="font-size: var(--fs-sm); color: var(--text-muted); margin: 8px 0 0; display: none;"></p>
@@ -4333,12 +4397,12 @@
 
 
     <div id="profile-edit" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="showSubPage" data-page="settings">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">ข้อมูลส่วนตัว</h1>
+            <h1 class="ta-card-title">ข้อมูลส่วนตัว</h1>
         </div>
 
         <div class="section-title" role="heading" aria-level="2">
@@ -4348,36 +4412,36 @@
         <div class="card">
             <!-- Read-only view (default) -->
             <div id="profile-readonly-view">
-                <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <div class="receipt-item ta-row-split-mb" >
                     <span>ชื่อ+นามสกุล</span><strong id="profile-fullname">—</strong>
                 </div>
-                <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <div class="receipt-item ta-row-split-mb" >
                     <span>เบอร์โทรศัพท์:</span><strong id="profile-phone">—</strong>
                 </div>
-                <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <div class="receipt-item ta-row-split-mb" >
                     <span>อีเมล:</span>
                     <span style="display:flex;align-items:center;gap:5px;text-align:right;">
                         <strong id="profile-email">—</strong>
                         <small id="profile-email-badge" style="color:var(--text-muted);font-size:0.75em;"></small>
                     </span>
                 </div>
-                <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <div class="receipt-item ta-row-split-mb" >
                     <span>ป้ายทะเบียน:</span><strong id="profile-license">—</strong>
                 </div>
             </div>
             <!-- Edit form (hidden by default — toggled by toggleProfileEditMode) -->
             <div id="profile-edit-form" style="display:none;">
-                <label style="font-size:var(--fs-sm); color:#666;">เบอร์โทรศัพท์ <span style="color:var(--accent);">🔒 ต้องยืนยัน OTP</span></label>
+                <label class="ta-sub-text">เบอร์โทรศัพท์ <span style="color:var(--accent);">🔒 ต้องยืนยัน OTP</span></label>
                 <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#f4f6f8; border-radius:var(--radius-sm); margin-bottom:8px; font-size:var(--fs-base);">
-                    <span style="color:#666;">ปัจจุบัน:</span>
+                    <span class="u-color-muted">ปัจจุบัน:</span>
                     <strong id="profile-edit-phone-display" style="color:var(--text-dark);">—</strong>
                 </div>
                 <button class="btn-main" style="background:var(--accent); width:100%; margin-bottom:14px;" data-action="openPhoneOtpModal"><i class="fas fa-mobile-alt"></i> เปลี่ยน / ตั้งเบอร์ใหม่ (ผ่าน OTP)</button>
-                <label style="font-size:var(--fs-sm); color:#666;">อีเมล</label>
-                <input type="email" id="profile-edit-email" placeholder="example@gmail.com" style="margin-bottom:15px;">
-                <div style="display:flex; gap:8px;">
-                    <button class="btn-secondary" style="flex:1;" data-action="toggleProfileEditMode" data-arg="false">ยกเลิก</button>
-                    <button class="btn-main" style="flex:1;" data-action="saveProfileEdit"><i class="fas fa-save"></i> บันทึกอีเมล</button>
+                <label class="ta-sub-text">อีเมล</label>
+                <input type="email" id="profile-edit-email" placeholder="example@gmail.com" class="u-mb-15">
+                <div class="ta-flex-gap-8">
+                    <button class="btn-secondary u-flex-1"  data-action="toggleProfileEditMode" data-arg="false">ยกเลิก</button>
+                    <button class="btn-main u-flex-1"  data-action="saveProfileEdit"><i class="fas fa-save"></i> บันทึกอีเมล</button>
                 </div>
                 <p style="font-size:var(--fs-sm); color:#888; margin-top:10px;">
                     <i class="fas fa-info-circle"></i> ชื่อ+นามสกุล, สัญญาเช่า และป้ายทะเบียน แก้ไม่ได้ — กรุณาติดต่อเจ้าของหากต้องการเปลี่ยน
@@ -4389,22 +4453,22 @@
                     <h3 style="margin:0 0 16px; font-size:var(--text-lg); color:var(--primary-dark);"><i class="fas fa-mobile-alt"></i> ยืนยันเบอร์โทรใหม่</h3>
                     <!-- Step 1: enter phone -->
                     <div id="otp-step-1">
-                        <label style="font-size:var(--fs-sm); color:#666;">เบอร์โทรศัพท์ใหม่ (ต้องเป็นเบอร์ที่ใช้งานได้)</label>
+                        <label class="ta-sub-text">เบอร์โทรศัพท์ใหม่ (ต้องเป็นเบอร์ที่ใช้งานได้)</label>
                         <input type="tel" id="otp-new-phone" placeholder="0812345678" maxlength="10" style="margin-bottom:12px; width:100%;">
                         <div id="otp-recaptcha-container" style="margin-bottom:12px;"></div>
-                        <div style="display:flex; gap:8px;">
-                            <button class="btn-secondary" style="flex:1;" data-action="closePhoneOtpModal">ยกเลิก</button>
-                            <button class="btn-main" id="otp-send-btn" style="flex:2;" data-action="sendPhoneOtp"><i class="fas fa-paper-plane"></i> ส่งรหัส OTP</button>
+                        <div class="ta-flex-gap-8">
+                            <button class="btn-secondary u-flex-1"  data-action="closePhoneOtpModal">ยกเลิก</button>
+                            <button class="btn-main u-flex-2" id="otp-send-btn"  data-action="sendPhoneOtp"><i class="fas fa-paper-plane"></i> ส่งรหัส OTP</button>
                         </div>
                     </div>
                     <!-- Step 2: enter code -->
                     <div id="otp-step-2" style="display:none;">
                         <p style="font-size:var(--fs-sm); color:#666; margin:0 0 12px;">ส่งรหัส 6 หลักไปยัง <strong id="otp-sent-to">—</strong> แล้ว</p>
-                        <label style="font-size:var(--fs-sm); color:#666;">รหัส OTP</label>
+                        <label class="ta-sub-text">รหัส OTP</label>
                         <input type="text" id="otp-code" placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="margin-bottom:12px; width:100%; font-size:var(--text-lg); letter-spacing:8px; text-align:center;">
-                        <div style="display:flex; gap:8px;">
-                            <button class="btn-secondary" style="flex:1;" data-action="resetPhoneOtpFlow"><i class="fas fa-arrow-left"></i> ย้อนกลับ</button>
-                            <button class="btn-main" id="otp-confirm-btn" style="flex:2;" data-action="confirmPhoneOtp"><i class="fas fa-check"></i> ยืนยัน</button>
+                        <div class="ta-flex-gap-8">
+                            <button class="btn-secondary u-flex-1"  data-action="resetPhoneOtpFlow"><i class="fas fa-arrow-left"></i> ย้อนกลับ</button>
+                            <button class="btn-main u-flex-2" id="otp-confirm-btn"  data-action="confirmPhoneOtp"><i class="fas fa-check"></i> ยืนยัน</button>
                         </div>
                     </div>
                     <p id="otp-status" style="font-size:var(--fs-sm); margin-top:12px; min-height:20px; color:var(--text-muted);"></p>
@@ -4417,8 +4481,8 @@
         <div class="card">
             <div class="receipt-item"><span>เริ่มต้นสัญญา:</span><strong id="profile-lease-start">—</strong></div>
             <div class="receipt-item"><span>สิ้นสุดสัญญา:</span><strong id="profile-lease-end">—</strong></div>
-            <div class="receipt-item"><span>ระยะเวลาคงเหลือ:</span><strong id="profile-lease-remaining" style="color:var(--primary-green);">—</strong></div>
-            <div class="receipt-item"><span>ค่าเช่ารายเดือน:</span><strong id="profile-rent" style="color:var(--primary-green);">—</strong></div>
+            <div class="receipt-item"><span>ระยะเวลาคงเหลือ:</span><strong id="profile-lease-remaining" class="u-color-green">—</strong></div>
+            <div class="receipt-item"><span>ค่าเช่ารายเดือน:</span><strong id="profile-rent" class="u-color-green">—</strong></div>
             <div class="receipt-item"><span>เงินมัดจำ (Deposit):</span><span style="display:flex;align-items:center;gap:8px;"><strong id="profile-deposit" style="color:var(--danger);">—</strong><span id="profile-deposit-badge" style="display:none;"></span></span></div>
             <button class="btn-main" style="margin-top: 15px; background: #334435;"
                 data-action="showSubPage" data-page="contract-action-page"><i class="fas fa-file-signature"></i> แจ้งต่อสัญญา /
@@ -4428,13 +4492,13 @@
     </div>
 
 
-    <div id="contract-action-page" class="page" style="background: var(--bg-color);">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+    <div id="contract-action-page" class="page u-bg-base" >
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="showSubPage" data-page="settings">
-                <i class=" fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class=" fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">จัดการสัญญาเช่า</h1>
+            <h1 class="ta-card-title">จัดการสัญญาเช่า</h1>
         </div>
         <div class="card" style="text-align: center; border-top: 5px solid var(--primary-green);">
             <i class="fas fa-file-contract"
@@ -4461,10 +4525,10 @@
         <!-- Contract Quiz MVP — อ่านสัญญาจบ → ทำ quiz → +20 pts (1 ครั้ง/เดือน) -->
         <div id="contract-quiz-section" class="card" style="border-left: 5px solid var(--accent-gold, #D4AF37);">
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                <div style="font-size:var(--fs-lg);">📝</div>
-                <div style="flex:1;">
+                <div class="u-fs-lg">📝</div>
+                <div class="u-flex-1">
                     <strong>รู้จักสัญญาของคุณดีแค่ไหน?</strong>
-                    <p style="margin:2px 0 0; font-size:var(--fs-sm); color:var(--text-muted);">ทำ quiz ตอบถูก 2/3 ได้ <strong style="color:var(--primary-green);">+20 pts</strong> (ทำได้ 1 ครั้ง/เดือน)</p>
+                    <p style="margin:2px 0 0; font-size:var(--fs-sm); color:var(--text-muted);">ทำ quiz ตอบถูก 2/3 ได้ <strong class="u-color-green">+20 pts</strong> (ทำได้ 1 ครั้ง/เดือน)</p>
                 </div>
             </div>
             <button id="contract-quiz-start-btn" class="btn-main" data-action="startContractQuiz" disabled
@@ -4473,29 +4537,29 @@
             </button>
         </div>
         <div id="contract-forms-section" style="padding: 15px;">
-            <label style="font-size: var(--fs-md); font-weight: 600;">ความประสงค์ของคุณ</label>
+            <label class="ta-md-600">ความประสงค์ของคุณ</label>
             <select id="contract-decision" style="margin-bottom: 20px;" data-action-change="toggleContractForm">
                 <option value="">โปรดเลือกดำเนินการ...</option>
                 <option value="renew">✅ ขอต่อสัญญาเช่า (Renew Lease)</option>
                 <option value="moveout">❌ แจ้งย้ายออก (Move-out Notice)</option>
             </select>
             <div id="renew-form" style="display: none; animation: slideUp 0.3s ease;">
-                <label style="font-size: var(--fs-md); font-weight: 600;">ระยะเวลาที่ต้องการต่อสัญญาใหม่</label>
-                <select id="renew-duration" style="margin-bottom: 15px;">
+                <label class="ta-md-600">ระยะเวลาที่ต้องการต่อสัญญาใหม่</label>
+                <select id="renew-duration" class="u-mb-15">
                     <option value="1y">1 ปี</option>
                 </select>
-                <label style="font-size: var(--fs-md); font-weight: 600;">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
-                <textarea id="renew-note" rows="2" placeholder="เช่น ขอลดราคาเล็กน้อย, ขอเปลี่ยนสภาพห้อง..." style="margin-bottom: 15px;"></textarea>
+                <label class="ta-md-600">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
+                <textarea id="renew-note" rows="2" placeholder="เช่น ขอลดราคาเล็กน้อย, ขอเปลี่ยนสภาพห้อง..." class="u-mb-15"></textarea>
                 <button class="btn-main" data-action="confirmLeaseRequest" data-arg="renew"><i
                         class="fas fa-paper-plane"></i> ส่งคำขอต่อสัญญา</button>
             </div>
             <div id="moveout-form" style="display: none; animation: slideUp 0.3s ease;">
                 <label style="font-size: var(--fs-md); font-weight: 600; color: var(--danger);">วันที่คาดว่าจะย้ายออก</label>
                 <input type="date" id="moveout-date" data-thai-date style="margin-bottom: 10px;">
-                <label style="font-size: var(--fs-md); font-weight: 600;">บัญชีธนาคารสำหรับรับเงินมัดจำคืน</label>
-                <input type="text" id="moveout-bank" placeholder="ระบุธนาคารและเลขบัญชี" style="margin-bottom: 15px;">
-                <label style="font-size: var(--fs-md); font-weight: 600;">เหตุผลที่ย้ายออก (ถ้าสะดวกบอก)</label>
-                <textarea id="moveout-reason" rows="2" placeholder="เพื่อช่วยปรับปรุงบริการในอนาคต" style="margin-bottom: 15px;"></textarea>
+                <label class="ta-md-600">บัญชีธนาคารสำหรับรับเงินมัดจำคืน</label>
+                <input type="text" id="moveout-bank" placeholder="ระบุธนาคารและเลขบัญชี" class="u-mb-15">
+                <label class="ta-md-600">เหตุผลที่ย้ายออก (ถ้าสะดวกบอก)</label>
+                <textarea id="moveout-reason" rows="2" placeholder="เพื่อช่วยปรับปรุงบริการในอนาคต" class="u-mb-15"></textarea>
                 <button class="btn-main" style="background: var(--danger);"
                     data-action="confirmLeaseRequest" data-arg="moveout"><i
                         class="fas fa-sign-out-alt"></i> ยืนยันการแจ้งย้ายออก</button>
@@ -4515,46 +4579,46 @@
     </div>
 
     <div id="page-privacy" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="showSubPage" data-page="settings">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">Privacy Policy</h1>
+            <h1 class="ta-card-title">Privacy Policy</h1>
         </div>
-        <div id="policy-privacy-content" class="card" style="padding-bottom:80px;">
-            <p style="font-weight:700; font-size:var(--fs-md); margin:0 0 4px;">นโยบายความเป็นส่วนตัว</p>
-            <p style="color:var(--text-muted); margin:0 0 8px; font-size:var(--fs-sm);">มีผลบังคับใช้ตั้งแต่ 1 พฤษภาคม 2568 · The Green Haven Co., Ltd.</p>
+        <div id="policy-privacy-content" class="card u-pb-nav" >
+            <p class="ta-stat-label">นโยบายความเป็นส่วนตัว</p>
+            <p class="ta-sub-desc">มีผลบังคับใช้ตั้งแต่ 1 พฤษภาคม 2568 · The Green Haven Co., Ltd.</p>
 
             <details class="faq-details">
                 <summary>1. ข้อมูลที่เราเก็บรวบรวม</summary>
                 <div class="faq-answer">
-                    <p style="margin:0 0 8px;">แอปพลิเคชัน Nature Haven เก็บข้อมูลต่อไปนี้เพื่อให้บริการแก่ผู้เช่า:</p>
-                    <p style="margin:0 0 8px;"><strong>ข้อมูลส่วนตัว</strong><br>
+                    <p class="ta-mb-0-8">แอปพลิเคชัน Nature Haven เก็บข้อมูลต่อไปนี้เพื่อให้บริการแก่ผู้เช่า:</p>
+                    <p class="ta-mb-0-8"><strong>ข้อมูลส่วนตัว</strong><br>
                     • ชื่อ-นามสกุล, เบอร์โทรศัพท์, อีเมล, ทะเบียนรถยนต์<br>
                     • หมายเลขห้อง และอาคารที่พักอาศัย<br>
                     • วันเกิด (เพื่อคำนวณดวงชะตาประจำวัน — เก็บเฉพาะวันในสัปดาห์)<br>
                     • ชื่อเล่นที่กำหนดเอง และรูปโปรไฟล์ (Avatar)</p>
-                    <p style="margin:0 0 8px;"><strong>ข้อมูลสัตว์เลี้ยง</strong><br>
+                    <p class="ta-mb-0-8"><strong>ข้อมูลสัตว์เลี้ยง</strong><br>
                     • ชื่อ, ประเภท, สายพันธุ์, เพศ, อายุ<br>
                     • สถานะการฉีดวัคซีน, วันที่ฉีดและวันหมดอายุ</p>
-                    <p style="margin:0 0 8px;"><strong>ข้อมูลการชำระเงิน</strong><br>
+                    <p class="ta-mb-0-8"><strong>ข้อมูลการชำระเงิน</strong><br>
                     • ยอดบิลค่าเช่า, ค่าไฟ, ค่าน้ำ<br>
                     • สลิปการโอนเงิน (ภาพ) สำหรับการยืนยันผ่าน SlipOK API<br>
                     • Transaction Reference จาก SlipOK<br>
                     • ข้อมูลบริษัท (ชื่อ, เลขประจำตัวผู้เสียภาษี, ที่อยู่) สำหรับใบเสร็จนามบริษัท</p>
-                    <p style="margin:0 0 8px;"><strong>ข้อมูลการใช้งานและมิเตอร์</strong><br>
+                    <p class="ta-mb-0-8"><strong>ข้อมูลการใช้งานและมิเตอร์</strong><br>
                     • ข้อมูลมิเตอร์ไฟฟ้า (หน่วยเก่า-ใหม่) และน้ำประปา<br>
                     • ประวัติการใช้งานย้อนหลัง 6 เดือน</p>
-                    <p style="margin:0 0 8px;"><strong>ข้อมูลการแจ้งและบริการ</strong><br>
+                    <p class="ta-mb-0-8"><strong>ข้อมูลการแจ้งและบริการ</strong><br>
                     • คำขอแจ้งซ่อม (หมวดหมู่, รายละเอียด, รูปภาพ, ความเร่งด่วน)<br>
                     • คำขอทำความสะอาด (วันที่, ช่วงเวลา, หมายเหตุ)<br>
                     • การแจ้งนิติ/ร้องเรียน (ประเภท, ความรุนแรง, สถานที่, รายละเอียด)<br>
                     • รูปภาพประกอบการแจ้งซ่อม</p>
-                    <p style="margin:0 0 8px;"><strong>ข้อมูลชุมชนและ Marketplace</strong><br>
+                    <p class="ta-mb-0-8"><strong>ข้อมูลชุมชนและ Marketplace</strong><br>
                     • โพสต์ Marketplace (ชื่อสินค้า, ราคา, รายละเอียด, รูปภาพ)<br>
                     • LINE User ID (เมื่อผูกบัญชี LINE LIFF)</p>
-                    <p style="margin:0;"><strong>ข้อมูล Gamification</strong><br>
+                    <p class="u-m0"><strong>ข้อมูล Gamification</strong><br>
                     • คะแนน, ระดับ, ป้าย (Badge), ความสำเร็จ (Achievement)<br>
                     • สถิติการ Login ต่อเนื่อง (Login Streak)<br>
                     • ประวัติการอ่านบทความ Wellness และการรับคะแนน</p>
@@ -4601,16 +4665,16 @@
     </div>
 
     <div id="page-terms" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="showSubPage" data-page="settings">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">คู่มือการใช้งาน</h1>
+            <h1 class="ta-card-title">คู่มือการใช้งาน</h1>
         </div>
-        <div id="policy-terms-content" class="card" style="padding-bottom:80px;">
-            <p style="font-weight:700; font-size:var(--fs-md); margin:0 0 4px;">คู่มือการใช้งาน Nature Haven App</p>
-            <p style="color:var(--text-muted); margin:0 0 8px; font-size:var(--fs-sm);">เวอร์ชัน 6.0 · อัปเดต พฤษภาคม 2568</p>
+        <div id="policy-terms-content" class="card u-pb-nav" >
+            <p class="ta-stat-label">คู่มือการใช้งาน Nature Haven App</p>
+            <p class="ta-sub-desc">เวอร์ชัน 6.0 · อัปเดต พฤษภาคม 2568</p>
 
             <details class="faq-details">
                 <summary>🏠 หน้าหลัก (Home)</summary>
@@ -4671,14 +4735,14 @@
 
     <!-- ===== FAQ page ===== -->
     <div id="page-faq" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="showSubPage" data-page="settings">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">คำถามที่พบบ่อย</h1>
+            <h1 class="ta-card-title">คำถามที่พบบ่อย</h1>
         </div>
-        <div class="card" style="padding-bottom:80px;">
+        <div class="card u-pb-nav" >
 
             <!-- ปัญหาการใช้งาน -->
             <p class="faq-section-label">⚙️ ปัญหาการใช้งาน</p>
@@ -4699,7 +4763,7 @@
             </details>
 
             <!-- บิล & ชำระเงิน -->
-            <p class="faq-section-label" style="margin-top:8px;">💳 บิล & การชำระเงิน</p>
+            <p class="faq-section-label u-mt-8" >💳 บิล & การชำระเงิน</p>
 
             <details class="faq-details">
                 <summary>บิลเดือนนี้ยังไม่โผล่</summary>
@@ -4717,7 +4781,7 @@
             </details>
 
             <!-- แจ้งซ่อม -->
-            <p class="faq-section-label" style="margin-top:8px;">🔧 แจ้งซ่อม</p>
+            <p class="faq-section-label u-mt-8" >🔧 แจ้งซ่อม</p>
 
             <details class="faq-details">
                 <summary>แจ้งซ่อมยังไง</summary>
@@ -4730,7 +4794,7 @@
             </details>
 
             <!-- แต้ม & รางวัล -->
-            <p class="faq-section-label" style="margin-top:8px;">⭐ แต้ม & รางวัล</p>
+            <p class="faq-section-label u-mt-8" >⭐ แต้ม & รางวัล</p>
 
             <details class="faq-details">
                 <summary>ได้แต้มจากอะไรบ้าง</summary>
@@ -4753,7 +4817,7 @@
             </details>
 
             <!-- สัญญาเช่า -->
-            <p class="faq-section-label" style="margin-top:8px;">📄 สัญญาเช่า</p>
+            <p class="faq-section-label u-mt-8" >📄 สัญญาเช่า</p>
 
             <details class="faq-details">
                 <summary>ดูสัญญาเช่าของตัวเองได้ที่ไหน</summary>
@@ -4770,16 +4834,16 @@
     <!-- ===== /FAQ page ===== -->
 
     <div id="page-compliance" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="showSubPage" data-page="settings">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">Data & Compliance</h1>
+            <h1 class="ta-card-title">Data & Compliance</h1>
         </div>
-        <div id="policy-compliance-content" class="card" style="padding-bottom:80px;">
-            <p style="font-weight:700; font-size:var(--fs-md); margin:0 0 4px;">การปฏิบัติตามกฎระเบียบด้านข้อมูล</p>
-            <p style="color:var(--text-muted); margin:0 0 8px; font-size:var(--fs-sm);">The Green Haven Co., Ltd. · มีผลบังคับใช้ 1 พฤษภาคม 2568</p>
+        <div id="policy-compliance-content" class="card u-pb-nav" >
+            <p class="ta-stat-label">การปฏิบัติตามกฎระเบียบด้านข้อมูล</p>
+            <p class="ta-sub-desc">The Green Haven Co., Ltd. · มีผลบังคับใช้ 1 พฤษภาคม 2568</p>
 
             <details class="faq-details">
                 <summary>1. พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA) พ.ศ. 2562</summary>
@@ -4832,16 +4896,16 @@
     </div>
 
     <div id="page-ip" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+        <div class="app-bar ta-page-top" >
+            <div class="ta-icon-circle"
                 data-action="showSubPage" data-page="settings">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+                <i class="fas fa-chevron-left u-color-green" ></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">IP Infringement</h1>
+            <h1 class="ta-card-title">IP Infringement</h1>
         </div>
-        <div id="policy-ip-content" class="card" style="padding-bottom:80px;">
-            <p style="font-weight:700; font-size:var(--fs-md); margin:0 0 4px;">นโยบายทรัพย์สินทางปัญญา</p>
-            <p style="color:var(--text-muted); margin:0 0 8px; font-size:var(--fs-sm);">The Green Haven Co., Ltd. · มีผลบังคับใช้ 1 พฤษภาคม 2568</p>
+        <div id="policy-ip-content" class="card u-pb-nav" >
+            <p class="ta-stat-label">นโยบายทรัพย์สินทางปัญญา</p>
+            <p class="ta-sub-desc">The Green Haven Co., Ltd. · มีผลบังคับใช้ 1 พฤษภาคม 2568</p>
 
             <details class="faq-details">
                 <summary>1. ทรัพย์สินทางปัญญาของเรา</summary>
@@ -4901,13 +4965,13 @@
         <!-- Quick-dial bar -->
         <div style="padding:0 15px 18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
             <button class="emergency-call-btn" data-action="makeCall" data-number="191">
-                <span style="font-size:1.5rem;">🚓</span>ตำรวจ<strong>191</strong>
+                <span class="u-fs-1-5rem">🚓</span>ตำรวจ<strong>191</strong>
             </button>
             <button class="emergency-call-btn" data-action="makeCall" data-number="199">
-                <span style="font-size:1.5rem;">🚒</span>ดับเพลิง<strong>199</strong>
+                <span class="u-fs-1-5rem">🚒</span>ดับเพลิง<strong>199</strong>
             </button>
             <button class="emergency-call-btn" data-action="makeCall" data-number="1669">
-                <span style="font-size:1.5rem;">🚑</span>พยาบาล<strong>1669</strong>
+                <span class="u-fs-1-5rem">🚑</span>พยาบาล<strong>1669</strong>
             </button>
         </div>
 
@@ -5009,15 +5073,15 @@
 
     <nav class="nav-bar" id="main-nav-bar" style="display: none;" role="navigation" aria-label="เมนูหลัก">
         <button type="button" class="nav-item active" aria-current="page" aria-label="หน้าหลัก" data-action="showPage--updateNavActiveIndex" data-page="home" data-nav-index="0"><i class="fas fa-home" aria-hidden="true"></i>หน้าหลัก</button>
-        <button type="button" class="nav-item" aria-label="บริการ" data-action="showPage--updateNavActiveIndex" data-page="services" data-nav-index="1" style="position:relative;">
+        <button type="button" class="nav-item u-pos-rel" aria-label="บริการ" data-action="showPage--updateNavActiveIndex" data-page="services" data-nav-index="1" >
             <i class="fas fa-leaf" aria-hidden="true"></i>บริการ
             <span id="nav-badge-services" aria-live="polite" style="display:none; position:absolute; top:4px; right:8px; background:var(--alert); color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
         </button>
-        <button type="button" id="nav-community-btn" class="nav-item" aria-label="Quiz" data-action="showPage--markCommunityRead" data-page="community" style="position:relative;">
+        <button type="button" id="nav-community-btn" class="nav-item u-pos-rel" aria-label="Quiz" data-action="showPage--markCommunityRead" data-page="community" >
             <i class="fas fa-question-circle" aria-hidden="true"></i>Quiz
             <span id="nav-badge-community" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:var(--alert); border-radius:50%;"></span>
         </button>
-        <button type="button" class="nav-item" aria-label="บิล" data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3" style="position:relative;">
+        <button type="button" class="nav-item u-pos-rel" aria-label="บิล" data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3" >
             <i class="fas fa-wallet" aria-hidden="true"></i>บิล
             <span id="nav-badge-bills" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:var(--alert); border-radius:50%;"></span>
         </button>
@@ -5855,8 +5919,8 @@
                 try {
                     await window.ensureQRCode();
                     new QRCode(qrBox, { text: buildPromptPayPayload(phone, 500), width:170, height:170, correctLevel: QRCode.CorrectLevel.M });
-                } catch(e) { qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">สร้าง QR ไม่ได้</p>'; }
-            } else qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่มีข้อมูล PromptPay</p>';
+                } catch(e) { qrBox.innerHTML = '<p class="ta-lighter-sm">สร้าง QR ไม่ได้</p>'; }
+            } else qrBox.innerHTML = '<p class="ta-lighter-sm">ไม่มีข้อมูล PromptPay</p>';
             // Reset slip state
             _cleaningSlipBase64 = null;
             document.getElementById('cpm-slip-preview').style.display = 'none';
@@ -6406,7 +6470,7 @@
             if (!body || !modal) return;
 
             if (type === 'pay') {
-                body.innerHTML = `<h3>ชำระเงิน</h3><p>ยอด: 2,736.00 ฿</p><div style="border:2px dashed #ccc; padding:20px; text-align:center; border-radius:15px; background:#fdfdfd;">คลิกเพื่อแนบสลิปการโอนเงินที่นี่</div><button class="btn-main" style="margin-top:15px;" data-action="closeModal">ส่งหลักฐาน</button>`;
+                body.innerHTML = `<h3>ชำระเงิน</h3><p>ยอด: 2,736.00 ฿</p><div style="border:2px dashed #ccc; padding:20px; text-align:center; border-radius:15px; background:#fdfdfd;">คลิกเพื่อแนบสลิปการโอนเงินที่นี่</div><button class="btn-main u-mt-15"  data-action="closeModal">ส่งหลักฐาน</button>`;
             } else if (type === 'suggest') {
                 body.innerHTML = `<h3 style="color: var(--primary-green); margin-top:0;">กระซิบถึงเจ้าของตึก</h3>
                   <p style="font-size:var(--fs-md); opacity: 0.8; margin-bottom: 15px;">ข้อความนี้จะถูกส่งตรงเพื่อพัฒนา Nature Haven ครับ</p>
@@ -6421,7 +6485,7 @@
                   <label style="display:block; margin-top:10px;">เบอร์โทร</label><input type="text" value="${curPhone}">
                   <p style="margin:8px 0 15px; font-size:var(--fs-sm); color:var(--text-muted);">* แก้เบอร์/ชื่อเพิ่มเติม กรุณาแจ้งนิติเพื่ออัปเดตระบบ</p>
                   <label style="display:block; margin-top:10px;">เปลี่ยน Avatar</label>
-                  <div class="avatar-selector" style="margin-bottom:15px;">
+                  <div class="avatar-selector u-mb-15" >
                       <div class="avatar-option active" data-action="setAvatar" data-avatar="🌿">🌿</div>
                       <div class="avatar-option" data-action="setAvatar" data-avatar="🌊">🌊</div>
                       <div class="avatar-option" data-action="setAvatar" data-avatar="⛰️">⛰️</div>
@@ -7315,7 +7379,7 @@
                 const html = `
         <div class="pet-item" style="animation: slideUp 0.5s ease; background: white; padding: 15px; border-radius: 20px; display: flex; align-items: center; gap: 15px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #f9f9f9;">
             <div class="pet-avatar" style="font-size: var(--fs-lg); ${avatarStyle} width:60px; height:60px; display:flex; align-items:center; justify-content:center; border-radius:15px; overflow:hidden;">${avatarInner}</div>
-            <div style="flex:1;">
+            <div class="u-flex-1">
                 <strong style="font-size: var(--fs-md); color: #334435;">น้อง${_esc(pet.name)} (${_esc(pet.breed)})</strong>
                 ${vaxStatusHTML}
                 ${pet.alertStatusHTML || ''}
@@ -7586,9 +7650,9 @@
                 const list = document.getElementById('rewards-list');
                 if (list) {
                     list.innerHTML =
-                        '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>' +
-                        '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>' +
-                        '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>';
+                        '<div class="gh-skeleton gh-skeleton--card ta-my-10" ></div>' +
+                        '<div class="gh-skeleton gh-skeleton--card ta-my-10" ></div>' +
+                        '<div class="gh-skeleton gh-skeleton--card ta-my-10" ></div>';
                 }
             }
         }
@@ -7995,7 +8059,7 @@
             if (tickets.length === 0) {
                 container.innerHTML = window.GhEmptyState
                     ? window.GhEmptyState.html('tasks', { title:'ยังไม่มีรายการแจ้งซ่อม', text:'เมื่อแจ้งซ่อมแล้ว รายการจะแสดงที่นี่' })
-                    : '<p style="text-align:center;color:#9ca3af;font-size:var(--fs-md);padding:20px;">ยังไม่มีรายการแจ้งซ่อม</p>';
+                    : '<p class="ta-text-ctr-muted">ยังไม่มีรายการแจ้งซ่อม</p>';
                 return;
             }
             const statusText = { pending:'⏳ รอดำเนินการ', inprogress:'🔧 กำลังซ่อม', done:'✅ เสร็จสิ้น' };
@@ -8331,7 +8395,7 @@
             if (filtered.length === 0) {
                 container.innerHTML = window.GhEmptyState
                     ? window.GhEmptyState.html('messages', { title:'ไม่พบรายการ', text:'ยังไม่มีประวัติการแจ้งที่ตรงกับตัวกรอง' })
-                    : '<p style="text-align:center;color:#9ca3af;font-size:var(--fs-md);padding:20px;">ไม่พบรายการ</p>';
+                    : '<p class="ta-text-ctr-muted">ไม่พบรายการ</p>';
                 return;
             }
             const statusLabel = { open:'⏳ รอดำเนินการ', 'in-progress':'🔧 กำลังดำเนินการ', resolved:'✅ แก้ไขแล้ว' };
@@ -9987,9 +10051,9 @@
             // (e.g. admin preview without LIFF claims).
             if (list && !list.children.length) {
                 list.innerHTML =
-                    '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>' +
-                    '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>' +
-                    '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>';
+                    '<div class="gh-skeleton gh-skeleton--card ta-my-10" ></div>' +
+                    '<div class="gh-skeleton gh-skeleton--card ta-my-10" ></div>' +
+                    '<div class="gh-skeleton gh-skeleton--card ta-my-10" ></div>';
             }
             if (amt)   amt.textContent = '฿ —';
             if (label) label.innerHTML = '<span class="gh-skeleton gh-skeleton--text gh-skeleton--text-half" style="display:inline-block;height:1em;"></span>';
@@ -10663,8 +10727,8 @@
             const daysInMonth = new Date(window.YearUtils.toCE(yr) || parseInt(yr), parseInt(mo), 0).getDate() || 30;
             const avgPerDay = (row.units / daysInMonth).toFixed(1);
             const dailyNote = isElec
-                ? `เฉลี่ย ${avgPerDay} ${unit}/วัน <span style="color:#aaa;">(ประมาณ — รอ Smart Home)</span>`
-                : `เฉลี่ย ${avgPerDay} ${unit}/วัน <span style="color:#aaa;">(ค่าเฉลี่ยจากยอดเดือน)</span>`;
+                ? `เฉลี่ย ${avgPerDay} ${unit}/วัน <span class="u-color-lighter">(ประมาณ — รอ Smart Home)</span>`
+                : `เฉลี่ย ${avgPerDay} ${unit}/วัน <span class="u-color-lighter">(ค่าเฉลี่ยจากยอดเดือน)</span>`;
 
             detail.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
@@ -10672,7 +10736,7 @@
                         <div style="font-size:var(--fs-md); font-weight:700; color:#334435;">${icon} ${monthLabel}</div>
                         ${row.old != null && row.new != null ? `<div style="font-size:10px; color:#9ca3af; margin-top:3px;">มิเตอร์ ${row.old} → ${row.new}</div>` : ''}
                     </div>
-                    <div style="text-align:right;">
+                    <div class="u-text-right">
                         <div style="font-size:1.3rem; font-weight:800; color:${color}; line-height:1.1;">${Number(row.units).toLocaleString()}<span style="font-size:var(--fs-sm); color:#888; font-weight:600; margin-left:4px;">${unit}</span></div>
                         <div style="font-size:var(--fs-sm); font-weight:700; color:#555;">฿ ${Number(row.cost).toLocaleString()}</div>
                     </div>
@@ -10848,8 +10912,8 @@
             el.innerHTML = pets.map(p => {
                 const emoji = emojiMap[p.type||p.petType] || '🐾';
                 return `<div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-                    <div style="font-size:var(--fs-lg);">${emoji}</div>
-                    <div><strong style="font-size:var(--fs-md);">${p.name||p.petName||'สัตว์เลี้ยง'}</strong>
+                    <div class="u-fs-lg">${emoji}</div>
+                    <div><strong class="u-fs-md">${p.name||p.petName||'สัตว์เลี้ยง'}</strong>
                     <p style="font-size:var(--fs-sm);color:#888;margin:2px 0 0;">${p.breed||p.petBreed||''}</p></div>
                 </div>`;
             }).join('');
@@ -10994,7 +11058,7 @@
             loadQuizRewardConfig().then(() => {
                 // แสดงค่า rewardPoints ที่ admin ตั้งในคำอธิบาย
                 const descEl = section.querySelector('p');
-                if (descEl) descEl.innerHTML = `ทำ quiz ตอบถูก 2/3 ได้ <strong style="color:var(--primary-green);">+${_quizRewardContract} pts</strong> (ทำได้ 1 ครั้ง/เดือน)`;
+                if (descEl) descEl.innerHTML = `ทำ quiz ตอบถูก 2/3 ได้ <strong class="u-color-green">+${_quizRewardContract} pts</strong> (ทำได้ 1 ครั้ง/เดือน)`;
             });
             // already done this month?
             // Firestore marker = source of truth (Session B). localStorage = hint
@@ -11177,8 +11241,8 @@
             const resEl = document.getElementById('quiz-result');
             resEl.style.display = 'block';
             resEl.innerHTML = previewPassed
-                ? `<div style="font-size:3rem;">🎉</div><strong style="color:var(--primary-green);">ตอบถูก ${previewCorrect}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">กำลังบันทึก... <strong style="color:var(--accent-gold,#D4AF37);">+${reward} pts</strong></p>`
-                : `<div style="font-size:3rem;">📖</div><strong>ตอบถูก ${previewCorrect}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ต้องตอบถูก ${passThreshold}/${total} ถึงได้แต้ม<br>ลองเดือนหน้านะครับ</p>`;
+                ? `<div class="u-fs-3rem">🎉</div><strong class="u-color-green">ตอบถูก ${previewCorrect}/${total}</strong><p class="ta-muted-6">กำลังบันทึก... <strong class="u-color-gold">+${reward} pts</strong></p>`
+                : `<div class="u-fs-3rem">📖</div><strong>ตอบถูก ${previewCorrect}/${total}</strong><p class="ta-muted-6">ต้องตอบถูก ${passThreshold}/${total} ถึงได้แต้ม<br>ลองเดือนหน้านะครับ</p>`;
             document.getElementById('quiz-submit-btn').textContent = 'ปิด';
             document.getElementById('quiz-submit-btn').disabled = false;
             document.getElementById('quiz-submit-btn').onclick = closeContractQuiz;
@@ -11223,8 +11287,8 @@
                 // Refresh result UI with server's actual answer.
                 if (typeof r.passed === 'boolean') {
                     resEl.innerHTML = r.passed
-                        ? `<div style="font-size:3rem;">🎉</div><strong style="color:var(--primary-green);">ตอบถูก ${r.score}/${r.total}</strong><p style="margin:6px 0; color:var(--text-muted);">ได้รับ <strong style="color:var(--accent-gold,#D4AF37);">+${r.reward} pts</strong></p>`
-                        : `<div style="font-size:3rem;">📖</div><strong>ตอบถูก ${r.score}/${r.total}</strong><p style="margin:6px 0; color:var(--text-muted);">ต้องตอบถูก ${r.passThreshold}/${r.total} ถึงได้แต้ม<br>ลองเดือนหน้านะครับ</p>`;
+                        ? `<div class="u-fs-3rem">🎉</div><strong class="u-color-green">ตอบถูก ${r.score}/${r.total}</strong><p class="ta-muted-6">ได้รับ <strong class="u-color-gold">+${r.reward} pts</strong></p>`
+                        : `<div class="u-fs-3rem">📖</div><strong>ตอบถูก ${r.score}/${r.total}</strong><p class="ta-muted-6">ต้องตอบถูก ${r.passThreshold}/${r.total} ถึงได้แต้ม<br>ลองเดือนหน้านะครับ</p>`;
                 }
                 if (typeof r.pointsAfter === 'number' && typeof loadGamificationData === 'function') {
                     loadGamificationData(); // refresh Quest Ecosystem display
@@ -11410,7 +11474,7 @@
                 const wU   = bill.charges?.water?.units ?? bill.meterReadings?.water?.units;
                 const wR   = bill.charges?.water?.rate  ?? 20;
                 const row = (label, amount, subline) => `
-                    <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                    <div class="ta-row-split-5">
                         <span>${label}</span><strong>฿${Number(amount).toLocaleString()}</strong>
                     </div>${subline ? `<div style="font-size:var(--fs-sm); color:#6b7280; padding:0 0 6px 8px;">${subline}</div>` : ''}`;
                 items.innerHTML = [
@@ -11433,9 +11497,9 @@
                     try {
                         await window.ensureQRCode();
                         new QRCode(qrBox, { text: buildPromptPayPayload(phone, total), width:180, height:180, correctLevel: QRCode.CorrectLevel.M });
-                    } catch(e) { qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่สามารถสร้าง QR ได้</p>'; }
+                    } catch(e) { qrBox.innerHTML = '<p class="ta-lighter-sm">ไม่สามารถสร้าง QR ได้</p>'; }
                 } else {
-                    qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่มีข้อมูล PromptPay</p>';
+                    qrBox.innerHTML = '<p class="ta-lighter-sm">ไม่มีข้อมูล PromptPay</p>';
                 }
             }
         }
@@ -11467,7 +11531,7 @@
                 const wU   = bill.charges?.water?.units ?? bill.meterReadings?.water?.units;
                 const wR   = bill.charges?.water?.rate  ?? 20;
                 const row = (label, amount, subline) => `
-                    <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                    <div class="ta-row-split-5">
                         <span>${label}</span><strong>฿${Number(amount).toLocaleString()}</strong>
                     </div>${subline ? `<div style="font-size:var(--fs-sm); color:#6b7280; padding:0 0 6px 8px;">${subline}</div>` : ''}`;
                 items.innerHTML = [
@@ -12242,9 +12306,9 @@
                 const head = document.createElement('div');
                 head.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:6px;';
                 head.innerHTML = `<span style="font-size:1.6rem;">${_esc(p.icon||'🔧')}</span>
-                    <div style="flex:1;">
-                        <div style="font-weight:700;">${_esc(p.name||'-')}</div>
-                        <small style="color:#666;">ประเภท: ${_esc(p.type||'-')}</small>
+                    <div class="u-flex-1">
+                        <div class="u-bold">${_esc(p.name||'-')}</div>
+                        <small class="u-color-muted">ประเภท: ${_esc(p.type||'-')}</small>
                     </div>`;
                 card.appendChild(head);
                 const info = document.createElement('div');
@@ -12388,24 +12452,24 @@
                     <div style="padding:1rem; background:#fff; border-radius:8px; border:2px dashed #2d8653;">
                         <div style="text-align:center; margin-bottom:0.8rem; border-bottom:2px solid var(--primary-green); padding-bottom:0.5rem;">
                             <h2 style="margin:0 0 0.5rem; color:var(--primary-green);">ใบเสร็จรับเงิน</h2>
-                            <small style="color:#888;">Receipt</small>
+                            <small class="u-color-sub">Receipt</small>
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:var(--fs-sm); margin-bottom:10px;">
-                            <div><small style="color:#888;">อ้างอิงบิล</small><div><strong>${_esc(bill.billId)}</strong></div></div>
-                            <div><small style="color:#888;">งวด</small><div><strong>${_esc(monthName)} ${_esc(year)}</strong></div></div>
-                            <div><small style="color:#888;">ห้อง</small><div><strong>${_esc(bill.roomId || _legacyRoom())}</strong></div></div>
-                            <div><small style="color:#888;">วิธีชำระ</small><div><strong>PromptPay</strong></div></div>
+                            <div><small class="u-color-sub">อ้างอิงบิล</small><div><strong>${_esc(bill.billId)}</strong></div></div>
+                            <div><small class="u-color-sub">งวด</small><div><strong>${_esc(monthName)} ${_esc(year)}</strong></div></div>
+                            <div><small class="u-color-sub">ห้อง</small><div><strong>${_esc(bill.roomId || _legacyRoom())}</strong></div></div>
+                            <div><small class="u-color-sub">วิธีชำระ</small><div><strong>PromptPay</strong></div></div>
                         </div>
                         <div style="border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;">
                             <div style="background:var(--primary-green); color:#fff; padding:8px 10px; font-weight:700;">รายละเอียด</div>
                             <div style="padding:10px;">
-                                ${bill.charges?.rent ? `<div style="display:flex; justify-content:space-between; padding:4px 0;"><span>🏠 ค่าเช่า</span><strong>฿${Number(bill.charges.rent).toLocaleString('th-TH')}</strong></div>` : ''}
-                                ${bill.charges?.electric?.cost ? `<div style="display:flex; justify-content:space-between; padding:4px 0;"><span>⚡ ค่าไฟ</span><strong>฿${Number(bill.charges.electric.cost).toLocaleString('th-TH')}</strong></div>` : ''}
-                                ${bill.charges?.water?.cost ? `<div style="display:flex; justify-content:space-between; padding:4px 0;"><span>💧 ค่าน้ำ</span><strong>฿${Number(bill.charges.water.cost).toLocaleString('th-TH')}</strong></div>` : ''}
-                                ${bill.charges?.trash ? `<div style="display:flex; justify-content:space-between; padding:4px 0;"><span>🗑️ ค่าขยะ</span><strong>฿${Number(bill.charges.trash).toLocaleString('th-TH')}</strong></div>` : ''}
+                                ${bill.charges?.rent ? `<div class="ta-row-split"><span>🏠 ค่าเช่า</span><strong>฿${Number(bill.charges.rent).toLocaleString('th-TH')}</strong></div>` : ''}
+                                ${bill.charges?.electric?.cost ? `<div class="ta-row-split"><span>⚡ ค่าไฟ</span><strong>฿${Number(bill.charges.electric.cost).toLocaleString('th-TH')}</strong></div>` : ''}
+                                ${bill.charges?.water?.cost ? `<div class="ta-row-split"><span>💧 ค่าน้ำ</span><strong>฿${Number(bill.charges.water.cost).toLocaleString('th-TH')}</strong></div>` : ''}
+                                ${bill.charges?.trash ? `<div class="ta-row-split"><span>🗑️ ค่าขยะ</span><strong>฿${Number(bill.charges.trash).toLocaleString('th-TH')}</strong></div>` : ''}
                                 <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:2px solid var(--primary-green); margin-top:6px;">
                                     <strong>รวมทั้งสิ้น</strong>
-                                    <strong style="color:var(--primary-green);">฿${Number(bill.totalCharge||bill.total||0).toLocaleString('th-TH')}</strong>
+                                    <strong class="u-color-green">฿${Number(bill.totalCharge||bill.total||0).toLocaleString('th-TH')}</strong>
                                 </div>
                             </div>
                         </div>
@@ -12482,7 +12546,7 @@
                     <div style="padding:1rem; background:#fff; border-radius:8px;">
                         <div style="text-align:center; border-bottom:2px solid var(--primary-green); padding-bottom:8px; margin-bottom:10px;">
                             <strong style="font-size:1.1rem;">🌿 ${_esc(getOwnerName())}</strong>
-                            <div style="color:#666; font-size:var(--fs-sm);">ใบวางบิล · เลขที่ ${_esc(billNo)}</div>
+                            <div class="ta-color-sm">ใบวางบิล · เลขที่ ${_esc(billNo)}</div>
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:var(--fs-sm); margin-bottom:10px;">
                             <div><small>ห้อง</small><div><strong>${_esc(_legacyRoom())}</strong></div></div>
@@ -12491,11 +12555,11 @@
                         <div style="border:1px solid #eee; border-radius:8px; overflow:hidden;">
                             <div style="background:var(--primary-green); color:#fff; padding:8px;">รายละเอียด</div>
                             <div style="padding:10px;">
-                                <div style="display:flex; justify-content:space-between; padding:4px 0;"><span>💰 ค่าเช่า</span><strong>฿${rent.toLocaleString('th-TH')}</strong></div>
-                                <div style="display:flex; justify-content:space-between; padding:4px 0;"><span>⚡ ค่าไฟ</span><strong>฿${elec.toLocaleString('th-TH')}</strong></div>
-                                <div style="display:flex; justify-content:space-between; padding:4px 0;"><span>💧 ค่าน้ำ</span><strong>฿${water.toLocaleString('th-TH')}</strong></div>
-                                <div style="display:flex; justify-content:space-between; padding:4px 0;"><span>🗑️ ค่าขยะ</span><strong>฿${trash.toLocaleString('th-TH')}</strong></div>
-                                <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:2px solid var(--primary-green); margin-top:6px;"><strong>รวม</strong><strong style="color:var(--primary-green);">฿${total.toLocaleString('th-TH')}</strong></div>
+                                <div class="ta-row-split"><span>💰 ค่าเช่า</span><strong>฿${rent.toLocaleString('th-TH')}</strong></div>
+                                <div class="ta-row-split"><span>⚡ ค่าไฟ</span><strong>฿${elec.toLocaleString('th-TH')}</strong></div>
+                                <div class="ta-row-split"><span>💧 ค่าน้ำ</span><strong>฿${water.toLocaleString('th-TH')}</strong></div>
+                                <div class="ta-row-split"><span>🗑️ ค่าขยะ</span><strong>฿${trash.toLocaleString('th-TH')}</strong></div>
+                                <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:2px solid var(--primary-green); margin-top:6px;"><strong>รวม</strong><strong class="u-color-green">฿${total.toLocaleString('th-TH')}</strong></div>
                             </div>
                         </div>
                         ${ppNumber ? `<div style="text-align:center; margin-top:10px; font-size:var(--fs-sm); color:#666;">PromptPay: ${_esc(ppNumber)}</div>` : ''}
