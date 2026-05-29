@@ -2321,6 +2321,10 @@
         .ta-section-heading { text-align: center; border-bottom: 2px solid var(--primary-green); padding-bottom: 8px; margin-bottom: 10px; }
         .ta-icon-pad     { padding: 8px; background: white; border-radius: 6px; text-align: center; }
         .ta-input-select { padding: 13px; border-radius: 12px; border: 1px solid #ddd; background: white; color: #666; font-family: inherit; font-weight: 700; cursor: pointer; }
+        /* display:none → classList migration */
+        .accordion-content      { display: none; }          /* default hidden; JS adds .is-open */
+        .accordion-content.is-open { display: block; }      /* accordion open state */
+        .ta-sect-hidden         { display: none; }          /* JS-toggled sections */
     </style>
 </head>
 
@@ -2793,7 +2797,7 @@
         <div class="menu-list">
 
             <!-- Building internet status (accordion, hidden until Firestore data arrives) -->
-            <div id="internetStatusSection" class="menu-item-group" style="display:none;">
+            <div id="internetStatusSection" class="menu-item-group ta-sect-hidden">
                 <div class="menu-item" data-action="toggleAccordion">
                     <div class="icon-box icon-blue"><i class="fas fa-wifi"></i></div>
                     <span>สถานะอินเทอร์เน็ตอาคาร</span>
@@ -2801,7 +2805,7 @@
                     <span id="internetStatusText" style="flex:0 0 auto; font-size:var(--fs-sm); font-weight:600; margin-right:10px;">เชื่อมต่อแล้ว</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
-                <div class="accordion-content" style="display:none;">
+                <div class="accordion-content">
                     <div id="internetSpeedSection" style="display:none; grid-template-columns:1fr 1fr; gap:10px;">
                         <div class="ta-icon-box">
                             <small class="u-color-muted">⬇️ Download</small>
@@ -2821,7 +2825,7 @@
             </div>
 
             <!-- Room-level internet status (accordion) -->
-            <div id="roomInternetStatusSection" class="menu-item-group" style="display:none;">
+            <div id="roomInternetStatusSection" class="menu-item-group ta-sect-hidden">
                 <div class="menu-item" data-action="toggleAccordion">
                     <div class="icon-box icon-green"><i class="fas fa-tower-broadcast"></i></div>
                     <span>สถานะอินเทอร์เน็ตห้องพัก</span>
@@ -2829,7 +2833,7 @@
                     <span id="roomInternetStatusText" style="flex:0 0 auto; font-size:var(--fs-sm); font-weight:600; margin-right:10px;">เชื่อมต่อแล้ว</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
-                <div class="accordion-content" style="display:none;">
+                <div class="accordion-content">
                     <div id="roomInternetSpeedSection" style="display:none; grid-template-columns:1fr 1fr; gap:10px;">
                         <div class="ta-icon-box">
                             <small class="u-color-muted">⬇️ ความเร็วประมาณ</small>
@@ -2877,7 +2881,7 @@
                     <span>เบอร์โทรฉุกเฉินอาคาร</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
-                <div class="accordion-content" style="display:none;">
+                <div class="accordion-content">
                     <div id="emergencyContactsList" style="display:grid; gap:8px;"></div>
                     <div id="serviceProvidersList" style="display:grid; gap:10px; margin-top:12px;"></div>
                 </div>
@@ -2890,7 +2894,7 @@
                     <span>เอกสารอาคาร</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
-                <div class="accordion-content" style="display:none;">
+                <div class="accordion-content">
                     <div id="documentsList" style="display:grid; gap:10px;"></div>
                 </div>
             </div>
@@ -3383,7 +3387,7 @@
 
         </div><!-- end usage flex wrapper -->
 
-        <div id="bills-history-section" style="display:none;">
+        <div class="ta-sect-hidden" id="bills-history-section">
             <div class="section-title" role="heading" aria-level="2"><span>ประวัติย้อนหลัง</span></div>
             <div class="card" id="bills-history-list">
                 <!-- Static fallback empty state — JS overwrites with bill cards or
@@ -3482,7 +3486,7 @@
         </div>
 
         <!-- STEP 2: Slip Upload -->
-        <div id="payment-step-2" style="display:none;">
+        <div class="ta-sect-hidden" id="payment-step-2">
             <div class="receipt-card">
                 <div class="receipt-inner">
                     <h2 class="receipt-title">อัปโหลดสลิป</h2>
@@ -3509,7 +3513,7 @@
         </div>
 
         <!-- STEP 3: Receipt -->
-        <div id="payment-step-3" style="display:none;">
+        <div class="ta-sect-hidden" id="payment-step-3">
             <div class="receipt-card">
                 <div class="receipt-inner">
                     <!-- Brand header -->
@@ -3562,7 +3566,7 @@
                 <button class="btn-receipt btn-green" data-action="goBackFromPayment">← กลับไปบิล</button>
             </div>
             <!-- ported: hidden container so downloadReceipt() finds receiptContent fallback -->
-            <div id="receiptContent" style="display:none;"></div>
+            <div class="ta-sect-hidden" id="receiptContent"></div>
         </div>
     </div>
 
@@ -3672,7 +3676,7 @@
         </div>
 
         <!-- Achievements Tab -->
-        <div id="eco-panel-achievements" style="display:none;" class="px-4">
+        <div id="eco-panel-achievements" class="px-4 ta-sect-hidden">
             <h3 class="font-bold text-sm mb-3">🏅 เหรียญที่ได้รับ</h3>
             <div id="badge-grid-container" class="grid grid-cols-3 gap-3 mb-6">
                 <div class="gh-skeleton ta-sk-img" ></div>
@@ -3688,7 +3692,7 @@
         </div>
 
         <!-- Rankings Tab -->
-        <div id="eco-panel-rankings" style="display:none;">
+        <div class="ta-sect-hidden" id="eco-panel-rankings">
             <div class="muji-card p-5 mb-4 mx-4">
                 <h3 class="font-bold text-sm mb-4">👑 ผู้พิทักษ์ป่าประจำสัปดาห์</h3>
                 <div id="eco-leaderboard" class="space-y-3">
@@ -3705,7 +3709,7 @@
         </div>
 
         <!-- Stats Tab -->
-        <div id="eco-panel-stats" style="display:none;" class="px-4">
+        <div id="eco-panel-stats" class="px-4 ta-sect-hidden">
             <div class="muji-card p-5 mb-4">
                 <h3 class="font-bold text-sm mb-4">📊 สถิติรายเดือน</h3>
                 <div class="space-y-3">
@@ -3812,7 +3816,7 @@
         </div>
 
         <!-- Facility type tabs -->
-        <div id="fb-type-tabs" style="display:none;"></div>
+        <div class="ta-sect-hidden" id="fb-type-tabs"></div>
 
         <!-- Date picker -->
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
@@ -3863,7 +3867,7 @@
         <div id="cl-status-area"></div>
 
         <!-- Pending instance form -->
-        <div id="cl-form-area" style="display:none;">
+        <div class="ta-sect-hidden" id="cl-form-area">
             <div class="card" style="margin-bottom:1rem;">
                 <div id="cl-form-title" style="font-weight:700;font-size:1rem;margin-bottom:.75rem;"></div>
 
@@ -3887,7 +3891,7 @@
         </div>
 
         <!-- Submitted / complete state -->
-        <div id="cl-done-area" style="display:none;">
+        <div class="ta-sect-hidden" id="cl-done-area">
             <div class="card" style="text-align:center;padding:2rem;">
                 <div style="font-size:2.5rem;margin-bottom:.75rem;">✅</div>
                 <div style="font-weight:700;font-size:1.05rem;margin-bottom:.5rem;">ส่งใบตรวจแล้ว</div>
@@ -4453,7 +4457,7 @@
                 </div>
             </div>
             <!-- Edit form (hidden by default — toggled by toggleProfileEditMode) -->
-            <div id="profile-edit-form" style="display:none;">
+            <div class="ta-sect-hidden" id="profile-edit-form">
                 <label class="ta-sub-text">เบอร์โทรศัพท์ <span style="color:var(--accent);">🔒 ต้องยืนยัน OTP</span></label>
                 <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#f4f6f8; border-radius:var(--radius-sm); margin-bottom:8px; font-size:var(--fs-base);">
                     <span class="u-color-muted">ปัจจุบัน:</span>
@@ -4485,7 +4489,7 @@
                         </div>
                     </div>
                     <!-- Step 2: enter code -->
-                    <div id="otp-step-2" style="display:none;">
+                    <div class="ta-sect-hidden" id="otp-step-2">
                         <p style="font-size:var(--fs-sm); color:#666; margin:0 0 12px;">ส่งรหัส 6 หลักไปยัง <strong id="otp-sent-to">—</strong> แล้ว</p>
                         <label class="ta-sub-text">รหัส OTP</label>
                         <input type="text" id="otp-code" placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="margin-bottom:12px; width:100%; font-size:var(--text-lg); letter-spacing:8px; text-align:center;">
@@ -4506,7 +4510,7 @@
             <div class="receipt-item"><span>สิ้นสุดสัญญา:</span><strong id="profile-lease-end">—</strong></div>
             <div class="receipt-item"><span>ระยะเวลาคงเหลือ:</span><strong id="profile-lease-remaining" class="u-color-green">—</strong></div>
             <div class="receipt-item"><span>ค่าเช่ารายเดือน:</span><strong id="profile-rent" class="u-color-green">—</strong></div>
-            <div class="receipt-item"><span>เงินมัดจำ (Deposit):</span><span style="display:flex;align-items:center;gap:8px;"><strong id="profile-deposit" style="color:var(--danger);">—</strong><span id="profile-deposit-badge" style="display:none;"></span></span></div>
+            <div class="receipt-item"><span>เงินมัดจำ (Deposit):</span><span style="display:flex;align-items:center;gap:8px;"><strong id="profile-deposit" style="color:var(--danger);">—</strong><span class="ta-sect-hidden" id="profile-deposit-badge"></span></span></div>
             <button class="btn-main" style="margin-top: 15px; background: #334435;"
                 data-action="showSubPage" data-page="contract-action-page"><i class="fas fa-file-signature"></i> แจ้งต่อสัญญา /
                 ย้ายออก</button>
@@ -5007,7 +5011,7 @@
                     <span>แจ้งความ / เรียกตำรวจ</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
-                <div class="accordion-content emergency-section-body" style="display:none;">
+                <div class="accordion-content emergency-section-body">
                     <div class="emergency-step"><div class="emergency-step-num">1</div><span>โทร <strong>191</strong> หรือ <strong>1599</strong> (สายด่วนตำรวจ) แจ้งเหตุและสถานที่</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">2</div><span>อย่าเคลื่อนย้ายหรือแตะต้องสิ่งของในที่เกิดเหตุ เก็บไว้เป็นหลักฐาน</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">3</div><span>จดบันทึก วัน เวลา รายละเอียดเหตุการณ์ และพยานที่อยู่ในเหตุการณ์</span></div>
@@ -5024,7 +5028,7 @@
                     <span>เกิดไฟไหม้</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
-                <div class="accordion-content emergency-section-body" style="display:none;">
+                <div class="accordion-content emergency-section-body">
                     <div class="emergency-step"><div class="emergency-step-num">1</div><span>กดสัญญาณเตือนไฟไหม้ที่ชั้นใกล้เคียงทันที</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">2</div><span>โทร <strong>199</strong> แจ้งชื่ออาคารและชั้น</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">3</div><span>ออกทางบันไดหนีไฟ — <strong>ห้ามใช้ลิฟต์</strong></span></div>
@@ -5041,7 +5045,7 @@
                     <span>น้ำท่วม / ท่อแตก</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
-                <div class="accordion-content emergency-section-body" style="display:none;">
+                <div class="accordion-content emergency-section-body">
                     <div class="emergency-step"><div class="emergency-step-num">1</div><span>ปิดวาล์วน้ำหลักในห้องทันที (ใต้อ่างล้างจาน หรือหลังชักโครก)</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">2</div><span>ปิดเบรกเกอร์ไฟฟ้าในห้องเพื่อป้องกันไฟช็อต</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">3</div><span>แจ้ง admin ทาง LINE หรือโทรหานิติบุคคลทันที</span></div>
@@ -5057,7 +5061,7 @@
                     <span>แผ่นดินไหว</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
-                <div class="accordion-content emergency-section-body" style="display:none;">
+                <div class="accordion-content emergency-section-body">
                     <div class="emergency-step"><div class="emergency-step-num">1</div><span><strong>DROP</strong> — นอนหรือก้มลงทันที</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">2</div><span><strong>COVER</strong> — หลบใต้โต๊ะแข็งแรง หรือปิดหัวด้วยแขน</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">3</div><span><strong>HOLD ON</strong> — จับโต๊ะไว้จนแผ่นดินหยุดสั่น</span></div>
@@ -5073,7 +5077,7 @@
                     <span>เจ็บป่วย / อุบัติเหตุ</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
-                <div class="accordion-content emergency-section-body" style="display:none;">
+                <div class="accordion-content emergency-section-body">
                     <div class="emergency-step"><div class="emergency-step-num">1</div><span>โทร <strong>1669</strong> แจ้งอาการเบื้องต้น ชื่ออาคาร ชั้น และห้อง</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">2</div><span>ห้ามเคลื่อนย้ายผู้ที่หมดสติหรือบาดเจ็บที่กระดูกสันหลัง</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">3</div><span>หากหยุดหายใจ — CPR: กดหน้าอก 30 ครั้ง เป่าลม 2 ครั้ง สลับกัน</span></div>
@@ -8449,7 +8453,7 @@
                 const btn = document.getElementById('eco-tab-' + t);
                 if (!panel || !btn) return;
                 const active = t === tab;
-                panel.style.display = active ? '' : 'none';
+                panel.classList.toggle('ta-sect-hidden', !active);
                 btn.style.background = active ? 'white' : 'transparent';
                 btn.style.color = active ? 'var(--primary-green)' : '#6b7280';
                 btn.style.boxShadow = active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none';
@@ -8464,17 +8468,17 @@
             const form = document.getElementById('profile-edit-form');
             const tgl  = document.getElementById('profile-edit-toggle');
             if (!view || !form) return;
-            const showForm = (show === undefined) ? form.style.display === 'none' : !!show;
+            const showForm = (show === undefined) ? form.classList.contains('ta-sect-hidden') : !!show;
             if (showForm) {
                 // Pre-fill current values. Phone is read-only here — must go through OTP modal.
                 document.getElementById('profile-edit-phone-display').textContent = _taTenant?.phone || '— ยังไม่ได้ตั้ง';
                 document.getElementById('profile-edit-email').value         = _taTenant?.email || '';
-                view.style.display = 'none';
-                form.style.display = 'block';
+                view.classList.add('ta-sect-hidden');
+                form.classList.remove('ta-sect-hidden');
                 if (tgl) tgl.textContent = '↩️ ยกเลิก';
             } else {
-                view.style.display = 'block';
-                form.style.display = 'none';
+                view.classList.remove('ta-sect-hidden');
+                form.classList.add('ta-sect-hidden');
                 if (tgl) tgl.textContent = '✏️ แก้ไข';
             }
         }
@@ -8570,8 +8574,8 @@
             if (c) c.innerHTML = '';
         }
         function resetPhoneOtpFlow() {
-            document.getElementById('otp-step-1').style.display = 'block';
-            document.getElementById('otp-step-2').style.display = 'none';
+            document.getElementById('otp-step-1').classList.remove('ta-sect-hidden');
+            document.getElementById('otp-step-2').classList.add('ta-sect-hidden');
             document.getElementById('otp-code').value = '';
             _otpVerificationId = null;
             _otpPendingPhone = null;
@@ -8612,8 +8616,8 @@
                 _otpVerificationId = await provider.verifyPhoneNumber(e164, _otpRecaptchaVerifier);
                 _otpPendingPhone = raw;
                 document.getElementById('otp-sent-to').textContent = raw;
-                document.getElementById('otp-step-1').style.display = 'none';
-                document.getElementById('otp-step-2').style.display = 'block';
+                document.getElementById('otp-step-1').classList.add('ta-sect-hidden');
+                document.getElementById('otp-step-2').classList.remove('ta-sect-hidden');
                 _setOtpStatus('✅ ส่ง OTP แล้ว — รออ่าน SMS', 'success');
                 setTimeout(() => document.getElementById('otp-code')?.focus(), 100);
             } catch (e) {
@@ -10066,7 +10070,7 @@
             const list = document.getElementById('bills-history-list');
             const amt = document.getElementById('current-bill-amount');
             const label = document.getElementById('bill-label');
-            if (section) section.style.display = '';
+            if (section) section.classList.remove('ta-sect-hidden');
             // Only inject skeletons if the slot is empty. If the static
             // gh-empty-state from the HTML markup is still there (or any
             // other content), preserve it — overwriting with skeletons that
@@ -10094,7 +10098,7 @@
             if (!el) return;
             if (!_taBills.length) {
                 // No bills yet — show empty state (replaces older hide-section behavior)
-                if (section) section.style.display = '';
+                if (section) section.classList.remove('ta-sect-hidden');
                 if (window.GhEmptyState) {
                     el.innerHTML = window.GhEmptyState.html('bills', {
                         title: 'ยังไม่มีบิล',
@@ -10121,7 +10125,7 @@
                 if (labelEl) labelEl.textContent = 'ยังไม่มีบิล';
                 return;
             }
-            if (section) section.style.display = '';
+            if (section) section.classList.remove('ta-sect-hidden');
             // SSoT paid-check via BillStore.isPaid — survives bills that have paidAt
             // but no status field, and is case-insensitive on the status string.
             const _isPaid = _isBillPaid;
@@ -10893,7 +10897,7 @@
                 const badge = document.getElementById('profile-deposit-badge');
                 if (badge) {
                     const isReturned = (l.depositStatus === 'returned') || (t && t.depositStatus === 'returned');
-                    badge.style.display = '';
+                    badge.classList.remove('ta-sect-hidden');
                     badge.innerHTML = isReturned
                         ? '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">✅ คืนแล้ว</span>'
                         : '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">💰 ถือมัดจำ</span>';
@@ -11457,7 +11461,7 @@
         function goToPaymentStep(n) {
             [1,2,3].forEach(i => {
                 const s = document.getElementById(`payment-step-${i}`);
-                if (s) s.style.display = i === n ? '' : 'none';
+                if (s) s.classList.toggle('ta-sect-hidden', i !== n);
                 const stepEl = document.getElementById(`step-${i}`);
                 if (stepEl) {
                     stepEl.classList.toggle('active', i === n);
@@ -11975,8 +11979,8 @@
                 console.warn('toggleAccordion: missing .accordion-content');
                 return;
             }
-            const isOpen = content.style.display !== 'none';
-            content.style.display = isOpen ? 'none' : 'block';
+            const isOpen = content.classList.contains('is-open');
+            content.classList.toggle('is-open', !isOpen);
             content.classList.toggle('active');
             headerElement.classList.toggle('active');
             headerElement.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
@@ -11989,8 +11993,8 @@
         function _applyBuildingInternetStatus(data) {
             const section = document.getElementById('internetStatusSection');
             if (!section) return;
-            if (!data) { section.style.display = 'none'; return; }
-            section.style.display = 'block';
+            if (!data) { section.classList.add('ta-sect-hidden'); return; }
+            section.classList.remove('ta-sect-hidden');
 
             const icon = document.getElementById('internetStatusIcon');
             const txt  = document.getElementById('internetStatusText');
@@ -12035,7 +12039,7 @@
             const section = document.getElementById('internetStatusSection');
             if (!section) return;
             // Default: hide until we get real data from Firestore
-            section.style.display = 'none';
+            section.classList.add('ta-sect-hidden');
             if (_buildingInternetUnsub) { _buildingInternetUnsub(); _buildingInternetUnsub = null; }
             if (!_taBuilding || !window.firebase?.firestore || !window.firebase.firestoreFunctions) return;
             // Map canonical _taBuilding → Firestore display id via SSoT helper
@@ -12063,7 +12067,7 @@
         function _applyRoomInternetStatus() {
             const section = document.getElementById('roomInternetStatusSection');
             if (!section) return;
-            section.style.display = 'block';
+            section.classList.remove('ta-sect-hidden');
 
             const online = navigator.onLine;
             const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
@@ -12498,7 +12502,7 @@
                         </div>
                     </div>`;
                 const rc = document.getElementById('receiptContent');
-                if (rc) { rc.style.display = 'block'; rc.innerHTML = receiptHTML; }
+                if (rc) { rc.classList.remove('ta-sect-hidden'); rc.innerHTML = receiptHTML; }
                 showPage('payment');
                 goToPaymentStep && goToPaymentStep(3);
             } catch(error) {

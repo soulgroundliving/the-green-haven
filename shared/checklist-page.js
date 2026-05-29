@@ -86,8 +86,8 @@
     if (!statusEl) return;
 
     // Reset visibility
-    formEl && (formEl.style.display = 'none');
-    doneEl && (doneEl.style.display = 'none');
+    formEl && formEl.classList.add('ta-sect-hidden');
+    doneEl && doneEl.classList.add('ta-sect-hidden');
     statusEl.innerHTML = '<div class="gh-skeleton" style="height:1em; width:60%; margin:0 auto 12px;"></div>'
                        + '<div class="gh-skeleton" style="height:1em; width:80%; margin:0 auto 12px;"></div>'
                        + '<div class="gh-skeleton" style="height:120px; border-radius:12px; margin:8px 16px 0;"></div>';
@@ -199,7 +199,7 @@
     }
 
     _renderItemsList();
-    formEl && (formEl.style.display = '');
+    formEl && formEl.classList.remove('ta-sect-hidden');
 
     // Init signature canvas after layout
     setTimeout(_initSignatureCanvas, 100);
@@ -376,8 +376,8 @@
       );
 
       // Show done state
-      document.getElementById('cl-form-area').style.display = 'none';
-      document.getElementById('cl-done-area').style.display = '';
+      document.getElementById('cl-form-area').classList.add('ta-sect-hidden');
+      document.getElementById('cl-done-area').classList.remove('ta-sect-hidden');
       const msg = document.getElementById('cl-done-msg');
       if (msg) msg.textContent = 'ส่งใบตรวจแล้ว — รอผู้ดูแลเซ็นกลับ';
 
@@ -409,8 +409,8 @@
                                              + '<div class="gh-skeleton" style="height:120px; border-radius:12px; margin:8px 16px 0;"></div>';
       const _clFormEl = document.getElementById('cl-form-area');
       const _clDoneEl = document.getElementById('cl-done-area');
-      if (_clFormEl) _clFormEl.style.display = 'none';
-      if (_clDoneEl) _clDoneEl.style.display = 'none';
+      if (_clFormEl) _clFormEl.classList.add('ta-sect-hidden');
+      if (_clDoneEl) _clDoneEl.classList.add('ta-sect-hidden');
       _clSigCtx = null;
 
       // Gate init on LIFF claims — without this, tapping before custom-token
