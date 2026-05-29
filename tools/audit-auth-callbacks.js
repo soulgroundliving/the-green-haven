@@ -36,7 +36,6 @@ const SCAN_GLOBS = [
   'login.html',
   'tax-filing.html',
   'audit-log-viewer.html',
-  'payment.html',
   'privacy.html',
 ];
 
