@@ -1136,7 +1136,7 @@ class TenantFirebaseSync {
         console.info('✅ TenantFirebaseSync: Meter data loaded from Firebase');
         return allMeterData;
       } else {
-        console.warn('⚠️ TenantFirebaseSync: No meter data found in Firebase');
+        console.debug('⚠️ TenantFirebaseSync: No meter data found in Firebase');
         return {};
       }
     } catch (error) {

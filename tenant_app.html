@@ -5690,7 +5690,7 @@
                     set('pm25-display',          d.concentration != null ? d.concentration : '—');
                 } catch (e) { console.error('AQI CF parse error:', e); }
             } else if (aqRes.status === 'rejected') {
-                console.warn('getAirQuality CF unavailable:', aqRes.reason?.message || aqRes.reason);
+                console.info('getAirQuality CF unavailable:', aqRes.reason?.message || aqRes.reason);
             }
         }
 
