@@ -1,4 +1,4 @@
-# Firebase security rules unit tests (Firestore + Storage).
+# Firebase security rules unit tests (Firestore + Storage + RTDB).
 #
 # Why this exists: a single bad allow rule is a silent catastrophe — no
 # error in CI, no console warning, the rule just deploys and someone
@@ -8,12 +8,13 @@
 # books, etc.) and blocks PRs that violate them.
 #
 # Trigger:
-#   - PRs that touch firestore.rules / storage.rules or their test files
+#   - PRs that touch firestore.rules / storage.rules / database.rules.json
+#     or their test files
 #   - Pushes to main that touch the same files
 #   - Manual via Actions UI (workflow_dispatch)
 #
-# Cost: free on every GitHub plan. Run is ~2 minutes (emulator boot ~30s,
-# Firestore tests ~25s, Storage tests ~20s, Node / Java setup the rest).
+# Cost: free on every GitHub plan. Run is ~3 minutes (emulator boot ~30s,
+# Firestore tests ~25s, Storage tests ~20s, RTDB tests ~15s, setup the rest).
 # Storage tests require BOTH emulators because storage.rules cross-reference
 # Firestore via firestore.get() (booking owner check, marketplace ownerUid,
 # checklist instance path-integrity gate, isLinkedTenant SoT fallback).
@@ -27,6 +28,8 @@ on:
       - 'firestore.rules.test.js'
       - 'storage.rules'
       - 'storage.rules.test.js'
+      - 'config/database.rules.json'
+      - 'database.rules.test.js'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/firestore-rules.yml'
@@ -37,6 +40,8 @@ on:
       - 'firestore.rules.test.js'
       - 'storage.rules'
       - 'storage.rules.test.js'
+      - 'config/database.rules.json'
+      - 'database.rules.test.js'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/firestore-rules.yml'
@@ -79,3 +84,7 @@ jobs:
       # doesn't mask a Storage test failure.
       - name: Run Storage rules tests
         run: firebase emulators:exec --only storage,firestore --project=demo-test 'npm run test:storage'
+
+      # RTDB rules test: bills/payments/maintenance/housekeeping/etc.
+      - name: Run RTDB rules tests
+        run: firebase emulators:exec --only database --project=demo-test 'npm run test:rtdb:rules'
