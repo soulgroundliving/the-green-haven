@@ -1,0 +1,86 @@
+# Playwright E2E tests — login, bill, slip flows.
+#
+# Why: frontend has 0% automated test coverage (9-dim audit finding).
+# These tests catch regressions in the 3 most critical admin flows by
+# running against the live Vercel production URL after every CF deploy.
+# Firebase Auth rejects localhost so tests must target the deployed app.
+#
+# Required secrets (add via GitHub → Settings → Secrets → Actions):
+#   SMOKE_ADMIN_EMAIL    — admin test account email
+#   SMOKE_ADMIN_PASSWORD — admin test account password
+#
+# Triggers:
+#   - Manual via Actions UI (workflow_dispatch) — run on demand
+#   - After every successful CF deploy (workflow_run) — regression catch
+#   - Not on every PR — avoids unnecessary Vercel + Firebase load from forks
+#
+# Graceful degradation: if secrets are not configured the workflow exits
+# cleanly with a warning rather than failing — unblocks contributors who
+# don't have admin credentials set up locally.
+
+name: E2E Tests
+
+on:
+  workflow_dispatch:
+  # Run after successful CF deploy to catch regressions introduced by each merge
+  workflow_run:
+    workflows: ['Deploy Cloud Functions']
+    types: [completed]
+    branches: [main]
+
+jobs:
+  e2e:
+    name: playwright-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # For workflow_run trigger: only run when the preceding deploy succeeded
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+      SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+
+    steps:
+      - name: Check secrets
+        id: check
+        run: |
+          if [ -z "$SMOKE_ADMIN_EMAIL" ] || [ -z "$SMOKE_ADMIN_PASSWORD" ]; then
+            echo "::warning::SMOKE_ADMIN_EMAIL / SMOKE_ADMIN_PASSWORD secrets not configured."
+            echo "::warning::Add them via GitHub → Settings → Secrets and variables → Actions."
+            echo "::warning::Skipping E2E tests — no credentials available."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.skip == 'false'
+
+      - uses: actions/setup-node@v6
+        if: steps.check.outputs.skip == 'false'
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install root dependencies (includes @playwright/test)
+        if: steps.check.outputs.skip == 'false'
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright Chromium browser
+        if: steps.check.outputs.skip == 'false'
+        run: npx playwright install chromium --with-deps
+
+      - name: Run E2E tests
+        if: steps.check.outputs.skip == 'false'
+        run: npm run test:e2e
+
+      - name: Upload Playwright report on failure
+        uses: actions/upload-artifact@v4
+        if: failure() && steps.check.outputs.skip == 'false'
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 7
