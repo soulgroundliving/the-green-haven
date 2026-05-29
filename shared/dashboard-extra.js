@@ -38,7 +38,7 @@ async function changePassword() {
   }
 
   try {
-    const user = window.auth.currentUser;
+    const user = window.firebaseAuth.currentUser;
     if (!user) {
       showToast('ไม่พบบัญชีผู้ใช้', 'warning');
       return;
@@ -51,8 +51,8 @@ async function changePassword() {
       return;
     }
 
-    await user.reauthenticateWithCredential(credential);
-    await user.updatePassword(newPassword);
+    await window.firebaseAuthFunctions.reauthenticateWithCredential(user, credential);
+    await window.firebaseAuthFunctions.updatePassword(user, newPassword);
 
     // Log audit
     const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');

@@ -89,7 +89,7 @@
   // Import Firebase SDKs
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getDatabase, ref, set, get, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-  import { getAuth, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+  import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
   import { getFirestore, collection, collectionGroup, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, updateDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
   import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
   import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
@@ -139,7 +139,9 @@
       window.firebasePush = push;
       window.firebaseChild = child;
       window.firebaseAuthFunctions = {
-        EmailAuthProvider: EmailAuthProvider
+        EmailAuthProvider: EmailAuthProvider,
+        reauthenticateWithCredential: reauthenticateWithCredential,
+        updatePassword: updatePassword,
       };
 
       window.firebase = {
