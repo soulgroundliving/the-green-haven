@@ -3,6 +3,7 @@
     "build": "node build.js",
     "test:rules": "node --test firestore.rules.test.js",
     "test:storage": "node --test storage.rules.test.js",
+    "test:rtdb:rules": "node --test database.rules.test.js",
     "test:unit": "npm run sync-shared --prefix functions && node --experimental-test-coverage --test functions/__tests__/*.test.js",
     "test:unit:plain": "npm run sync-shared --prefix functions && node --test functions/__tests__/*.test.js",
     "csp:hash": "node tools/compute-csp-hashes.js",
