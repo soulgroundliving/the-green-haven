@@ -546,6 +546,78 @@
     .modal-source { font-size: .78rem; color: var(--text-muted); }
     .btn-cancel-sm { padding: 9px 18px; background: #eee; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: var(--font-brand); }
     .btn-dl-csv { padding: 9px 18px; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-family: var(--font-brand); }
+
+    /* ── Inline-style replacements (§ style-src-attr migration) ── */
+    /* CSV preview */
+    .csv-th{padding:8px 10px;background:#f5f5f5;border-bottom:2px solid #ddd;text-align:left;position:sticky;top:0;z-index:1;}
+    .csv-td{padding:6px 10px;border-bottom:1px solid #eee;}
+    .csv-td-left{text-align:left;}
+    .csv-td-right{text-align:right;}
+    .csv-row-total{background:#fff9e5;font-weight:700;}
+    .csv-row-even{background:#fafafa;}
+    /* PDF pages */
+    .pdf-page{position:relative;min-height:1095px;padding-bottom:56px;box-sizing:border-box;}
+    /* PDF header */
+    .pdf-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px double #1a5c38;padding-bottom:14px;margin-bottom:16px;}
+    .pdf-owner-name{font-size:17px;font-weight:700;color:#1a5c38;line-height:1.2;}
+    .pdf-owner-en{font-size:11px;color:#555;margin-top:2px;}
+    .pdf-owner-addr{font-size:10.5px;color:#666;margin-top:6px;line-height:1.55;}
+    .pdf-logo-wrap{text-align:center;min-width:90px;}
+    .pdf-logo-img{max-width:110px;max-height:70px;object-fit:contain;}
+    .pdf-logo-box{text-align:center;padding:8px 12px;border:2px solid #1a5c38;border-radius:8px;min-width:90px;}
+    .pdf-logo-icon{font-size:20px;line-height:1;}
+    .pdf-logo-line{font-size:8.5px;font-weight:700;color:#1a5c38;letter-spacing:.5px;margin-top:4px;}
+    .pdf-logo-line2{font-size:8.5px;font-weight:700;color:#1a5c38;letter-spacing:.5px;}
+    /* PDF title */
+    .pdf-title-wrap{text-align:center;margin-bottom:14px;}
+    .pdf-doc-title{font-size:19px;margin:0 0 2px;color:#1a5c38;font-weight:700;}
+    .pdf-doc-sub{font-size:10px;color:#888;letter-spacing:1.5px;text-transform:uppercase;}
+    .pdf-doc-period{font-size:13px;color:#333;margin-top:5px;font-weight:600;}
+    .pdf-docref{display:grid;grid-template-columns:1fr 1fr;gap:3px 20px;font-size:10.5px;background:#f8faf9;padding:9px 12px;border-left:4px solid #2d8653;border-radius:4px;margin-bottom:14px;}
+    .pdf-mono{font-family:monospace;}
+    .pdf-footer{position:absolute;bottom:24px;left:44px;right:44px;display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid #ddd;font-size:9px;color:#888;}
+    /* PDF notes page */
+    .pdf-notes-title{text-align:center;margin-bottom:16px;}
+    .pdf-notes-h{font-size:16px;margin:0;color:#1a5c38;}
+    .pdf-notes-sub{font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase;}
+    .pdf-alert-warn{margin-top:6px;padding:12px 14px;background:#fff8e5;border-left:4px solid #f59e0b;border-radius:4px;font-size:11px;color:#6c5005;line-height:1.6;}
+    .pdf-alert-info{margin-top:18px;padding:12px 14px;background:#f0f9ff;border-left:4px solid #3b82f6;border-radius:4px;font-size:11px;color:#1e40af;line-height:1.65;}
+    .pdf-alert-title-warn{display:block;margin-bottom:6px;color:#92400e;font-size:12px;}
+    .pdf-alert-title-info{display:block;margin-bottom:6px;color:#1e3a8a;font-size:12px;}
+    .pdf-alert-list{margin:0;padding-left:20px;}
+    .pdf-sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:48px;font-size:11px;color:#444;}
+    .pdf-sig-grid-sm{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:30px;font-size:11px;color:#444;}
+    .pdf-sig-cell{text-align:center;}
+    .pdf-sig-line{border-top:1px dotted #888;padding-top:6px;margin-top:54px;}
+    .pdf-sig-label{margin-top:3px;color:#888;font-size:10px;}
+    /* Report (CSV / screen) */
+    .rpt-title-wrap{text-align:center;margin-bottom:24px;}
+    .rpt-h{font-size:22px;margin:0 0 6px;color:#1a5c38;}
+    .rpt-period{font-size:14px;color:#666;}
+    .rpt-meta{display:flex;justify-content:space-between;font-size:12px;color:#444;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:12px;}
+    .rpt-section-h{font-size:15px;margin:0 0 8px;color:#1a5c38;}
+    .rpt-section-h2{font-size:15px;margin:18px 0 8px;color:#1a5c38;}
+    .rpt-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:18px;}
+    .rpt-table-sm{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:18px;}
+    .rpt-thead-row{background:#1a5c38;color:#fff;}
+    .rpt-th-l{padding:7px 10px;text-align:left;border:1px solid #1a5c38;}
+    .rpt-th-r{padding:7px 10px;text-align:right;border:1px solid #1a5c38;}
+    .rpt-tr-alt{background:#f9f9f9;}
+    .rpt-td{padding:6px 10px;border:1px solid #ddd;}
+    .rpt-td-r{padding:6px 10px;border:1px solid #ddd;text-align:right;}
+    .rpt-td-rb{padding:6px 10px;border:1px solid #ddd;text-align:right;font-weight:700;}
+    .rpt-total-row{background:#1a5c38;color:#fff;font-weight:700;}
+    .rpt-td-total{padding:8px 10px;border:1px solid #1a5c38;}
+    .rpt-td-total-r{padding:8px 10px;border:1px solid #1a5c38;text-align:right;}
+    .rpt-tax-label{padding:8px 12px;border:1px solid #ddd;background:#f5f5f5;width:60%;}
+    .rpt-tax-val{padding:8px 12px;border:1px solid #ddd;text-align:right;font-weight:600;}
+    .rpt-tax-label-b{padding:8px 12px;border:1px solid #ddd;background:#f5f5f5;font-weight:700;}
+    .rpt-tax-val-g{padding:8px 12px;border:1px solid #ddd;text-align:right;font-weight:700;color:#1a5c38;}
+    .rpt-tax-label-warn{padding:8px 12px;border:1px solid #ddd;background:#fff8e5;font-weight:700;}
+    .rpt-tax-val-r{padding:8px 12px;border:1px solid #ddd;text-align:right;font-weight:700;color:#dc2626;}
+    .rpt-tax-val-r2{padding:8px 12px;border:1px solid #ddd;text-align:right;color:#dc2626;}
+    .rpt-note-box{padding:10px 14px;background:#fff8e5;border-left:4px solid #f59e0b;border-radius:4px;font-size:11px;color:#6c5005;margin-bottom:18px;}
+    .rpt-footer{text-align:right;margin-top:36px;font-size:11px;color:#888;border-top:1px solid #ddd;padding-top:10px;}
   </style>
 </head>
 <body>
@@ -1366,16 +1438,16 @@
       `${rows.length} rows · มูลค่ารวม ฿${total.toLocaleString('th-TH', { maximumFractionDigits: 0 })}`;
     // Head
     const thead = document.getElementById('csvPreviewHead');
-    thead.innerHTML = '<tr>' + headers.map(h => `<th style="padding:8px 10px; background:#f5f5f5; border-bottom:2px solid #ddd; text-align:left; position:sticky; top:0; z-index:1;">${csvEsc(h)}</th>`).join('') + '</tr>';
+    thead.innerHTML = '<tr>' + headers.map(h => `<th class="csv-th">${csvEsc(h)}</th>`).join('') + '</tr>';
     // Body
     const tbody = document.getElementById('csvPreviewBody');
     tbody.innerHTML = rows.map((r, i) => {
       const isTotal = typeof r[0] === 'string' && /รวม|ประเมิน|สุทธิ|หัก/.test(r[0]);
-      const bg = isTotal ? 'background:#fff9e5; font-weight:700;' : (i % 2 === 0 ? 'background:#fafafa;' : '');
-      return '<tr style="' + bg + '">' + r.map((c, j) => {
+      const rowClass = isTotal ? 'csv-row-total' : (i % 2 === 0 ? 'csv-row-even' : '');
+      return `<tr class="${rowClass}">` + r.map((c, j) => {
         const align = (typeof c === 'number' || (typeof c === 'string' && /^-?\d+(\.\d+)?$/.test(c))) ? 'right' : 'left';
         const val = typeof c === 'number' ? c.toLocaleString('th-TH') : csvEsc(c);
-        return `<td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:${align};">${val}</td>`;
+        return `<td class="csv-td csv-td-${align}">${val}</td>`;
       }).join('') + '</tr>';
     }).join('');
     modal.style.display = 'flex';
@@ -1467,42 +1539,42 @@
     wrap.style.cssText = 'max-width:794px; margin:0 auto; padding:48px 44px; background:#fff; box-shadow:0 4px 16px rgba(0,0,0,.12); font-family:"Sarabun",-apple-system,sans-serif; color:#222; font-size:12.5px; line-height:1.5; border-radius:6px;';
     // Common letterhead block (reused on each page so PDF pages all look professional)
     const letterhead = `
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px double #1a5c38; padding-bottom:14px; margin-bottom:16px;">
+      <div class="pdf-header">
         <div>
-          <div style="font-size:17px; font-weight:700; color:#1a5c38; line-height:1.2;">${_esc(owner.legalName)}</div>
-          <div style="font-size:11px; color:#555; margin-top:2px;">${_esc(owner.englishName)}</div>
-          <div style="font-size:10.5px; color:#666; margin-top:6px; line-height:1.55;">
+          <div class="pdf-owner-name">${_esc(owner.legalName)}</div>
+          <div class="pdf-owner-en">${_esc(owner.englishName)}</div>
+          <div class="pdf-owner-addr">
             <div>📍 ${_esc(owner.address)}</div>
             <div>📞 ${_esc(owner.phone)} &nbsp;·&nbsp; ✉️ ${_esc(owner.email)}</div>
             <div>เลขประจำตัวผู้เสียภาษี: <strong>${_esc(owner.taxId)}</strong></div>
           </div>
         </div>
         ${owner.logoDataUrl
-          ? `<div style="text-align:center; min-width:90px;"><img src="${owner.logoDataUrl}" alt="logo" style="max-width:110px; max-height:70px; object-fit:contain;"></div>`
-          : `<div style="text-align:center; padding:8px 12px; border:2px solid #1a5c38; border-radius:8px; min-width:90px;">
-          <div style="font-size:20px; line-height:1;">🌿</div>
-          <div style="font-size:8.5px; font-weight:700; color:#1a5c38; letter-spacing:.5px; margin-top:4px;">THE GREEN</div>
-          <div style="font-size:8.5px; font-weight:700; color:#1a5c38; letter-spacing:.5px;">HAVEN</div>
+          ? `<div class="pdf-logo-wrap"><img src="${owner.logoDataUrl}" alt="logo" class="pdf-logo-img"></div>`
+          : `<div class="pdf-logo-box">
+          <div class="pdf-logo-icon">🌿</div>
+          <div class="pdf-logo-line">THE GREEN</div>
+          <div class="pdf-logo-line2">HAVEN</div>
         </div>`}
       </div>
     `;
     const reportTitle = `
-      <div style="text-align:center; margin-bottom:14px;">
-        <h1 style="font-size:19px; margin:0 0 2px; color:#1a5c38; font-weight:700;">รายงานภาษีรายเดือน</h1>
-        <div style="font-size:10px; color:#888; letter-spacing:1.5px; text-transform:uppercase;">Monthly Tax Report</div>
-        <div data-a4-title style="font-size:13px; color:#333; margin-top:5px; font-weight:600;">เดือน ${THAI_MONTHS_FULL[month]} ${yearBE}</div>
+      <div class="pdf-title-wrap">
+        <h1 class="pdf-doc-title">รายงานภาษีรายเดือน</h1>
+        <div class="pdf-doc-sub">Monthly Tax Report</div>
+        <div data-a4-title class="pdf-doc-period">เดือน ${THAI_MONTHS_FULL[month]} ${yearBE}</div>
       </div>
     `;
     const docMeta = `
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px 20px; font-size:10.5px; background:#f8faf9; padding:9px 12px; border-left:4px solid #2d8653; border-radius:4px; margin-bottom:14px;">
-        <div><strong>เลขที่เอกสาร:</strong> <span data-a4-ref style="font-family:monospace;">${docRef}</span></div>
+      <div class="pdf-docref">
+        <div><strong>เลขที่เอกสาร:</strong> <span data-a4-ref class="pdf-mono">${docRef}</span></div>
         <div><strong>วันที่ออกรายงาน:</strong> ${today}</div>
         <div><strong>ประเภทรายได้:</strong> ม.40(5)(ก) ทรัพย์สิน (VAT-exempt)</div>
         <div><strong>แบบภาษี:</strong> ${_esc(owner.taxFormName)}</div>
       </div>
     `;
     const pageFooter = (pageNum, totalPages) => `
-      <div style="position:absolute; bottom:24px; left:44px; right:44px; display:flex; justify-content:space-between; align-items:center; padding-top:8px; border-top:1px solid #ddd; font-size:9px; color:#888;">
+      <div class="pdf-footer">
         <div>Generated by The Green Haven Tax Filing System</div>
         <div>${nowStr}</div>
         <div>หน้า ${pageNum} / ${totalPages}</div>
@@ -1511,7 +1583,7 @@
 
     wrap.innerHTML = `
       <!-- ===== PAGE 1: Letterhead + meta + revenue/expense tables + KPIs ===== -->
-      <div data-pdf-page="1" style="position:relative; min-height:1095px; padding-bottom:56px; box-sizing:border-box;">
+      <div data-pdf-page="1" class="pdf-page">
         ${letterhead}
         ${reportTitle}
         ${docMeta}
@@ -1520,17 +1592,17 @@
       </div>
 
       <!-- ===== PAGE 2: Notes + signatures + filing checklist ===== -->
-      <div data-pdf-page="2" style="position:relative; min-height:1095px; padding-bottom:56px; box-sizing:border-box;">
+      <div data-pdf-page="2" class="pdf-page">
         ${letterhead}
-        <div style="text-align:center; margin-bottom:16px;">
-          <h2 style="font-size:16px; margin:0; color:#1a5c38;">หมายเหตุประกอบรายงาน &amp; เอกสารยืนยัน</h2>
-          <div style="font-size:10px; color:#888; letter-spacing:1px; text-transform:uppercase;">Notes &amp; Confirmation</div>
+        <div class="pdf-notes-title">
+          <h2 class="pdf-notes-h">หมายเหตุประกอบรายงาน &amp; เอกสารยืนยัน</h2>
+          <div class="pdf-notes-sub">Notes &amp; Confirmation</div>
         </div>
 
         <!-- Legal notes -->
-        <div style="margin-top:6px; padding:12px 14px; background:#fff8e5; border-left:4px solid #f59e0b; border-radius:4px; font-size:11px; color:#6c5005; line-height:1.6;">
-          <strong style="display:block; margin-bottom:6px; color:#92400e; font-size:12px;">📌 หมายเหตุทางกฎหมายและภาษี</strong>
-          <ul style="margin:0; padding-left:20px;">
+        <div class="pdf-alert-warn">
+          <strong class="pdf-alert-title-warn">📌 หมายเหตุทางกฎหมายและภาษี</strong>
+          <ul class="pdf-alert-list">
             <li>รายงานนี้แสดงรายได้ค่าเช่าทรัพย์สิน (ม.40(5)(ก)) ซึ่งได้รับยกเว้นภาษีมูลค่าเพิ่ม (VAT) ตามประมวลรัษฎากร <strong>ม.81(1)(น)</strong></li>
             <li>ประมาณภาษีเป็นการคำนวณเบื้องต้นโดยใช้<strong>ค่าใช้จ่ายเหมา 30%</strong> ของรายได้รวม — ภาษีจริงขึ้นกับรายได้จากแหล่งอื่นและค่าลดหย่อนส่วนบุคคล</li>
             <li>ต้องยื่นแบบ <strong>ภ.ง.ด.90</strong> ภายใน <strong>31 มีนาคม</strong> ของปีถัดไป หรือ <strong>ภ.ง.ด.94</strong> (รายได้ครึ่งปี) ภายใน <strong>30 กันยายน</strong></li>
@@ -1539,9 +1611,9 @@
         </div>
 
         <!-- Filing checklist -->
-        <div style="margin-top:18px; padding:12px 14px; background:#f0f9ff; border-left:4px solid #3b82f6; border-radius:4px; font-size:11px; color:#1e40af; line-height:1.65;">
-          <strong style="display:block; margin-bottom:6px; color:#1e3a8a; font-size:12px;">✅ เช็คลิสต์ก่อนยื่น ภ.ง.ด.</strong>
-          <ul style="margin:0; padding-left:20px;">
+        <div class="pdf-alert-info">
+          <strong class="pdf-alert-title-info">✅ เช็คลิสต์ก่อนยื่น ภ.ง.ด.</strong>
+          <ul class="pdf-alert-list">
             <li>☐ รวบรวมใบเสร็จรับเงินทั้งหมด (export CSV จากปุ่ม "Preview + Export ใบเสร็จ")</li>
             <li>☐ ตรวจสอบยอดรายได้รวมตรงกับใบเสร็จ + payment record ใน RTDB</li>
             <li>☐ รวบรวมใบหัก ณ ที่จ่าย (ภ.ง.ด.3) จากผู้เช่าที่เป็นบริษัท</li>
@@ -1551,24 +1623,24 @@
         </div>
 
         <!-- Signature block -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:50px; margin-top:48px; font-size:11px; color:#444;">
-          <div style="text-align:center;">
-            <div style="border-top:1px dotted #888; padding-top:6px; margin-top:54px;">ผู้จัดทำรายงาน</div>
-            <div style="margin-top:3px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
+        <div class="pdf-sig-grid">
+          <div class="pdf-sig-cell">
+            <div class="pdf-sig-line">ผู้จัดทำรายงาน</div>
+            <div class="pdf-sig-label">(ลงชื่อ / วันที่)</div>
           </div>
-          <div style="text-align:center;">
-            <div style="border-top:1px dotted #888; padding-top:6px; margin-top:54px;">ผู้ตรวจสอบ</div>
-            <div style="margin-top:3px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
+          <div class="pdf-sig-cell">
+            <div class="pdf-sig-line">ผู้ตรวจสอบ</div>
+            <div class="pdf-sig-label">(ลงชื่อ / วันที่)</div>
           </div>
         </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:50px; margin-top:30px; font-size:11px; color:#444;">
-          <div style="text-align:center;">
-            <div style="border-top:1px dotted #888; padding-top:6px; margin-top:54px;">ที่ปรึกษาบัญชี / ผู้สอบบัญชี</div>
-            <div style="margin-top:3px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
+        <div class="pdf-sig-grid-sm">
+          <div class="pdf-sig-cell">
+            <div class="pdf-sig-line">ที่ปรึกษาบัญชี / ผู้สอบบัญชี</div>
+            <div class="pdf-sig-label">(ลงชื่อ / วันที่)</div>
           </div>
-          <div style="text-align:center;">
-            <div style="border-top:1px dotted #888; padding-top:6px; margin-top:54px;">เจ้าของกิจการ</div>
-            <div style="margin-top:3px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
+          <div class="pdf-sig-cell">
+            <div class="pdf-sig-line">เจ้าของกิจการ</div>
+            <div class="pdf-sig-label">(ลงชื่อ / วันที่)</div>
           </div>
         </div>
 
@@ -1609,65 +1681,65 @@
     const taxInfo = window.calculateMonthlyIncomeTax?.(month, yearBE - 543) || {};
     const today = new Date().toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' });
     return `
-      <div style="text-align:center; margin-bottom:24px;">
-        <h1 style="font-size:22px; margin:0 0 6px; color:#1a5c38;">รายงานภาษีรายเดือน</h1>
-        <div style="font-size:14px; color:#666;">เดือน ${monthName} ${yearBE}</div>
+      <div class="rpt-title-wrap">
+        <h1 class="rpt-h">รายงานภาษีรายเดือน</h1>
+        <div class="rpt-period">เดือน ${monthName} ${yearBE}</div>
       </div>
-      <div style="display:flex; justify-content:space-between; font-size:12px; color:#444; margin-bottom:18px; border-bottom:1px solid #ddd; padding-bottom:12px;">
+      <div class="rpt-meta">
         <div><strong>บริษัท:</strong> The Green Haven</div>
         <div><strong>วันที่ออกรายงาน:</strong> ${today}</div>
       </div>
 
-      <h2 style="font-size:15px; margin:0 0 8px; color:#1a5c38;">📊 รายได้แยกตามห้อง</h2>
-      <table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:18px;">
+      <h2 class="rpt-section-h">📊 รายได้แยกตามห้อง</h2>
+      <table class="rpt-table">
         <thead>
-          <tr style="background:#1a5c38; color:#fff;">
-            <th style="padding:7px 10px; text-align:left; border:1px solid #1a5c38;">ห้อง</th>
-            <th style="padding:7px 10px; text-align:right; border:1px solid #1a5c38;">ค่าเช่า</th>
-            <th style="padding:7px 10px; text-align:right; border:1px solid #1a5c38;">ค่าไฟ</th>
-            <th style="padding:7px 10px; text-align:right; border:1px solid #1a5c38;">ค่าน้ำ</th>
-            <th style="padding:7px 10px; text-align:right; border:1px solid #1a5c38;">ค่าขยะ</th>
-            <th style="padding:7px 10px; text-align:right; border:1px solid #1a5c38;">รวม</th>
+          <tr class="rpt-thead-row">
+            <th class="rpt-th-l">ห้อง</th>
+            <th class="rpt-th-r">ค่าเช่า</th>
+            <th class="rpt-th-r">ค่าไฟ</th>
+            <th class="rpt-th-r">ค่าน้ำ</th>
+            <th class="rpt-th-r">ค่าขยะ</th>
+            <th class="rpt-th-r">รวม</th>
           </tr>
         </thead>
         <tbody>
           ${rooms.map((k, i) => {
             const r = byRoom[k];
-            return `<tr style="background:${i%2?'#f9f9f9':'#fff'};">
-              <td style="padding:6px 10px; border:1px solid #ddd;">${_esc(r.room)}</td>
-              <td style="padding:6px 10px; border:1px solid #ddd; text-align:right;">${_fmt(r.rent)}</td>
-              <td style="padding:6px 10px; border:1px solid #ddd; text-align:right;">${_fmt(r.electricity)}</td>
-              <td style="padding:6px 10px; border:1px solid #ddd; text-align:right;">${_fmt(r.water)}</td>
-              <td style="padding:6px 10px; border:1px solid #ddd; text-align:right;">${_fmt(r.trash)}</td>
-              <td style="padding:6px 10px; border:1px solid #ddd; text-align:right; font-weight:700;">${_fmt(r.total)}</td>
+            return `<tr class="${i%2?'rpt-tr-alt':''}">
+              <td class="rpt-td">${_esc(r.room)}</td>
+              <td class="rpt-td-r">${_fmt(r.rent)}</td>
+              <td class="rpt-td-r">${_fmt(r.electricity)}</td>
+              <td class="rpt-td-r">${_fmt(r.water)}</td>
+              <td class="rpt-td-r">${_fmt(r.trash)}</td>
+              <td class="rpt-td-rb">${_fmt(r.total)}</td>
             </tr>`;
           }).join('')}
-          <tr style="background:#1a5c38; color:#fff; font-weight:700;">
-            <td style="padding:8px 10px; border:1px solid #1a5c38;">รวมทั้งหมด (${rooms.length} ห้อง)</td>
-            <td style="padding:8px 10px; border:1px solid #1a5c38; text-align:right;">${_fmt(data.rentIncome)}</td>
-            <td style="padding:8px 10px; border:1px solid #1a5c38; text-align:right;">${_fmt(data.electricIncome)}</td>
-            <td style="padding:8px 10px; border:1px solid #1a5c38; text-align:right;">${_fmt(data.waterIncome)}</td>
-            <td style="padding:8px 10px; border:1px solid #1a5c38; text-align:right;">${_fmt(data.trashIncome)}</td>
-            <td style="padding:8px 10px; border:1px solid #1a5c38; text-align:right;">${_fmt(total)}</td>
+          <tr class="rpt-total-row">
+            <td class="rpt-td-total">รวมทั้งหมด (${rooms.length} ห้อง)</td>
+            <td class="rpt-td-total-r">${_fmt(data.rentIncome)}</td>
+            <td class="rpt-td-total-r">${_fmt(data.electricIncome)}</td>
+            <td class="rpt-td-total-r">${_fmt(data.waterIncome)}</td>
+            <td class="rpt-td-total-r">${_fmt(data.trashIncome)}</td>
+            <td class="rpt-td-total-r">${_fmt(total)}</td>
           </tr>
         </tbody>
       </table>
 
-      <h2 style="font-size:15px; margin:18px 0 8px; color:#1a5c38;">💰 สรุปประมาณภาษี (ภ.ง.ด.90)</h2>
-      <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:18px;">
+      <h2 class="rpt-section-h2">💰 สรุปประมาณภาษี (ภ.ง.ด.90)</h2>
+      <table class="rpt-table-sm">
         <tbody>
-          <tr><td style="padding:8px 12px; border:1px solid #ddd; background:#f5f5f5; width:60%;">รายได้รวม (Gross Revenue)</td><td style="padding:8px 12px; border:1px solid #ddd; text-align:right; font-weight:600;">${_fmt(taxInfo.grossRevenue)}</td></tr>
-          <tr><td style="padding:8px 12px; border:1px solid #ddd; background:#f5f5f5;">หักค่าใช้จ่ายเหมา 30% (ม.40(5)(ก))</td><td style="padding:8px 12px; border:1px solid #ddd; text-align:right; color:#dc2626;">- ${_fmt(taxInfo.deductibleExpenses)}</td></tr>
-          <tr><td style="padding:8px 12px; border:1px solid #ddd; background:#f5f5f5; font-weight:700;">รายได้สุทธิ (Net Income)</td><td style="padding:8px 12px; border:1px solid #ddd; text-align:right; font-weight:700; color:#1a5c38;">${_fmt(taxInfo.taxableIncome)}</td></tr>
-          <tr><td style="padding:8px 12px; border:1px solid #ddd; background:#fff8e5; font-weight:700;">ภาษีประมาณการ (รายเดือน)</td><td style="padding:8px 12px; border:1px solid #ddd; text-align:right; font-weight:700; color:#dc2626;">${_fmt(taxInfo.incomeTax)}</td></tr>
+          <tr><td class="rpt-tax-label">รายได้รวม (Gross Revenue)</td><td class="rpt-tax-val">${_fmt(taxInfo.grossRevenue)}</td></tr>
+          <tr><td class="rpt-tax-label">หักค่าใช้จ่ายเหมา 30% (ม.40(5)(ก))</td><td class="rpt-tax-val-r2">- ${_fmt(taxInfo.deductibleExpenses)}</td></tr>
+          <tr><td class="rpt-tax-label-b">รายได้สุทธิ (Net Income)</td><td class="rpt-tax-val-g">${_fmt(taxInfo.taxableIncome)}</td></tr>
+          <tr><td class="rpt-tax-label-warn">ภาษีประมาณการ (รายเดือน)</td><td class="rpt-tax-val-r">${_fmt(taxInfo.incomeTax)}</td></tr>
         </tbody>
       </table>
 
-      <div style="padding:10px 14px; background:#fff8e5; border-left:4px solid #f59e0b; border-radius:4px; font-size:11px; color:#6c5005; margin-bottom:18px;">
+      <div class="rpt-note-box">
         <strong>หมายเหตุ:</strong> ภาษีจริงคำนวณจากรายได้รวมประจำปี + ค่าลดหย่อนส่วนบุคคล. ใช้รายงานนี้เป็นข้อมูลประกอบการยื่น ภ.ง.ด.90 ปลายปี
       </div>
 
-      <div style="text-align:right; margin-top:36px; font-size:11px; color:#888; border-top:1px solid #ddd; padding-top:10px;">
+      <div class="rpt-footer">
         Generated by The Green Haven Tax Filing System · ${new Date().toLocaleString('th-TH')}
       </div>
     `;
