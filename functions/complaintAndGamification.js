@@ -151,7 +151,7 @@ exports.awardComplaintFreeMonthManual = functions
   .region('asia-southeast1')
   .runWith({ timeoutSeconds: 120 })
   .https.onRequest(async (req, res) => {
-    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Origin', 'https://the-green-haven.vercel.app');
     if (req.method === 'OPTIONS') {
       res.set('Access-Control-Allow-Methods', 'POST');
       res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');

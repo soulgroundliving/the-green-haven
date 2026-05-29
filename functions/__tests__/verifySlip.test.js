@@ -208,6 +208,9 @@ Module._load = function (request, parent, isMain) {
   if (request === 'form-data') return FormDataStub;
   if (request === './_auth') return authStub;
   if (request === './_billFlex') return billFlexStub;
+  if (request === './buildingRegistry') return {
+    getValidBuildings: async () => new Set(['rooms', 'nest']),
+  };
   return _origLoad.call(this, request, parent, isMain);
 };
 
