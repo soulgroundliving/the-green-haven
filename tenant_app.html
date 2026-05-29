@@ -2321,6 +2321,30 @@
         .ta-section-heading { text-align: center; border-bottom: 2px solid var(--primary-green); padding-bottom: 8px; margin-bottom: 10px; }
         .ta-icon-pad     { padding: 8px; background: white; border-radius: 6px; text-align: center; }
         .ta-input-select { padding: 13px; border-radius: 12px; border: 1px solid #ddd; background: white; color: #666; font-family: inherit; font-weight: 700; cursor: pointer; }
+        /* pass-4 patterns (2× each) */
+        .u-p-15          { padding: 15px; }
+        .u-px-15         { padding: 0 15px; }
+        .u-flex-1-min0   { flex: 1; min-width: 0; }
+        .ta-fs-sm-muted  { font-size: var(--fs-sm); color: var(--text-muted); }
+        .ta-fs-sm-sub-mt { font-size: var(--fs-sm); color: #888; margin-top: 4px; }
+        .ta-tag-label    { font-size: var(--fs-sm); color: #6b7280; padding: 0 0 6px 8px; }
+        .ta-note-block   { font-size: var(--fs-sm); color: #666; display: block; }
+        .ta-label-dark   { font-size: var(--fs-sm); font-weight: 700; color: var(--text-dark); margin: 0 0 8px; }
+        .ta-md-bold-mb4  { font-size: var(--fs-md); font-weight: 700; margin-bottom: 4px; }
+        .ta-md-600-dk    { font-size: var(--fs-md); font-weight: 600; color: var(--text-dark); }
+        .ta-heading-green { font-size: var(--fs-lg); font-weight: 800; color: var(--primary-green); margin-bottom: 4px; }
+        .ta-lg-green     { font-size: var(--fs-lg); color: var(--primary-green); }
+        .ta-badge-label  { font-size: 9px; opacity: 0.8; font-weight: 700; text-transform: uppercase; margin: 0 0 2px; letter-spacing: .06em; }
+        .ta-title-xl     { font-size: 1.25rem; font-weight: 800; margin: 0; }
+        .ta-sm-600-sub   { font-size: var(--fs-sm); color: #888; font-weight: 600; }
+        .ta-lg-tight     { font-size: var(--fs-lg); line-height: 1; }
+        .ta-sm-gray      { font-size: var(--fs-sm); color: #9ca3af; }
+        .ta-sm-gray-mb4  { font-size: var(--fs-sm); color: #6b7280; margin-bottom: 4px; }
+        .ta-divider-note { font-size: var(--fs-sm); margin-top: 8px; padding-top: 8px; border-top: 1px solid #f0f0f0; color: #374151; }
+        .ta-input-sm     { width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 8px; font-size: var(--fs-sm); margin-top: 4px; }
+        .ta-input-lg-plain { width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; font-family: inherit; }
+        .ta-input-lg-white { width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; background: white; font-family: inherit; }
+        .ta-tab-alt      { flex: 1; padding: 8px; border-radius: 10px; font-size: var(--fs-sm); font-weight: 700; border: 2px solid #ddd; color: #6b7280; background: #f9fafb; cursor: pointer; }
         /* display:none → classList migration */
         .accordion-content      { display: none; }          /* default hidden; JS adds .is-open */
         .accordion-content.is-open { display: block; }      /* accordion open state */
@@ -2406,7 +2430,7 @@
                    background: rgba(255,255,255,0.8); padding: 10px 14px;
                    border: none; border-radius: 30px; backdrop-filter: blur(5px);
                    cursor: pointer; font: inherit;">
-            <span style="font-size: var(--fs-lg); line-height: 1;">🔔</span>
+            <span class="ta-lg-tight">🔔</span>
             <span id="map-bell-badge" aria-live="polite"
                 style="display: none; min-width: 18px; padding: 0 6px; height: 18px;
                        background: #E74C3C; color: #fff; border-radius: 9px;
@@ -2426,7 +2450,7 @@
                    background: rgba(255,255,255,0.8); border: none; border-radius: 50%;
                    backdrop-filter: blur(5px); cursor: pointer; font: inherit;
                    transition: transform .12s ease;">
-            <span style="font-size: var(--fs-lg); line-height: 1;">💰</span>
+            <span class="ta-lg-tight">💰</span>
         </button>
 
         <div class="map-container" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10;
@@ -2509,7 +2533,7 @@
         <div style="background:#fff; border-radius:24px; max-width:420px; width:100%; padding:24px; box-shadow:var(--shadow);">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
                 <strong id="quiz-title" class="u-fs-lg">Contract Quiz</strong>
-                <div id="quiz-progress" style="font-size:var(--fs-sm); color:var(--text-muted);">1/3</div>
+                <div id="quiz-progress" class="ta-fs-sm-muted">1/3</div>
             </div>
             <div id="quiz-question" style="font-size:var(--fs-md); font-weight:600; margin-bottom:14px;"></div>
             <div id="quiz-options" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
@@ -2562,7 +2586,7 @@
             <div style="display:flex; flex-direction:column; gap:14px;">
                 <div class="u-text-center">
                     <div style="font-size:2.2rem; margin-bottom:4px;">🧹</div>
-                    <div id="scm-title" style="font-size:var(--fs-lg); font-weight:800; color:var(--primary-green); margin-bottom:4px;">
+                    <div id="scm-title" class="ta-heading-green">
                         Standard Clean เดือนนี้ฟรี!
                     </div>
                     <div class="ta-color-sm">
@@ -2606,7 +2630,7 @@
             <div style="display:flex; flex-direction:column; gap:14px;">
                 <!-- Header -->
                 <div class="u-text-center">
-                    <div id="cpm-title" style="font-size:var(--fs-lg); font-weight:800; color:var(--primary-green); margin-bottom:4px;">
+                    <div id="cpm-title" class="ta-heading-green">
                         🧼 ชำระค่า Deep Cleaning
                     </div>
                     <div class="ta-color-sm">
@@ -2630,7 +2654,7 @@
                 <!-- Slip upload -->
                 <div id="cpm-slip-drop" data-action="triggerInput" data-target="cpm-slip-input"
                     style="border:2px dashed #ccc; border-radius:14px; padding:18px; text-align:center; cursor:pointer;">
-                    <i class="fas fa-cloud-upload-alt" style="font-size:var(--fs-lg); color:var(--primary-green);"></i>
+                    <i class="fas fa-cloud-upload-alt ta-lg-green" ></i>
                     <p style="margin:6px 0 2px; font-size:var(--fs-md); color:#666;">แตะเพื่ออัปโหลดสลิป</p>
                     <small class="u-color-lighter">JPG / PNG / WEBP ไม่เกิน 10MB</small>
                 </div>
@@ -2763,7 +2787,7 @@
                 </div>
                 <div class="u-flex-1">
                     <div id="wellness-article-category" style="font-size:var(--fs-sm); color:var(--primary-green); font-weight:600;">Wellness</div>
-                    <div id="wellness-article-readtime" style="font-size:var(--fs-sm); color:var(--text-muted);">อ่าน 3 นาที</div>
+                    <div id="wellness-article-readtime" class="ta-fs-sm-muted">อ่าน 3 นาที</div>
                 </div>
             </div>
             <div id="wellness-article-body" style="font-size:var(--fs-md); line-height:1.75; color:var(--text-dark);"></div>
@@ -2973,7 +2997,7 @@
         </div>
         <div id="records-section" style="display: none;">
             <div class="section-title" role="heading" aria-level="2">ประวัติการแจ้งเรื่องล่าสุด</div>
-            <div id="records-container" style="padding: 0 15px;"></div>
+            <div id="records-container" class="u-px-15"></div>
         </div>
         <div class="suggest-card u-mb-50" >
             <strong><i class="fas fa-comment-dots"></i> กระซิบถึงเจ้าของตึก</strong>
@@ -3139,7 +3163,7 @@
             </div>
 
             <div class="u-mb-20">
-                <h3 style="font-size:var(--fs-sm); font-weight:700; color:var(--text-dark); margin:0 0 8px;">📅 การยกเลิกและเลื่อนนัด</h3>
+                <h3 class="ta-label-dark">📅 การยกเลิกและเลื่อนนัด</h3>
                 <ul class="ta-list-body">
                     <li>กรุณาแจ้งยกเลิกหรือเลื่อนนัดล่วงหน้าอย่างน้อย <strong>24 ชั่วโมง</strong> ผ่านช่องทางติดต่อของโครงการ</li>
                     <li>การยกเลิกกะทันหันโดยไม่แจ้งล่วงหน้าอาจถูกระงับสิทธิ์การใช้บริการในรอบถัดไป</li>
@@ -3147,7 +3171,7 @@
             </div>
 
             <div class="u-mb-20">
-                <h3 style="font-size:var(--fs-sm); font-weight:700; color:var(--text-dark); margin:0 0 8px;">✨ Standard Clean (ฟรี)</h3>
+                <h3 class="ta-label-dark">✨ Standard Clean (ฟรี)</h3>
                 <ul class="ta-list-body">
                     <li>สิทธิ์ใช้งาน <strong>1 ครั้ง ต่อ 6 เดือน</strong> ต่อห้อง</li>
                     <li>ครอบคลุมการทำความสะอาดทั่วไป ปัดฝุ่น ดูดฝุ่น และถูพื้น</li>
@@ -3201,11 +3225,11 @@
                         🟢 เล็กน้อย
                     </button>
                     <button type="button" id="sev-medium" data-action="setSeverity" data-arg="medium"
-                        style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; border:2px solid #ddd; color:#6b7280; background:#f9fafb; cursor:pointer;">
+                        class="ta-tab-alt">
                         🟡 ปานกลาง
                     </button>
                     <button type="button" id="sev-high" data-action="setSeverity" data-arg="high"
-                        style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; border:2px solid #ddd; color:#6b7280; background:#f9fafb; cursor:pointer;">
+                        class="ta-tab-alt">
                         🔴 เร่งด่วน
                     </button>
                 </div>
@@ -3250,7 +3274,7 @@
                 class="ta-icon-circle-sm">
                 <i class="fas fa-chevron-left u-color-green" ></i>
             </button>
-            <div style="flex:1; min-width:0;">
+            <div class="u-flex-1-min0">
                 <h1 class="page-title-top u-m0" >Quiz Center 🎯</h1>
                 <p style="margin:4px 0 0;">ทบทวนความเข้าใจ — รับ pts รายเดือน</p>
             </div>
@@ -3496,7 +3520,7 @@
                     </div>
                     <div id="slip-drop-area" style="border:2px dashed #ccc; border-radius:16px; padding:30px; text-align:center; margin:10px 0; cursor:pointer;"
                          data-action="triggerInput" data-target="slip-file-input">
-                        <i class="fas fa-cloud-upload-alt" style="font-size:var(--fs-lg); color:var(--primary-green);"></i>
+                        <i class="fas fa-cloud-upload-alt ta-lg-green" ></i>
                         <p style="margin:8px 0 0; font-size:var(--fs-md); color:#666;">แตะเพื่อเลือกรูปสลิป</p>
                         <small class="u-color-lighter">JPG / PNG / WEBP ไม่เกิน 5MB</small>
                     </div>
@@ -3619,12 +3643,12 @@
         <div id="profile-points-banner" class="border-none mx-4 p-5" style="background:linear-gradient(135deg,var(--primary-green),var(--primary-dark)); color:white; border-radius:16px 16px 0 0;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <div>
-                    <p style="font-size:9px; opacity:0.8; font-weight:700; text-transform:uppercase; margin:0 0 2px; letter-spacing:.06em;">ระดับปัจจุบัน</p>
-                    <h2 id="eco-level-name" style="font-size:1.25rem; font-weight:800; margin:0;">— 🌱</h2>
+                    <p class="ta-badge-label">ระดับปัจจุบัน</p>
+                    <h2 id="eco-level-name" class="ta-title-xl">— 🌱</h2>
                 </div>
                 <div class="u-text-right">
-                    <p style="font-size:9px; opacity:0.8; font-weight:700; text-transform:uppercase; margin:0 0 2px; letter-spacing:.06em;">อันดับในตึก</p>
-                    <h2 id="eco-rank" style="font-size:1.25rem; font-weight:800; margin:0;">#—</h2>
+                    <p class="ta-badge-label">อันดับในตึก</p>
+                    <h2 id="eco-rank" class="ta-title-xl">#—</h2>
                 </div>
             </div>
             <div class="u-mt-10">
@@ -3854,7 +3878,7 @@
     </div>
 
     <!-- ===== CHECKLIST — Move-In / Move-Out (Tier 3I) ===== -->
-    <div id="checklist" class="page" style="display:none;">
+    <div id="checklist" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom:20px;">
             <div class="ta-icon-circle"
                 data-action="goBackToService">
@@ -3908,7 +3932,7 @@
             </div>
             <h1 class="ta-card-title">Smart Laundry 👕</h1>
         </div>
-        <div style="padding: 15px;">
+        <div class="u-p-15">
             <div class="section-title" style="padding: 0 0 10px;"><span>เครื่องซักผ้า (Washers)</span></div>
             <div class="card"
                 style="margin: 0 0 15px; display: flex; align-items: center; gap: 15px; border-left: 6px solid #22c55e;">
@@ -4057,7 +4081,7 @@
                 <div>
                     <label class="ta-md-600-sub">ประเภทสัตว์เลี้ยง</label>
                     <select id="pet-type"
-                        style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; background: white; font-family: inherit;">
+                        class="ta-input-lg-white">
                         <option value="🐶">สุนัข (Dog)</option>
                         <option value="🐱">แมว (Cat)</option>
                         <option value="🐰">กระต่าย (Rabbit)</option>
@@ -4068,7 +4092,7 @@
                 <div>
                     <label class="ta-md-600-sub">สายพันธุ์</label>
                     <input type="text" id="pet-breed" placeholder="เช่น โกลเด้น"
-                        style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; font-family: inherit;">
+                        class="ta-input-lg-plain">
                 </div>
             </div>
 
@@ -4076,7 +4100,7 @@
                 <div>
                     <label class="ta-md-600-sub">เพศ</label>
                     <select id="pet-gender"
-                        style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; background: white; font-family: inherit;">
+                        class="ta-input-lg-white">
                         <option>ผู้</option>
                         <option>เมีย</option>
                     </select>
@@ -4084,7 +4108,7 @@
                 <div>
                     <label class="ta-md-600-sub">วันเกิด</label>
                     <input type="date" id="pet-dob"
-                        style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; font-family: inherit;">
+                        class="ta-input-lg-plain">
                 </div>
             </div>
 
@@ -4100,14 +4124,14 @@
 
                 <div id="vaccine-inputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div>
-                        <label style="font-size: var(--fs-sm); color: #888; font-weight: 600;">วันที่ฉีดล่าสุด</label>
+                        <label class="ta-sm-600-sub">วันที่ฉีดล่าสุด</label>
                         <input type="date" id="vaccine-date" data-thai-date
-                            style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 8px; font-size: var(--fs-sm); margin-top: 4px;">
+                            class="ta-input-sm">
                     </div>
                     <div>
-                        <label style="font-size: var(--fs-sm); color: #888; font-weight: 600;">วันที่หมดอายุ</label>
+                        <label class="ta-sm-600-sub">วันที่หมดอายุ</label>
                         <input type="date" id="vaccine-expiry" data-thai-date
-                            style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 8px; font-size: var(--fs-sm); margin-top: 4px;">
+                            class="ta-input-sm">
                     </div>
                 </div>
             </div>
@@ -4155,8 +4179,8 @@
                 <img id="market-image-preview" src="" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;">
                 <div id="market-image-placeholder" style="padding:24px 20px;">
                     <i class="fas fa-camera" style="color:var(--primary-green); font-size:var(--fs-lg); display:block; margin-bottom:8px;"></i>
-                    <div style="font-size:var(--fs-md); font-weight:600; color:var(--text-dark);">เพิ่มรูปภาพ</div>
-                    <div style="font-size:var(--fs-sm); color:#888; margin-top:4px;">กดเพื่อเลือกรูปจากคลัง</div>
+                    <div class="ta-md-600-dk">เพิ่มรูปภาพ</div>
+                    <div class="ta-fs-sm-sub-mt">กดเพื่อเลือกรูปจากคลัง</div>
                 </div>
             </div>
             <input type="file" id="market-image-input" accept="image/*" class="u-hidden">
@@ -4257,7 +4281,7 @@
             </button>
             <div id="market-chat-header" style="flex:1; min-width:0; display:flex; align-items:center; gap:10px;">
                 <div id="market-chat-header-img" style="width:42px; height:42px; border-radius:10px; background:#f3f4f6; flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center;"></div>
-                <div style="flex:1; min-width:0;">
+                <div class="u-flex-1-min0">
                     <div id="market-chat-header-title" style="font-weight:700; font-size:var(--fs-md); overflow:hidden; white-space:nowrap; text-overflow:ellipsis;"></div>
                     <div id="market-chat-header-sub" style="font-size:var(--fs-xs); color:#888;"></div>
                 </div>
@@ -4378,7 +4402,7 @@
         </div>
 
         <div class="section-title" role="heading" aria-level="2"><span>ตั้งค่าดวงชะตา & ข้อมูล 🔮</span></div>
-        <div style="padding: 0 15px;">
+        <div class="u-px-15">
             <div style="border-radius:24px; padding: 20px; box-shadow: var(--shadow); background:var(--white);">
                 <label style="font-size: var(--fs-sm); opacity: 0.6;">เลือกวันเกิดของคุณ (เพื่อคำนวณดวงประจำวัน)</label>
                 <select id="birth-day-select" data-action-change="updateAstro">
@@ -4405,9 +4429,9 @@
                 <div style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-bottom: 8px;">ข้อมูลบริษัทผู้เช่า (กรอกเองเพื่อใช้ในใบเสร็จ)</div>
                 <label style="font-size:var(--fs-sm); color:#666; display:block; margin-top:8px;">ชื่อบริษัท</label>
                 <input type="text" id="comp-name-input" placeholder="เช่น บริษัท ABC จำกัด" class="u-mb-8">
-                <label style="font-size:var(--fs-sm); color:#666; display:block;">เลขประจำตัวผู้เสียภาษี (13 หลัก)</label>
+                <label class="ta-note-block">เลขประจำตัวผู้เสียภาษี (13 หลัก)</label>
                 <input type="text" id="comp-tax-input" inputmode="numeric" maxlength="13" placeholder="0105555555555" class="u-mb-8">
-                <label style="font-size:var(--fs-sm); color:#666; display:block;">ที่อยู่สำนักงานใหญ่</label>
+                <label class="ta-note-block">ที่อยู่สำนักงานใหญ่</label>
                 <textarea id="comp-addr-input" rows="2" placeholder="เลขที่ ... ถนน ... แขวง/ตำบล ... เขต/อำเภอ ... จังหวัด ... 10xxx" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-family:inherit; resize:vertical; margin-bottom:10px;"></textarea>
                 <button class="btn-main" id="comp-save-btn" data-action="saveCompanyInfo" style="width:100%;"><i class="fas fa-save"></i> บันทึกข้อมูลบริษัท</button>
                 <div id="comp-save-msg" style="display:none; background:var(--soft-green); color:var(--primary-dark, #1a5c38); padding:8px 10px; border-radius:8px; font-size:var(--fs-sm); margin-top:8px; text-align:center;"></div>
@@ -4563,7 +4587,7 @@
                 <span id="contract-quiz-btn-label">อ่าน 10 วินาที เพื่อปลดล็อก…</span>
             </button>
         </div>
-        <div id="contract-forms-section" style="padding: 15px;">
+        <div id="contract-forms-section" class="u-p-15">
             <label class="ta-md-600">ความประสงค์ของคุณ</label>
             <select id="contract-decision" style="margin-bottom: 20px;" data-action-change="toggleContractForm">
                 <option value="">โปรดเลือกดำเนินการ...</option>
@@ -7129,8 +7153,8 @@
             if (ph && !ph.querySelector('i')) {
                 // Restore placeholder content if we cleared it on entry to edit-mode
                 ph.innerHTML = '<i class="fas fa-camera" style="color:var(--primary-green); font-size:var(--fs-lg); display:block; margin-bottom:8px;"></i>'
-                    + '<div style="font-size:var(--fs-md); font-weight:600; color:var(--text-dark);">เพิ่มรูปภาพ</div>'
-                    + '<div style="font-size:var(--fs-sm); color:#888; margin-top:4px;">กดเพื่อเลือกรูปจากคลัง</div>';
+                    + '<div class="ta-md-600-dk">เพิ่มรูปภาพ</div>'
+                    + '<div class="ta-fs-sm-sub-mt">กดเพื่อเลือกรูปจากคลัง</div>';
             }
         }
 
@@ -8099,11 +8123,11 @@
                         <span class="ta-sm-bold-muted">${_esc(t.id)}</span>
                         <span style="font-size:var(--fs-sm);font-weight:700;color:${statusColor[status]||'#6b7280'};">${_esc(statusText[status]||status)}</span>
                     </div>
-                    <p style="font-size:var(--fs-md);font-weight:700;margin-bottom:4px;">${_esc(getCategoryName(t.category))}</p>
-                    <p style="font-size:var(--fs-sm);color:#6b7280;margin-bottom:4px;">${_esc(t.description||t.desc||'')}</p>
-                    <p style="font-size:var(--fs-sm);color:#9ca3af;">${_esc(date)}</p>
+                    <p class="ta-md-bold-mb4">${_esc(getCategoryName(t.category))}</p>
+                    <p class="ta-sm-gray-mb4">${_esc(t.description||t.desc||'')}</p>
+                    <p class="ta-sm-gray">${_esc(date)}</p>
                     ${t.beforePhoto ? `<img src="${_esc(t.beforePhoto)}" style="margin-top:8px;width:100%;max-height:140px;object-fit:cover;border-radius:8px;">` : ''}
-                    ${status==='done' && t.workNotes ? `<p style="font-size:var(--fs-sm);margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;color:#374151;">📝 ${_esc(t.workNotes)}</p>` : ''}
+                    ${status==='done' && t.workNotes ? `<p class="ta-divider-note">📝 ${_esc(t.workNotes)}</p>` : ''}
                 </div>`;
             }).join('');
         }
@@ -8436,10 +8460,10 @@
                         <span class="ta-sm-bold-muted">${_esc(c.id || '—')}</span>
                         <span style="font-size:var(--fs-sm);font-weight:700;color:${statusColor[status]||'#6b7280'};">${_esc(statusLabel[status]||status)}</span>
                     </div>
-                    <p style="font-size:var(--fs-md);font-weight:700;margin-bottom:4px;">${_esc(catLabel[c.category]||c.category||'—')}</p>
-                    <p style="font-size:var(--fs-sm);color:#6b7280;margin-bottom:4px;">${_esc(c.description||'')}</p>
-                    <p style="font-size:var(--fs-sm);color:#9ca3af;">${date}${c.location?' · '+_esc(c.location):''}</p>
-                    ${c.adminNote ? `<p style="font-size:var(--fs-sm);margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;color:#374151;">📝 ${_esc(c.adminNote)}</p>` : ''}
+                    <p class="ta-md-bold-mb4">${_esc(catLabel[c.category]||c.category||'—')}</p>
+                    <p class="ta-sm-gray-mb4">${_esc(c.description||'')}</p>
+                    <p class="ta-sm-gray">${date}${c.location?' · '+_esc(c.location):''}</p>
+                    ${c.adminNote ? `<p class="ta-divider-note">📝 ${_esc(c.adminNote)}</p>` : ''}
                 </div>`;
             }).join('');
         }
@@ -10411,7 +10435,7 @@
                 const dateStr = new Date(e.at).toLocaleDateString('th-TH', {day:'numeric', month:'short', year:'numeric'});
                 return `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:12px;">
                     <div style="font-size:1.4rem;flex:0 0 auto;">${e.icon}</div>
-                    <div style="flex:1;min-width:0;">
+                    <div class="u-flex-1-min0">
                         <div style="font-weight:600;font-size:var(--fs-md);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.title}</div>
                         <div style="font-size:var(--fs-sm);color:var(--text-muted);">${dateStr} • ตอบถูก ${e.score}/${e.total}</div>
                     </div>
@@ -10502,7 +10526,7 @@
                 return `<button class="quiz-hub-card" data-action="${c.action}"${argAttr}
                     style="display:flex;align-items:center;gap:12px;padding:14px;background:#fff;border:1px solid var(--border);border-radius:14px;cursor:pointer;text-align:left;font-family:inherit;width:100%;${c.done?'opacity:.72;':''}">
                     <div style="font-size:1.6rem;flex:0 0 auto;">${c.icon}</div>
-                    <div style="flex:1;min-width:0;">
+                    <div class="u-flex-1-min0">
                         <div style="font-weight:700;font-size:var(--fs-md);color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.title}</div>
                         <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-top:2px;">${c.subtitle}</div>
                         <div style="font-size:var(--fs-sm);margin-top:4px;">${subline}</div>
@@ -11503,7 +11527,7 @@
                 const row = (label, amount, subline) => `
                     <div class="ta-row-split-5">
                         <span>${label}</span><strong>฿${Number(amount).toLocaleString()}</strong>
-                    </div>${subline ? `<div style="font-size:var(--fs-sm); color:#6b7280; padding:0 0 6px 8px;">${subline}</div>` : ''}`;
+                    </div>${subline ? `<div class="ta-tag-label">${subline}</div>` : ''}`;
                 items.innerHTML = [
                     rent  ? row('ค่าเช่าห้อง', rent) : '',
                     elecC !== null ? row('ค่าไฟฟ้า', elecC, (eOld!=null&&eNew!=null) ? `มิเตอร์ไฟ: ${eOld} → ${eNew} (${eU||0} หน่วย × ฿${eR})` : '') : '',
@@ -11560,7 +11584,7 @@
                 const row = (label, amount, subline) => `
                     <div class="ta-row-split-5">
                         <span>${label}</span><strong>฿${Number(amount).toLocaleString()}</strong>
-                    </div>${subline ? `<div style="font-size:var(--fs-sm); color:#6b7280; padding:0 0 6px 8px;">${subline}</div>` : ''}`;
+                    </div>${subline ? `<div class="ta-tag-label">${subline}</div>` : ''}`;
                 items.innerHTML = [
                     rent  ? row('ค่าเช่าห้อง', rent) : '',
                     elecC ? row('ค่าไฟฟ้า', elecC, (eOld!=null&&eNew!=null) ? `มิเตอร์ไฟ: ${eOld} → ${eNew} (${eU||0} หน่วย × ฿${eR})` : '') : '',
