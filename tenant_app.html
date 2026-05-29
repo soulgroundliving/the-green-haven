@@ -6534,7 +6534,8 @@
                     fs.collection(db, 'marketplace'),
                     fs.where('building', '==', _taBuilding),
                     fs.where('status', 'in', MARKET_STATUS_VISIBLE),
-                    fs.orderBy('createdAt', 'desc')
+                    fs.orderBy('createdAt', 'desc'),
+                    fs.limit(100)
                 );
                 _marketUnsub = fs.onSnapshot(q, snap => {
                     const now = new Date().toISOString();
@@ -8207,7 +8208,8 @@
                 const q = fs.query(
                     fs.collection(db, 'complaints'),
                     fs.where('building', '==', _taBuilding),
-                    fs.where('room', '==', String(_taRoom))
+                    fs.where('room', '==', String(_taRoom)),
+                    fs.limit(50)
                 );
                 _complaintsUnsub = fs.onSnapshot(q, snap => {
                     const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -9068,7 +9070,7 @@
             try {
                 const fs = window.firebase.firestoreFunctions;
                 const db = window.firebase.firestore();
-                const colRef = fs.collection(db, 'rewards');
+                const colRef = fs.query(fs.collection(db, 'rewards'), fs.limit(100));
                 _rewardsUnsub = fs.onSnapshot(colRef, snap => {
                     _rewardsCache = snap.docs
                         .map(d => ({ id: d.id, ...d.data() }))
@@ -11078,7 +11080,8 @@
                 const q = fs.query(
                     fs.collection(db, 'announcements'),
                     fs.where('type', '==', 'banner'),
-                    fs.where('audience', 'in', ['all', audience])
+                    fs.where('audience', 'in', ['all', audience]),
+                    fs.limit(20)
                 );
                 _taAnnUnsub = fs.onSnapshot(q, snap => {
                     const docs = snap.docs.map(d => {
@@ -11361,7 +11364,8 @@
                 const q = fs.query(
                     fs.collection(db, 'meter_data'),
                     fs.where('building', '==', _taBuilding),
-                    fs.where('roomId', '==', String(_taRoom))
+                    fs.where('roomId', '==', String(_taRoom)),
+                    fs.limit(24)
                 );
                 const snap = await fs.getDocs(q);
                 _meterHistoryCache = snap.docs.map(d => {
@@ -11616,7 +11620,8 @@
                 const q = fs.query(
                     fs.collection(db, 'announcements'),
                     fs.where('type', '==', 'event'),
-                    fs.where('audience', 'in', ['all', audience])
+                    fs.where('audience', 'in', ['all', audience]),
+                    fs.limit(50)
                 );
                 _taNewEventsUnsub = fs.onSnapshot(q, snap => {
                     // Normalize C4 event shape → legacy event shape (title/date/time/location/description/building).
@@ -13187,7 +13192,7 @@
             }
             const fs = window.firebase.firestoreFunctions;
             const db = window.firebase.firestore();
-            fs.onSnapshot(fs.collection(db, 'communityDocuments'), snap => {
+            fs.onSnapshot(fs.query(fs.collection(db, 'communityDocuments'), fs.limit(50)), snap => {
                 const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 if (docs.length) {
                     try { localStorage.setItem('community_documents_data', JSON.stringify(docs)); } catch(e) {}
