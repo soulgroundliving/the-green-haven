@@ -216,7 +216,91 @@
         }
     }
 
-    // ── 4. PAYMENT CONFIG ──────────────────────────────────────────────────
+    // ── 4. CLEANING SERVICE CONFIG ────────────────────────────────────────
+    // Firestore: system/cleaningServices doc with:
+    //   { services: [{id, label, icon, price, free, note, priceLabel}],
+    //     timeSlots: ['09:00 - 12:00 น.', ...], activeMonth: 'YYYY-MM' }
+    // Admin manages via dashboard → Content → Cleaning tab.
+    // Fallback: existing hardcoded <option>s remain until first Firestore snapshot.
+    // `window._cleaningCfgCache` is mirrored after every update so inline code
+    // (_isStandardCleanAvailable, _maybeOpenStandardCleanModal, dismissStandardCleanModal,
+    // bookStandardCleanFromModal) can read it without crossing the module boundary.
+
+    let _cleaningCfgUnsub = null;
+    let _cleaningCfgCache = null;
+    window._cleaningCfgCache = null; // readable from inline script before first snapshot
+
+    function _subscribeCleaningConfig() {
+        if (_cleaningCfgUnsub) return;
+        if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+        try {
+            const fs = window.firebase.firestoreFunctions;
+            const db = window.firebase.firestore();
+            const ref = fs.doc(db, 'system', 'cleaningServices');
+            _cleaningCfgUnsub = fs.onSnapshot(ref, snap => {
+                if (!snap.exists()) return;
+                _cleaningCfgCache = snap.data() || null;
+                window._cleaningCfgCache = _cleaningCfgCache; // keep inline readers in sync
+                _renderCleaningServices();
+                _renderCleaningTimeSlots();
+                if (typeof window._refreshStandardCleanAvailability === 'function') window._refreshStandardCleanAvailability();
+            }, err => console.warn('cleaningConfig subscribe failed:', err.message));
+        } catch (e) { console.warn('cleaningConfig subscribe init failed:', e.message); }
+    }
+
+    function _renderCleaningServices() {
+        if (!_cleaningCfgCache || !Array.isArray(_cleaningCfgCache.services)) return;
+        const list = document.getElementById('cleaning-service-list');
+        if (!list) return;
+        list.innerHTML = '';
+        _cleaningCfgCache.services.forEach((svc, idx) => {
+            const card = document.createElement('div');
+            card.id = `service-${svc.id || idx}`;
+            card.className = 'card p-4 border-2 border-transparent';
+            card.addEventListener('click', () => {
+                if (typeof window.selectService === 'function') window.selectService(svc.id);
+            });
+            const inner = document.createElement('div');
+            inner.className = 'flex flex-col items-center text-center';
+            const icon = document.createElement('span');
+            icon.className = 'text-2xl mb-2';
+            icon.textContent = svc.icon || '✨';
+            const title = document.createElement('strong');
+            title.className = 'text-sm';
+            title.textContent = svc.label || '(service)';
+            const price = document.createElement('p');
+            price.className = `text-[10px] font-bold mt-1 ${svc.free ? 'text-green-600' : 'text-blue-600'}`;
+            price.textContent = svc.free
+                ? `ฟรี (${svc.quotaMonths || 6} เดือน/ครั้ง)`
+                : (svc.priceLabel || `${svc.price || 0} ฿ / ครั้ง`);
+            inner.appendChild(icon); inner.appendChild(title); inner.appendChild(price);
+            card.appendChild(inner);
+            list.appendChild(card);
+        });
+        // Re-apply selection so the active-service border persists after re-render.
+        // Default to 'deep' when Standard Clean is unavailable — avoids firing the
+        // "unavailable" toast on app init (fires on every onSnapshot re-render otherwise).
+        const defaultSvc = (typeof window._isStandardCleanAvailable === 'function' && window._isStandardCleanAvailable()) ? 'free' : 'deep';
+        const _selSvc = window._selectedService;
+        if (typeof window.selectService === 'function') {
+            window.selectService(_selSvc && _selSvc !== 'free' ? _selSvc : defaultSvc);
+        }
+        if (typeof window._refreshStandardCleanAvailability === 'function') window._refreshStandardCleanAvailability();
+    }
+
+    function _renderCleaningTimeSlots() {
+        if (!_cleaningCfgCache || !Array.isArray(_cleaningCfgCache.timeSlots)) return;
+        const sel = document.getElementById('clean-time');
+        if (!sel) return;
+        sel.innerHTML = '';
+        _cleaningCfgCache.timeSlots.forEach(ts => {
+            const opt = document.createElement('option');
+            opt.textContent = ts;
+            sel.appendChild(opt);
+        });
+    }
+
+    // ── 5. PAYMENT CONFIG ──────────────────────────────────────────────────
     // Firestore: buildings/{rooms|nest} doc fields { promptPayId, companyName, ownerName }.
     // Admin sets this in dashboard.html → Buildings → ✏️ แก้ไข.
     // All buildings/* docs are canonical-only as of 2026-05-18 migration.
@@ -274,6 +358,9 @@
     // [audit-skip] reads system/maintenanceCategories + system/complaintCategories
     // (firestore.rules:33 — match /system/{docId} allows read:if true). No auth claim needed.
     window.addEventListener('authReady', _subscribeCategories);
+
+    // [audit-skip] reads system/cleaningServices — public-read (firestore.rules:33).
+    window.addEventListener('authReady', _subscribeCleaningConfig);
 
     // [audit-skip] reads system/emergencyContacts — public-read (firestore.rules:33).
     window.addEventListener('authReady', _subscribeEmergencyContacts);
