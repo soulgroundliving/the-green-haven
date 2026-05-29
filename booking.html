@@ -706,6 +706,57 @@
       line-height: var(--leading-relaxed);
     }
     .pp-account-info strong { color: var(--ink); }
+
+    /* ── Inline-style replacements (§ style-src-attr migration) ── */
+    .debug-panel{position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:rgba(0,0,0,.85);color:#0f0;font-family:monospace;font-size:11px;padding:8px;z-index:9999;line-height:1.4;}
+    .debug-panel-header{color:#fff;border-bottom:1px solid #444;padding-bottom:4px;margin-bottom:4px;display:flex;justify-content:space-between;}
+    .debug-btn{background:#333;color:#fff;border:1px solid #666;padding:2px 8px;font-size:11px;cursor:pointer;}
+    .recovery-banner{background:var(--brand-primary-wash);border:1px solid var(--brand-primary);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-4);cursor:pointer;}
+    .recovery-banner-title{font-size:var(--text-sm);color:var(--brand-primary-dark);font-weight:600;}
+    .recovery-banner-sub{font-size:var(--text-xs);color:var(--shadow);margin-top:4px;}
+    .early-bird-hint{font-size:var(--text-xs);color:var(--brand-primary-dark);margin-top:var(--space-1);display:none;}
+    .rooms-empty{text-align:center;padding:var(--space-6);color:var(--pebble);}
+    .required-field{color:var(--alert);}
+    .early-bird-badge{background:var(--brand-primary-wash);border-radius:var(--radius-sm);padding:var(--space-3);margin-bottom:var(--space-3);font-size:var(--text-sm);color:var(--brand-primary-dark);}
+    .heading-tight{margin-top:0;}
+    .text-center{text-align:center;}
+    .qr-instruction-text{font-size:var(--text-sm);color:var(--shadow);}
+    .qr-download-btn{margin-top:var(--space-2);font-size:var(--text-sm);}
+    .countdown-margin{margin-top:var(--space-3);}
+    .divider{border:none;border-top:1px solid var(--border-subtle);margin:var(--space-4) 0;}
+    .section-title{margin:0 0 var(--space-3);}
+    .slip-icon{font-size:2rem;margin-bottom:var(--space-2);}
+    .slip-instruction-text{font-size:var(--text-sm);color:var(--shadow);}
+    .full-width-button{width:100%;margin-top:var(--space-3);}
+    .full-width-button-mb{width:100%;margin-bottom:var(--space-2);}
+    .confirm-panel{display:none;background:rgba(192,100,88,.07);border:1px solid rgba(192,100,88,.22);border-radius:var(--radius-sm);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-4);text-align:center;}
+    .confirm-message{font-size:var(--text-sm);color:var(--ink);margin:0 0 var(--space-3);}
+    .button-group-center{display:flex;gap:var(--space-2);justify-content:center;}
+    .confirm-btn{flex:1;max-width:120px;}
+    .heading-centered{text-align:center;margin:0 0 var(--space-2);}
+    .subtitle-centered{text-align:center;color:var(--shadow);margin:0 0 var(--space-5);}
+    .booking-reference{font-family:monospace;letter-spacing:.05em;}
+    .text-right{text-align:right;}
+    .reference-label{font-size:10px;color:var(--pebble);}
+    .booking-id-display{font-size:10px;color:var(--pebble);user-select:all;word-break:break-all;}
+    .value-xs{font-size:var(--text-xs);}
+    .early-bird-confirmation{background:var(--brand-primary-wash);border-radius:var(--radius-sm);padding:var(--space-3);margin-top:var(--space-4);font-size:var(--text-sm);color:var(--brand-primary-dark);}
+    .confirmation-note{font-size:var(--text-sm);color:var(--shadow);margin-top:var(--space-5);line-height:var(--leading-relaxed);}
+    .section-heading{margin:0 0 var(--space-2);}
+    .optional-label{font-weight:var(--weight-light);color:var(--shadow);font-size:var(--text-sm);}
+    .section-description{font-size:var(--text-sm);color:var(--shadow);margin-bottom:var(--space-4);line-height:var(--leading-relaxed);}
+    .file-requirement-note{font-size:var(--text-xs);color:var(--pebble);margin-top:var(--space-2);text-align:center;}
+    .kyc-success-card{margin-top:var(--space-4);border-color:var(--info);}
+    .receipt-tick-info{background:var(--info);}
+    .subtitle-centered-sm{text-align:center;color:var(--shadow);margin:0 0 var(--space-3);font-size:var(--text-sm);}
+    .kyc-summary-text{text-align:center;color:var(--pebble);font-size:var(--text-xs);}
+    .boot-error{color:var(--alert);font-weight:var(--weight-semibold);}
+    .boot-message{max-width:320px;text-align:center;line-height:var(--leading-relaxed);}
+    .boot-button{flex:0 0 auto;padding:var(--space-3) var(--space-6);}
+    .value-primary{color:var(--brand-primary-dark);font-weight:var(--weight-bold);}
+    .text-right-pb{text-align:right;padding-bottom:var(--space-2);}
+    .room-card-skeleton{--skeleton-opacity:1;opacity:var(--skeleton-opacity);}
+    .mt-space-4{margin-top:var(--space-4);}
   </style>
 </head>
 <body>
@@ -730,10 +781,10 @@
 <!-- On-screen debug panel — visible only when URL has ?debug=1.
      Lets us read console.log output on iOS LIFF where Safari Web Inspector
      isn't practical. The panel appends every _dlog(msg) call in real time. -->
-<div id="bookDebugPanel" class="hide" style="position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:rgba(0,0,0,0.85);color:#0f0;font-family:monospace;font-size:11px;padding:8px;z-index:9999;line-height:1.4;">
-  <div style="color:#fff;border-bottom:1px solid #444;padding-bottom:4px;margin-bottom:4px;display:flex;justify-content:space-between;">
+<div id="bookDebugPanel" class="hide debug-panel">
+  <div class="debug-panel-header">
     <span>🐞 debug</span>
-    <button id="bookDebugClear" style="background:#333;color:#fff;border:1px solid #666;padding:2px 8px;font-size:11px;cursor:pointer;">clear</button>
+    <button id="bookDebugClear" class="debug-btn">clear</button>
   </div>
   <div id="bookDebugLog"></div>
 </div>
@@ -770,9 +821,9 @@
 
     <!-- Recovery banner — shown when Firestore has an active lock for this user.
          Populated by tryRestoreLockFromServer; click goes back to Step 3. -->
-    <div id="recoveryBanner" class="hide" style="background:var(--brand-primary-wash);border:1px solid var(--brand-primary);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-4);cursor:pointer;">
-      <div style="font-size: var(--text-sm); color: var(--brand-primary-dark); font-weight:600;" id="recoveryBannerTitle">📌 พบการจองที่ค้างอยู่</div>
-      <div style="font-size: var(--text-xs); color: var(--shadow); margin-top: 4px;" id="recoveryBannerSub">กดเพื่อกลับไปจ่ายมัดจำ</div>
+    <div id="recoveryBanner" class="hide recovery-banner">
+      <div class="recovery-banner-title" id="recoveryBannerTitle">📌 พบการจองที่ค้างอยู่</div>
+      <div class="recovery-banner-sub" id="recoveryBannerSub">กดเพื่อกลับไปจ่ายมัดจำ</div>
     </div>
 
     <div class="building-tabs">
@@ -786,13 +837,13 @@
 
     <div class="filter-row">
       <div class="filter-grid">
-        <div id="nestFilterFloor" style="display:none">
+        <div id="nestFilterFloor" class="hide">
           <label class="filter-label" for="filterFloor">ชั้น</label>
           <select id="filterFloor" class="filter-input">
             <option value="">ทุกชั้น</option>
           </select>
         </div>
-        <div id="nestFilterType" style="display:none">
+        <div id="nestFilterType" class="hide">
           <label class="filter-label" for="filterType">ประเภท</label>
           <select id="filterType" class="filter-input">
             <option value="">ทุกประเภท</option>
@@ -804,11 +855,11 @@
     <div>
       <label class="filter-label">เลือกวันที่ย้ายเข้า</label>
       <div id="dateStrip" class="date-strip" aria-label="เลือกวันที่ย้ายเข้า"></div>
-      <div id="earlyBirdHint" style="font-size: var(--text-xs); color: var(--brand-primary-dark); margin-top: var(--space-1); display:none;">🎁 จุด • = จองล่วงหน้า ≥ 30 วัน รับ 500 แต้ม Early Bird (เฉพาะ Nest)</div>
+      <div id="earlyBirdHint" class="early-bird-hint">🎁 จุด • = จองล่วงหน้า ≥ 30 วัน รับ 500 แต้ม Early Bird (เฉพาะ Nest)</div>
     </div>
 
     <div id="roomsList" class="rooms-list"></div>
-    <div id="roomsEmpty" class="hide" style="text-align:center; padding: var(--space-6); color: var(--pebble);">
+    <div id="roomsEmpty" class="hide rooms-empty">
       ไม่พบห้องที่ตรงกับตัวกรอง
     </div>
 
@@ -833,23 +884,23 @@
 
       <div class="modal-name-row">
         <div class="modal-form-col">
-          <label for="modalFirstName">ชื่อ <span style="color: var(--alert)">*</span></label>
+          <label for="modalFirstName">ชื่อ <span class="required-field">*</span></label>
           <input id="modalFirstName" type="text" maxlength="40" autocomplete="given-name" placeholder="ชื่อจริง">
         </div>
         <div class="modal-form-col">
-          <label for="modalLastName">นามสกุล <span style="color: var(--alert)">*</span></label>
+          <label for="modalLastName">นามสกุล <span class="required-field">*</span></label>
           <input id="modalLastName" type="text" maxlength="40" autocomplete="family-name" placeholder="นามสกุล">
         </div>
       </div>
       <span id="modalNameErr" class="modal-name-err"></span>
 
       <div class="modal-form-row">
-        <label for="modalPhone">เบอร์โทร <span style="color: var(--alert)">*</span></label>
+        <label for="modalPhone">เบอร์โทร <span class="required-field">*</span></label>
         <input id="modalPhone" type="tel" inputmode="numeric" maxlength="12" autocomplete="tel" placeholder="0XXXXXXXXX">
         <span id="modalPhoneErr" class="err"></span>
       </div>
 
-      <div id="modalEarlyBird" class="hide" style="background: var(--brand-primary-wash); border-radius: var(--radius-sm); padding: var(--space-3); margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--brand-primary-dark);">
+      <div id="modalEarlyBird" class="hide early-bird-badge">
         🎁 จองล่วงหน้า ≥ 30 วัน — รับ 500 แต้ม Early Bird (มอบหลังทำสัญญา)
       </div>
 
@@ -863,7 +914,7 @@
   <!-- ──────────── Step 3: Payment ──────────── -->
   <section id="stepPayment" class="step hide">
     <div class="payment-card">
-      <h2 style="margin-top:0;">มัดจำห้อง <span id="payRoomLabel"></span></h2>
+      <h2 class="heading-tight">มัดจำห้อง <span id="payRoomLabel"></span></h2>
       <div class="modal-row">
         <span class="label">ห้อง</span>
         <span class="value" id="payRoom">—</span>
@@ -881,40 +932,40 @@
         <span class="value" id="payDuration">—</span>
       </div>
 
-      <div style="text-align:center;">
+      <div class="text-center">
         <div class="qr-amount" id="payAmountText">— <span class="qr-amount-suffix">บาท</span></div>
-        <div style="font-size: var(--text-sm); color: var(--shadow);">สแกน PromptPay เพื่อโอนมัดจำ</div>
+        <div class="qr-instruction-text">สแกน PromptPay เพื่อโอนมัดจำ</div>
         <div id="ppAccountName" class="pp-account-info"></div>
         <div class="qr-wrap" id="qrWrap"></div>
         <!-- A3: save QR to device gallery -->
-        <button id="qrDownloadBtn" class="btn btn-secondary" style="margin-top: var(--space-2); font-size: var(--text-sm);">💾 บันทึก QR ลงเครื่อง</button>
-        <div id="countdown" class="countdown-strip" style="margin-top: var(--space-3);">⏰ ห้องถูกล็อคไว้ <span id="countdownText">20:00</span> นาที</div>
+        <button id="qrDownloadBtn" class="btn btn-secondary qr-download-btn">💾 บันทึก QR ลงเครื่อง</button>
+        <div id="countdown" class="countdown-strip countdown-margin">⏰ ห้องถูกล็อคไว้ <span id="countdownText">20:00</span> นาที</div>
         <div id="fiveMinWarning" class="five-min-warning" role="alert">⚠️ เหลือเวลาไม่ถึง 5 นาที — กรุณาโอนและแนบสลิปโดยด่วน!</div>
       </div>
 
-      <hr style="border:none; border-top: 1px solid var(--border-subtle); margin: var(--space-4) 0;">
+      <hr class="divider">
 
-      <h3 style="margin: 0 0 var(--space-3);">อัปโหลดสลิปการโอน</h3>
+      <h3 class="section-title">อัปโหลดสลิปการโอน</h3>
       <label class="slip-drop" id="slipDrop">
         <input type="file" id="slipFileInput" accept="image/*">
         <div id="slipDropContent">
-          <div style="font-size: 2rem; margin-bottom: var(--space-2);">📤</div>
-          <div style="font-size: var(--text-sm); color: var(--shadow);">แตะเพื่อเลือกรูปสลิป</div>
+          <div class="slip-icon">📤</div>
+          <div class="slip-instruction-text">แตะเพื่อเลือกรูปสลิป</div>
         </div>
         <img id="slipPreview" class="slip-preview hide" alt="สลิปธนาคาร">
       </label>
       <div id="slipStatus" class="status-line hide"></div>
-      <button id="slipVerifyBtn" class="btn btn-primary hide" style="width:100%; margin-top: var(--space-3);">ยืนยันสลิปและตรวจสอบอัตโนมัติ</button>
-      <button id="expiredRestartBtn" class="btn btn-primary hide" style="width:100%; margin-top: var(--space-3);">เริ่มการจองใหม่อีกครั้ง</button>
+      <button id="slipVerifyBtn" class="btn btn-primary hide full-width-button">ยืนยันสลิปและตรวจสอบอัตโนมัติ</button>
+      <button id="expiredRestartBtn" class="btn btn-primary hide full-width-button">เริ่มการจองใหม่อีกครั้ง</button>
     </div>
 
-    <button id="cancelBookingBtn" class="btn btn-secondary" style="width:100%; margin-bottom: var(--space-2);">ยกเลิกการจอง</button>
+    <button id="cancelBookingBtn" class="btn btn-secondary full-width-button-mb">ยกเลิกการจอง</button>
     <!-- Inline confirm panel (replaces window.confirm) -->
-    <div id="cancelConfirmPanel" class="hide" style="display:none; background:rgba(192,100,88,0.07); border:1px solid rgba(192,100,88,0.22); border-radius:var(--radius-sm); padding:var(--space-3) var(--space-4); margin-bottom:var(--space-4); text-align:center;">
-      <p style="font-size:var(--text-sm); color:var(--ink); margin:0 0 var(--space-3);">ยืนยันยกเลิกการจองและกลับไปเลือกห้องใหม่?</p>
-      <div style="display:flex; gap:var(--space-2); justify-content:center;">
-        <button id="cancelConfirmYes" class="btn btn-danger" style="flex:1; max-width:120px;">ยกเลิกการจอง</button>
-        <button id="cancelConfirmNo"  class="btn btn-secondary" style="flex:1; max-width:120px;">ไม่</button>
+    <div id="cancelConfirmPanel" class="hide confirm-panel">
+      <p class="confirm-message">ยืนยันยกเลิกการจองและกลับไปเลือกห้องใหม่?</p>
+      <div class="button-group-center">
+        <button id="cancelConfirmYes" class="btn btn-danger confirm-btn">ยกเลิกการจอง</button>
+        <button id="cancelConfirmNo"  class="btn btn-secondary confirm-btn">ไม่</button>
       </div>
     </div>
   </section>
@@ -923,18 +974,18 @@
   <section id="stepConfirm" class="step hide">
     <div class="receipt-card">
       <div class="receipt-tick">✓</div>
-      <h2 style="text-align:center; margin: 0 0 var(--space-2);">จองสำเร็จ</h2>
-      <p style="text-align:center; color: var(--shadow); margin: 0 0 var(--space-5);">
+      <h2 class="heading-centered">จองสำเร็จ</h2>
+      <p class="subtitle-centered">
         ใบรับเงินชั่วคราวถูกส่งไปยัง LINE ของคุณ
       </p>
 
       <div class="modal-row">
         <span class="label">รหัสการจอง</span>
-        <span class="value" id="confBookingRef" style="font-family: monospace; letter-spacing: 0.05em;">—</span>
+        <span class="value booking-reference" id="confBookingRef">—</span>
       </div>
-      <div style="text-align:right; padding-bottom: var(--space-2);">
-        <span style="font-size: 10px; color: var(--pebble);">ref: </span>
-        <span id="confBookingId" style="font-size: 10px; color: var(--pebble); user-select: all; word-break: break-all;">—</span>
+      <div class="text-right-pb">
+        <span class="reference-label">ref: </span>
+        <span id="confBookingId" class="booking-id-display">—</span>
       </div>
       <div class="modal-row">
         <span class="label">ห้อง</span>
@@ -946,21 +997,21 @@
       </div>
       <div class="modal-row">
         <span class="label">เลขรายการ</span>
-        <span class="value" id="confTxRef" style="font-size: var(--text-xs);">—</span>
+        <span class="value value-xs" id="confTxRef">—</span>
       </div>
-      <div id="confEarlyBird" class="hide" style="background: var(--brand-primary-wash); border-radius: var(--radius-sm); padding: var(--space-3); margin-top: var(--space-4); font-size: var(--text-sm); color: var(--brand-primary-dark);">
+      <div id="confEarlyBird" class="hide early-bird-confirmation">
         🎁 คุณได้รับสิทธิ์ Early Bird +500 แต้ม จะอัปเดตหลังทำสัญญา
       </div>
 
-      <p style="font-size: var(--text-sm); color: var(--shadow); margin-top: var(--space-5); line-height: var(--leading-relaxed);">
+      <p class="confirmation-note">
         ขั้นตอนต่อไป — ทีมงานจะติดต่อคุณเพื่อนัดเซ็นสัญญาและรับกุญแจ
       </p>
     </div>
 
     <!-- ──── KYC pre-check-in (Phase 5, optional) ──── -->
-    <div id="kycSection" class="payment-card" style="margin-top: var(--space-4);">
-      <h3 style="margin: 0 0 var(--space-2);">📋 ส่งเอกสาร KYC ล่วงหน้า <span style="font-weight: var(--weight-light); color: var(--shadow); font-size: var(--text-sm);">(ไม่บังคับ)</span></h3>
-      <p style="font-size: var(--text-sm); color: var(--shadow); margin-bottom: var(--space-4); line-height: var(--leading-relaxed);">
+    <div id="kycSection" class="payment-card mt-space-4">
+      <h3 class="section-heading">📋 ส่งเอกสาร KYC ล่วงหน้า <span class="optional-label">(ไม่บังคับ)</span></h3>
+      <p class="section-description">
         ส่งเอกสารตอนนี้เพื่อย่นเวลาเข้าอยู่ — แอดมินจะตรวจสอบล่วงหน้า ในวันเข้าอยู่จริงเพียงรับกุญแจเสร็จใน 1 นาที
       </p>
 
@@ -968,13 +1019,13 @@
         <label class="kyc-tile" data-kyc-type="idCardFront">
           <input type="file" accept="image/*,application/pdf">
           <div class="kyc-icon">🆔</div>
-          <div class="kyc-label">บัตรประชาชน (หน้า) <span style="color: var(--alert);">*</span></div>
+          <div class="kyc-label">บัตรประชาชน (หน้า) <span class="required-field">*</span></div>
           <div class="kyc-status" data-kyc-status>ยังไม่ได้อัปโหลด</div>
         </label>
         <label class="kyc-tile" data-kyc-type="idCardBack">
           <input type="file" accept="image/*,application/pdf">
           <div class="kyc-icon">🆔</div>
-          <div class="kyc-label">บัตรประชาชน (หลัง) <span style="color: var(--alert);">*</span></div>
+          <div class="kyc-label">บัตรประชาชน (หลัง) <span class="required-field">*</span></div>
           <div class="kyc-status" data-kyc-status>ยังไม่ได้อัปโหลด</div>
         </label>
         <label class="kyc-tile" data-kyc-type="houseReg">
@@ -991,21 +1042,21 @@
         </label>
       </div>
 
-      <div id="kycStatus" class="status-line hide" style="margin-top: var(--space-3);"></div>
-      <button id="kycSubmitBtn" class="btn btn-primary" disabled style="width:100%; margin-top: var(--space-3);">📋 ส่งเอกสารให้แอดมิน</button>
-      <p style="font-size: var(--text-xs); color: var(--pebble); margin-top: var(--space-2); text-align: center;">
+      <div id="kycStatus" class="status-line hide countdown-margin"></div>
+      <button id="kycSubmitBtn" class="btn btn-primary full-width-button" disabled>📋 ส่งเอกสารให้แอดมิน</button>
+      <p class="file-requirement-note">
         ไฟล์ต้องเป็น JPG / PNG / PDF, ขนาดไม่เกิน 5MB ต่อไฟล์
       </p>
     </div>
 
     <!-- KYC submission success state -->
-    <div id="kycDone" class="receipt-card hide" style="margin-top: var(--space-4); border-color: var(--info);">
-      <div class="receipt-tick" style="background: var(--info);">📋</div>
-      <h3 style="text-align:center; margin: 0 0 var(--space-2);">ส่งเอกสารเรียบร้อย</h3>
-      <p style="text-align:center; color: var(--shadow); margin: 0 0 var(--space-3); font-size: var(--text-sm);">
+    <div id="kycDone" class="receipt-card hide kyc-success-card">
+      <div class="receipt-tick receipt-tick-info">📋</div>
+      <h3 class="heading-centered">ส่งเอกสารเรียบร้อย</h3>
+      <p class="subtitle-centered-sm">
         แอดมินจะตรวจสอบและติดต่อกลับภายใน 1-2 วัน
       </p>
-      <p id="kycDoneSummary" style="text-align:center; color: var(--pebble); font-size: var(--text-xs);"></p>
+      <p id="kycDoneSummary" class="kyc-summary-text"></p>
     </div>
   </section>
 
@@ -1295,9 +1346,9 @@
     if (!el) return;
     el.innerHTML = `
       <div class="leaf">⚠️</div>
-      <div style="color: var(--alert); font-weight: var(--weight-semibold);">เชื่อมต่อไม่สำเร็จ</div>
-      <div class="msg" style="max-width: 320px; text-align: center; line-height: var(--leading-relaxed);">${reason || 'กรุณาลองใหม่อีกครั้ง'}</div>
-      <button class="btn btn-primary" id="bootRetryBtn" style="flex: 0 0 auto; padding: var(--space-3) var(--space-6);">ลองอีกครั้ง</button>
+      <div class="boot-error">เชื่อมต่อไม่สำเร็จ</div>
+      <div class="msg boot-message">${reason || 'กรุณาลองใหม่อีกครั้ง'}</div>
+      <button class="btn btn-primary boot-button" id="bootRetryBtn">ลองอีกครั้ง</button>
     `;
     document.getElementById('bootRetryBtn').addEventListener('click', () => location.reload());
   }
@@ -1576,9 +1627,8 @@
 
     // P1 #9: show shimmer skeleton until availability data arrives from CF
     if (!state.availabilityLoaded[state.building]) {
-      list.innerHTML = [1, 0.7, 0.45].map(op =>
-        `<div class="room-card-skeleton" style="opacity:${op}"></div>`
-      ).join('');
+      list.innerHTML = '<div class="room-card-skeleton"></div>'.repeat(3);
+      list.querySelectorAll('.room-card-skeleton').forEach((el, i) => { el.style.opacity = [1, 0.7, 0.45][i]; });
       empty.classList.add('hide');
       return;
     }
@@ -1696,7 +1746,7 @@
       ${meta.length ? `<div class="modal-row"><span class="label">ประเภท</span><span class="value">${meta.join(' · ')}</span></div>` : ''}
       <div class="modal-row"><span class="label">วันย้ายเข้า</span><span class="value">${formatDateThai(state.selectedDate)}</span></div>
       <div class="modal-row"><span class="label">ค่าเช่า/เดือน</span><span class="value">฿${formatNum(room.rentPrice)}</span></div>
-      <div class="modal-row"><span class="label">ค่ามัดจำ</span><span class="value" style="color: var(--brand-primary-dark); font-weight: var(--weight-bold);">฿${formatNum(dep)}</span></div>
+      <div class="modal-row"><span class="label">ค่ามัดจำ</span><span class="value value-primary">฿${formatNum(dep)}</span></div>
     `;
 
     // A1: pre-fill from sessionStorage (persists across modal open/close within the session)
