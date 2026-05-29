@@ -216,6 +216,59 @@
         }
     }
 
+    // ── 4. PAYMENT CONFIG ──────────────────────────────────────────────────
+    // Firestore: buildings/{rooms|nest} doc fields { promptPayId, companyName, ownerName }.
+    // Admin sets this in dashboard.html → Buildings → ✏️ แก้ไข.
+    // All buildings/* docs are canonical-only as of 2026-05-18 migration.
+    // localStorage mirror keeps legacy callers (buildPromptPayPayload, getOwnerName) working.
+    // Reads window._taCurrentBill (mirrored from inline `let _taCurrentBill` at each write site).
+
+    let _paymentCfgUnsub = null;
+
+    function _subscribePaymentConfig() {
+        if (_paymentCfgUnsub) return;
+        if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+        // Wait until building is known — same pattern as _subscribeBroadcasts.
+        // Without this, Nest tenants subscribe to buildings/rooms in the anonymous
+        // phase and the idempotency guard prevents a retry when claims arrive.
+        if (!_taBuilding) return;
+        try {
+            const fs = window.firebase.firestoreFunctions;
+            const db = window.firebase.firestore();
+            const fsBuilding = window.CONFIG.getFirestoreBuilding(_taBuilding);
+            const ref = fs.doc(db, 'buildings', fsBuilding);
+            _paymentCfgUnsub = fs.onSnapshot(ref, snap => {
+                if (!snap.exists()) return;
+                const data = snap.data() || {};
+                const pp = data.promptPayId;
+                const cn = data.companyName || data.payment?.companyName;
+                const on = data.ownerName   || data.payment?.ownerName;
+                if (pp) try { localStorage.setItem('promptpay', String(pp)); } catch(e) {}
+                if (cn) try { localStorage.setItem('company_name', String(cn)); } catch(e) {}
+                if (on) try { localStorage.setItem('owner_name', String(on)); } catch(e) {}
+                // Update visible footer label without waiting for re-render
+                const ownerEl = document.getElementById('receipt-owner-name');
+                if (ownerEl && (cn || on)) ownerEl.textContent = cn || on;
+                // Re-render visible payment screens so changes appear without reload
+                if (document.getElementById('pay-qr-canvas') && window._taCurrentBill) {
+                    if (typeof window.renderPaymentInvoice === 'function') window.renderPaymentInvoice(window._taCurrentBill);
+                }
+                // Render building-info page from same doc
+                const info = data.info || {};
+                const setBld = (id, v) => { const el = document.getElementById(id); if (el && v != null && v !== '') el.textContent = v; };
+                setBld('bld-name', info.name);
+                setBld('bld-tagline', info.tagline);
+                setBld('bld-units', info.units ? `${info.units} ห้อง` : null);
+                setBld('bld-petzone', info.petZone);
+                setBld('bld-elec-status', info.electricStatus);
+                setBld('bld-water-status', info.waterStatus);
+            }, err => {
+                console.error('[paymentConfig] subscribe failed:', err?.message);
+                if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') _paymentCfgUnsub = null;
+            });
+        } catch (e) { console.warn('payment config subscribe init failed:', e.message); }
+    }
+
     // ── Subscription wiring ────────────────────────────────────────────────
 
     // [audit-skip] reads system/maintenanceCategories + system/complaintCategories
@@ -227,4 +280,10 @@
 
     // [audit-skip] reads rewards/* — public-read (firestore.rules:29).
     window.addEventListener('authReady', _subscribeRewards);
+
+    // Auth-gated on _taBuilding — wired via _onLiffClaimsReady so Nest tenants
+    // don't subscribe with wrong building during anonymous phase (§7-U).
+    if (typeof _onLiffClaimsReady === 'function') {
+        _onLiffClaimsReady(_subscribePaymentConfig);
+    }
 })();
