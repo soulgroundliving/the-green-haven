@@ -2345,6 +2345,23 @@
         .ta-input-lg-plain { width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; font-family: inherit; }
         .ta-input-lg-white { width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; background: white; font-family: inherit; }
         .ta-tab-alt      { flex: 1; padding: 8px; border-radius: 10px; font-size: var(--fs-sm); font-weight: 700; border: 2px solid #ddd; color: #6b7280; background: #f9fafb; cursor: pointer; }
+        /* JS innerHTML template-literal classes */
+        .ta-err-msg       { padding: 16px; text-align: center; color: var(--text-muted); font-size: var(--fs-sm); }
+        .ta-err-msg-lg    { padding: 20px; text-align: center; color: var(--text-muted); font-size: var(--fs-sm); }
+        .ta-empty-state   { padding: 16px; text-align: center; color: var(--text-muted); }
+        .ta-empty-card    { text-align: center; padding: 14px; color: var(--text-muted); font-size: var(--fs-sm); background: #fff; border: 1px dashed var(--border); border-radius: 12px; }
+        .ta-loading-state { text-align: center; padding: 24px 0; color: var(--text-muted); }
+        .ta-modal-h3      { color: var(--primary-green); margin-top: 0; }
+        .ta-modal-h3-plain { margin-top: 0; }
+        .ta-cam-icon      { color: var(--primary-green); font-size: var(--fs-lg); display: block; margin-bottom: 8px; }
+        .ta-emoji-lg      { font-size: 3rem; margin-bottom: 16px; }
+        .ta-emoji-xl      { font-size: 2.5rem; margin-bottom: 10px; }
+        .ta-icon-1-6rem   { font-size: 1.6rem; }
+        .ta-slip-slot     { border: 2px dashed #ccc; padding: 20px; text-align: center; border-radius: 15px; background: #fdfdfd; }
+        .ta-add-cta       { border: 2px dashed #e0e0e0; padding: 30px 20px; border-radius: 25px; text-align: center; cursor: pointer; background: #fff; }
+        .ta-preview-wrap  { padding: 1rem; }
+        .ta-err-danger    { text-align: center; color: var(--danger); padding: 16px; }
+        .ta-spinner-icon  { font-size: 22px; }
         /* display:none → classList migration */
         .accordion-content      { display: none; }          /* default hidden; JS adds .is-open */
         .accordion-content.is-open { display: block; }      /* accordion open state */
@@ -4178,7 +4195,7 @@
             <div id="market-image-zone" style="border:1.5px dashed var(--primary-green); border-radius:15px; text-align:center; margin-bottom:20px; background:#fdfdfd; cursor:pointer; position:relative; overflow:hidden; min-height:110px; display:flex; align-items:center; justify-content:center; touch-action:manipulation;">
                 <img id="market-image-preview" src="" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;">
                 <div id="market-image-placeholder" style="padding:24px 20px;">
-                    <i class="fas fa-camera" style="color:var(--primary-green); font-size:var(--fs-lg); display:block; margin-bottom:8px;"></i>
+                    <i class="fas fa-camera ta-cam-icon"></i>
                     <div class="ta-md-600-dk">เพิ่มรูปภาพ</div>
                     <div class="ta-fs-sm-sub-mt">กดเพื่อเลือกรูปจากคลัง</div>
                 </div>
@@ -6521,9 +6538,9 @@
             if (!body || !modal) return;
 
             if (type === 'pay') {
-                body.innerHTML = `<h3>ชำระเงิน</h3><p>ยอด: 2,736.00 ฿</p><div style="border:2px dashed #ccc; padding:20px; text-align:center; border-radius:15px; background:#fdfdfd;">คลิกเพื่อแนบสลิปการโอนเงินที่นี่</div><button class="btn-main u-mt-15"  data-action="closeModal">ส่งหลักฐาน</button>`;
+                body.innerHTML = `<h3>ชำระเงิน</h3><p>ยอด: 2,736.00 ฿</p><div class="ta-slip-slot">คลิกเพื่อแนบสลิปการโอนเงินที่นี่</div><button class="btn-main u-mt-15"  data-action="closeModal">ส่งหลักฐาน</button>`;
             } else if (type === 'suggest') {
-                body.innerHTML = `<h3 style="color: var(--primary-green); margin-top:0;">กระซิบถึงเจ้าของตึก</h3>
+                body.innerHTML = `<h3 class="ta-modal-h3">กระซิบถึงเจ้าของตึก</h3>
                   <p style="font-size:var(--fs-md); opacity: 0.8; margin-bottom: 15px;">ข้อความนี้จะถูกส่งตรงเพื่อพัฒนา Nature Haven ครับ</p>
                   <textarea id="suggest-text" placeholder="บอกเราได้ทุกเรื่องเลยครับ..." rows="5" style="width:100%; border-radius:12px; border:1px solid #eee; padding:12px; font-family:inherit; font-size:16px; box-sizing:border-box;"></textarea>
                   <button id="suggest-submit-btn" class="btn-main" style="margin-top:20px;" data-action="submitSuggestion">ส่งข้อความ</button>`;
@@ -6531,7 +6548,7 @@
                 const t = _taTenant || {};
                 const curName = t.name || t.tenantName || '';
                 const curPhone = t.phone || t.tel || '';
-                body.innerHTML = `<h3 style="margin-top:0;">แก้ไขข้อมูลส่วนตัว</h3>
+                body.innerHTML = `<h3 class="ta-modal-h3-plain">แก้ไขข้อมูลส่วนตัว</h3>
                   <label>ชื่อที่แสดงผล</label><input type="text" placeholder="คุณ..." value="${curName}" data-action-input="updateName">
                   <label style="display:block; margin-top:10px;">เบอร์โทร</label><input type="text" value="${curPhone}">
                   <p style="margin:8px 0 15px; font-size:var(--fs-sm); color:var(--text-muted);">* แก้เบอร์/ชื่อเพิ่มเติม กรุณาแจ้งนิติเพื่ออัปเดตระบบ</p>
@@ -6666,7 +6683,7 @@
                     if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') _marketUnsub = null;
                     const c = document.getElementById('market-list-container');
                     if (c && !c.querySelector('[data-err="market"]')) {
-                        c.innerHTML = '<p data-err="market" style="padding:20px;text-align:center;color:var(--text-muted);font-size:var(--fs-sm);">โหลดไม่สำเร็จ — กรุณา Reload</p>';
+                        c.innerHTML = '<p data-err="market" class="ta-err-msg-lg">โหลดไม่สำเร็จ — กรุณา Reload</p>';
                     }
                 });
             } catch(e) { console.warn('subscribeMarketplace:', e); }
@@ -6699,7 +6716,7 @@
                 const empty = document.createElement('div');
                 empty.style.cssText = 'grid-column:1/-1;text-align:center;padding:40px 20px;color:#aaa;';
                 const isFiltered = _marketFilter !== 'all';
-                empty.innerHTML = `<div style="font-size:2.5rem;margin-bottom:10px;">🛒</div>
+                empty.innerHTML = `<div class="ta-emoji-xl">🛒</div>
                     <div style="font-weight:600;color:#666;">${isFiltered ? 'ไม่มีประกาศในหมวดนี้' : 'ยังไม่มีประกาศ'}</div>
                     <div style="font-size:var(--fs-sm);margin-top:6px;">${isFiltered ? 'ลองดูหมวดอื่นครับ' : 'เป็นคนแรกที่ลงประกาศสิครับ!'}</div>`;
                 container.appendChild(empty);
@@ -7152,7 +7169,7 @@
             const ph = document.getElementById('market-image-placeholder');
             if (ph && !ph.querySelector('i')) {
                 // Restore placeholder content if we cleared it on entry to edit-mode
-                ph.innerHTML = '<i class="fas fa-camera" style="color:var(--primary-green); font-size:var(--fs-lg); display:block; margin-bottom:8px;"></i>'
+                ph.innerHTML = '<i class="fas fa-camera ta-cam-icon"></i>'
                     + '<div class="ta-md-600-dk">เพิ่มรูปภาพ</div>'
                     + '<div class="ta-fs-sm-sub-mt">กดเพื่อเลือกรูปจากคลัง</div>';
             }
@@ -7382,7 +7399,7 @@
                     if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') _petsUnsub = null;
                     const c = document.getElementById('pet-list-container');
                     if (c && !c.querySelector('[data-err="pets"]') && !petDataList.length) {
-                        c.innerHTML = '<p data-err="pets" style="padding:16px;text-align:center;color:var(--text-muted);font-size:var(--fs-sm);">โหลดไม่สำเร็จ — กรุณา Reload</p>';
+                        c.innerHTML = '<p data-err="pets" class="ta-err-msg">โหลดไม่สำเร็จ — กรุณา Reload</p>';
                     }
                 });
             } catch (e) { console.warn('pets subscribe init failed:', e.message); }
@@ -10425,7 +10442,7 @@
             entries.sort((a, b) => b.at - a.at);
             const top = entries.slice(0, 10);
             if (top.length === 0) {
-                list.innerHTML = `<div style="text-align:center;padding:14px;color:var(--text-muted);font-size:var(--fs-sm);background:#fff;border:1px dashed var(--border);border-radius:12px;">ยังไม่มีประวัติการทำ Quiz</div>`;
+                list.innerHTML = `<div class="ta-empty-card">ยังไม่มีประวัติการทำ Quiz</div>`;
                 return;
             }
             list.innerHTML = top.map(e => {
@@ -10512,7 +10529,7 @@
                 });
             }
             if (cards.length === 0) {
-                list.innerHTML = '<div class="gh-empty-state" style="padding:16px;text-align:center;color:var(--text-muted);">ยังไม่มี quiz พร้อมใช้งาน</div>';
+                list.innerHTML = '<div class="gh-empty-state ta-empty-state">ยังไม่มี quiz พร้อมใช้งาน</div>';
                 return;
             }
             list.innerHTML = cards.map(c => {
@@ -10952,7 +10969,7 @@
                 try { pets = JSON.parse(localStorage.getItem(`tenant_pets_${_taRoom}`) || '[]'); } catch(e) {}
             }
             if (!pets.length) {
-                el.innerHTML = `<div data-action="showSubPage" data-page="add-pet-page" style="border:2px dashed #e0e0e0;padding:30px 20px;border-radius:25px;text-align:center;cursor:pointer;background:#fff;">
+                el.innerHTML = `<div data-action="showSubPage" data-page="add-pet-page" class="ta-add-cta">
                     <div style="font-size:var(--fs-lg);margin-bottom:10px;opacity:0.5;">🐾</div>
                     <p style="font-size:var(--fs-md);color:#888;font-weight:500;">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
                     <p style="font-size:var(--fs-sm);color:var(--primary-green);font-weight:600;margin-top:5px;">+ เพิ่มสัตว์เลี้ยงของคุณ</p>
@@ -11847,7 +11864,7 @@
                 ov = document.createElement('div');
                 ov.id = 'logged-out-overlay';
                 ov.style.cssText = 'position:fixed; inset:0; background:var(--bg-color,#f4f6f8); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; text-align:center; z-index:9999;';
-                ov.innerHTML = '<div style="font-size:3rem; margin-bottom:16px;">🌿</div>'
+                ov.innerHTML = '<div class="ta-emoji-lg">🌿</div>'
                     + '<h2 style="margin:0 0 8px; color:var(--primary-dark,#1a5c38);">ออกจากระบบเรียบร้อย</h2>'
                     + '<p style="margin:0 0 24px; color:var(--text-muted,#6b7a8d); max-width:320px;">เปิด LINE แล้วเข้าผ่านเมนู Green Haven อีกครั้งเพื่อใช้งาน</p>';
                 document.body.appendChild(ov);
@@ -12356,7 +12373,7 @@
                 card.style.cssText = 'padding:12px; background:#EFF6FF; border-radius:12px; border-left:4px solid #3B82F6;';
                 const head = document.createElement('div');
                 head.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:6px;';
-                head.innerHTML = `<span style="font-size:1.6rem;">${_esc(p.icon||'🔧')}</span>
+                head.innerHTML = `<span class="ta-icon-1-6rem">${_esc(p.icon||'🔧')}</span>
                     <div class="u-flex-1">
                         <div class="u-bold">${_esc(p.name||'-')}</div>
                         <small class="u-color-muted">ประเภท: ${_esc(p.type||'-')}</small>
@@ -12438,7 +12455,7 @@
             try { documents = JSON.parse(localStorage.getItem('community_documents_data') || '[]'); } catch(e) {}
             container.textContent = '';
             if (!documents.length) {
-                container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px 0;">ยังไม่มีเอกสาร</p>';
+                container.innerHTML = '<p class="ta-loading-state">ยังไม่มีเอกสาร</p>';
                 return;
             }
             documents.forEach(d => {
@@ -12805,7 +12822,7 @@
                 try { await window.ensureHtml2Canvas(); } catch (e) { toast('โหลดไลบรารีไม่สำเร็จ', 'error'); return; }
                 const tmp = document.createElement('div');
                 tmp.style.cssText = 'position:fixed; left:-9999px; background:#fff; padding:2rem; width:800px;';
-                tmp.innerHTML = `<div style="padding:1rem;">${preview.innerHTML}</div>`;
+                tmp.innerHTML = `<div class="ta-preview-wrap">${preview.innerHTML}</div>`;
                 document.body.appendChild(tmp);
                 const canvas = await html2canvas(tmp, { backgroundColor:'#ffffff', scale:2, logging:false });
                 const fileName = getOwnerName().replace(/\s+/g, '-').toLowerCase();
@@ -13016,7 +13033,7 @@
             const previewEl = document.getElementById('lease-doc-preview');
             const contentEl = document.getElementById('lease-doc-preview-content');
             previewEl.style.display = 'block';
-            contentEl.innerHTML = '<div style="text-align:center;padding:24px 0;color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="font-size:22px;"></i><br><span style="font-size:var(--fs-sm);">กำลังโหลด…</span></div>';
+            contentEl.innerHTML = '<div class="ta-loading-state"><i class="fas fa-spinner fa-spin ta-spinner-icon"></i><br><span style="font-size:var(--fs-sm);">กำลังโหลด…</span></div>';
             previewEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             const url = await _getLeaseSignedUrl();
             if (!url) { previewEl.style.display = 'none'; return; }
@@ -13030,7 +13047,7 @@
                 img.src = url;
                 img.alt = 'เอกสารสัญญา';
                 img.style.cssText = 'width:100%;border-radius:12px;display:block;';
-                img.onerror = () => { contentEl.innerHTML = '<p style="text-align:center;color:var(--danger);padding:16px;">โหลดเอกสารไม่ได้ กรุณาลองใหม่</p>'; };
+                img.onerror = () => { contentEl.innerHTML = '<p class="ta-err-danger">โหลดเอกสารไม่ได้ กรุณาลองใหม่</p>'; };
                 contentEl.appendChild(img);
             } else {
                 // PDF — open externally (LINE WebView cannot render PDFs inline)
