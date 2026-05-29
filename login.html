@@ -590,6 +590,10 @@
     .password-req-grid { margin-top: 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
     .password-req-pill { font-size: 11px; padding: 4px; background: #ddd; border-radius: 2px; text-align: center; }
     .loading-text { margin-top: 12px; color: #6b7a8d; }
+    /* reset-password modal classes (§ style-src-attr migration) */
+    .reset-hint{margin:0 0 12px;font-size:14px;color:var(--muted);}
+    .reset-email-input{width:100%;padding:10px 12px;border:1.5px solid var(--stone);border-radius:8px;font-size:14px;box-sizing:border-box;font-family:inherit;background:#fff;color:#1a2332;}
+    .reset-err{display:none;margin-top:8px;color:var(--alert);font-size:13px;}
   </style>
 </head>
 <body>
@@ -1303,10 +1307,10 @@
     function showForgotPassword() {
       window.GhModal.open({
         title: 'รีเซ็ตรหัสผ่าน',
-        body: '<p style="margin:0 0 12px;font-size:14px;color:var(--muted);">กรอกอีเมลที่ใช้ลงทะเบียน ระบบจะส่งลิงก์รีเซ็ตให้ทันที</p>' +
+        body: '<p class="reset-hint">กรอกอีเมลที่ใช้ลงทะเบียน ระบบจะส่งลิงก์รีเซ็ตให้ทันที</p>' +
           '<input type="email" id="gh-reset-email" placeholder="email@example.com" autocomplete="email" inputmode="email" ' +
-          'style="width:100%;padding:10px 12px;border:1.5px solid var(--stone);border-radius:8px;font-size:14px;box-sizing:border-box;font-family:inherit;background:#fff;color:#1a2332;">' +
-          '<div id="gh-reset-err" role="alert" style="display:none;margin-top:8px;color:var(--alert);font-size:13px;"></div>',
+          'class="reset-email-input">' +
+          '<div id="gh-reset-err" role="alert" class="reset-err"></div>',
         actions: [
           { label: 'ยกเลิก', variant: 'ghost', onClick: function(m) { m.close(); } },
           { label: 'ส่งลิงก์รีเซ็ต', variant: 'primary', onClick: async function(m) {
