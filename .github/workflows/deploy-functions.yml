@@ -75,6 +75,7 @@ jobs:
       # CFs read SLIPOK_API_URL at deploy time. Locally it lives in
       # functions/.env (gitignored). For CI we write it from a GitHub secret.
       SLIPOK_API_URL: ${{ secrets.SLIPOK_API_URL }}
+      WAQI_API_TOKEN: ${{ secrets.WAQI_API_TOKEN }}
       # Opt actions/checkout@v4 + google-github-actions/auth@v2 into Node.js 24
       # runtime ahead of the forced migration on 2026-06-02.
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -145,6 +146,8 @@ jobs:
             exit 1
           fi
           echo "SLIPOK_API_URL=$SLIPOK_API_URL" > functions/.env
+          # WAQI_API_TOKEN is optional — CF returns 400 if absent but won't block deploy
+          [ -n "$WAQI_API_TOKEN" ] && echo "WAQI_API_TOKEN=$WAQI_API_TOKEN" >> functions/.env
           echo "✅ functions/.env written ($(wc -l < functions/.env) line(s))"
 
       - name: Deploy Cloud Functions
