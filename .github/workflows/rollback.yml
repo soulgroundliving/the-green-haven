@@ -47,6 +47,7 @@ jobs:
       SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN }}
       SLIPOK_API_URL: ${{ secrets.SLIPOK_API_URL }}
       TARGET_SHA: ${{ github.event.inputs.git_sha }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Validate inputs
@@ -71,7 +72,7 @@ jobs:
           echo "Rollback target commit:"
           git log -1 --format='%H %s (%ai)' HEAD
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: 'npm'
