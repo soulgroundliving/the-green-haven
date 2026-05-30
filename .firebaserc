@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "the-green-haven"
+    "default": "the-green-haven",
+    "staging": "the-green-haven-staging"
   }
 }
