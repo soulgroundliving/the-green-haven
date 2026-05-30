@@ -1,7 +1,7 @@
-/**
+﻿/**
  * Tenant System - Consolidated Tenant Management
  * Consolidates: tenant-config.js, tenant-manager.js, tenant-firebase-sync.js
- * ระบบจัดการข้อมูลผู้เช่า เรวมศูนย์จากไฟล์สามไฟล์
+ * เธฃเธฐเธเธเธเธฑเธ”เธเธฒเธฃเธเนเธญเธกเธนเธฅเธเธนเนเน€เธเนเธฒ เน€เธฃเธงเธกเธจเธนเธเธขเนเธเธฒเธเนเธเธฅเนเธชเธฒเธกเนเธเธฅเน
  *
  * Part 1: TenantConfigManager - Master data storage and CRUD operations
  * Part 2: TenantManager - Tenant data loading utilities for tenant app
@@ -31,19 +31,18 @@ class TenantConfigManager {
     const allData = this.getAllTenantsRaw();
     allData[building] = data;
     localStorage.setItem('tenant_master_data', JSON.stringify(allData));
-    console.info(`✅ Tenant data saved for ${building}`);
   }
 
   // Add tenant to specific building
   static addTenant(building, tenantId, tenantData) {
     if (!building || !tenantId || !tenantData.name) {
-      console.warn('⚠️ Building, tenant ID, and name are required');
+      console.warn('โ ๏ธ Building, tenant ID, and name are required');
       return false;
     }
 
     const tenants = this.getAllTenants(building);
     if (tenants[tenantId]) {
-      console.warn(`⚠️ Tenant ${tenantId} already exists in ${building}`);
+      console.warn(`โ ๏ธ Tenant ${tenantId} already exists in ${building}`);
       return false;
     }
 
@@ -55,7 +54,6 @@ class TenantConfigManager {
     };
 
     this.saveTenants(building, tenants);
-    console.info(`✅ Tenant ${tenantId} added to ${building}: ${tenantData.name}`);
     return true;
   }
 
@@ -75,13 +73,12 @@ class TenantConfigManager {
   static updateTenant(building, tenantId, updates) {
     const tenants = this.getAllTenants(building);
     if (!tenants[tenantId]) {
-      console.warn(`⚠️ Tenant ${tenantId} not found in ${building}`);
+      console.warn(`โ ๏ธ Tenant ${tenantId} not found in ${building}`);
       return false;
     }
 
-    tenants[tenantId] = { ...tenants[tenantId], ...updates };
-    this.saveTenants(building, tenants);
-    console.info(`✅ Tenant ${tenantId} in ${building} updated`);
+    const updatedTenants = { ...tenants, [tenantId]: { ...tenants[tenantId], ...updates } };
+    this.saveTenants(building, updatedTenants);
     return true;
   }
 
@@ -89,20 +86,19 @@ class TenantConfigManager {
   static deleteTenant(building, tenantId) {
     const tenants = this.getAllTenants(building);
     if (!tenants[tenantId]) {
-      console.warn(`⚠️ Tenant ${tenantId} not found in ${building}`);
+      console.warn(`โ ๏ธ Tenant ${tenantId} not found in ${building}`);
       return false;
     }
 
-    delete tenants[tenantId];
-    this.saveTenants(building, tenants);
-    console.info(`✅ Tenant ${tenantId} deleted from ${building}`);
+    const updatedTenants = Object.fromEntries(Object.entries(tenants).filter(([k]) => k !== tenantId));
+    this.saveTenants(building, updatedTenants);
     return true;
   }
 
   // Get tenants in building via leases (for reference purposes)
   static getTenantsByBuilding(building) {
     if (typeof LeaseAgreementManager === 'undefined') {
-      console.warn('⚠️ LeaseAgreementManager not loaded yet');
+      console.warn('โ ๏ธ LeaseAgreementManager not loaded yet');
       return [];
     }
 
@@ -158,13 +154,13 @@ class TenantConfigManager {
     //    instead of {tenantId}. Store tenantId as a field inside the doc.
     try {
       if (!window.firebase) {
-        console.warn('⚠️ Firebase not loaded');
+        console.warn('โ ๏ธ Firebase not loaded');
         return success;
       }
 
       const roomId = TenantConfigManager._resolveRoomId(tenantId, tenantData);
       if (!roomId) {
-        console.warn(`⚠️ Cannot resolve roomId from tenantId=${tenantId}, skipping Firestore sync`);
+        console.warn(`โ ๏ธ Cannot resolve roomId from tenantId=${tenantId}, skipping Firestore sync`);
         return success;
       }
 
@@ -180,9 +176,8 @@ class TenantConfigManager {
         roomId,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      console.info(`✅ Tenant synced to tenants/${building}/list/${roomId} (tenantId=${tenantId})`);
     } catch (error) {
-      console.warn(`⚠️ Firebase sync failed for tenant ${tenantId}:`, error.message);
+      console.warn(`โ ๏ธ Firebase sync failed for tenant ${tenantId}:`, error.message);
     }
 
     return success;
@@ -194,7 +189,7 @@ class TenantConfigManager {
         return this.getAllTenants(building);
       }
 
-      // Skip if not authenticated — Firestore rules require auth
+      // Skip if not authenticated โ€” Firestore rules require auth
       if (!window.firebaseAuth?.currentUser) {
         return this.getAllTenants(building);
       }
@@ -212,11 +207,10 @@ class TenantConfigManager {
         const stored = JSON.parse(localStorage.getItem('tenant_master_data') || '{}');
         stored[building] = tenants;
         localStorage.setItem('tenant_master_data', JSON.stringify(stored));
-        console.info(`✅ Tenants for ${building} loaded from Firebase (${querySnap.size} items)`);
         return tenants;
       }
     } catch (error) {
-      console.warn(`⚠️ Firebase load failed for tenants:`, error.message);
+      console.warn(`โ ๏ธ Firebase load failed for tenants:`, error.message);
     }
 
     // Fallback to localStorage
@@ -231,14 +225,14 @@ class TenantConfigManager {
     //    record from localStorage to resolve roomId (older callers don't pass it).
     try {
       if (!window.firebase) {
-        console.warn('⚠️ Firebase not loaded');
+        console.warn('โ ๏ธ Firebase not loaded');
         return success;
       }
 
       const current = this.getTenant(building, tenantId) || {};
       const roomId = TenantConfigManager._resolveRoomId(tenantId, { ...current, ...updates });
       if (!roomId) {
-        console.warn(`⚠️ Cannot resolve roomId from tenantId=${tenantId}, skipping Firestore sync`);
+        console.warn(`โ ๏ธ Cannot resolve roomId from tenantId=${tenantId}, skipping Firestore sync`);
         return success;
       }
 
@@ -255,9 +249,8 @@ class TenantConfigManager {
         roomId,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      console.info(`✅ Tenant updated at tenants/${building}/list/${roomId} (tenantId=${tenantId})`);
     } catch (error) {
-      console.warn(`⚠️ Firebase update failed for tenant ${tenantId}:`, error.message);
+      console.warn(`โ ๏ธ Firebase update failed for tenant ${tenantId}:`, error.message);
     }
 
     return success;
@@ -268,11 +261,11 @@ class TenantConfigManager {
     const success = this.deleteTenant(building, tenantId);
 
     // 2. Phase 4 SSoT: delete the canonical roomId-keyed doc.
-    //    Don't delete the doc itself — clear identity fields only, so linkedAuthUid
+    //    Don't delete the doc itself โ€” clear identity fields only, so linkedAuthUid
     //    + lease history archive references survive. Admin can re-assign tenant later.
     try {
       if (!window.firebase) {
-        console.warn('⚠️ Firebase not loaded');
+        console.warn('โ ๏ธ Firebase not loaded');
         return success;
       }
 
@@ -307,9 +300,8 @@ class TenantConfigManager {
         movedOutAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      console.info(`✅ Tenant cleared at tenants/${building}/list/${roomId} (was tenantId=${tenantId})`);
     } catch (error) {
-      console.warn(`⚠️ Firebase delete failed for tenant ${tenantId}:`, error.message);
+      console.warn(`โ ๏ธ Firebase delete failed for tenant ${tenantId}:`, error.message);
     }
 
     return success;
@@ -329,13 +321,13 @@ class TenantManager {
     try {
       // Get active lease for the room
       if (typeof LeaseAgreementManager === 'undefined') {
-        console.warn('⚠️ LeaseAgreementManager not loaded');
+        console.warn('โ ๏ธ LeaseAgreementManager not loaded');
         return null;
       }
 
       const lease = LeaseAgreementManager.getActiveLease(building, roomId);
       if (!lease || !lease.tenantId) {
-        console.warn(`⚠️ No active lease found for ${building}/${roomId}`);
+        console.warn(`โ ๏ธ No active lease found for ${building}/${roomId}`);
         return null;
       }
 
@@ -366,7 +358,7 @@ class TenantManager {
    * Get display name for tenant
    */
   static getTenantDisplayName(tenantData) {
-    return tenantData?.tenant?.name || 'ผู้เช่า';
+    return tenantData?.tenant?.name || 'เธเธนเนเน€เธเนเธฒ';
   }
 
   /**
@@ -374,7 +366,7 @@ class TenantManager {
    */
   static getRoomDisplayInfo(tenantData) {
     const { room, roomId, building } = tenantData;
-    const roomName = room?.name || `ห้อง ${roomId}`;
+    const roomName = room?.name || `เธซเนเธญเธ ${roomId}`;
     const floor = Math.floor(parseInt(roomId.replace(/[^0-9]/g, '')) / 100) || 1;
 
     return {
@@ -552,31 +544,31 @@ class TenantManager {
     return [
       {
         id: 'ANN_001',
-        title: 'แจ้งปิดน้ำ',
+        title: 'เนเธเนเธเธเธดเธ”เธเนเธณ',
         date: '2026-06-15',
         time: '10:00 - 14:00',
-        icon: '💧',
-        content: 'มีการดำเนินการซ่อมท่อน้ำในอาคารจึงต้องปิดน้ำ',
+        icon: '๐’ง',
+        content: 'เธกเธตเธเธฒเธฃเธ”เธณเน€เธเธดเธเธเธฒเธฃเธเนเธญเธกเธ—เนเธญเธเนเธณเนเธเธญเธฒเธเธฒเธฃเธเธถเธเธ•เนเธญเธเธเธดเธ”เธเนเธณ',
         priority: 'high',
         createdDate: '2026-06-10'
       },
       {
         id: 'ANN_002',
-        title: 'ทำความสะอาดใหญ่',
+        title: 'เธ—เธณเธเธงเธฒเธกเธชเธฐเธญเธฒเธ”เนเธซเธเน',
         date: '2026-06-20',
         time: 'all day',
-        icon: '🧹',
-        content: 'การทำความสะอาดสถานที่ทั่วไปในอาคาร',
+        icon: '๐งน',
+        content: 'เธเธฒเธฃเธ—เธณเธเธงเธฒเธกเธชเธฐเธญเธฒเธ”เธชเธ–เธฒเธเธ—เธตเนเธ—เธฑเนเธงเนเธเนเธเธญเธฒเธเธฒเธฃ',
         priority: 'normal',
         createdDate: '2026-06-12'
       },
       {
         id: 'ANN_003',
-        title: 'ซ่อมลิฟต์',
+        title: 'เธเนเธญเธกเธฅเธดเธเธ•เน',
         date: '2026-06-22',
         time: '08:00 - 12:00',
-        icon: '🔧',
-        content: 'การตรวจสอบและบำรุงรักษาระบบลิฟต์',
+        icon: '๐”ง',
+        content: 'เธเธฒเธฃเธ•เธฃเธงเธเธชเธญเธเนเธฅเธฐเธเธณเธฃเธธเธเธฃเธฑเธเธฉเธฒเธฃเธฐเธเธเธฅเธดเธเธ•เน',
         priority: 'normal',
         createdDate: '2026-06-14'
       }
@@ -623,12 +615,12 @@ class TenantManager {
    */
   static getBillStatusDisplay(bill) {
     if (bill.status === 'paid') {
-      return { icon: '✅', text: 'จ่ายแล้ว', color: 'green' };
+      return { icon: 'โ…', text: 'เธเนเธฒเธขเนเธฅเนเธง', color: 'green' };
     } else if (bill.status === 'overdue') {
-      return { icon: '⚠️', text: 'เกินกำหนด', color: 'red' };
+      return { icon: 'โ ๏ธ', text: 'เน€เธเธดเธเธเธณเธซเธเธ”', color: 'red' };
     } else {
       const daysLeft = this.daysUntilDue(bill.dueDate);
-      return { icon: '⏳', text: `รอชำระ (${daysLeft} วัน)`, color: 'orange' };
+      return { icon: 'โณ', text: `เธฃเธญเธเธณเธฃเธฐ (${daysLeft} เธงเธฑเธ)`, color: 'orange' };
     }
   }
 
@@ -638,7 +630,7 @@ class TenantManager {
   static async syncTenantDataToFirebase(uid, tenantData) {
     try {
       if (!window.firebase) {
-        console.warn('⚠️ Firebase not loaded');
+        console.warn('โ ๏ธ Firebase not loaded');
         return false;
       }
 
@@ -653,10 +645,9 @@ class TenantManager {
         updatedAt: new Date().toISOString()
       }, { merge: true });
 
-      console.info('✅ Tenant data synced to Firebase');
       return true;
     } catch (error) {
-      console.warn('⚠️ Firebase sync failed:', error);
+      console.warn('โ ๏ธ Firebase sync failed:', error);
       return false;
     }
   }
@@ -667,7 +658,7 @@ class TenantManager {
   static async loadTenantDataFromFirebase(uid) {
     try {
       if (!window.firebase) {
-        console.warn('⚠️ Firebase not loaded');
+        console.warn('โ ๏ธ Firebase not loaded');
         return null;
       }
 
@@ -685,7 +676,7 @@ class TenantManager {
 
       return null;
     } catch (error) {
-      console.warn('⚠️ Firebase load failed:', error);
+      console.warn('โ ๏ธ Firebase load failed:', error);
       return null;
     }
   }
@@ -702,7 +693,7 @@ class TenantManager {
       const meterData = allMeters[meterKey];
 
       if (!meterData) {
-        console.warn(`⚠️ No meter data found for ${meterKey}`);
+        console.warn(`โ ๏ธ No meter data found for ${meterKey}`);
         return null;
       }
 
@@ -712,7 +703,7 @@ class TenantManager {
         : null;
 
       if (!lease) {
-        console.warn(`⚠️ No active lease for ${building}/${roomId}`);
+        console.warn(`โ ๏ธ No active lease for ${building}/${roomId}`);
         return null;
       }
 
@@ -778,7 +769,7 @@ class TenantManager {
         // Tenant info
         tenant: {
           id: lease.tenantId,
-          name: tenant?.name || 'ผู้เช่า',
+          name: tenant?.name || 'เธเธนเนเน€เธเนเธฒ',
           phone: tenant?.phone || '-',
           email: tenant?.email || '-',
           address: tenant?.address || '-'
@@ -853,7 +844,7 @@ class TenantFirebaseSync {
   static initialize(user, building, room) {
     try {
       if (!window.firebaseDatabase) {
-        console.warn('⚠️ Firebase Database not initialized. Waiting for Firebase module...');
+        console.warn('โ ๏ธ Firebase Database not initialized. Waiting for Firebase module...');
         return false;
       }
 
@@ -870,21 +861,20 @@ class TenantFirebaseSync {
       this.currentBuilding = building;
       this.currentRoom = room;
 
-      console.info('✅ TenantFirebaseSync initialized for', { building, room });
       return true;
     } catch (error) {
-      console.error('❌ Firebase initialization error:', error);
+      console.error('โ Firebase initialization error:', error);
       return false;
     }
   }
 
   /**
    * Load tenant lease information from Firestore meta_data collection
-   * Priority: Firestore FIRST → localStorage FALLBACK
+   * Priority: Firestore FIRST โ’ localStorage FALLBACK
    */
-  // Canonical building id IS the Firestore doc id since B4 migration (rooms → buildings/rooms).
-  // Room IDs: ใช้ตามที่ admin ตั้งใน Firestore ตรงๆ (เช่น '15ก', 'ร้านใหญ่' ภาษาไทย)
-  // หาก Firestore docId ไม่ตรง → loadLease() คืน null + console แจ้ง path ที่ค้น
+  // Canonical building id IS the Firestore doc id since B4 migration (rooms โ’ buildings/rooms).
+  // Room IDs: เนเธเนเธ•เธฒเธกเธ—เธตเน admin เธ•เธฑเนเธเนเธ Firestore เธ•เธฃเธเน (เน€เธเนเธ '15เธ', 'เธฃเนเธฒเธเนเธซเธเน' เธ เธฒเธฉเธฒเนเธ—เธข)
+  // เธซเธฒเธ Firestore docId เนเธกเนเธ•เธฃเธ โ’ loadLease() เธเธทเธ null + console เนเธเนเธ path เธ—เธตเนเธเนเธ
   static _fsBuilding(b) { return b; }
   static _fsRoomId(r) { return r; }
 
@@ -905,7 +895,7 @@ class TenantFirebaseSync {
           if (ssotSnap.exists()) {
             const d = ssotSnap.data();
             const lease = d.lease || {};
-            // Phase 3d: tenant.lease mirror is reduced — fetch full lease
+            // Phase 3d: tenant.lease mirror is reduced โ€” fetch full lease
             // record when leaseId is present so amounts + contract docs
             // resolve correctly even when the mirror omits them.
             let fullLease = {};
@@ -916,14 +906,14 @@ class TenantFirebaseSync {
                 const leaseSnap = await fs.getDoc(leaseRef);
                 if (leaseSnap.exists()) fullLease = leaseSnap.data() || {};
               } catch (e) {
-                // Permission errors aren't fatal — fall back to mirror.
-                console.debug(`  ⚠️ leases lookup failed for ${leaseId}:`, e.message);
+                // Permission errors aren't fatal โ€” fall back to mirror.
+                console.debug(`  โ ๏ธ leases lookup failed for ${leaseId}:`, e.message);
               }
             }
             const leaseData = {
               building,
               roomId,
-              // Lease — read from .lease subobject; fall back to full lease
+              // Lease โ€” read from .lease subobject; fall back to full lease
               // record; then top-level for unmigrated docs (Phase 6 will
               // remove top-level dupes).
               rentAmount: lease.rentAmount ?? fullLease.rentAmount ?? d.rentAmount ?? 0,
@@ -958,13 +948,12 @@ class TenantFirebaseSync {
               _raw: d,
               _source: 'tenants/list',
             };
-            console.info(`✅ TenantFirebaseSync: Loaded from tenants/${building}/list/${roomId}:`, leaseData);
             return leaseData;
           }
         } catch (e) {
           // permission_denied expected pre-LIFF-link (linkedAuthUid not set yet)
           if (!/permission/i.test(e?.message || '')) {
-            console.debug(`  ❌ tenants/list lookup failed:`, e.message);
+            console.debug(`  โ tenants/list lookup failed:`, e.message);
           }
         }
 
@@ -972,23 +961,21 @@ class TenantFirebaseSync {
         // from buildings/{alias}/rooms/{r}, so the old fallback can never find
         // data anymore. tenants/{b}/list/{roomId} is the only canonical source.
 
-        console.info(`ℹ️ No lease data found in Firestore for ${building}/${roomId}, falling back to localStorage`);
       } else {
-        console.warn('⚠️ Firestore not available, using localStorage fallback');
+        console.warn('โ ๏ธ Firestore not available, using localStorage fallback');
       }
 
       // Final fallback: localStorage
       if (typeof LeaseAgreementManager !== 'undefined') {
         const lease = LeaseAgreementManager.getActiveLease(this.currentBuilding, this.currentRoom);
         if (lease) {
-          console.info('✅ Loaded lease from localStorage (fallback):', lease);
           return lease;
         }
       }
 
       return null;
     } catch (error) {
-      console.error('❌ Error loading lease:', error);
+      console.error('โ Error loading lease:', error);
       return null;
     }
   }
@@ -1003,7 +990,6 @@ class TenantFirebaseSync {
       if (typeof TenantConfigManager !== 'undefined' && this.currentBuilding) {
         const tenant = TenantConfigManager.getTenant(this.currentBuilding, tenantId);
         if (tenant) {
-          console.info('✅ Loaded tenant from localStorage:', tenant);
           return tenant;
         }
       }
@@ -1014,13 +1000,12 @@ class TenantFirebaseSync {
       if (lease) {
         // The lease object contains basic tenant info (tenantName, rent, etc.)
         // But for phone, email, address, we need the full tenant record
-        console.info('✅ Loaded tenant from lease data:', lease);
         return lease;
       }
 
       return null;
     } catch (error) {
-      console.error('❌ Error loading tenant:', error);
+      console.error('โ Error loading tenant:', error);
       return null;
     }
   }
@@ -1035,7 +1020,6 @@ class TenantFirebaseSync {
       if (typeof RoomConfigManager !== 'undefined') {
         const room = RoomConfigManager.getRoom(this.currentBuilding, this.currentRoom);
         if (room) {
-          console.info('✅ Loaded room from localStorage:', room);
           return room;
         }
       }
@@ -1051,13 +1035,12 @@ class TenantFirebaseSync {
 
       if (snapshot.exists()) {
         const roomData = snapshot.val();
-        console.info('✅ Loaded room from Firebase:', roomData);
         return roomData;
       }
 
       return null;
     } catch (error) {
-      console.error('❌ Error loading room:', error);
+      console.error('โ Error loading room:', error);
       return null;
     }
   }
@@ -1069,7 +1052,7 @@ class TenantFirebaseSync {
   static async loadMeterDataFromFirebase() {
     try {
       if (!window.firebase?.firestore) {
-        console.warn('⚠️ Firebase Firestore not initialized');
+        console.warn('โ ๏ธ Firebase Firestore not initialized');
         return {};
       }
 
@@ -1079,7 +1062,6 @@ class TenantFirebaseSync {
       const yearsToLoad = [currentBudYear - 2, currentBudYear - 1, currentBudYear];
       const yearsToLoadShort = yearsToLoad.map(y => y % 100);
 
-      console.info(`🔄 TenantFirebaseSync: Loading meter data from Firebase for building='${this.currentBuilding}'...`);
 
       const db = window.firebase.firestore();
       const fs = window.firebase.firestoreFunctions;
@@ -1125,22 +1107,20 @@ class TenantFirebaseSync {
               };
             });
 
-            console.info(`   ✅ Loaded meter data for year ${year}`);
           }
         } catch (e) {
-          console.debug(`   ℹ️ No meter data for year ${year}: ${e.message}`);
+          console.debug(`   โน๏ธ No meter data for year ${year}: ${e.message}`);
         }
       }
 
       if (Object.keys(allMeterData).length > 0) {
-        console.info('✅ TenantFirebaseSync: Meter data loaded from Firebase');
         return allMeterData;
       } else {
-        console.debug('⚠️ TenantFirebaseSync: No meter data found in Firebase');
+        console.debug('โ ๏ธ TenantFirebaseSync: No meter data found in Firebase');
         return {};
       }
     } catch (error) {
-      console.error('❌ Error loading meter data from Firebase:', error);
+      console.error('โ Error loading meter data from Firebase:', error);
       return {};
     }
   }
@@ -1158,7 +1138,6 @@ class TenantFirebaseSync {
       if (typeof TenantManager !== 'undefined') {
         const meterBills = TenantManager.getBillsForRoom(this.currentBuilding, this.currentRoom);
         if (meterBills && meterBills.length > 0) {
-          console.info(`✅ Loaded ${meterBills.length} bills from TenantManager (meter data)`);
           allBills.push(...meterBills);
           meterBills.forEach(b => billIds.add(b.billId || b.id));
         }
@@ -1173,7 +1152,6 @@ class TenantFirebaseSync {
 
           if (snapshot.exists()) {
             const firebaseBills = Object.values(snapshot.val() || {});
-            console.info(`✅ Loaded ${firebaseBills.length} bills from Firebase`);
 
             // Add Firebase bills that aren't already in the list
             firebaseBills.forEach(fbBill => {
@@ -1186,7 +1164,7 @@ class TenantFirebaseSync {
         } catch (e) {
           // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
           if (!/permission/i.test(e?.message || '')) {
-            console.warn(`⚠️ Firebase bill loading failed: ${e.message}`);
+            console.warn(`โ ๏ธ Firebase bill loading failed: ${e.message}`);
           }
         }
       }
@@ -1200,7 +1178,7 @@ class TenantFirebaseSync {
     } catch (error) {
       // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
       if (!/permission/i.test(error?.message || '')) {
-        console.error('❌ Error loading bills:', error);
+        console.error('โ Error loading bills:', error);
       }
       return [];
     }
@@ -1214,7 +1192,7 @@ class TenantFirebaseSync {
    */
   static subscribeBills(callback, onPermissionDenied) {
     if (!this.database || !window.firebaseRef || !window.firebaseOnValue) {
-      console.warn('⚠️ Firebase not available for bill subscription');
+      console.warn('โ ๏ธ Firebase not available for bill subscription');
       return () => {};
     }
     try {
@@ -1231,13 +1209,13 @@ class TenantFirebaseSync {
         if (/permission/i.test(err?.message || '')) {
           if (typeof onPermissionDenied === 'function') onPermissionDenied();
         } else {
-          console.warn('⚠️ subscribeBills error:', err.message);
+          console.warn('โ ๏ธ subscribeBills error:', err.message);
         }
       });
       return typeof unsub === 'function' ? unsub : () => {};
     } catch (e) {
       if (!/permission/i.test(e?.message || '')) {
-        console.warn('⚠️ subscribeBills failed:', e.message);
+        console.warn('โ ๏ธ subscribeBills failed:', e.message);
       }
       return () => {};
     }
@@ -1258,7 +1236,6 @@ class TenantFirebaseSync {
 
       if (snapshot.exists()) {
         const paymentsData = Object.values(snapshot.val() || {});
-        console.info(`✅ Loaded ${paymentsData.length} payments from Firebase`);
         return paymentsData.sort((a, b) =>
           new Date(b.createdAt) - new Date(a.createdAt)
         );
@@ -1268,7 +1245,7 @@ class TenantFirebaseSync {
     } catch (error) {
       // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
       if (!/permission/i.test(error?.message || '')) {
-        console.error('❌ Error loading payment history:', error);
+        console.error('โ Error loading payment history:', error);
       }
       return [];
     }
@@ -1289,7 +1266,6 @@ class TenantFirebaseSync {
 
       if (snapshot.exists()) {
         const ticketsData = Object.values(snapshot.val() || {});
-        console.info(`✅ Loaded ${ticketsData.length} maintenance tickets from Firebase`);
         return ticketsData.sort((a, b) =>
           new Date(b.createdAt) - new Date(a.createdAt)
         );
@@ -1299,7 +1275,7 @@ class TenantFirebaseSync {
     } catch (error) {
       // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
       if (!/permission/i.test(error?.message || '')) {
-        console.error('❌ Error loading maintenance tickets:', error);
+        console.error('โ Error loading maintenance tickets:', error);
       }
       return [];
     }
@@ -1322,12 +1298,11 @@ class TenantFirebaseSync {
     try {
       const lease = await this.loadLease();
       if (lease?.contractDocument) {
-        console.info('✅ Loaded contract document');
         return lease.contractDocument;
       }
       return null;
     } catch (error) {
-      console.error('❌ Error loading contract:', error);
+      console.error('โ Error loading contract:', error);
       return null;
     }
   }
@@ -1337,8 +1312,6 @@ class TenantFirebaseSync {
    */
   static async loadAllData() {
     try {
-      console.info('🔄 Loading all tenant data from Firebase...');
-      console.info('   Building:', this.currentBuilding, 'Room:', this.currentRoom);
 
       // Load data in parallel (including meter data)
       const [lease, room, bills, payments, tickets, announcements, meterData] =
@@ -1352,7 +1325,7 @@ class TenantFirebaseSync {
           this.loadMeterDataFromFirebase().catch(e => { console.warn('Warning loading meter data:', e); return {}; })
         ]);
 
-      // Tenant info — when loadLease returned data from SSoT (tenants/{b}/list/{roomId}),
+      // Tenant info โ€” when loadLease returned data from SSoT (tenants/{b}/list/{roomId}),
       // it already includes ALL tenant identity fields (name, phone, email, lineID,
       // idCardNumber, etc.) plus the lease subobject. Don't call loadTenant() in that
       // case because localStorage has a different (legacy-flat) shape that would
@@ -1366,7 +1339,7 @@ class TenantFirebaseSync {
       }
 
       // Phase 6: overlay canonical identity from people/{tenantId}. After
-      // Phase 6 slim-down, tenant docs no longer carry identity fields —
+      // Phase 6 slim-down, tenant docs no longer carry identity fields โ€”
       // people/ is the SSoT. Falls through to tenant-doc fields when person
       // doc is missing (legacy tenants pre-people/ creation).
       if (tenant?.tenantId && typeof window !== 'undefined' && window.PersonManager) {
@@ -1406,21 +1379,9 @@ class TenantFirebaseSync {
         meterData: meterData || {}
       };
 
-      console.info('✅ All tenant data loaded:', {
-        hasLease: !!lease,
-        leaseDetails: lease ? Object.keys(lease) : 'none',
-        hasTenant: !!tenant,
-        tenantName: tenant?.name || 'N/A',
-        hasRoom: !!room,
-        billCount: (bills || []).length,
-        paymentCount: (payments || []).length,
-        ticketCount: (tickets || []).length,
-        announcementCount: (announcements || []).length,
-        meterDataYears: Object.keys(meterData || {})
-      });
       return allData;
     } catch (error) {
-      console.error('❌ Error loading all data:', error);
+      console.error('โ Error loading all data:', error);
       return {
         lease: null,
         tenant: null,
@@ -1440,7 +1401,7 @@ class TenantFirebaseSync {
   static async saveMaintenanceTicket(ticketData) {
     try {
       if (!this.database || !window.firebaseRef || !window.firebaseSet) {
-        console.warn('⚠️ Firebase not available, saving to localStorage only');
+        console.warn('โ ๏ธ Firebase not available, saving to localStorage only');
         return null;
       }
 
@@ -1454,10 +1415,9 @@ class TenantFirebaseSync {
         createdAt: new Date().toISOString()
       });
 
-      console.info('✅ Maintenance ticket saved to Firebase:', ticketId);
       return ticketId;
     } catch (error) {
-      console.error('❌ Error saving maintenance ticket:', error);
+      console.error('โ Error saving maintenance ticket:', error);
       return null;
     }
   }
@@ -1468,7 +1428,7 @@ class TenantFirebaseSync {
   static async deleteMaintenanceTicket(building, room, ticketId) {
     try {
       if (!this.database || !window.firebaseRef || !window.firebaseRemove) {
-        console.warn('⚠️ Firebase not available, cannot delete');
+        console.warn('โ ๏ธ Firebase not available, cannot delete');
         return false;
       }
 
@@ -1477,10 +1437,9 @@ class TenantFirebaseSync {
 
       await window.firebaseRemove(ticketRef);
 
-      console.info('✅ Maintenance ticket deleted from Firebase:', ticketId);
       return true;
     } catch (error) {
-      console.error('❌ Error deleting maintenance ticket:', error);
+      console.error('โ Error deleting maintenance ticket:', error);
       return false;
     }
   }
@@ -1491,37 +1450,28 @@ class TenantFirebaseSync {
    */
   static async debugFirebaseStructure() {
     if (!this.database || !window.firebaseRef || !window.firebaseGet) {
-      console.error('❌ Firebase not available');
+      console.error('โ Firebase not available');
       return;
     }
 
-    console.info('🔍 === DEBUG: Firebase Structure ===');
-    console.info('Building:', this.currentBuilding);
-    console.info('Room:', this.currentRoom);
 
     // Try root
     try {
-      console.info('\n📍 Checking root:');
       const rootRef = window.firebaseRef(this.database, '');
       const rootSnapshot = await window.firebaseGet(rootRef);
       if (rootSnapshot.exists()) {
         const keys = Object.keys(rootSnapshot.val());
-        console.info('   Root keys:', keys);
 
         // For each key, try to get data for this building/room
         for (const key of keys) {
-          console.info(`\n📍 Checking /${key}/${this.currentBuilding}/${this.currentRoom}:`);
           try {
             const ref = window.firebaseRef(this.database,
               `${key}/${this.currentBuilding}/${this.currentRoom}`);
             const snapshot = await window.firebaseGet(ref);
             if (snapshot.exists()) {
-              console.info(`   ✅ DATA FOUND:`, snapshot.val());
             } else {
-              console.info(`   No data`);
             }
           } catch (e) {
-            console.info(`   Error: ${e.message}`);
           }
         }
       }
@@ -1529,7 +1479,6 @@ class TenantFirebaseSync {
       console.error('Error checking root:', e);
     }
 
-    console.info('\n✅ Debug complete');
   }
 
   /**
@@ -1548,15 +1497,13 @@ class TenantFirebaseSync {
       const unsubscribe = window.firebaseOnValue(leaseRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.val();
-          console.info('📡 Real-time lease update:', data);
           callback({ type: 'lease', data: data });
         }
       });
 
-      console.info('📡 Real-time listener active for lease data');
       return unsubscribe;
     } catch (error) {
-      console.error('❌ Error setting up real-time listener:', error);
+      console.error('โ Error setting up real-time listener:', error);
       return null;
     }
   }
@@ -1580,4 +1527,3 @@ if (typeof module !== 'undefined' && module.exports) {
   };
 }
 
-console.info('✅ Tenant System loaded (v3.0 - Consolidated from 3 modules)');

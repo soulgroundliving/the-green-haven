@@ -341,7 +341,8 @@
   }
   // Heartbeat: tightly-bounded interval so a single missed beat
   // doesn't immediately drop the recipient off the "active" window.
-  setInterval(_writePresence, 60 * 1000);
+  const _hbInterval = setInterval(_writePresence, 60 * 1000);
+  window.addEventListener('pagehide', function() { clearInterval(_hbInterval); }, { once: true });
   // Re-write immediately when the tab becomes visible again
   // (returning from background → resume push suppression promptly).
   document.addEventListener('visibilitychange', function () {

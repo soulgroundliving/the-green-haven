@@ -138,7 +138,7 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
       import { getDatabase, ref, get, set, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
       import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, onIdTokenChanged, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-      import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+      import { initializeFirestore, persistentLocalCache, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
       import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
       import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
       // Phase 4D App Check disabled 2026-04-25 — Firebase backend returns 403 on token
@@ -158,7 +158,7 @@
           // initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeJX8gsAAAAAN7mD2p2uutB31ryWXYXNA1ndZwA'), isTokenAutoRefreshEnabled: true });
           const database = getDatabase(app);
           const auth = getAuth(app);
-          const firestore = getFirestore(app);
+          const firestore = initializeFirestore(app, { localCache: persistentLocalCache() });
           const storage = getStorage(app);
           // Region must match CF deployment (asia-southeast1)
           const fns = getFunctions(app, 'asia-southeast1');

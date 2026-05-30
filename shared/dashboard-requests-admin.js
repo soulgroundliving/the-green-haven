@@ -1437,14 +1437,16 @@ async function _seedDepositsFromTenants() {
   try {
     for (const building of (window.BuildingRegistry?.list()?.map(b=>b.id)) || ['rooms','nest']) {
       const snap = await fs.getDocs(fs.collection(db, `tenants/${building}/list`));
-      for (const d of snap.docs) {
-        const t = d.data() || {};
-        if (!t.deposit || t.status === 'vacant') continue;
-        const docId = `${building}_${d.id}`;
-        const depRef = fs.doc(db, 'deposits', docId);
-        const existing = await fs.getDoc(depRef);
-        if (!existing.exists()) {
-          await fs.setDoc(depRef, {
+      const eligible = snap.docs.filter(d => { const t = d.data() || {}; return t.deposit && t.status !== 'vacant'; });
+      if (!eligible.length) continue;
+      // Batch-fetch all deposit docs to avoid N+1 round-trips
+      const depSnaps = await Promise.all(eligible.map(d => fs.getDoc(fs.doc(db, 'deposits', `${building}_${d.id}`))));
+      const existingIds = new Set(depSnaps.filter(s => s.exists()).map(s => s.id));
+      await Promise.all(eligible
+        .filter(d => !existingIds.has(`${building}_${d.id}`))
+        .map(d => {
+          const t = d.data();
+          return fs.setDoc(fs.doc(db, 'deposits', `${building}_${d.id}`), {
             building, roomId: d.id,
             amount: Number(t.deposit) || 0,
             status: 'holding',
@@ -1454,8 +1456,8 @@ async function _seedDepositsFromTenants() {
             notes: '',
             updatedAt: new Date().toISOString()
           });
-        }
-      }
+        })
+      );
     }
   } catch (e) {
     console.warn('⚠️ deposit seed skipped:', e.message);

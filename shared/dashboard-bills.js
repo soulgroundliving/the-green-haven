@@ -599,9 +599,10 @@ function handleBillingImportFileProcess(file) {
   showBillingImportStatus('⏳ กำลังโหลดไฟล์...', 'info');
 
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       showBillingImportStatus('⏳ กำลังประมวลผลข้อมูล...', 'info');
+      await window._loadXlsx();
 
       // STEP 3: Async processing to prevent UI freeze
       // setTimeout allows browser to update UI between processing

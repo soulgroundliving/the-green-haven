@@ -578,7 +578,8 @@ window.RequestsStore = window.RequestsStore || (function(){
       // Store unsub so cleanupAdminListeners() can detach. Without this the
       // listener would persist for the whole session even after admin closes
       // the dashboard tab — burning callback CPU on every complaints write.
-      window._RequestsStoreComplaintsUnsub = fs.onSnapshot(fs.collection(db, 'complaints'), snap => {
+      const { query: _q, orderBy: _ob, limit: _lim } = fs;
+      window._RequestsStoreComplaintsUnsub = fs.onSnapshot(_q(fs.collection(db, 'complaints'), _ob('createdAt', 'desc'), _lim(200)), snap => {
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         // Merge with any local-only entries (Firestore wins on collision)
         const local = _legacy('complaints_data');

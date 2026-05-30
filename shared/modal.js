@@ -332,6 +332,61 @@
   };
 
   /*
+   * window.ghPrompt — styled replacement for native prompt().
+   * Returns Promise<string|null>: the entered text, or null if cancelled.
+   *
+   *   const val = await window.ghPrompt('Enter reason:', 'default');
+   *   if (val === null) return;  // cancelled
+   */
+  window.ghPrompt = function (message, defaultValue, opts) {
+    if (defaultValue !== null && typeof defaultValue === 'object') {
+      opts = defaultValue;
+      defaultValue = opts.defaultValue || '';
+    }
+    opts = opts || {};
+    defaultValue = (defaultValue == null) ? '' : String(defaultValue);
+    return new Promise(function (resolve) {
+      var resolved = false;
+      var wrapper = document.createElement('div');
+      var msgEl = document.createElement('p');
+      msgEl.style.cssText = 'margin:0 0 10px 0;white-space:pre-wrap;font-size:14px';
+      msgEl.textContent = message || '';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.value = defaultValue;
+      input.style.cssText = 'width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-muted,#d1d5db);border-radius:6px;font-size:14px;font-family:inherit';
+      wrapper.appendChild(msgEl);
+      wrapper.appendChild(input);
+
+      var m = open({
+        title: opts.title || 'กรอกข้อมูล',
+        body: wrapper,
+        size: opts.size || 'small',
+        dismissible: opts.dismissible !== false,
+        actions: [
+          {
+            label: opts.cancelLabel || 'ยกเลิก',
+            variant: 'ghost',
+            onClick: function (modal) { resolved = true; resolve(null); modal.close(); },
+          },
+          {
+            label: opts.confirmLabel || 'ตกลง',
+            variant: 'primary',
+            onClick: function (modal) { resolved = true; resolve(input.value); modal.close(); },
+          },
+        ],
+        onClose: function () { if (!resolved) resolve(null); },
+      });
+      // Focus input after mount; allow Enter/Escape shortcuts
+      setTimeout(function () { try { input.focus(); input.select(); } catch (_) {} }, 60);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { resolved = true; resolve(input.value); m.close(); }
+        else if (e.key === 'Escape') { resolved = true; resolve(null); m.close(); }
+      });
+    });
+  };
+
+  /*
    * window.ghAlert — terse promise-based replacement for native alert().
    * Drop-in fallback to native alert if GhModal is unavailable.
    *

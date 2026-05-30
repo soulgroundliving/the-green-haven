@@ -1,4 +1,23 @@
 // ===== IMPORT METER DATA FUNCTIONS =====
+
+window._loadXlsx = (function() {
+  var _p = null;
+  return function() {
+    if (window.XLSX) return Promise.resolve();
+    if (_p) return _p;
+    _p = new Promise(function(resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.integrity = 'sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw';
+      s.crossOrigin = 'anonymous';
+      s.onload = resolve;
+      s.onerror = function() { _p = null; reject(new Error('xlsx load failed')); };
+      document.head.appendChild(s);
+    });
+    return _p;
+  };
+})();
+
 let currentImportData = null;
 let currentImportMatchResults = null;
 let currentImportWorkbook = null; // Store workbook for month changes
@@ -86,8 +105,9 @@ function handleImportFileProcess(file) {
   showImportStatus('⏳ กำลังโหลด...', 'info');
 
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
+      await window._loadXlsx();
       // STEP 1: Read Excel file binary data
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });

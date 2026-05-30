@@ -125,6 +125,18 @@ jobs:
           fi
         done
 
+    - name: Validate CSP hashes
+      run: |
+        npm run csp:hash
+        if ! git diff --quiet tools/csp-hashes.json; then
+          echo "::error::CSP hashes are out of sync with committed HTML."
+          echo "Run locally: npm run csp:hash && node tools/update-vercel-csp.js"
+          echo "Then commit both tools/csp-hashes.json and vercel.json."
+          git diff tools/csp-hashes.json
+          exit 1
+        fi
+        echo "✓ CSP hashes are in sync"
+
     - name: Summary
       run: |
         echo "=========================================="
@@ -136,5 +148,6 @@ jobs:
         echo "✓ Security Checks Passed"
         echo "✓ Responsive Design Confirmed"
         echo "✓ CSS Syntax Valid"
+        echo "✓ CSP Hashes In Sync"
         echo ""
         echo "Ready to merge! 🚀"

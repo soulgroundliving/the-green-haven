@@ -115,7 +115,7 @@ class LeaseAgreementManager {
     try {
       const db = window.firebase.firestore();
       const fs = window.firebase.firestoreFunctions;
-      const snap = await fs.getDocs(fs.collection(db, 'leases', building, 'list'));
+      const snap = await fs.getDocs(fs.query(fs.collection(db, 'leases', building, 'list'), fs.limit(100)));
       const fresh = {};
       snap.forEach(d => { fresh[d.id] = d.data(); });
       // Replace this building's leases — drop orphans

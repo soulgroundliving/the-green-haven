@@ -1,0 +1,116 @@
+# Staging deployment — runs on every PR to main.
+#
+# Flow: unit tests → deploy CFs to the-green-haven-staging → smoke check.
+# Production (main branch) is handled by deploy-functions.yml; this workflow
+# acts as a pre-merge safety gate. Vercel staging is automatic via vercel.json
+# preview deployments — this workflow only covers Firebase CFs.
+#
+# Required secrets (same service account, different project target):
+#   FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN — must have roles on BOTH projects,
+#   or use a separate staging SA: FIREBASE_SERVICE_ACCOUNT_STAGING
+#   SLIPOK_API_URL, WAQI_API_TOKEN — same as production
+
+name: Deploy to Staging
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - 'shared/gamification-rules.js'
+
+concurrency:
+  group: deploy-staging-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-staging:
+    name: deploy-cf-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN }}
+      SLIPOK_API_URL: ${{ secrets.SLIPOK_API_URL }}
+      WAQI_API_TOKEN: ${{ secrets.WAQI_API_TOKEN }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Skip if SA secret missing (staging is optional)
+        if: env.SA_KEY == ''
+        run: |
+          echo "::warning::FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN not configured — skipping staging deploy."
+          echo "Configure the secret to enable automatic staging deployments on PRs."
+
+      - uses: actions/checkout@v4
+        if: env.SA_KEY != ''
+
+      - uses: actions/setup-node@v6
+        if: env.SA_KEY != ''
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install function dependencies
+        if: env.SA_KEY != ''
+        working-directory: functions
+        run: npm ci --no-audit --no-fund
+
+      - name: Run Cloud Function unit tests
+        if: env.SA_KEY != ''
+        working-directory: functions
+        run: npm test
+
+      - name: Authenticate to Google Cloud
+        if: env.SA_KEY != ''
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN }}
+
+      - name: Install firebase-tools
+        if: env.SA_KEY != ''
+        run: npm install -g firebase-tools@15.13.0
+
+      - name: Write functions/.env from secrets
+        if: env.SA_KEY != ''
+        run: |
+          echo "SLIPOK_API_URL=${SLIPOK_API_URL:-placeholder}" > functions/.env
+          [ -n "$WAQI_API_TOKEN" ] && echo "WAQI_API_TOKEN=$WAQI_API_TOKEN" >> functions/.env
+          echo "✅ functions/.env written for staging ($(wc -l < functions/.env) line(s))"
+
+      - name: Deploy Cloud Functions to staging
+        if: env.SA_KEY != ''
+        run: |
+          FROZEN="generateBillsOnMeterUpdate"
+          CF_LIST=$(grep -oP '^exports\.\K\w+' functions/index.js \
+            | grep -v "^${FROZEN}$" \
+            | sed 's/^/functions:/' \
+            | paste -sd,)
+          CF_COUNT=$(echo "${CF_LIST}" | tr ',' '\n' | wc -l)
+          echo "Deploying ${CF_COUNT} CFs to staging (${FROZEN} frozen/excluded)"
+          firebase deploy \
+            --only "${CF_LIST}" \
+            --project the-green-haven-staging \
+            --force \
+            --non-interactive
+
+      - name: Staging smoke check
+        if: env.SA_KEY != ''
+        run: |
+          CF_BASE="https://asia-southeast1-the-green-haven-staging.cloudfunctions.net"
+          for CF in liffSignIn verifySlip; do
+            for ATTEMPT in 1 2 3; do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 -X GET "${CF_BASE}/${CF}")
+              if [ "$STATUS" != "000" ] && [ "${STATUS:0:1}" != "5" ]; then
+                echo "✅ Staging smoke: ${CF} → HTTP ${STATUS} (attempt ${ATTEMPT})"
+                break
+              fi
+              if [ "$ATTEMPT" = "3" ]; then
+                echo "::warning::Staging smoke: ${CF} returned ${STATUS} — may need index warm-up"
+              else
+                echo "⏳ ${CF} attempt ${ATTEMPT}: HTTP ${STATUS} — retrying in 15s..."
+                sleep 15
+              fi
+            done
+          done
+          echo "✅ Staging deploy complete — PR is safe to merge to main"

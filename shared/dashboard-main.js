@@ -424,10 +424,11 @@ async function _tenantRecordExists(building, roomId) {
 // See lifecycle_tenant_transitions.md §F2 and functions/adminApprovedLink.js.
 async function adminDirectLinkLiff(lineUserId, building, room) {
   if (!window.firebase?.firestore) return;
-  const evidence = prompt(
+  const evidence = await window.ghPrompt(
     'บันทึกหลักฐานการยืนยันตัวตน (ต้องกรอก — เก็บไว้ใน audit log)\n' +
     'ตัวอย่าง: "ยืนยันบัตร ID ตัวต่อตัว 2026-05-26", "วิดีโอคอล ยืนยันหน้า+บัตร"',
-    ''
+    '',
+    { title: '📋 หลักฐานการยืนยัน' }
   );
   if (evidence === null) return;               // admin cancelled
   if (!evidence || evidence.trim().length < 10) {
@@ -482,7 +483,7 @@ async function approveLiffLink(lineUserId){
 
 async function rejectLiffLink(lineUserId){
   const defaultReason = 'ข้อมูลไม่ตรงกับสัญญาเช่า กรุณาติดต่อเจ้าของ';
-  const reason = prompt('เหตุผลในการปฏิเสธ (ส่งให้ลูกบ้านทาง LINE):', defaultReason);
+  const reason = await window.ghPrompt('เหตุผลในการปฏิเสธ (ส่งให้ลูกบ้านทาง LINE):', defaultReason, { title: '❌ เหตุผลการปฏิเสธ' });
   if (reason === null) return; // admin cancelled
   const finalReason = (reason && reason.trim()) || defaultReason;
   if(!window.firebase?.firestore) return;

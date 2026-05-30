@@ -989,10 +989,10 @@ async function openChecklistModal() {
     if (!proceed) return;
   }
 
-  const typeLabel = prompt(
-    `สร้าง Checklist ห้อง ${roomId} — ${tenantName || 'ผู้เช่า'}\n\n` +
-    `พิมพ์ "in" สำหรับ Move-In หรือ "out" สำหรับ Move-Out:`,
-    'in'
+  const typeLabel = await window.ghPrompt(
+    `สร้าง Checklist ห้อง ${roomId} — ${tenantName || 'ผู้เช่า'}\n\nพิมพ์ "in" สำหรับ Move-In หรือ "out" สำหรับ Move-Out:`,
+    'in',
+    { title: '📋 ประเภท Checklist', confirmLabel: 'สร้าง' }
   );
   if (!typeLabel) return;
   const type = typeLabel.trim().toLowerCase() === 'out' ? 'move_out' : 'move_in';

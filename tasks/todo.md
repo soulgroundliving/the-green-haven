@@ -28,19 +28,19 @@
 
 ### 🔐 Security
 
-- [ ] **[SEC-XSS-1] Escape Firestore data ใน wellness content renderer**
+- [x] **[SEC-XSS-1] Escape Firestore data ใน wellness content renderer**
   - **Why:** `a.category`, `a.icon`, `a.readtime`, `a.reward` inject เข้า innerHTML โดยตรง — stored XSS สำหรับ admin ที่อาจถูก compromise
   - **ไฟล์:** `shared/dashboard-wellness-content.js:436,440,450`
   - **Fix:** wrap แต่ละ field ด้วย `_escWC(value)` ก่อน template literal
   - **Verify:** `grep -n "a\.category\|a\.icon\|a\.reward\|a\.readtime" shared/dashboard-wellness-content.js` — ทุก hit ต้องผ่าน escape
 
-- [ ] **[SEC-XSS-2] Escape CF response ใน admin-ops panel**
+- [x] **[SEC-XSS-2] Escape CF response ใน admin-ops panel**
   - **Why:** `json.email`, `json.uid`, `json.error` จาก `setAdminClaim` CF response → innerHTML โดยตรง
   - **ไฟล์:** `shared/dashboard-admin-ops.js:74,77,108,110`
   - **Fix:** เพิ่ม local `function _esc(s){ return String(s).replace(...) }` + wrap ทุก interpolation
   - **Verify:** `grep -n "json\." shared/dashboard-admin-ops.js | grep innerHTML`
 
-- [ ] **[SEC-CLEANUP-CF] ตรวจสอบและลบ/gate cleanup CFs**
+- [x] **[SEC-CLEANUP-CF] ตรวจสอบและลบ/gate cleanup CFs**
   - **Why:** `cleanupRoomData.js` + `cleanupRealtimeDB.js` auth ด้วย `req.query.token` (URL token = logs/history leak)
   - **ไฟล์:** `functions/cleanupRoomData.js:50`, `functions/cleanupRealtimeDB.js:20,93`
   - **Fix:** ยืนยัน 4 exports (`cleanupRoomData`, `analyzeRoomData`, `verifyMigrationComplete`, `deleteRealtimeDBData`) ไม่ได้อยู่ใน `functions/index.js` → ถ้าไม่ได้ deploy ให้ลบไฟล์ทิ้ง
@@ -50,13 +50,13 @@
 
 ### 🎨 UX/Accessibility
 
-- [ ] **[A11Y-MAIN] เพิ่ม `<main id="main-content">` ใน tenant_app.html**
+- [x] **[A11Y-MAIN] เพิ่ม `<main id="main-content">` ใน tenant_app.html**
   - **Why:** Skip link บรรทัด 2400 ชี้ไป `#main-content` แต่ element ไม่มีอยู่ → WCAG 2.4.1 (A) ล้มเหลว; ไม่มี landmark เลย (WCAG 1.3.1)
   - **ไฟล์:** `tenant_app.html` บรรทัด ~2420 (หลัง `#app-loading-splash`)
   - **Fix:** เพิ่ม `<main id="main-content">` ครอบ `.page-container` div และปิด `</main>` ก่อน bottom-nav
   - **Verify:** `grep -n "main-content\|<main" tenant_app.html` → ต้องมี `<main id="main-content">`
 
-- [ ] **[A11Y-ARIA] เพิ่ม `aria-current="page"` ใน admin sidebar**
+- [x] **[A11Y-ARIA] เพิ่ม `aria-current="page"` ใน admin sidebar**
   - **Why:** `showPage()` toggle แค่ `.active` class — screen reader ไม่รู้ว่า page ไหนกำลัง active (WCAG 4.1.2)
   - **ไฟล์:** `shared/dashboard-main.js:14-24` (`_showPageImpl` / `showPage`)
   - **Fix:** ใน `showPage()` — clear `aria-current` บน sidebar items ทั้งหมด แล้ว set `btn.setAttribute('aria-current','page')` บน active item
@@ -305,8 +305,8 @@
 
 _กรอกหลังจาก implement แต่ละ section_
 
-- [ ] P0 Security XSS — แก้แล้ว commit: `___`
-- [ ] P0 A11y main landmark — แก้แล้ว commit: `___`
+- [x] P0 Security XSS — commit: `87bb4a3`
+- [x] P0 A11y main landmark — commit: `87bb4a3`
 - [ ] P1 Performance queries — แก้แล้ว commit: `___`
 - [ ] P1 Code quality — แก้แล้ว commit: `___`
 

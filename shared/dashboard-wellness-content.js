@@ -309,10 +309,10 @@ async function initWellnessArticlesPage() {
   }
   try {
     const db = window.firebase.firestore();
-    const { collection, onSnapshot } = window.firebase.firestoreFunctions;
+    const { collection, onSnapshot, query, limit } = window.firebase.firestoreFunctions;
     // No orderBy — Firestore would silently exclude docs missing the field.
     // Sort client-side instead.
-    _wellnessUnsub = onSnapshot(collection(db, 'wellness_articles'), snap => {
+    _wellnessUnsub = onSnapshot(query(collection(db, 'wellness_articles'), limit(100)), snap => {
       const docs = snap.docs.map(d => ({ id: d.id, data: d.data() }));
       // Newest first, fallback to title for stable order
       docs.sort((a, b) => {
