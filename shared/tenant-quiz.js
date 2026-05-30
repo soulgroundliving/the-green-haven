@@ -1,15 +1,17 @@
-// ===== QUIZ SYSTEM (Contract Quiz + Wellness Quiz markers) =====
+// ===== QUIZ SYSTEM (Contract Quiz + Wellness Quiz markers + Hub/History renders) =====
 // Extracted from tenant_app.html. Exports:
-//   window._bkkYm               — Bangkok year-month helper (used by renderQuizHub/renderQuizHistory in inline)
-//   window._wellnessQuizMarkers  — Firestore marker map (used by renderQuizHistory in inline)
-//   window._contractQuizMarkers  — Firestore marker map (used by renderQuizHistory in inline)
+//   window._bkkYm               — Bangkok year-month helper
+//   window._wellnessQuizMarkers  — Firestore marker map (live object, mutated by subscription)
+//   window._contractQuizMarkers  — Firestore marker map (live object, mutated by subscription)
 //   window._getContractQuizMarker — marker lookup helper
-//   window._quizRewardContract   — default 20 pts (used by renderQuizHistory/renderQuizHub in inline)
+//   window._quizRewardContract   — default 20 pts
 //   window.setupContractQuizGate — called from renderContractPage() + closeContractQuiz()
 //   window.startContractQuiz / submitContractQuiz / closeContractQuiz — data-action dispatcher
 //   window.renderQuizQuestion    — called from startContractQuiz
 //   window.startWellnessQuiz     — data-action dispatcher
 //   window.awardQuizPoints       — called from inline script after quiz completion
+//   window.renderQuizHub         — called from markCommunityRead() + _onLiffClaimsReady
+//   window.renderQuizHistory     — called from markCommunityRead() + _onLiffClaimsReady
 //
 // _subscribeQuizMarkers wired internally via window._onLiffClaimsReady() inside IIFE.
 // Shared state: _taBuilding/_taRoom (var globals), _taLease (var global from tenant-liff-auth.js)
@@ -66,8 +68,8 @@ function _subscribeQuizMarkers() {
             snap.forEach(d => { _wellnessQuizMarkers[d.id] = d.data() || {}; });
             // Refresh visible quiz hub / history / article prompt
             try {
-                if (typeof renderQuizHub === 'function' && document.getElementById('community-quiz-hub')) renderQuizHub();
-                if (typeof renderQuizHistory === 'function' && document.getElementById('quiz-history-list')) renderQuizHistory();
+                if (document.getElementById('community-quiz-hub')) renderQuizHub();
+                if (document.getElementById('quiz-history-list')) renderQuizHistory();
                 if (window._currentWellnessArticle && typeof window._setupWellnessQuizPrompt === 'function') window._setupWellnessQuizPrompt(window._currentWellnessArticle);
             } catch (uiErr) { console.warn('quiz UI refresh failed:', uiErr?.message); }
         }, err => {
@@ -84,9 +86,9 @@ function _subscribeQuizMarkers() {
                 Object.keys(_contractQuizMarkers).forEach(k => delete _contractQuizMarkers[k]);
                 snap.forEach(d => { _contractQuizMarkers[d.id] = d.data() || {}; });
                 try {
-                    if (typeof setupContractQuizGate === 'function') setupContractQuizGate();
-                    if (typeof renderQuizHub === 'function' && document.getElementById('community-quiz-hub')) renderQuizHub();
-                    if (typeof renderQuizHistory === 'function' && document.getElementById('quiz-history-list')) renderQuizHistory();
+                    setupContractQuizGate();
+                    if (document.getElementById('community-quiz-hub')) renderQuizHub();
+                    if (document.getElementById('quiz-history-list')) renderQuizHistory();
                 } catch (uiErr) { console.warn('contract quiz UI refresh failed:', uiErr?.message); }
             }, err => {
                 console.warn('[contractQuizPassed] subscribe failed:', err?.message || err);
@@ -448,6 +450,167 @@ function awardQuizPoints(n) {
 
     window._onLiffClaimsReady(_subscribeQuizMarkers);
 
+    // ── Render helpers ────────────────────────────────────────────────────────
+    // Moved from tenant_app.html inline script — depend on private IIFE state
+    // (_quizMonthKey, _wellnessQuizMarkers, _contractQuizMarkers, _bkkYm, etc.)
+
+    // Quiz History — past attempts (passed + not passed). Session B: Firestore
+    // markers (wellnessQuizPassed/contractQuizPassed subcoll) are SoT; localStorage
+    // is a fallback for months before Session B migration / offline writes.
+    // Sorted newest first, capped at 10.
+    function renderQuizHistory() {
+        const list = document.getElementById('quiz-history-list');
+        if (!list) return;
+        const entries = [];
+        const wellnessSrc = window._getWellnessArticles ? window._getWellnessArticles() : [];
+        const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+        const _toMillis = (v) => {
+            if (v == null) return 0;
+            if (typeof v === 'number') return v;
+            if (typeof v.toMillis === 'function') return v.toMillis();
+            if (v.seconds) return v.seconds * 1000;
+            const t = new Date(v).getTime();
+            return isNaN(t) ? 0 : t;
+        };
+        const seenKeys = new Set();
+        // 1. Firestore wellness markers (authoritative, including current month)
+        for (const fsKey of Object.keys(_wellnessQuizMarkers || {})) {
+            const m = _wellnessQuizMarkers[fsKey];
+            if (!m) continue;
+            const parts = fsKey.split('_');
+            if (parts.length < 2) continue;
+            const ym = parts[parts.length - 1];
+            const articleId = parts.slice(0, -1).join('_');
+            const art = wellnessSrc.find(x => x.id === articleId);
+            seenKeys.add(`w:${articleId}:${ym}`);
+            entries.push({ at: _toMillis(m.at), title: art ? art.title : (articleId || 'Wellness Quiz'),
+                icon: '🌿', score: m.score, total: m.total, passed: m.passed, reward: m.reward });
+        }
+        // 2. Firestore contract markers (tenant-only)
+        if (!isPlayer) {
+            for (const ym of Object.keys(_contractQuizMarkers || {})) {
+                const m = _contractQuizMarkers[ym];
+                if (!m) continue;
+                seenKeys.add(`c:${ym}`);
+                entries.push({ at: _toMillis(m.at), title: 'Contract Quiz', icon: '📜',
+                    score: m.score, total: m.total, passed: m.passed, reward: m.reward });
+            }
+        }
+        // 3. localStorage fallback — only for entries Firestore doesn't already have.
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (!k) continue;
+            if (!/^quiz_(contract|wellness)_/.test(k)) continue;
+            if (isPlayer) continue;
+            if (k.startsWith('quiz_wellness_player_')) continue;
+            let p;
+            try { p = JSON.parse(localStorage.getItem(k) || '{}'); } catch(e) { continue; }
+            if (!p || typeof p.at !== 'number') continue;
+            const m6 = k.match(/_(\d{6})$/);
+            const ym = m6 ? `${m6[1].slice(0,4)}-${m6[1].slice(4,6)}` : '';
+            let title = 'Contract Quiz', icon = '📜', dedup = `c:${ym}`;
+            if (k.startsWith('quiz_wellness_')) {
+                const parts = k.replace(/_(\d{6})$/, '').split('_');
+                const articleId = parts.slice(4).join('_');
+                const art = wellnessSrc.find(x => x.id === articleId);
+                title = art ? art.title : (articleId || 'Wellness Quiz');
+                icon = '🌿'; dedup = `w:${articleId}:${ym}`;
+            }
+            if (seenKeys.has(dedup)) continue;
+            entries.push({ at: p.at, title, icon, score: p.score, total: p.total, passed: p.passed });
+        }
+        entries.sort((a, b) => b.at - a.at);
+        const top = entries.slice(0, 10);
+        if (top.length === 0) {
+            list.innerHTML = `<div class="ta-empty-card">ยังไม่มีประวัติการทำ Quiz</div>`;
+            return;
+        }
+        list.innerHTML = top.map(e => {
+            const pillBg = e.passed ? '#dcfce7' : '#fef3c7';
+            const pillColor = e.passed ? '#15803d' : '#92400e';
+            const pillText = e.passed ? `✓ ผ่าน +${(e.title === 'Contract Quiz' ? _quizRewardContract : (window._quizRewardWellness || 10))} pts` : 'ไม่ผ่าน';
+            const dateStr = new Date(e.at).toLocaleDateString('th-TH', {day:'numeric', month:'short', year:'numeric'});
+            return `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:12px;">
+                <div style="font-size:1.4rem;flex:0 0 auto;">${e.icon}</div>
+                <div class="u-flex-1-min0">
+                    <div style="font-weight:600;font-size:var(--fs-md);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.title}</div>
+                    <div style="font-size:var(--fs-sm);color:var(--text-muted);">${dateStr} • ตอบถูก ${e.score}/${e.total}</div>
+                </div>
+                <span style="background:${pillBg};color:${pillColor};padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;flex:0 0 auto;">${pillText}</span>
+            </div>`;
+        }).join('');
+    }
+
+    // Quiz Hub (Phase A2) — list every quiz available to the tenant with status.
+    // Includes Contract Quiz (always) + each wellness article whose data carries a quiz field.
+    // localStorage markers determine status: ✅ done this month / 🟡 ready / ⏰ next month.
+    function renderQuizHub() {
+        const list = document.getElementById('quiz-hub-list');
+        if (!list) return;
+        const cards = [];
+        // 1. Contract Quiz card — only if there's a lease.
+        // Source-of-truth: Firestore _contractQuizMarkers; localStorage hint fallback.
+        if (_taLease && (_taLease.endDate || _taLease.moveOutDate)) {
+            const fsMarker = _contractQuizMarkers[_bkkYm()] || null;
+            let done = !!fsMarker, scoreLine = '';
+            if (fsMarker && typeof fsMarker.score === 'number') {
+                scoreLine = `ตอบถูก ${fsMarker.score}/${fsMarker.total}`;
+            } else {
+                try {
+                    const ls = localStorage.getItem(_quizMonthKey());
+                    if (ls) { done = true; const p = JSON.parse(ls); if (p && typeof p.score === 'number') scoreLine = `ตอบถูก ${p.score}/${p.total}`; }
+                } catch(e) {}
+            }
+            cards.push({ title:'Contract Quiz', subtitle:'รู้จักสัญญาของคุณดีแค่ไหน',
+                pts: _quizRewardContract || 20, done, scoreLine,
+                action:'startContractQuiz', arg:'', icon:'📜' });
+        }
+        // 2. Wellness article quizzes — Firestore markers first, localStorage hint fallback.
+        const src = window._getWellnessArticles ? window._getWellnessArticles() : [];
+        const ym = _bkkYm();
+        for (const a of src) {
+            if (!Array.isArray(a.quiz) || a.quiz.length === 0) continue;
+            const fsKey = `${a.id}_${ym}`;
+            const fsMarker = _wellnessQuizMarkers && _wellnessQuizMarkers[fsKey];
+            let done = !!fsMarker, scoreLine = '';
+            if (fsMarker && typeof fsMarker.score === 'number') {
+                scoreLine = `ตอบถูก ${fsMarker.score}/${fsMarker.total}`;
+            } else {
+                const monthKey = window._wellnessQuizMonthKey ? window._wellnessQuizMonthKey(a.id) : '';
+                try {
+                    const ls = monthKey ? localStorage.getItem(monthKey) : null;
+                    if (ls) { done = true; const p = JSON.parse(ls); if (p && typeof p.score === 'number') scoreLine = `ตอบถูก ${p.score}/${p.total}`; }
+                } catch(e) {}
+            }
+            cards.push({ title:a.title, subtitle:a.category||'Wellness',
+                pts: window._quizRewardWellness || 10, done, scoreLine,
+                action:'openWellnessArticle', arg:a.id, icon:'🌿' });
+        }
+        if (cards.length === 0) {
+            list.innerHTML = '<div class="gh-empty-state ta-empty-state">ยังไม่มี quiz พร้อมใช้งาน</div>';
+            return;
+        }
+        list.innerHTML = cards.map(c => {
+            const statusBadge = c.done
+                ? `<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:700;">✅ ทำแล้ว</span>`
+                : `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:700;">🟡 พร้อม</span>`;
+            const subline = c.done && c.scoreLine
+                ? `<span style="color:var(--text-muted);">${c.scoreLine} • รออีกเดือนหน้า</span>`
+                : `<span style="color:var(--accent-gold,#D4AF37);font-weight:700;">+${c.pts} pts</span>`;
+            const argAttr = c.arg ? ` data-arg="${c.arg}"` : '';
+            return `<button class="quiz-hub-card" data-action="${c.action}"${argAttr}
+                style="display:flex;align-items:center;gap:12px;padding:14px;background:#fff;border:1px solid var(--border);border-radius:14px;cursor:pointer;text-align:left;font-family:inherit;width:100%;${c.done?'opacity:.72;':''}">
+                <div style="font-size:1.6rem;flex:0 0 auto;">${c.icon}</div>
+                <div class="u-flex-1-min0">
+                    <div style="font-weight:700;font-size:var(--fs-md);color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.title}</div>
+                    <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-top:2px;">${c.subtitle}</div>
+                    <div style="font-size:var(--fs-sm);margin-top:4px;">${subline}</div>
+                </div>
+                <div style="flex:0 0 auto;">${statusBadge}</div>
+            </button>`;
+        }).join('');
+    }
+
     window._bkkYm                    = _bkkYm;
     window._wellnessQuizMarkers      = _wellnessQuizMarkers;
     window._contractQuizMarkers      = _contractQuizMarkers;
@@ -460,4 +623,6 @@ function awardQuizPoints(n) {
     window.closeContractQuiz         = closeContractQuiz;
     window.startWellnessQuiz         = startWellnessQuiz;
     window.awardQuizPoints           = awardQuizPoints;
+    window.renderQuizHistory         = renderQuizHistory;
+    window.renderQuizHub             = renderQuizHub;
 })();
