@@ -169,6 +169,25 @@ const MIGRATIONS = [
   ['style="animation-delay: 0.3s;"', 'u-anim-delay-3'],
   ['style="animation-delay: 0.4s;"', 'u-anim-delay-4'],
   ['style="animation-delay: 0.6s;"', 'u-anim-delay-6'],
+  // ── Pass 6 (2× patterns after god-file extraction) ───────────────────────
+  ['style="flex:0 0 auto; font-size:var(--fs-sm); font-weight:600; margin-right:10px;"',
+   'ta-flex-fixed-sm'],
+  ['style="flex:0 0 auto; font-size:var(--fs-md); margin-right:6px;"',
+   'ta-flex-fixed-md'],
+  ['style="display:grid; gap:8px;"',                   'ta-grid-gap-8'],
+  ['style="display:flex; justify-content:space-between;"', 'ta-flex-sb'],
+  ['style="display:flex; justify-content:space-between; align-items:center; gap:12px;"',
+   'ta-flex-sb-12'],
+  ['style="display:flex; gap:10px;"',                  'ta-flex-gap-10'],
+  ['style="display:flex; flex-direction:column; gap:14px;"', 'ta-col-gap-14'],
+  ['style="display:block;font-weight:700;font-size:var(--fs-sm);margin-bottom:5px;"',
+   'ta-label-bold-sm'],
+  ['style="display:block; margin-top:8px; color:#aaa;"', 'ta-note-aaa'],
+  ['style="border:none; border-top:1px dashed #ddd; margin:8px 0;"', 'ta-divider-8'],
+  ['style="border:none; border-top:1px dashed #ddd; margin:12px 0;"', 'ta-divider-12'],
+  ['style="background:white; width:100%; max-width:380px; border-radius:24px; padding:20px; position:relative; margin:auto; box-sizing:border-box;"',
+   'ta-modal-card'],
+  ['style="background:#fee2e2; color:#dc2626;"',       'ta-badge-error'],
 ];
 
 function esc(s) {

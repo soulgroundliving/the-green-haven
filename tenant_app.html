@@ -2430,12 +2430,12 @@
                 <div style="background:#fff9c4;border-left:4px solid #fbc02d;border-radius:8px;padding:.7rem .9rem;margin-bottom:1rem;font-size:var(--fs-sm);color:#5d4037;">
                     🔗 เชื่อมบัญชีเพื่อใช้งาน<br>กรอกข้อมูลห้องของคุณ admin จะอนุมัติภายใน 24 ชม.
                 </div>
-                <label style="display:block;font-weight:700;font-size:var(--fs-sm);margin-bottom:5px;">ตึก</label>
+                <label class="ta-label-bold-sm">ตึก</label>
                 <select id="liff-link-building" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:.9rem;">
                     <option value="rooms">🏠 ห้องเช่า</option>
                     <option value="nest">🏢 Nest</option>
                 </select>
-                <label style="display:block;font-weight:700;font-size:var(--fs-sm);margin-bottom:5px;">หมายเลขห้อง</label>
+                <label class="ta-label-bold-sm">หมายเลขห้อง</label>
                 <select id="liff-link-room" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:1.2rem;background:#fff;">
                     <option value="">— เลือกห้อง —</option>
                 </select>
@@ -2582,7 +2582,7 @@
             <div id="quiz-question" style="font-size:var(--fs-md); font-weight:600; margin-bottom:14px;"></div>
             <div id="quiz-options" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
             <div id="quiz-result" style="display:none; text-align:center; padding:12px 0;"></div>
-            <div style="display:flex; gap:10px;">
+            <div class="ta-flex-gap-10">
                 <button id="quiz-cancel-btn" data-action="closeContractQuiz" style="flex:1; padding:12px; border-radius:12px; border:1px solid var(--border); background:#fff; font-family:inherit; cursor:pointer;">ยกเลิก</button>
                 <button id="quiz-submit-btn" data-action="submitContractQuiz" disabled class="btn-main u-flex-2" >ส่งคำตอบ</button>
             </div>
@@ -2626,8 +2626,8 @@
     <!-- Standard Clean Monthly Opt-in Modal: pops up when admin opens a cleaning campaign month -->
     <div id="standard-clean-modal" role="dialog" aria-modal="true" aria-labelledby="scm-title"
         style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1500; align-items:center; justify-content:center; padding:16px; overflow-y:auto;">
-        <div style="background:white; width:100%; max-width:380px; border-radius:24px; padding:20px; position:relative; margin:auto; box-sizing:border-box;">
-            <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="ta-modal-card">
+            <div class="ta-col-gap-14">
                 <div class="u-text-center">
                     <div style="font-size:2.2rem; margin-bottom:4px;">🧹</div>
                     <div id="scm-title" class="ta-heading-green">
@@ -2670,8 +2670,8 @@
     <!-- Deep Cleaning Payment Modal: requires 500฿ slip before booking is saved -->
     <div id="cleaning-payment-modal" role="dialog" aria-modal="true" aria-labelledby="cpm-title"
         style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1500; align-items:center; justify-content:center; padding:16px; overflow-y:auto;">
-        <div style="background:white; width:100%; max-width:380px; border-radius:24px; padding:20px; position:relative; margin:auto; box-sizing:border-box;">
-            <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="ta-modal-card">
+            <div class="ta-col-gap-14">
                 <!-- Header -->
                 <div class="u-text-center">
                     <div id="cpm-title" class="ta-heading-green">
@@ -2683,8 +2683,8 @@
                 </div>
                 <!-- Summary -->
                 <div id="cpm-summary" style="background:var(--soft-green); border-radius:14px; padding:14px; font-size:var(--fs-sm); display:flex; flex-direction:column; gap:4px;">
-                    <div style="display:flex; justify-content:space-between;"><span>วันที่</span><strong id="cpm-date">—</strong></div>
-                    <div style="display:flex; justify-content:space-between;"><span>เวลา</span><strong id="cpm-time">—</strong></div>
+                    <div class="ta-flex-sb"><span>วันที่</span><strong id="cpm-date">—</strong></div>
+                    <div class="ta-flex-sb"><span>เวลา</span><strong id="cpm-time">—</strong></div>
                     <div id="cpm-note-row" style="display:none; justify-content:space-between;"><span>หมายเหตุ</span><strong id="cpm-note" style="text-align:right; max-width:60%;"></strong></div>
                 </div>
                 <!-- QR box -->
@@ -2751,7 +2751,7 @@
 
         <!-- IQAir-style combined card (AQI tier color + face + PM2.5 + weather row) -->
         <div id="iqair-card" class="card rounded-[2rem]" style="padding:18px; background:#A8E6A0; transition:background .35s ease; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+            <div class="ta-flex-sb-12">
                 <div style="display:flex; align-items:center; gap:12px; min-width:0;">
                     <div style="background:#fff; padding:7px 12px; border-radius:14px; text-align:center; line-height:1; min-width:62px; flex-shrink:0;">
                         <div id="aqi-display" style="font-size:1.5rem; font-weight:800; color:#1F2937;">—</div>
@@ -2869,8 +2869,8 @@
                 <div class="menu-item" data-action="toggleAccordion">
                     <div class="icon-box icon-blue"><i class="fas fa-wifi"></i></div>
                     <span>สถานะอินเทอร์เน็ตอาคาร</span>
-                    <span id="internetStatusIcon" style="flex:0 0 auto; font-size:var(--fs-md); margin-right:6px;">🟢</span>
-                    <span id="internetStatusText" style="flex:0 0 auto; font-size:var(--fs-sm); font-weight:600; margin-right:10px;">เชื่อมต่อแล้ว</span>
+                    <span id="internetStatusIcon" class="ta-flex-fixed-md">🟢</span>
+                    <span id="internetStatusText" class="ta-flex-fixed-sm">เชื่อมต่อแล้ว</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
                 <div class="accordion-content">
@@ -2888,7 +2888,7 @@
                         <div>ผู้ให้บริการ: <strong id="internetProvider">-</strong></div>
                         <div>ติดต่อ: <span id="internetContact">-</span></div>
                     </div>
-                    <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="internetLastCheck">-</span></small>
+                    <small class="ta-note-aaa">ตรวจสอบล่าสุด: <span id="internetLastCheck">-</span></small>
                 </div>
             </div>
 
@@ -2897,8 +2897,8 @@
                 <div class="menu-item" data-action="toggleAccordion">
                     <div class="icon-box icon-green"><i class="fas fa-tower-broadcast"></i></div>
                     <span>สถานะอินเทอร์เน็ตห้องพัก</span>
-                    <span id="roomInternetStatusIcon" style="flex:0 0 auto; font-size:var(--fs-md); margin-right:6px;">🟢</span>
-                    <span id="roomInternetStatusText" style="flex:0 0 auto; font-size:var(--fs-sm); font-weight:600; margin-right:10px;">เชื่อมต่อแล้ว</span>
+                    <span id="roomInternetStatusIcon" class="ta-flex-fixed-md">🟢</span>
+                    <span id="roomInternetStatusText" class="ta-flex-fixed-sm">เชื่อมต่อแล้ว</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
                 <div class="accordion-content">
@@ -2936,7 +2936,7 @@
                         <small style="display:block; margin-top:10px; color:#5d4037; font-style:italic;">📞 มีปัญหาเน็ต? ติดต่อทีม ISP ที่ติดตั้งเน็ตให้ห้องคุณโดยตรง</small>
                     </div>
                     <small style="display:block; margin-top:6px; color:#aaa; font-style:italic;">* วัดจากอุปกรณ์ของคุณเอง</small>
-                    <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="roomInternetLastCheck">-</span></small>
+                    <small class="ta-note-aaa">ตรวจสอบล่าสุด: <span id="roomInternetLastCheck">-</span></small>
                 </div>
             </div>
 
@@ -2945,12 +2945,12 @@
                  to page-emergency (linked via the tile below). -->
             <div id="emergencyContactsSection" class="menu-item-group">
                 <div class="menu-item" data-action="toggleAccordion">
-                    <div class="icon-box" style="background:#fee2e2; color:#dc2626;"><i class="fas fa-phone"></i></div>
+                    <div class="icon-box ta-badge-error" ><i class="fas fa-phone"></i></div>
                     <span>เบอร์โทรฉุกเฉินอาคาร</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
                 <div class="accordion-content">
-                    <div id="emergencyContactsList" style="display:grid; gap:8px;"></div>
+                    <div id="emergencyContactsList" class="ta-grid-gap-8"></div>
                     <div id="serviceProvidersList" style="display:grid; gap:10px; margin-top:12px;"></div>
                 </div>
             </div>
@@ -3406,13 +3406,13 @@
 
         <div id="my-listings-section" style="display:none; padding:0 16px 16px;">
             <div class="section-title" style="padding:0; margin-bottom:8px;"><span>ประกาศของฉัน</span></div>
-            <div id="my-listings-container" style="display:grid; gap:8px;"></div>
+            <div id="my-listings-container" class="ta-grid-gap-8"></div>
         </div>
         </div><!-- /marketplace-section -->
     </div>
 
     <div id="usage" class="page">
-        <div class="app-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div class="app-bar ta-flex-sb-12" >
             <div>
                 <h1 class="page-title-top u-m0" >การใช้งาน</h1>
                 <p style="margin:4px 0 0; color: var(--text-muted);">สรุปบิล &amp; การใช้ประจำเดือน</p>
@@ -3519,10 +3519,10 @@
                             <span class="u-color-muted">วันที่ออกบิล:</span><strong id="inv-date">—</strong>
                         </div>
                     </div>
-                    <hr style="border:none; border-top:1px dashed #ddd; margin:8px 0;">
+                    <hr class="ta-divider-8">
                     <!-- Line items (populated by renderPaymentInvoice) -->
                     <div id="inv-items" class="u-fs-md"></div>
-                    <hr style="border:none; border-top:1px dashed #ddd; margin:8px 0;">
+                    <hr class="ta-divider-8">
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0;">
                         <span style="color:#666; font-size:var(--fs-md);">รวมทั้งสิ้น</span>
                         <div id="inv-total" style="font-weight:bold; color:var(--primary-green); font-size:1.5rem; line-height:1.2;">฿—</div>
@@ -3605,10 +3605,10 @@
                             <span class="u-color-muted">วันที่ชำระ:</span><strong id="rcpt-paid-date">—</strong>
                         </div>
                     </div>
-                    <hr style="border:none; border-top:1px dashed #ddd; margin:12px 0;">
+                    <hr class="ta-divider-12">
                     <!-- Line items (populated by renderPaymentReceipt) -->
                     <div id="rcpt-items" class="u-fs-md"></div>
-                    <hr style="border:none; border-top:1px dashed #ddd; margin:12px 0;">
+                    <hr class="ta-divider-12">
                     <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.15rem; color:var(--primary-green); padding:6px 0;">
                         <span>รวมทั้งสิ้น</span><span id="rcpt-total">฿—</span>
                     </div>
@@ -3913,7 +3913,7 @@
             <div style="background:#fff; border-radius:18px 18px 0 0; padding:24px; width:100%; max-width:480px; box-shadow:0 -4px 24px rgba(0,0,0,.15);">
                 <div style="font-weight:700; font-size:1.05rem; margin-bottom:4px;" id="fb-confirm-title">ยืนยันการจอง</div>
                 <div id="fb-confirm-detail" style="color:var(--text-muted); font-size:.9rem; margin-bottom:20px;"></div>
-                <div style="display:flex; gap:10px;">
+                <div class="ta-flex-gap-10">
                     <button data-action="fbCancelModal" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:#fff;font-family:var(--font-brand);font-weight:600;cursor:pointer;">ยกเลิก</button>
                     <button id="fb-confirm-btn" data-action="fbConfirmBooking" style="flex:2;padding:12px;border-radius:10px;border:none;background:var(--primary-green);color:#fff;font-family:var(--font-brand);font-weight:700;cursor:pointer;">✅ จอง</button>
                 </div>
@@ -5141,7 +5141,7 @@
             <!-- Medical -->
             <div class="menu-item-group">
                 <div class="menu-item" data-action="toggleAccordion">
-                    <div class="icon-box" style="background:#fee2e2; color:#dc2626;">🚑</div>
+                    <div class="icon-box ta-badge-error" >🚑</div>
                     <span>เจ็บป่วย / อุบัติเหตุ</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
