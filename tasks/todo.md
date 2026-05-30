@@ -68,7 +68,7 @@
 
 ### ⚡ Performance — Unbounded Queries
 
-- [ ] **[PERF-Q1] ปิด 7 unbounded Firestore queries ที่เหลือ**
+- [x] **[PERF-Q1] ปิด 7 unbounded Firestore queries ที่เหลือ**
   - **Why:** ขยายตามจำนวน user/ข้อมูล — Firestore billing + latency โตไม่มีเพดาน
   - **ไฟล์และ fix:**
     - `shared/dashboard-insights.js:284-285` — add `limit(500)` ให้ `wellnessQuizPassed` + `contractQuizPassed` collectionGroup
@@ -80,25 +80,25 @@
     - `shared/lease-config.js:118` — add `where('status','==','active'), limit(100)` ให้ lease list
   - **Verify:** `npm run audit:size` + grep แต่ละไฟล์ยืนยัน `.limit(` อยู่ติดกัน
 
-- [ ] **[PERF-XLSX] Lazy-load xlsx.full.min.js (~300KB gzip)**
+- [x] **[PERF-XLSX] Lazy-load xlsx.full.min.js (~300KB gzip)**
   - **Why:** โหลดทุก admin session แม้ไม่ได้ import ไฟล์ — เสีย 300KB เปล่าสำหรับทุก page ที่ไม่ใช่ meter/billing import
   - **ไฟล์:** `dashboard.html:75`, `shared/dashboard-meter-import.js`, `shared/dashboard-bills.js`
   - **Fix:** ลบ `<script defer src="...xlsx...">` จาก HTML → dynamic `import('...xlsx...')` ใน change handler ของ `#importFileInput` และ `#billingFileInput` (pattern เดียวกับ jsPDF ที่ทำแล้ว)
   - **Verify:** Chrome DevTools Network → โหลด dashboard → xlsx ไม่ควรอยู่ใน initial requests
 
-- [ ] **[PERF-CACHE] Enable Firestore persistent local cache**
+- [x] **[PERF-CACHE] Enable Firestore persistent local cache**
   - **Why:** `tenant_app.html` เปิด/ปิดบ่อยผ่าน LIFF — persistent cache ทำให้ bill/room data โหลดจาก IndexedDB ก่อน revalidate
   - **ไฟล์:** Firebase init ใน `shared/tenant-liff-auth.js` หรือ `shared/firebase-init.js`
   - **Fix:** แทน `getFirestore(app)` ด้วย `initializeFirestore(app, { localCache: persistentLocalCache() })`
   - **Verify:** Chrome → Application → IndexedDB → `firebaseLocalStorageDb` ปรากฏหลัง first visit
 
-- [ ] **[PERF-N1] แก้ N+1 deposit check ใน requests-admin**
+- [x] **[PERF-N1] แก้ N+1 deposit check ใน requests-admin**
   - **Why:** `getDoc` per tenant ใน loop สำหรับ building ที่มี 50 ห้อง = 50 round-trips
   - **ไฟล์:** `shared/dashboard-requests-admin.js:1438-1445`
   - **Fix:** batch-fetch ทุก `deposits` docs ของ building ใน getDocs เดียว → build Map → `Map.has(key)` แทน
   - **Verify:** Network panel → `getDocs` 1 call แทน N calls
 
-- [ ] **[PERF-LEAK] แก้ interval leak ใน facility-booking-ui.js**
+- [x] **[PERF-LEAK] แก้ interval leak ใน facility-booking-ui.js**
   - **Why:** `setInterval(_writePresence, 60000)` ที่บรรทัด 344 ไม่มี `clearInterval` เลย — fire ทุก 60s ตลอด session
   - **ไฟล์:** `shared/facility-booking-ui.js:344,347`
   - **Fix:** `const _presenceInterval = setInterval(...)` → เพิ่ม `pagehide`/`visibilitychange` handler ที่ call `clearInterval(_presenceInterval)` และ `document.removeEventListener(...)` เมื่อ hidden
@@ -108,19 +108,19 @@
 
 ### 💎 Code Quality
 
-- [ ] **[CQ-PROMPT] แทน `prompt()` 3 จุดด้วย `window.ghConfirm`**
+- [x] **[CQ-PROMPT] แทน `prompt()` 3 จุดด้วย `window.ghPrompt` (added to modal.js)**
   - **Why:** `prompt()` block event loop, style ไม่ได้, §7-Q ระบุชัดว่าต้องแทน
   - **ไฟล์:** `shared/dashboard-main.js:427` (evidence input), `shared/dashboard-main.js:485` (reject reason), `shared/dashboard-tenant-modal.js:992` (type label)
   - **Fix:** แทนด้วย `window.ghConfirm(message, { input: true })` pattern ที่ไฟล์เดียวกันใช้อยู่แล้ว (ดู line 467, 506)
   - **Verify:** `grep -rn "= prompt(" shared/ dashboard.html` → 0 hits
 
-- [ ] **[CQ-CONSOLE] ลบ console.info 239+ calls ใน tenant-system.js**
+- [x] **[CQ-CONSOLE] ลบ console.info 43 calls ใน tenant-system.js**
   - **Why:** debug logging ที่ fire ทุก tenant operation — banned by project standards
   - **ไฟล์:** `shared/tenant-system.js` (239 instances)
   - **Fix:** `sed`-style bulk remove all `console.info(...)` calls in the file
   - **Verify:** `grep -c "console\.info" shared/tenant-system.js` → 0
 
-- [ ] **[CQ-MUTATE] แก้ mutation pattern ใน TenantConfigManager**
+- [x] **[CQ-MUTATE] แก้ mutation pattern ใน TenantConfigManager**
   - **Why:** `delete tenants[tenantId]` + `tenants[tenantId] = {...}` mutate object in-place — violates immutability rule
   - **ไฟล์:** `shared/tenant-system.js:82,96`
   - **Fix:**
@@ -128,7 +128,7 @@
     - update: `const updated = { ...tenants, [tenantId]: { ...tenants[tenantId], ...changes } }`
   - **Verify:** `grep -n "delete tenants\[" shared/tenant-system.js` → 0 hits
 
-- [ ] **[CQ-ONSNAPSHOT] เพิ่ม error callback ใน 2 onSnapshot ที่ขาด**
+- [x] **[CQ-ONSNAPSHOT] เพิ่ม error callback ใน 2 onSnapshot ที่ขาด** (already done in prior session)
   - **Why:** §7-N — silent failure เมื่อ index ขาด หรือ permission-denied
   - **ไฟล์:**
     - `shared/dashboard-extra.js:770` — `setupAnnouncementListener` inner onSnapshot
@@ -140,12 +140,12 @@
 
 ### 🚀 DevOps
 
-- [ ] **[DEVOPS-STAGING] Wire staging environment เข้า CI/CD**
+- [x] **[DEVOPS-STAGING] Wire staging environment เข้า CI/CD**
   - **Why:** `.firebaserc` มี staging alias แต่ทุก CI deploy ไป production ตรง — ไม่มี safety gate
   - **Fix:** สร้าง `.github/workflows/deploy-staging.yml` — triggered on PR → staging branch: run unit tests → deploy CFs ไป `the-green-haven-staging` → run E2E กับ staging URL → require manual approval ก่อน production
   - **Verify:** PR ไปยัง main → GitHub Actions แสดง staging deploy step ก่อน production
 
-- [ ] **[DEVOPS-CSP-CI] เพิ่ม CSP hash validation ใน GitHub Actions**
+- [x] **[DEVOPS-CSP-CI] เพิ่ม CSP hash validation ใน GitHub Actions**
   - **Why:** pre-commit hook bypass ได้ (`--no-verify`) — drift จะไม่ถูกจับจนกว่าจะ deploy แล้ว production เสีย (§7-II incident)
   - **ไฟล์:** `.github/workflows/validate.yml` (เพิ่ม step)
   - **Fix:** เพิ่ม step: `node tools/compute-csp-hashes.js && diff tools/csp-hashes.json <(git show HEAD:tools/csp-hashes.json) || (echo "CSP drift detected" && exit 1)`
@@ -307,8 +307,9 @@ _กรอกหลังจาก implement แต่ละ section_
 
 - [x] P0 Security XSS — commit: `87bb4a3`
 - [x] P0 A11y main landmark — commit: `87bb4a3`
-- [ ] P1 Performance queries — แก้แล้ว commit: `___`
-- [ ] P1 Code quality — แก้แล้ว commit: `___`
+- [x] P1 Performance (5 tasks) — commit: `7e5ef7b`
+- [x] P1 Code Quality (4 tasks) — commit: `7e5ef7b`
+- [x] P1 DevOps (2 tasks) — commit: `7e5ef7b`
 
 ---
 
