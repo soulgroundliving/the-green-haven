@@ -5,7 +5,7 @@
 //   window.bookStandardCleanFromModal   — data-action dispatcher
 // Dependencies (resolved via global scope):
 //   window._cleaningCfgCache, _taBuilding, _taRoom, toast,
-//   _saveCleaningBooking, _renderCleaningHistory (still inline)
+//   _saveCleaningBooking, _renderCleaningHistory (from shared/tenant-cleaning.js)
 (function () {
     'use strict';
 
