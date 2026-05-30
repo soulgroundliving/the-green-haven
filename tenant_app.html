@@ -105,10 +105,13 @@
     <script src="./shared/checklist-manager.js" defer></script>
     <script src="./shared/tenant-marketplace.js" defer></script>
     <script src="./shared/tenant-subscriptions.js" defer></script>
+    <script src="./shared/tenant-community.js" defer></script>
     <script src="./shared/tenant-phone-otp.js" defer></script>
     <script src="./shared/tenant-profile-edit.js" defer></script>
     <script src="./shared/tenant-lease-request.js" defer></script>
     <script src="./shared/tenant-usage-chart.js" defer></script>
+    <script src="./shared/tenant-meter.js" defer></script>
+    <script src="./shared/tenant-data.js" defer></script>
     <script src="./shared/tenant-world-map.js" defer></script>
     <script src="./shared/tenant-standard-clean-modal.js" defer></script>
     <script src="./shared/tenant-leaderboard.js" defer></script>
@@ -119,6 +122,7 @@
     <script src="./shared/tenant-pets.js" defer></script>
     <script src="./shared/tenant-profile-ui.js" defer></script>
     <script src="./shared/tenant-render.js" defer></script>
+    <script src="./shared/tenant-auth.js" defer></script>
     <script src="./shared/tenant-legacy.js" defer></script>
     <script src="./shared/tenant-slip-verify.js" defer></script>
     <script src="./shared/marketplace-chat.js" defer></script>
@@ -5703,268 +5707,19 @@
             window._nestOnlyDisabled = true;
         }
 
-        // SWR helpers — hydrate from localStorage synchronously, then re-render once
-        // background refresh from Firestore returns. Splits the old loadTenantAppData
-        // into a sync part (instant first paint) and an async part (eventual consistency).
-        function _hydrateTenantFromLocalStorage() {
-            if (!_taLease && typeof LeaseAgreementManager !== 'undefined') {
-                try { _taLease = LeaseAgreementManager.getActiveLease(_taBuilding, _taRoom); } catch(e) {}
-            }
-            if (!_taTenant && typeof TenantConfigManager !== 'undefined') {
-                try { _taTenant = TenantConfigManager.getTenant(_taBuilding, _taRoom); } catch(e) {}
-            }
-            if (!_taTenant) {
-                try { _taTenant = JSON.parse(localStorage.getItem('tenant_data') || 'null'); } catch(e) {}
-            }
-            if (!_taBills.length) {
-                [2567,2568,2569,2570].forEach(y => {
-                    try {
-                        const raw = JSON.parse(localStorage.getItem(`bills_${y}`) || '[]');
-                        const _normBld = b => { const s = String(b||'').toLowerCase(); return (s==='nest'||s.includes('nest')) ? 'nest' : 'rooms'; };
-                        _taBills.push(...raw.filter(b => _normBld(b.building) === _taBuilding && String(b.room) === String(_taRoom)));
-                    } catch(e) {}
-                });
-            }
-            _taBills.sort((a,b) => ((b.year||0)-(a.year||0)) || ((b.month||0)-(a.month||0)));
-            if (!_taPayments.length) {
-                try { _taPayments = JSON.parse(localStorage.getItem(`payment_${_taBuilding}_${_taRoom}`) || '[]'); } catch(e) {}
-            }
-            // Filter AFTER bills/payments are hydrated from localStorage — the cache
-            // may contain previous tenant's bills written before the boundary filter
-            // shipped (or by an earlier subscribe firing before _taLease was known).
-            if (_taLease) _applyTenantBoundary();
-            window._tenantAppLease = _taLease;
-            window._tenantAppTenant = _taTenant;
-            window._tenantAppBills = _taBills;
-            window._tenantAppPayments = _taPayments;
-        }
-
-        function _rerenderTenantViews() {
-            // Render the visible page immediately (critical path), defer the rest
-            // to requestIdleCallback. Was rebuilding 5 page subtrees on every RTDB
-            // bill update (~40-80ms blocked) even for pages user wasn't viewing.
-            const visibleId = _currentPageEl?.id || '';
-
-            // Nav badges always update (visible on every page)
-            if (typeof updateNavBadges === 'function') updateNavBadges();
-
-            const renderHome     = () => typeof renderHomePage     === 'function' && renderHomePage();
-            const renderBills    = () => typeof renderBillsList    === 'function' && renderBillsList();
-            const renderProfile  = () => typeof renderProfilePage  === 'function' && renderProfilePage();
-            const renderContract = () => typeof renderContractPage === 'function' && renderContractPage();
-            const renderChart    = () => typeof _renderUsageChart  === 'function' && _renderUsageChart();
-
-            // Visible page first (synchronous, blocks paint as expected)
-            if (visibleId === 'home-page')          renderHome();
-            else if (visibleId === 'usage-page')  { renderBills(); renderChart(); }
-            else if (visibleId === 'profile' || visibleId === 'quest-page') renderProfile();
-            else if (visibleId === 'contract-page') renderContract();
-
-            // Off-screen pages deferred to idle (user navigates → fresh data ready)
-            const idleCb = window.requestIdleCallback || ((fn) => setTimeout(fn, 50));
-            idleCb(() => {
-                if (visibleId !== 'home-page')     renderHome();
-                if (visibleId !== 'usage-page')  { renderBills(); renderChart(); }
-                if (visibleId !== 'profile' && visibleId !== 'quest-page') renderProfile();
-                if (visibleId !== 'contract-page') renderContract();
-            });
-        }
-
-        // SSoT delegation: dedup logic lives in BillStore.dedupSynthetic
-        // (shared/billing-system.js). Local wrapper just threads _taBills through it.
-        // Needed because admin may issue a real bill for a past month after the
-        // cash-legacy synth row was already pushed — dedup keeps the real one.
-        function _dedupBills() {
-            if (!window.BillStore?.dedupSynthetic) return;
-            const before = _taBills.length;
-            _taBills = window.BillStore.dedupSynthetic(_taBills);
-            if (_taBills.length !== before) {
-                window._tenantAppBills = _taBills;
-            }
-        }
-
-        // SSoT delegation: tenant-boundary filter lives in BillStore.filterByTenantBoundary.
-        // Hides previous tenant's bills and meter readings (room may have had multiple
-        // tenants over time; new tenant must only see data from their move-in onwards).
-        // Re-runs whenever bills/meter cache OR _taLease changes — order of arrival isn't
-        // guaranteed, so every assignment site re-applies + every lease load re-applies.
-        function _applyTenantBoundary() {
-            if (!window.BillStore?.filterByTenantBoundary) return;
-            const billYM   = b => (Number(b.year)  || 0) * 100 + (Number(b.month)  || 0);
-            const meterYM  = m => (Number(m.year)  || 0) * 100 + (Number(m.month)  || 0);
-            _taBills            = window.BillStore.filterByTenantBoundary(_taBills,            billYM,  _taLease);
-            _meterHistoryCache  = window.BillStore.filterByTenantBoundary(_meterHistoryCache,  meterYM, _taLease);
-            window._meterHistoryCache = _meterHistoryCache; // mirror for tenant-usage-chart.js
-            window._tenantAppBills = _taBills;
-        }
-
-        const _ce = (y) => window.YearUtils?.toCE?.(y) || Number(y) || 0;
-
-        async function loadTenantAppData() {
-            if (!_taRoom) return;
-
-            // 1. SYNC: hydrate from localStorage so the renders that follow have
-            //    cached data to display immediately (no Firestore round-trip on critical path).
-            _hydrateTenantFromLocalStorage();
-
-            // 2. SUBSCRIBE: idempotent, safe to call when Firebase isn't ready (no-ops + retries
-            //    via authReady/liffLinked listeners). Bills uses RTDB scoped by claims.
-            _subscribeBillsRealtime();
-            _loadMeterHistoryFromFirestore();
-
-            // 3. BACKGROUND: refresh from Firestore + re-render specific sections when fresh
-            //    data arrives. If Firebase isn't ready yet, retry once it initializes.
-            if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady) {
-                try {
-                    const userStr = sessionStorage.getItem('user');
-                    const user = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
-                    TenantFirebaseSync.initialize(user, _taBuilding, _taRoom);
-                    TenantFirebaseSync.loadAllData().then(data => {
-                        if (data.lease) _taLease = data.lease;
-                        if (data.tenant) _taTenant = data.tenant;
-                        if (data.bills && data.bills.length) {
-                            // Merge: Firestore wins on billId collision, otherwise keep cached.
-                            const byId = new Map();
-                            _taBills.forEach(b => byId.set(b.billId || b.id, b));
-                            data.bills.forEach(b => byId.set(b.billId || b.id, b));
-                            // Use toCE for sort — bills can have year as 2569 (BE 4-digit),
-                            // 69 (BE 2-digit, raw from Excel), or 2026 (CE from synth).
-                            // Raw subtraction (2569 - 2026) sorts April > May. toCE
-                            // normalizes all three to CE so the comparison is monotonic.
-                            _taBills = Array.from(byId.values()).sort((a,b) =>
-                                (_ce(b.year)*100+Number(b.month||0)) - (_ce(a.year)*100+Number(a.month||0)));
-                            _dedupBills();
-                        }
-                        if (data.payments && data.payments.length) _taPayments = data.payments;
-                        // Apply tenant-boundary AFTER lease is set (and bills merged)
-                        _applyTenantBoundary();
-                        window._tenantAppLease = _taLease;
-                        window._tenantAppTenant = _taTenant;
-                        window._tenantAppBills = _taBills;
-                        window._tenantAppPayments = _taPayments;
-                        _rerenderTenantViews();
-                        // Trigger any subscribes that depend on building (now claims may be present)
-                        if (typeof _subscribeBillsRealtime === 'function') _subscribeBillsRealtime();
-                    }).catch(e => console.warn('tenant data refresh failed:', e?.message));
-                } catch(e) { console.warn('tenant data init failed:', e?.message); }
-            } else {
-                // Firebase not ready yet — schedule one retry on init, then recurse
-                window.addEventListener('firebaseInitialized', () => loadTenantAppData(), { once: true });
-            }
-        }
-
-        let _billsUnsub = null;
-        let _billsRetryCount = 0;
-        async function _subscribeBillsRealtime() {
-            if (_billsUnsub) return;
-            if (typeof TenantFirebaseSync === 'undefined') return;
-            // Phase 4C: RTDB rule requires {room,building} claims (set by linkAuthUid after LIFF login).
-            // If claims aren't ready yet, schedule a backoff retry — relying solely on
-            // authReady/liffLinked events misses the case where both fired before the
-            // server-side custom claims propagated to the local token cache. Cap at 5
-            // retries (covers ~30s of LIFF + linkAuthUid + token refresh) so we don't
-            // burn forever on a permanently broken auth.
-            try {
-                const user = window.firebaseAuth?.currentUser;
-                if (!user) {
-                    if (_billsRetryCount < 5) {
-                        _billsRetryCount++;
-                        setTimeout(_subscribeBillsRealtime, 2000 * _billsRetryCount);
-                    } else {
-                        console.warn('⛔ Bills subscription gave up — no Firebase user after 5 retries');
-                    }
-                    return;
-                }
-                const tr = await user.getIdTokenResult();
-                if (!tr.claims.admin && !(tr.claims.room && tr.claims.building)) {
-                    if (_billsRetryCount < 5) {
-                        _billsRetryCount++;
-                        setTimeout(_subscribeBillsRealtime, 2000 * _billsRetryCount);
-                    } else {
-                        console.warn('⛔ Bills subscription gave up — claims not set after 5 retries. Check linkAuthUid CF.');
-                    }
-                    return;
-                }
-                _billsRetryCount = 0;
-            } catch (_) { return; }
-            try {
-                const userStr = sessionStorage.getItem('user');
-                const u = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
-                TenantFirebaseSync.initialize(u, _taBuilding, _taRoom);
-                _billsUnsub = TenantFirebaseSync.subscribeBills((bills) => {
-                    if (!Array.isArray(bills)) return;
-                    // Hide previous tenant's bills BEFORE merge + localStorage cache —
-                    // RTDB returns every bill ever stored at bills/{building}/{room}.
-                    if (window.BillStore?.filterByTenantBoundary) {
-                        bills = window.BillStore.filterByTenantBoundary(
-                            bills, b => (Number(b.year)||0)*100 + (Number(b.month)||0), _taLease);
-                    }
-                    // Merge with existing (Firestore wins on billId collision)
-                    const byId = new Map();
-                    _taBills.forEach(b => byId.set(b.billId || b.id, b));
-                    bills.forEach(b => byId.set(b.billId || b.id, b));
-                    _taBills = Array.from(byId.values()).sort((a, b) =>
-                        (_ce(b.year)*100+Number(b.month||0)) - (_ce(a.year)*100+Number(a.month||0))
-                    );
-                    _dedupBills();
-                    _applyTenantBoundary(); // catches stale entries from prior _taBills state
-                    window._tenantAppBills = _taBills;
-                    if (typeof renderBillsList === 'function') renderBillsList();
-                    if (typeof updateNavBadges === 'function') updateNavBadges();
-                    if (typeof _renderUsageChart === 'function') _renderUsageChart();
-                    // Persist RTDB bills to localStorage (normalized building) so they
-                    // survive page reloads and are available before subscription fires.
-                    try {
-                        const byYr = {};
-                        bills.forEach(b => {
-                            const yr = Number(b.year) || 0; if (!yr) return;
-                            (byYr[yr] = byYr[yr] || []).push({...b, building: _taBuilding});
-                        });
-                        Object.entries(byYr).forEach(([yr, bs]) => {
-                            const key = `bills_${yr}`;
-                            const existing = JSON.parse(localStorage.getItem(key) || '[]');
-                            const cache = new Map();
-                            existing.forEach(b => cache.set(b.billId || b.id, b));
-                            bs.forEach(b => cache.set(b.billId || b.id, b));
-                            localStorage.setItem(key, JSON.stringify(Array.from(cache.values())));
-                        });
-                    } catch(_) {}
-                }, async () => {
-                    // permission_denied during LIFF auth transition: expected — signInWithCustomToken
-                    // briefly invalidates the existing RTDB session. liffLinked re-triggers
-                    // _subscribeBillsRealtime automatically; 2s setTimeout is the backstop if it
-                    // already fired. No user-visible toast — this always self-heals.
-                    _billsUnsub = null;
-                    try {
-                        const u = window.firebaseAuth?.currentUser;
-                        const fresh = u ? await u.getIdTokenResult(true).catch(() => null) : null;
-                        console.warn('[bills] permission_denied — silent retry in 2s', {
-                            path: `bills/${_taBuilding}/${_taRoom}`,
-                            claimRoom: fresh?.claims?.room || '(none)',
-                            claimBuilding: fresh?.claims?.building || '(none)',
-                            uid: u?.uid?.slice(0, 14),
-                            isAnon: u?.isAnonymous,
-                        });
-                    } catch (_) {}
-                    setTimeout(_subscribeBillsRealtime, 2000);
-                });
-            } catch (e) { console.warn('subscribeBillsRealtime failed:', e.message); }
-        }
-        _onLiffClaimsReady(_subscribeBillsRealtime);
-        _onLiffClaimsReady(_loadMeterHistoryFromFirestore);
+        // ---- DATA INTEGRATION CORE ----
+        // Extracted to shared/tenant-data.js (loaded via <script defer>).
+        // Exports: window.loadTenantAppData, window._subscribeBillsRealtime,
+        //          window._rerenderTenantViews, window._dedupBills, window._applyTenantBoundary
+        // Wiring:  _onLiffClaimsReady moved into module
+        // _loadMeterHistoryFromFirestore wiring moved to shared/tenant-meter.js
         // Re-run after liffLinked so _taBuilding/_taRoom are available for the
         // tenants/{b}/list/{r} subscription (active tenant branch of _subscribeEcoPoints).
         // Closure wrapper: loadGamificationData is set by the defer module tenant-leaderboard.js,
         // which runs after this inline script. The closure resolves at call time (authReady/liffLinked
         // both fire after defer scripts), so window.loadGamificationData is available by then.
         _onLiffClaimsReady(() => { if (typeof loadGamificationData === 'function') loadGamificationData(); });
-        // Reload tenant identity + lease from Firestore after liffLinked delivers real
-        // custom-token claims. The initial call at initTenantApp() fires before claims
-        // exist → TenantFirebaseSync.loadAllData() → loadLease() gets permission_denied
-        // from Firestore and silently falls back to stale localStorage → ข้อมูลส่วนตัว
-        // shows cached/empty data.  This second fire (after real claims) retries the
-        // Firestore read and re-renders the profile page with current data. (§7-A)
-        _onLiffClaimsReady(loadTenantAppData);
+        // loadTenantAppData + _subscribeBillsRealtime wiring moved to shared/tenant-data.js
 
 
         function _startTenantTour() {
@@ -6003,94 +5758,9 @@
         // Implementation extracted to shared/tenant-render.js (loaded via <script defer>).
         // Exports: window.renderHomePage, window.showBillsSkeleton, window.renderBillsList
 
-        // ---- COMMUNITY UNIFIED FEED — C4 S3 (2026-05-27): dead DOM + render fns removed ----
-        // setCommunityFilter / renderCommunityFeed / renderAnnouncements / renderCommunityEvents
-        // dropped. Bell panel (_renderBroadcastsList) is the sole community surface.
-        // _subscribeAnnouncementsFromFirestore (banners) + _subscribeNewAnnouncementsEvents
-        // (events) still live — they hydrate localStorage for badge counts.
-
-        // ---- COMMUNITY BANNERS — C4 dual-read (2026-05-17) ----
-        // After C4: announcements collection holds {notice|event|banner} docs with
-        // unified audience field. For the banner panel we filter type='banner' +
-        // audience match. Legacy banner docs (pre-C4 backfilled by
-        // tools/c4-backfill-legacy-announcements.js) carry type='banner' + audience
-        // from the same merge — single query covers both populations. Anti-pattern
-        // §7-U: claim-guard FIRST, error callback resets unsub for liffLinked retry.
-        let _taAnnUnsub = null;
-        function _subscribeAnnouncementsFromFirestore() {
-            if (_taAnnUnsub) return;
-            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-            if (!_taBuilding) return;  // §7-U claim-presence guard
-            try {
-                const db = window.firebase.firestore();
-                const fs = window.firebase.firestoreFunctions;
-                const audience = _taBuilding;
-                const q = fs.query(
-                    fs.collection(db, 'announcements'),
-                    fs.where('type', '==', 'banner'),
-                    fs.where('audience', 'in', ['all', audience]),
-                    fs.limit(20)
-                );
-                _taAnnUnsub = fs.onSnapshot(q, snap => {
-                    const docs = snap.docs.map(d => {
-                        const data = d.data() || {};
-                        // Safely resolve sentAt → Date. Manually-backfilled docs may
-                        // lack sentAt; `??` doesn't catch NaN from Date.parse('').
-                        let sentMs = data.sentAt?.toDate?.()?.getTime?.();
-                        if (sentMs == null) sentMs = Date.parse(data.sentAt || '');
-                        if (!Number.isFinite(sentMs)) sentMs = Date.now();
-                        const sentDate = new Date(sentMs);
-                        return {
-                            id: d.id,
-                            icon: data.icon || '📢',
-                            title: data.title || '',
-                            content: data.body || '',
-                            date: sentDate.toISOString().split('T')[0],
-                            time: '',
-                            building: data.audience || 'all',
-                            createdAt: sentDate.toISOString(),
-                            createdBy: data.sender?.email || '📌 Admin',
-                        };
-                    });
-                    const local = JSON.parse(localStorage.getItem('announcements_data') || '[]');
-                    const byId = new Map();
-                    local.forEach(a => byId.set(a.id, a));
-                    docs.forEach(a => byId.set(a.id, a));
-                    localStorage.setItem('announcements_data', JSON.stringify(Array.from(byId.values())));
-                    _updateCommunityBadge(docs);
-                }, err => {
-                    console.warn('[announcements/banner] subscribe failed:', err?.message || err);
-                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                        _taAnnUnsub = null;
-                    }
-                });
-            } catch(e) { console.warn('tenant announcements subscribe failed:', e); }
-        }
-        _onLiffClaimsReady(_subscribeAnnouncementsFromFirestore);
-
-        function _updateCommunityBadge(docs) {
-            const badge = document.getElementById('nav-badge-community');
-            if (!badge) return;
-            let lastSeen = localStorage.getItem('ta_community_seen_at');
-            if (!lastSeen) {
-                // First open: treat all existing announcements as seen — no badge on fresh install
-                localStorage.setItem('ta_community_seen_at', new Date().toISOString());
-                badge.style.display = 'none';
-                return;
-            }
-            const hasNew = docs.some(a => (a.createdAt || '') > lastSeen);
-            badge.style.display = hasNew ? 'block' : 'none';
-        }
-
-        function markCommunityRead() {
-            localStorage.setItem('ta_community_seen_at', new Date().toISOString());
-            const badge = document.getElementById('nav-badge-community');
-            if (badge) badge.style.display = 'none';
-            _setMarketSeenAt();
-            if (typeof window._renderBellVisibility === 'function') window._renderBellVisibility();
-            renderQuizHub();
-            renderQuizHistory();
-        }
+        // ---- COMMUNITY SUBSCRIPTIONS + BADGE ----
+        // Extracted to shared/tenant-community.js (loaded via <script defer>).
+        // Exports: window.markCommunityRead, window._updateCommunityBadge
 
         // ===== QUIZ HUB + QUIZ HISTORY =====
         // Moved to shared/tenant-quiz.js — they depend on private quiz IIFE state
@@ -6098,158 +5768,16 @@
         // Exports: window.renderQuizHub, window.renderQuizHistory
 
         // ---- METER HISTORY ----
-        // ===== FIRESTORE METER HISTORY LOADER =====
-        // Firestore: meter_data/{building_year_month_roomId} — each doc has
-        // {building, roomId, year(BE 2-digit), month, eOld, eNew, wOld, wNew, yearMonth}
-        // Cache populated by _loadMeterHistoryFromFirestore(); used by:
-        //   1. _getMeterHistory for the 6-month usage chart (elec/water visualization)
-        //   2. _backfillCashLegacyBills to retroactively render past months when admin
-        //      hadn't yet pushed bills to RTDB (pre-SlipOK era — tenant paid in cash).
-        //      Current+future months are NOT synthesized — admin's forecast-revenue
-        //      tool owns that view; tenants only see bills admin has actually issued.
-        let _meterHistoryCache = []; window._meterHistoryCache = _meterHistoryCache; // sorted newest first, normalized rows
-        let _meterHistoryLoading = false;
-        async function _loadMeterHistoryFromFirestore() {
-            if (!_taBuilding || !_taRoom) return;
-            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-            if (_meterHistoryLoading) return;
-            _meterHistoryLoading = true;
-            try {
-                const fs = window.firebase.firestoreFunctions;
-                const db = window.firebase.firestore();
-                const q = fs.query(
-                    fs.collection(db, 'meter_data'),
-                    fs.where('building', '==', _taBuilding),
-                    fs.where('roomId', '==', String(_taRoom)),
-                    fs.limit(24)
-                );
-                const snap = await fs.getDocs(q);
-                _meterHistoryCache = snap.docs.map(d => {
-                    const m = d.data() || {};
-                    // SSoT year normalization (handles 2-digit BE / 4-digit BE / 4-digit CE)
-                    const yrCE = window.YearUtils.toCE(m.year) || 0;
-                    const mo = Number(m.month) || 0;
-                    return {
-                        monthKey: `${yrCE}-${String(mo).padStart(2,'0')}`, // "2026-04"
-                        year: yrCE, month: mo,
-                        eOld: Number(m.eOld)||0, eNew: Number(m.eNew)||0,
-                        wOld: Number(m.wOld)||0, wNew: Number(m.wNew)||0,
-                        createdAt: m.createdAt || m.updatedAt || null
-                    };
-                }).sort((a,b) => b.monthKey.localeCompare(a.monthKey));
-                // Hide previous tenant's meter rows — synthesizeFromMeter already filters
-                // synthetic bills, but the raw cache also drives _renderUsageChart and
-                // any future direct meter views. SSoT helper handles the no-lease case.
-                if (window.BillStore?.filterByTenantBoundary) {
-                    _meterHistoryCache = window.BillStore.filterByTenantBoundary(
-                        _meterHistoryCache, m => (Number(m.year)||0)*100 + (Number(m.month)||0), _taLease);
-                }
-                window._meterHistoryCache = _meterHistoryCache; // mirror for tenant-usage-chart.js
-                // Mirror to localStorage so offline/early-render has data
-                try { localStorage.setItem(`meter_history_${_taBuilding}_${_taRoom}`, JSON.stringify(_meterHistoryCache)); } catch(e) {}
-                _backfillCashLegacyBills();
-                if (typeof renderBillsList === 'function') renderBillsList();
-                if (typeof _renderUsageChart === 'function') _renderUsageChart();
-            } catch (e) {
-                console.warn('⚠️ meter history load failed:', e.message);
-            } finally {
-                _meterHistoryLoading = false;
-            }
-        }
-
-        // Synthesize bills from meter_data — meter_data is the SoT for bills.
-        // Past months → status='paid' method='cash_legacy' (pre-SlipOK).
-        // Current month → status='pending' (newly uploaded meter, awaiting payment).
-        function _backfillCashLegacyBills() {
-            if (!_meterHistoryCache.length) return;
-            if (!window.BillStore?.synthesizeFromMeter) return;
-            // Resolve rates: prefer RoomConfigManager, fallback to lease rentAmount, then defaults
-            let rent = 0, eRate = 8, wRate = 20, trash = 40;
-            try {
-                if (typeof RoomConfigManager !== 'undefined') {
-                    const rc = RoomConfigManager.getRoom?.(_taBuilding, _taRoom);
-                    if (rc) {
-                        rent  = Number(rc.rentPrice    ?? rc.rent)     || 0;
-                        eRate = Number(rc.electricRate ?? rc.elecRate) || 8;
-                        wRate = Number(rc.waterRate)                   || 20;
-                        trash = Number(rc.trashRate    ?? rc.trashFee) || 40;
-                    }
-                }
-            } catch(e) {}
-            if (!rent && _taLease?.rentAmount) rent = Number(_taLease.rentAmount) || 0;
-
-            const synth = window.BillStore.synthesizeFromMeter({
-                meterHistory: _meterHistoryCache,
-                existingBills: _taBills,
-                rates: { rent, eRate, wRate, trash },
-                moveInDate: _taLease?.moveInDate,
-                building: _taBuilding,
-                room: _taRoom,
-                pastOnly: false
-            });
-            if (synth.length) _taBills.push(...synth);
-            _taBills.sort((a,b) => {
-                const aCE = window.YearUtils.toCE(a.year) || 0;
-                const bCE = window.YearUtils.toCE(b.year) || 0;
-                return (bCE*100+Number(b.month)) - (aCE*100+Number(a.month));
-            });
-            _dedupBills();
-            window._tenantAppBills = _taBills;
-        }
+        // Extracted to shared/tenant-meter.js (loaded via <script defer>).
+        // Exports: window._loadMeterHistoryFromFirestore, window._backfillCashLegacyBills
+        // State:   window._meterHistoryCache (initialized by module)
 
         // ===== 12-month Usage Chart (elec + water tab toggle, tap-for-detail) =====
         // Implementation extracted to shared/tenant-usage-chart.js (loaded via <script defer>).
         // Reads window._tenantAppBills + window._meterHistoryCache (mirrored at every write site above).
 
-        // ---- COMMUNITY EVENTS — C4 single-source subscriber (S2 2026-05-18) ----
-        // Legacy communityEvents subscriber dropped post-migration. Events come from
-        // announcements/ WHERE type='event' only, audience-scoped. Anti-pattern §7-U guard.
-        let _taNewEventsUnsub = null;
-        function _subscribeNewAnnouncementsEvents() {
-            if (_taNewEventsUnsub) return;
-            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-            if (!_taBuilding) return;  // §7-U claim-presence guard
-            try {
-                const db = window.firebase.firestore();
-                const fs = window.firebase.firestoreFunctions;
-                const audience = _taBuilding;
-                const q = fs.query(
-                    fs.collection(db, 'announcements'),
-                    fs.where('type', '==', 'event'),
-                    fs.where('audience', 'in', ['all', audience]),
-                    fs.limit(50)
-                );
-                _taNewEventsUnsub = fs.onSnapshot(q, snap => {
-                    // Normalize C4 event shape → legacy event shape (title/date/time/location/description/building).
-                    const docs = snap.docs.map(d => {
-                        const data = d.data() || {};
-                        const dt = data.eventDate?.toDate?.() || (data.eventDate ? new Date(data.eventDate) : null);
-                        const dateStr = dt ? dt.toISOString().split('T')[0] : '';
-                        const timeStr = dt ? dt.toISOString().split('T')[1]?.slice(0, 5) : '';
-                        return {
-                            id: d.id,
-                            title: data.title || '',
-                            date: dateStr,
-                            time: timeStr,
-                            location: data.location || '',
-                            description: data.body || '',
-                            building: data.audience || 'all',
-                        };
-                    });
-                    const local = JSON.parse(localStorage.getItem('community_events_data') || '[]');
-                    const byId = new Map();
-                    local.forEach(e => byId.set(e.id, e));
-                    docs.forEach(e => byId.set(e.id, e));
-                    localStorage.setItem('community_events_data', JSON.stringify(Array.from(byId.values())));
-                }, err => {
-                    console.warn('[announcements/event] subscribe failed:', err?.message || err);
-                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                        _taNewEventsUnsub = null;
-                    }
-                });
-            } catch(e) { console.warn('tenant new-events subscribe failed:', e); }
-        }
-        _onLiffClaimsReady(_subscribeNewAnnouncementsEvents);
+        // ---- COMMUNITY EVENTS SUBSCRIPTION ----
+        // Extracted to shared/tenant-community.js (loaded via <script defer>).
 
         // ===== PROFILE + PET + CONTRACT + NAV + PAYMENT RENDER =====
         // Implementation extracted to shared/tenant-render.js (loaded via <script defer>).
@@ -6312,116 +5840,12 @@
         // Extracted to shared/tenant-slip-verify.js (loaded via <script defer>).
         // Exports: window._tenantRateLimit, window.buildPromptPayPayload (also used by tenant-cleaning.js)
 
-        // ---- LOGOUT ----
-        async function logoutTenantApp() {
-            const _logoutOk = await window.GhModal.confirm({
-                title: 'ออกจากระบบ',
-                body: 'ต้องการออกจากระบบ?',
-                confirmLabel: 'ออกจากระบบ',
-                cancelLabel: 'ยกเลิก',
-            });
-            if (!_logoutOk) return;
-            sessionStorage.clear();
-            try { localStorage.removeItem('tenant_session'); } catch(_){}
-            try { localStorage.removeItem('tenant_app_room'); } catch(_){}
-            // ใน LIFF — logout + ปิด webview
-            if (window.liff && liff.isInClient && liff.isInClient()) {
-                try { liff.logout(); } catch(_){}
-                try { liff.closeWindow(); return; } catch(_){}
-            }
-            // Browser ปกติ: ไม่ redirect ไปไหน (กัน tenant เข้าถึง login.html ของ admin)
-            // แสดง overlay "ออกจากระบบเรียบร้อย" in-page — ต้องเข้าใหม่ผ่าน LINE เท่านั้น
-            showLoggedOutScreen();
-        }
-
-        function showLoggedOutScreen() {
-            document.querySelectorAll('.page').forEach(p => { p.style.display='none'; p.classList.remove('active'); });
-            const nav = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
-            if (nav) nav.style.display = 'none';
-            document.querySelectorAll('.swal2-container, .swal-modal, #daily-modal').forEach(e => { e.style.display='none'; });
-            let ov = document.getElementById('logged-out-overlay');
-            if (!ov) {
-                ov = document.createElement('div');
-                ov.id = 'logged-out-overlay';
-                ov.style.cssText = 'position:fixed; inset:0; background:var(--bg-color,#f4f6f8); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; text-align:center; z-index:9999;';
-                ov.innerHTML = '<div class="ta-emoji-lg">🌿</div>'
-                    + '<h2 style="margin:0 0 8px; color:var(--primary-dark,#1a5c38);">ออกจากระบบเรียบร้อย</h2>'
-                    + '<p style="margin:0 0 24px; color:var(--text-muted,#6b7a8d); max-width:320px;">เปิด LINE แล้วเข้าผ่านเมนู Green Haven อีกครั้งเพื่อใช้งาน</p>';
-                document.body.appendChild(ov);
-            } else { ov.style.display = 'flex'; }
-        }
-
-        // Hard access gate — runs before any tenant init. Three paths allowed:
-        //   1. LINE LIFF (User-Agent contains "Line/") — full LIFF flow handles approval
-        //   2. Admin claim — auth.token.admin === true unlocks every URL pattern
-        //      (admin preview ?room=X&building=Y, plain /tenant_app, anywhere). Admin
-        //      acting as tenant via /login also flows through this path.
-        //   3. Tenant login via /login — sessionStorage.user.userType === 'tenant'
-        //      AND a non-anonymous Firebase user. Per-room data access still gated
-        //      by Firebase rules, so spoofing sessionStorage gets you the page
-        //      chrome but no actual tenant data.
-        async function _enforceAccessGate() {
-            const uaIsLine = /Line\//i.test(navigator.userAgent);
-            if (uaIsLine) return true;
-
-            // Wait up to 5s for auth state, capturing both admin claim + sign-in status.
-            const authState = await new Promise(resolve => {
-                let done = false;
-                const finish = (s) => { if (!done) { done = true; resolve(s); } };
-                const timer = setTimeout(() => finish({ admin: false, signedIn: false }), 5000);
-                const check = async (user) => {
-                    if (done || !user) return;
-                    try {
-                        const tr = await user.getIdTokenResult();
-                        clearTimeout(timer);
-                        finish({ admin: tr.claims.admin === true, signedIn: !user.isAnonymous });
-                    } catch(_) {}
-                };
-                try {
-                    if (window.firebaseAuth?.currentUser) check(window.firebaseAuth.currentUser);
-                    if (window.firebaseAuth?.onAuthStateChanged) {
-                        window.firebaseAuth.onAuthStateChanged(check);
-                    } else {
-                        // [audit-skip] fallback path when onAuthStateChanged isn't available;
-                        // calls check(currentUser) which reads token claims (admin) — no Firestore read.
-                        window.addEventListener('authReady', () => check(window.firebaseAuth?.currentUser), { once: true });
-                    }
-                } catch(_) { clearTimeout(timer); finish({ admin: false, signedIn: false }); }
-            });
-
-            if (authState.admin) return true; // admin → all URL patterns allowed
-
-            let sessUser = null;
-            try { sessUser = JSON.parse(sessionStorage.getItem('user') || 'null'); } catch(_) {}
-            if (authState.signedIn && sessUser && sessUser.userType === 'tenant') return true;
-
-            // Block — clear stale flags so we don't carry corrupt session state forward.
-            sessionStorage.removeItem('_adminPreview');
-            sessionStorage.removeItem('user');
-
-            // Block — render-replace body. Throwing isn't enough because the load
-            // handler keeps running; we replace the DOM so any later mutations land
-            // on the locked-out page instead of the real app.
-            document.body.innerHTML = `
-                <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:linear-gradient(135deg,#e8f5e9,#f4f6f8);text-align:center;font-family:Sarabun,sans-serif;">
-                    <div style="font-size:5rem;margin-bottom:1rem;">🔒</div>
-                    <h1 style="font-size:1.4rem;margin-bottom:.6rem;color:#1a5c38;font-weight:700;">เข้าถึงไม่ได้</h1>
-                    <p style="color:#444;font-size:1rem;line-height:1.6;max-width:340px;margin-bottom:1rem;">
-                        ระบบนี้ใช้งานผ่าน LINE เท่านั้น<br>
-                        เฉพาะลูกบ้านที่ได้รับอนุมัติจากแอดมิน
-                    </p>
-                    <p style="color:#888;font-size:.85rem;max-width:320px;line-height:1.6;">
-                        กรุณาเปิด LINE app → คลิก rich menu หรือ link ที่แอดมินส่งให้
-                    </p>
-                    <p style="color:#aaa;font-size:.7rem;margin-top:3rem;">Nature Haven · Tenant System</p>
-                </div>`;
-            // Stop further script paths that ignore the boolean return — defensive
-            try { document.documentElement.dataset.accessBlocked = '1'; } catch(_) {}
-            return false;
-        }
+        // ---- LOGOUT + ACCESS GATE ----
+        // Extracted to shared/tenant-auth.js (loaded via <script defer>).
+        // Exports: window.logoutTenantApp, window.showLoggedOutScreen, window._enforceAccessGate
 
         window.addEventListener('load', async () => {
-            if (!(await _enforceAccessGate())) return;
+            if (!(await window._enforceAccessGate())) return;
             // 1. สั่งเปิดหน้าแผนที่เป็นหน้าแรก (แก้จาก 'home' เป็น 'world-map-page')
             showPage('world-map-page');
             // อัปเดต bg ตามเวลาไทยทันที (ไม่รอ weather API) — updateDashboard จะเติม weather code ตามมา
