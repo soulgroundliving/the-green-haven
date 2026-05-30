@@ -22,6 +22,7 @@
  */
 
 const esbuild = require('esbuild');
+const { minify: minifyHtml } = require('html-minifier-terser');
 const { glob } = require('glob');
 const fs = require('fs');
 const { execSync } = require('child_process');
@@ -76,6 +77,36 @@ if (!process.env.VERCEL && !process.env.FORCE_BUILD) {
   } catch (e) {
     console.error('❌ Tailwind build failed:', e.message);
     process.exit(1);
+  }
+
+  // HTML minification: whitespace + comments only.
+  // CRITICAL: minifyCSS and minifyJS are OFF — inline <style>/<script> content
+  // must remain byte-for-byte identical so pre-committed CSP hashes stay valid.
+  const htmlFiles = await glob(['*.html'], { nodir: true });
+  if (htmlFiles.length > 0) {
+    console.log(`📄 Minifying ${htmlFiles.length} HTML files (whitespace + comments, keep inline scripts/styles)...`);
+    let htmlBefore = 0;
+    let htmlAfter = 0;
+    for (const file of htmlFiles) {
+      const src = fs.readFileSync(file, 'utf8');
+      htmlBefore += Buffer.byteLength(src, 'utf8');
+      const out = await minifyHtml(src, {
+        removeComments: true,
+        collapseWhitespace: true,
+        conservativeCollapse: false,
+        collapseInlineTagWhitespace: false,
+        minifyCSS: false,   // preserve inline <style> hash
+        minifyJS: false,    // preserve inline <script> hash
+        removeRedundantAttributes: false,
+        removeScriptTypeAttributes: false,
+        removeStyleLinkTypeAttributes: false,
+      });
+      htmlAfter += Buffer.byteLength(out, 'utf8');
+      fs.writeFileSync(file, out, 'utf8');
+    }
+    const htmlSavedKB = ((htmlBefore - htmlAfter) / 1024).toFixed(1);
+    const htmlPct = ((1 - htmlAfter / htmlBefore) * 100).toFixed(1);
+    console.log(`✅ HTML: ${(htmlBefore / 1024).toFixed(0)}KB → ${(htmlAfter / 1024).toFixed(0)}KB (saved ${htmlSavedKB}KB, -${htmlPct}%)\n`);
   }
 
   const files = await glob(['shared/**/*.js', 'accounting/**/*.js'], { nodir: true });
