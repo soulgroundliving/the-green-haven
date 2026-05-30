@@ -122,6 +122,7 @@
     <script src="./shared/tenant-pets.js" defer></script>
     <script src="./shared/tenant-profile-ui.js" defer></script>
     <script src="./shared/tenant-render.js" defer></script>
+    <script src="./shared/tenant-auth.js" defer></script>
     <script src="./shared/tenant-legacy.js" defer></script>
     <script src="./shared/tenant-slip-verify.js" defer></script>
     <script src="./shared/marketplace-chat.js" defer></script>
@@ -5839,116 +5840,12 @@
         // Extracted to shared/tenant-slip-verify.js (loaded via <script defer>).
         // Exports: window._tenantRateLimit, window.buildPromptPayPayload (also used by tenant-cleaning.js)
 
-        // ---- LOGOUT ----
-        async function logoutTenantApp() {
-            const _logoutOk = await window.GhModal.confirm({
-                title: 'ออกจากระบบ',
-                body: 'ต้องการออกจากระบบ?',
-                confirmLabel: 'ออกจากระบบ',
-                cancelLabel: 'ยกเลิก',
-            });
-            if (!_logoutOk) return;
-            sessionStorage.clear();
-            try { localStorage.removeItem('tenant_session'); } catch(_){}
-            try { localStorage.removeItem('tenant_app_room'); } catch(_){}
-            // ใน LIFF — logout + ปิด webview
-            if (window.liff && liff.isInClient && liff.isInClient()) {
-                try { liff.logout(); } catch(_){}
-                try { liff.closeWindow(); return; } catch(_){}
-            }
-            // Browser ปกติ: ไม่ redirect ไปไหน (กัน tenant เข้าถึง login.html ของ admin)
-            // แสดง overlay "ออกจากระบบเรียบร้อย" in-page — ต้องเข้าใหม่ผ่าน LINE เท่านั้น
-            showLoggedOutScreen();
-        }
-
-        function showLoggedOutScreen() {
-            document.querySelectorAll('.page').forEach(p => { p.style.display='none'; p.classList.remove('active'); });
-            const nav = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
-            if (nav) nav.style.display = 'none';
-            document.querySelectorAll('.swal2-container, .swal-modal, #daily-modal').forEach(e => { e.style.display='none'; });
-            let ov = document.getElementById('logged-out-overlay');
-            if (!ov) {
-                ov = document.createElement('div');
-                ov.id = 'logged-out-overlay';
-                ov.style.cssText = 'position:fixed; inset:0; background:var(--bg-color,#f4f6f8); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; text-align:center; z-index:9999;';
-                ov.innerHTML = '<div class="ta-emoji-lg">🌿</div>'
-                    + '<h2 style="margin:0 0 8px; color:var(--primary-dark,#1a5c38);">ออกจากระบบเรียบร้อย</h2>'
-                    + '<p style="margin:0 0 24px; color:var(--text-muted,#6b7a8d); max-width:320px;">เปิด LINE แล้วเข้าผ่านเมนู Green Haven อีกครั้งเพื่อใช้งาน</p>';
-                document.body.appendChild(ov);
-            } else { ov.style.display = 'flex'; }
-        }
-
-        // Hard access gate — runs before any tenant init. Three paths allowed:
-        //   1. LINE LIFF (User-Agent contains "Line/") — full LIFF flow handles approval
-        //   2. Admin claim — auth.token.admin === true unlocks every URL pattern
-        //      (admin preview ?room=X&building=Y, plain /tenant_app, anywhere). Admin
-        //      acting as tenant via /login also flows through this path.
-        //   3. Tenant login via /login — sessionStorage.user.userType === 'tenant'
-        //      AND a non-anonymous Firebase user. Per-room data access still gated
-        //      by Firebase rules, so spoofing sessionStorage gets you the page
-        //      chrome but no actual tenant data.
-        async function _enforceAccessGate() {
-            const uaIsLine = /Line\//i.test(navigator.userAgent);
-            if (uaIsLine) return true;
-
-            // Wait up to 5s for auth state, capturing both admin claim + sign-in status.
-            const authState = await new Promise(resolve => {
-                let done = false;
-                const finish = (s) => { if (!done) { done = true; resolve(s); } };
-                const timer = setTimeout(() => finish({ admin: false, signedIn: false }), 5000);
-                const check = async (user) => {
-                    if (done || !user) return;
-                    try {
-                        const tr = await user.getIdTokenResult();
-                        clearTimeout(timer);
-                        finish({ admin: tr.claims.admin === true, signedIn: !user.isAnonymous });
-                    } catch(_) {}
-                };
-                try {
-                    if (window.firebaseAuth?.currentUser) check(window.firebaseAuth.currentUser);
-                    if (window.firebaseAuth?.onAuthStateChanged) {
-                        window.firebaseAuth.onAuthStateChanged(check);
-                    } else {
-                        // [audit-skip] fallback path when onAuthStateChanged isn't available;
-                        // calls check(currentUser) which reads token claims (admin) — no Firestore read.
-                        window.addEventListener('authReady', () => check(window.firebaseAuth?.currentUser), { once: true });
-                    }
-                } catch(_) { clearTimeout(timer); finish({ admin: false, signedIn: false }); }
-            });
-
-            if (authState.admin) return true; // admin → all URL patterns allowed
-
-            let sessUser = null;
-            try { sessUser = JSON.parse(sessionStorage.getItem('user') || 'null'); } catch(_) {}
-            if (authState.signedIn && sessUser && sessUser.userType === 'tenant') return true;
-
-            // Block — clear stale flags so we don't carry corrupt session state forward.
-            sessionStorage.removeItem('_adminPreview');
-            sessionStorage.removeItem('user');
-
-            // Block — render-replace body. Throwing isn't enough because the load
-            // handler keeps running; we replace the DOM so any later mutations land
-            // on the locked-out page instead of the real app.
-            document.body.innerHTML = `
-                <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:linear-gradient(135deg,#e8f5e9,#f4f6f8);text-align:center;font-family:Sarabun,sans-serif;">
-                    <div style="font-size:5rem;margin-bottom:1rem;">🔒</div>
-                    <h1 style="font-size:1.4rem;margin-bottom:.6rem;color:#1a5c38;font-weight:700;">เข้าถึงไม่ได้</h1>
-                    <p style="color:#444;font-size:1rem;line-height:1.6;max-width:340px;margin-bottom:1rem;">
-                        ระบบนี้ใช้งานผ่าน LINE เท่านั้น<br>
-                        เฉพาะลูกบ้านที่ได้รับอนุมัติจากแอดมิน
-                    </p>
-                    <p style="color:#888;font-size:.85rem;max-width:320px;line-height:1.6;">
-                        กรุณาเปิด LINE app → คลิก rich menu หรือ link ที่แอดมินส่งให้
-                    </p>
-                    <p style="color:#aaa;font-size:.7rem;margin-top:3rem;">Nature Haven · Tenant System</p>
-                </div>`;
-            // Stop further script paths that ignore the boolean return — defensive
-            try { document.documentElement.dataset.accessBlocked = '1'; } catch(_) {}
-            return false;
-        }
+        // ---- LOGOUT + ACCESS GATE ----
+        // Extracted to shared/tenant-auth.js (loaded via <script defer>).
+        // Exports: window.logoutTenantApp, window.showLoggedOutScreen, window._enforceAccessGate
 
         window.addEventListener('load', async () => {
-            if (!(await _enforceAccessGate())) return;
+            if (!(await window._enforceAccessGate())) return;
             // 1. สั่งเปิดหน้าแผนที่เป็นหน้าแรก (แก้จาก 'home' เป็น 'world-map-page')
             showPage('world-map-page');
             // อัปเดต bg ตามเวลาไทยทันที (ไม่รอ weather API) — updateDashboard จะเติม weather code ตามมา
