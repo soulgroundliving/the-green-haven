@@ -18,6 +18,13 @@ const orig = html;
 
 // [exact style attr value (with quotes), replacement class name]
 const MIGRATIONS = [
+  // ── display:none (pure only — no other properties) ───────────────────────
+  // Safe: JS shows these via el.style.display='block/flex' (inline beats class).
+  // u-init-hide has no !important so inline style assignment always wins.
+  ['style="display:none;"',   'u-init-hide'],
+  ['style="display: none;"',  'u-init-hide'],
+  ['style="display:none"',    'u-init-hide'],
+
   // ── Pointer ───────────────────────────────────────────────────────────────
   ['style="cursor:pointer;"',
    'dash-cur-ptr'],
@@ -135,6 +142,58 @@ const MIGRATIONS = [
    'dash-kpi-accent'],
   ['style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;margin-bottom:.85rem;"',
    'dash-form-input-6'],
+
+  // ── Pass 3: remaining 3× patterns ────────────────────────────────────────
+  ['style="display: flex; gap: 1rem;"',             'dash-flex-gap-4'],
+  ['style="height:1.25rem;width:60%;border-radius:3px;"', 'dash-skel-60'],
+  ['style="font-weight:600;font-size:.9rem;margin-bottom:.5rem;color:var(--text);"',
+   'dash-section-label'],
+  ['style="text-align:center;"',                    'u-text-center'],
+  ['style="margin-bottom:1rem;"',                   'dash-mb-4'],
+  ['style="background: #999;"',                     'dash-bg-gray'],
+  ['style="padding: 10px 20px;"',                   'dash-p-10-20'],
+  ['style="font-size:12px;color:var(--text-muted);margin-bottom:4px;"',
+   'dash-caption-12'],
+  ['style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;"',
+   'dash-grid-3col'],
+  ['style="width: 140px;"',                         'dash-w-140'],
+  ['style="position:relative;display:flex;align-items:center;"', 'dash-rel-flex'],
+  ['style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;"',
+   'dash-tab-btn'],
+  ['style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"',
+   'dash-search-field'],
+  ['style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);"',
+   'dash-flex-input'],
+
+  // ── Pass 4: remaining 3× patterns ────────────────────────────────────────
+  ['style="margin-bottom:20px;"',                   'dash-mb-20'],
+  ['style="font-size:1.2rem;font-weight:600;color:var(--ok-dark);"',
+   'dash-ok-heading'],
+  ['style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;"',
+   'dash-deposit-label'],
+  ['style="display: flex; gap: 1rem; margin-bottom: 1rem;"',
+   'dash-flex-gap-4-mb'],
+  ['style="font-size:0.95rem;font-weight:600;color:var(--text);margin-bottom:10px;"',
+   'dash-list-title'],
+  ['style="display:flex;flex-direction:column;"',   'dash-col'],
+  ['style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;"',
+   'dash-btn-green'],
+  ['style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;"',
+   'dash-tabs-bar'],
+
+  // ── Pass 5 (final batch) ─────────────────────────────────────────────────
+  ['style="height:.65rem;width:55%;margin-bottom:.5rem;border-radius:3px;"',
+   'dash-skel-55'],
+  ['style="font-size:.72rem;color:var(--text-muted);margin-top:4px;"',
+   'dash-tiny-note'],
+  ['style="font-weight:700;"',                      'u-bold'],
+  ['style="font-weight: 700; margin-bottom: 1rem;"', 'dash-bold-mb-4'],
+  ['style="color:var(--text-muted);text-align:center;padding:2rem;"',
+   'dash-empty-center'],
+  ['style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);"',
+   'dash-form-label-8'],
+  ['style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;"',
+   'dash-form-panel'],
 ];
 
 function esc(s) {

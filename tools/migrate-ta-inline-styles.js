@@ -14,6 +14,9 @@ const original = html;
 
 // [exact style attr value, replacement class name]
 const MIGRATIONS = [
+  // ── display:none (pure only) ────────────────────────────────────────────
+  ['style="display:none;"',   'u-init-hide'],
+  ['style="display: none;"',  'u-init-hide'],
   // ── Color utilities ──────────────────────────────────────────────────────
   ['style="color:var(--primary-green);"',          'u-color-green'],
   ['style="color:#666;"',                          'u-color-muted'],

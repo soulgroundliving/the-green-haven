@@ -1987,7 +1987,7 @@
   }
 
   /* Generic modal backdrop — used by tenantModal / batchRentModal / emergencyEditModal / rewardEditModal / changePasswordModal.
-     Keep style="display:none" inline; JS toggles to 'flex' to show. */
+     Keep class="u-init-hide" inline; JS toggles to 'flex' to show. */
   .ui-modal {
     position: fixed;
     inset: 0;
@@ -2888,7 +2888,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <span class="sidebar-item-icon" aria-hidden="true">👥</span>Tenant Information
       </button>
       <button class="sidebar-item" data-action="showPage" data-page="requests-approvals">
-        <span class="sidebar-item-icon" aria-hidden="true">🔧</span>Requests & Approvals<span class="sidebar-badge" id="mxBadge" style="display:none"></span>
+        <span class="sidebar-item-icon" aria-hidden="true">🔧</span>Requests & Approvals<span class="sidebar-badge u-init-hide" id="mxBadge" ></span>
       </button>
       <button class="sidebar-item" data-action="showPage" data-page="content-management">
         <span class="sidebar-item-icon" aria-hidden="true">📚</span>Community Events
@@ -2902,7 +2902,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <span class="sidebar-item-icon" aria-hidden="true">📊</span>Meter Upload
       </button>
       <button class="sidebar-item" data-action="showPage" data-page="bill">
-        <span class="sidebar-item-icon" aria-hidden="true">💳</span>Billing & Payment<span class="sidebar-badge" id="billBadge" style="display:none"></span><span class="sidebar-badge" id="paymentBadge" style="display:none"></span>
+        <span class="sidebar-item-icon" aria-hidden="true">💳</span>Billing & Payment<span class="sidebar-badge u-init-hide" id="billBadge" ></span><span class="sidebar-badge u-init-hide" id="paymentBadge" ></span>
       </button>
       <button class="sidebar-item" data-action="showPage" data-page="expense">
         <span class="sidebar-item-icon" aria-hidden="true">💸</span>ค่าใช้จ่าย
@@ -2947,7 +2947,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 </aside>
 
 <!-- ===== TENANT EDIT MODAL ===== -->
-<div class="ui-modal" id="tenantModal" role="dialog" aria-modal="true" aria-labelledby="tenantModalTitle" style="display:none;">
+<div class="ui-modal u-init-hide" id="tenantModal" role="dialog" aria-modal="true" aria-labelledby="tenantModalTitle" >
   <div style="background:#fff;border-radius:var(--radius);max-width:680px;width:100%;max-height:95vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;">
     <!-- Modal Header with Gradient -->
     <div style="background:linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
@@ -3267,9 +3267,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <div class="card"><div class="gh-skeleton dash-skel-xs" ></div><div class="gh-skeleton" style="height:200px;border-radius:8px;"></div></div>
       </div>
       <div class="dash-skel-insight-grid">
-        <div class="insight-card dash-border-card" ><div class="gh-skeleton" style="height:.65rem;width:55%;margin-bottom:.5rem;border-radius:3px;"></div><div class="gh-skeleton" style="height:1.25rem;width:60%;border-radius:3px;"></div></div>
-        <div class="insight-card dash-border-card" ><div class="gh-skeleton" style="height:.65rem;width:55%;margin-bottom:.5rem;border-radius:3px;"></div><div class="gh-skeleton" style="height:1.25rem;width:60%;border-radius:3px;"></div></div>
-        <div class="insight-card dash-border-card" ><div class="gh-skeleton" style="height:.65rem;width:55%;margin-bottom:.5rem;border-radius:3px;"></div><div class="gh-skeleton" style="height:1.25rem;width:60%;border-radius:3px;"></div></div>
+        <div class="insight-card dash-border-card" ><div class="gh-skeleton dash-skel-55" ></div><div class="gh-skeleton dash-skel-60" ></div></div>
+        <div class="insight-card dash-border-card" ><div class="gh-skeleton dash-skel-55" ></div><div class="gh-skeleton dash-skel-60" ></div></div>
+        <div class="insight-card dash-border-card" ><div class="gh-skeleton dash-skel-55" ></div><div class="gh-skeleton dash-skel-60" ></div></div>
       </div>
     </div>
     <div class="year-tabs" style="margin-bottom:.4rem;">
@@ -3356,7 +3356,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
     </div>
     <!-- Hidden — JS-only containers -->
-    <div style="display:none;" aria-hidden="true">
+    <div class="u-init-hide" aria-hidden="true">
       <div id="dashPaymentBehavior"></div>
       <div id="card-years-compare"><canvas id="chartYears"></canvas></div>
     </div>
@@ -3464,7 +3464,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div class="section-title" role="heading" aria-level="2">👥 Tenant Information</div>
 
   <!-- Main Tab Nav -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
+  <div class="year-tabs dash-tabs-bar" >
     <button id="tenant-main-tab-btn-tenants" class="year-tab active" data-action="switchTenantMainTab" data-tab="tenants">👥 ผู้เช่า</button>
     <button id="tenant-main-tab-btn-leases" class="year-tab" data-action="switchTenantMainTab" data-tab="leases">📋 สัญญา</button>
     <button id="tenant-main-tab-btn-requests" class="year-tab" data-action="switchTenantMainTab" data-tab="requests">📨 คำขอ <span id="leaseRequestsBadge" style="display:none;background:var(--red-dark);color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
@@ -3483,7 +3483,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div id="tenant-rooms-section">
     <!-- Stats strip -->
     <div class="stats-strip stats-strip--green">
-      <span style="font-weight:700;">🏠 <span id="occupancy-total">0</span> ห้อง</span>
+      <span class="u-bold">🏠 <span id="occupancy-total">0</span> ห้อง</span>
       <span class="color-silver">|</span>
       <span style="color:var(--ok-dark);">👤 <b id="occupancy-occupied">0</b> มีผู้เช่า</span>
       <span class="color-silver">|</span>
@@ -3505,10 +3505,10 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div><!-- end tenant-rooms-section -->
 
   <!-- ===== Compact Summary: Nest ===== -->
-  <div id="tenant-nest-section" style="display:none;">
+  <div id="tenant-nest-section" class="u-init-hide">
     <!-- Stats strip -->
     <div class="stats-strip stats-strip--blue">
-      <span style="font-weight:700;">🏗️ <span id="nest-occupancy-total">0</span> ห้อง</span>
+      <span class="u-bold">🏗️ <span id="nest-occupancy-total">0</span> ห้อง</span>
       <span class="color-silver">|</span>
       <span style="color:var(--blue-dark);">👤 <b id="nest-occupancy-occupied">0</b> มีผู้เช่า</span>
       <span class="color-silver">|</span>
@@ -3528,7 +3528,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     </div>
     <!-- อัตราค่าเช่า/ค่าสาธารณูปโภค Nest → ดู/แก้ได้ที่ Tab จัดการห้อง & อัตรา (SSoT) -->
     <!-- Classic Table View -->
-    <div id="nestViewClassic" style="display:none;">
+    <div id="nestViewClassic" class="u-init-hide">
       <div class="card">
         <div class="card-title" role="heading" aria-level="3">ตารางห้องพัก Nest & อัตราค่าเช่า</div>
         <div class="scroll-x"><table class="data-table" id="nestRoomTable"></table></div>
@@ -3539,7 +3539,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <!-- ===== Generic Building Section (any building beyond rooms/nest) ===== -->
   <!-- Only carries the stats strip; the searchable room grid below (#tenantGrid)
        is shared across all buildings and rendered by renderTenantPage(). -->
-  <div id="tenant-generic-section" style="display:none;">
+  <div id="tenant-generic-section" class="u-init-hide">
     <div id="tenant-generic-stats" class="stats-strip stats-strip--green"></div>
   </div><!-- end tenant-generic-section -->
 
@@ -3565,7 +3565,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- Batch Rent Adjustment Modal -->
-  <div class="ui-modal" id="batchRentModal" role="dialog" aria-modal="true" aria-labelledby="batchRentModalTitle" style="display:none;">
+  <div class="ui-modal u-init-hide" id="batchRentModal" role="dialog" aria-modal="true" aria-labelledby="batchRentModalTitle" >
     <div style="background:white;border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <h2 id="batchRentModalTitle" style="font-size:1.4rem;margin:0;color:#1b5e20;">⚙️ ปรับค่าเช่าแบบหลายห้อง</h2>
@@ -3573,8 +3573,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
 
       <!-- Room Selection -->
-      <div style="margin-bottom:20px;">
-        <h3 style="font-size:0.95rem;font-weight:600;color:var(--text);margin-bottom:10px;">📍 เลือกห้องพัก</h3>
+      <div class="dash-mb-20">
+        <h3 class="dash-list-title">📍 เลือกห้องพัก</h3>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:8px;margin-bottom:12px;max-height:150px;overflow-y:auto;">
           <div id="roomSelectionContainer" style="grid-column:1/-1;">
             <p style="color:#999;text-align:center;">กำลังโหลด...</p>
@@ -3590,8 +3590,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
 
       <!-- Adjustment Type Selection -->
-      <div style="margin-bottom:20px;">
-        <h3 style="font-size:0.95rem;font-weight:600;color:var(--text);margin-bottom:10px;">📊 วิธีการปรับค่าเช่า</h3>
+      <div class="dash-mb-20">
+        <h3 class="dash-list-title">📊 วิธีการปรับค่าเช่า</h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
           <label class="dash-option-row" data-action="updateAdjustmentDisplay">
             <input type="radio" name="adjustType" value="fixed-increase" checked class="dash-cur-ptr">
@@ -3617,8 +3617,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
 
       <!-- Adjustment Value Input -->
-      <div style="margin-bottom:20px;">
-        <h3 style="font-size:0.95rem;font-weight:600;color:var(--text);margin-bottom:10px;">
+      <div class="dash-mb-20">
+        <h3 class="dash-list-title">
           <span id="adjustLabel">จำนวนที่เพิ่ม</span>
         </h3>
         <div class="dash-flex-ac-8">
@@ -3645,7 +3645,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- Table View (Hidden) -->
-  <div id="tenantViewTable" style="display:none;">
+  <div id="tenantViewTable" class="u-init-hide">
     <div class="card">
       <div class="card-title" role="heading" aria-level="3">👥 Tenant Information</div>
       <div class="scroll-x">
@@ -3669,12 +3669,12 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div><!-- /tenant-main-tab-tenants -->
 
   <!-- TAB 2: สัญญาเช่า -->
-  <div id="tenant-main-tab-leases" style="display:none;">
+  <div id="tenant-main-tab-leases" class="u-init-hide">
     <div id="leaseAgreementsContainer"></div>
   </div>
 
   <!-- TAB 3: คำขอจากลูกบ้าน -->
-  <div id="tenant-main-tab-requests" style="display:none;">
+  <div id="tenant-main-tab-requests" class="u-init-hide">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
         <div>
@@ -3700,7 +3700,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
        hardcoded in functions/remindLeaseExpiry.js. -->
 
   <!-- TAB 5: จอง (LIFF Booking flow — Phase 4 admin sub-tab) -->
-  <div id="tenant-main-tab-bookings" style="display:none;">
+  <div id="tenant-main-tab-bookings" class="u-init-hide">
     <div class="card" style="padding:1.2rem;">
       <div style="display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;margin-bottom:1rem;">
         <div style="font-weight:700;font-size:1.05rem;">🗓️ การจองห้องผ่าน LIFF</div>
@@ -3823,12 +3823,12 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <input type="number" id="newRoomRentCopy" placeholder="ราคาห้องพัก" value="1500" step="1" class="input-md">
       </div>
 
-      <button data-action="addNewRoom" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">➕ เพิ่มห้อง</button>
+      <button data-action="addNewRoom" class="dash-btn-green">➕ เพิ่มห้อง</button>
     </div>
   </div>
 
   <!-- Tab Content: Import Meter Data -->
-  <div id="meter-import-meter-content" class="meter-tab-content" style="display:none;">
+  <div id="meter-import-meter-content" class="meter-tab-content u-init-hide" >
     <div class="section-title" role="heading" aria-level="2">📥 นำเข้าข้อมูลมิเตอร์</div>
 
     <!-- Building Selection -->
@@ -3836,7 +3836,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
       <!-- File Upload -->
       <div class="mb-6">
-        <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📤 อัพโหลดไฟล์ Excel:</label>
+        <label class="dash-form-label-8">📤 อัพโหลดไฟล์ Excel:</label>
         <div class="import-drop-zone" id="importDropZone"
              style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
              data-drop-handler="handleImportDrop">
@@ -3844,12 +3844,12 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์มาวางที่นี่ หรือคลิก</div>
           <div class="text-xs-muted">ไฟล์ Excel (.xlsx, .xls)</div>
         </div>
-        <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" data-action="handleImportFile">
+        <input type="file" id="importFileInput" accept=".xlsx,.xls" class="u-init-hide" data-action="handleImportFile">
       </div>
 
       <!-- Month Selector (Optional manual selection) -->
       <div class="mb-6">
-        <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📅 เลือกเดือน (ถ้าไม่อัตโนมัติ):</label>
+        <label class="dash-form-label-8">📅 เลือกเดือน (ถ้าไม่อัตโนมัติ):</label>
         <select id="importMonthSelect" style="width:100%;padding:0.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-secondary);color:var(--text);font-size:0.9rem;cursor:pointer;">
           <option value="">-- อัตโนมัติ (จากชื่อไฟล์) --</option>
           <option value="1">📅 เดือนที่ 1 - มกราคม</option>
@@ -3881,7 +3881,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <div id="importMatchSummary" style="background:var(--green-pale);border:1px solid var(--green-light);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;"></div>
 
         <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
-          <button id="approveImportBtn" data-action="approveImportData" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
+          <button id="approveImportBtn" data-action="approveImportData" class="dash-btn-green">✅ อนุมัติและบันทึก</button>
           <button data-action="cancelImportProcess" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">❌ ยกเลิก</button>
         </div>
       </div>
@@ -3893,17 +3893,17 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
           <!-- Period Info -->
           <div style="background:white;border:1px solid var(--ok-pale);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
-            <div style="text-align:center;">
+            <div class="u-text-center">
               <div class="text-xs-muted">📅 ปี</div>
-              <div id="recordedYear" style="font-size:1.2rem;font-weight:600;color:var(--ok-dark);">-</div>
+              <div id="recordedYear" class="dash-ok-heading">-</div>
             </div>
-            <div style="text-align:center;">
+            <div class="u-text-center">
               <div class="text-xs-muted">📆 เดือน</div>
-              <div id="recordedMonth" style="font-size:1.2rem;font-weight:600;color:var(--ok-dark);">-</div>
+              <div id="recordedMonth" class="dash-ok-heading">-</div>
             </div>
-            <div style="text-align:center;">
+            <div class="u-text-center">
               <div class="text-xs-muted">⏰ เวลา</div>
-              <div id="recordedTime" style="font-size:1.2rem;font-weight:600;color:var(--ok-dark);">-</div>
+              <div id="recordedTime" class="dash-ok-heading">-</div>
             </div>
           </div>
 
@@ -3975,13 +3975,13 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- Tab Content: Import Billing Data -->
-  <div id="meter-import-billing-content" class="meter-tab-content" style="display:none;">
+  <div id="meter-import-billing-content" class="meter-tab-content u-init-hide" >
     <div class="section-title" role="heading" aria-level="2">📥 นำเข้าข้อมูลบิล</div>
 
     <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;">
       <!-- File Upload -->
       <div class="mb-6">
-        <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📤 อัพโหลดไฟล์บิล Excel:</label>
+        <label class="dash-form-label-8">📤 อัพโหลดไฟล์บิล Excel:</label>
         <div class="import-drop-zone" id="billingDropZone"
              style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
              data-drop-handler="handleBillingImportDrop"
@@ -3990,7 +3990,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์บิล Excel มาวางที่นี่ หรือคลิก</div>
           <div class="text-xs-muted">ไฟล์ Excel (.xlsx, .xls) เช่น บิลปี68.xlsx</div>
         </div>
-        <input type="file" id="billingFileInput" accept=".xlsx,.xls" style="display:none;" data-action="handleBillingImportFile">
+        <input type="file" id="billingFileInput" accept=".xlsx,.xls" class="u-init-hide" data-action="handleBillingImportFile">
       </div>
 
 
@@ -4005,7 +4005,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </div>
 
         <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
-          <button id="approveBillingBtn" data-action="approveBillingImportData" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
+          <button id="approveBillingBtn" data-action="approveBillingImportData" class="dash-btn-green">✅ อนุมัติและบันทึก</button>
           <button data-action="cancelBillingImportProcess" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">❌ ยกเลิก</button>
         </div>
       </div>
@@ -4034,7 +4034,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           </div>
           <!-- Data Display -->
           <div id="historicalDataDisplay" class="u-scroll-x">
-            <p style="color:var(--text-muted);text-align:center;padding:2rem;">โปรดเลือกปีที่ต้องการดู</p>
+            <p class="dash-empty-center">โปรดเลือกปีที่ต้องการดู</p>
           </div>
         </div>
       </div>
@@ -4081,7 +4081,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     </div>
     <!-- Summary -->
     <div>
-      <div class="card" style="margin-bottom:1rem;">
+      <div class="card dash-mb-4" >
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           📊 สรุปประจำเดือน
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -4175,21 +4175,21 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB 2: Community Events -->
-  <div id="content-tab-events" class="content-mgmt-content" style="display: none;">
+  <div id="content-tab-events" class="content-mgmt-content u-init-hide" >
     <div class="card dash-mb-6" >
-      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-        <input type="text" id="eventSearch" placeholder="Search events..." data-action="loadAndRenderCommunityEvents" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+      <div class="dash-flex-gap-4-mb">
+        <input type="text" id="eventSearch" placeholder="Search events..." data-action="loadAndRenderCommunityEvents" class="dash-flex-input">
         <select id="eventBuildingFilter" data-action="loadAndRenderCommunityEvents" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);">
           <option value="all">🌐 ทุกตึก</option>
           <option value="rooms">🏠 ห้องแถว</option>
           <option value="nest">🏢 Nest</option>
         </select>
-        <button data-action="toggleAddEventForm" class="btn-invoice" style="padding: 10px 20px;">➕ Add Event</button>
+        <button data-action="toggleAddEventForm" class="btn-invoice dash-p-10-20" >➕ Add Event</button>
       </div>
 
       <!-- Add Event Form (Hidden) -->
-      <div id="addEventForm" class="u-hidden" style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
-        <div style="font-weight: 700; margin-bottom: 1rem;">Add / Edit Community Event</div>
+      <div id="addEventForm" class="u-hidden dash-form-panel" >
+        <div class="dash-bold-mb-4">Add / Edit Community Event</div>
         <input type="text" id="eventTitle" placeholder="Event Title" class="input-pad10">
         <div class="grid-2col">
           <input type="date" id="eventDate" class="pad-box">
@@ -4202,9 +4202,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </select>
         <input type="text" id="eventLocation" placeholder="Location" class="input-pad10">
         <textarea id="eventDescription" placeholder="Description" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
-        <div style="display: flex; gap: 1rem;">
+        <div class="dash-flex-gap-4">
           <button data-action="saveCommunityEvent" class="btn-receipt">💾 Save</button>
-          <button data-action="toggleAddEventForm" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+          <button data-action="toggleAddEventForm" class="btn-invoice dash-bg-gray" >✕ Cancel</button>
         </div>
       </div>
 
@@ -4214,16 +4214,16 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB 3: Community Documents -->
-  <div id="content-tab-docs" class="content-mgmt-content" style="display: none;">
+  <div id="content-tab-docs" class="content-mgmt-content u-init-hide" >
     <div class="card dash-mb-6" >
-      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-        <input type="text" id="docSearch" placeholder="Search documents..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-        <button data-action="toggleAddDocForm" class="btn-invoice" style="padding: 10px 20px;">➕ Add Document</button>
+      <div class="dash-flex-gap-4-mb">
+        <input type="text" id="docSearch" placeholder="Search documents..." class="dash-flex-input">
+        <button data-action="toggleAddDocForm" class="btn-invoice dash-p-10-20" >➕ Add Document</button>
       </div>
 
       <!-- Add Document Form (Hidden) -->
-      <div id="addDocForm" class="u-hidden" style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
-        <div style="font-weight: 700; margin-bottom: 1rem;">Add New Document</div>
+      <div id="addDocForm" class="u-hidden dash-form-panel" >
+        <div class="dash-bold-mb-4">Add New Document</div>
         <input type="text" id="docTitle" placeholder="Document Title" class="input-pad10">
         <div class="grid-2col">
           <select id="docCategory" class="pad-box">
@@ -4244,9 +4244,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </div>
         <input type="text" id="docUrl" placeholder="Document URL / Link (กรอกเองถ้าไม่อัพไฟล์)" class="input-pad10">
         <textarea id="docDescription" placeholder="Description (optional)" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
-        <div style="display: flex; gap: 1rem;">
+        <div class="dash-flex-gap-4">
           <button data-action="saveCommunityDocument" class="btn-receipt">💾 Save</button>
-          <button data-action="toggleAddDocForm" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+          <button data-action="toggleAddDocForm" class="btn-invoice dash-bg-gray" >✕ Cancel</button>
         </div>
       </div>
 
@@ -4256,7 +4256,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB 4: Wellness Articles -->
-  <div id="content-tab-wellness" class="content-mgmt-content" style="display: none;">
+  <div id="content-tab-wellness" class="content-mgmt-content u-init-hide" >
     <!-- Create Form -->
     <div class="card dash-mb-8" >
       <div class="card-title" role="heading" aria-level="3">🌿 เขียนบทความ Wellness ใหม่</div>
@@ -4296,7 +4296,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <img id="wellness-cover-img" src="" alt="ภาพปก" style="width:120px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
           <button type="button" data-action="clearWellnessCover" style="display:block;margin-top:4px;font-size:.72rem;background:none;border:none;color:var(--danger);cursor:pointer;font-family:var(--font-brand);">✕ ลบภาพปก</button>
         </div>
-        <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">ภาพปกจะแสดงแทน icon ในรายการ Wellness Tips — รองรับ JPG/PNG/WEBP</div>
+        <div class="dash-tiny-note">ภาพปกจะแสดงแทน icon ในรายการ Wellness Tips — รองรับ JPG/PNG/WEBP</div>
       </div>
 
       <!-- Image upload (multiple, compressed inline base64) -->
@@ -4304,7 +4304,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <label class="field-label">📷 รูปประกอบ (เลือกหลายรูปได้)</label>
         <input type="file" id="wellness-images-input" accept="image/*" multiple data-action="onWellnessImagesPicked" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:var(--font-brand);">
         <div id="wellness-images-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
-        <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">รูปจะถูกย่อเป็น 800px width + แทรกเข้าเนื้อหาให้อัตโนมัติ — รองรับ JPG/PNG/WEBP</div>
+        <div class="dash-tiny-note">รูปจะถูกย่อเป็น 800px width + แทรกเข้าเนื้อหาให้อัตโนมัติ — รองรับ JPG/PNG/WEBP</div>
       </div>
 
       <div class="mb-4">
@@ -4391,7 +4391,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div class="section-title" role="heading" aria-level="2">💳 Billing & Payment</div>
 
   <!-- Main Tab Nav -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
+  <div class="year-tabs dash-tabs-bar" >
     <button id="bill-main-tab-btn-billing" class="year-tab active" data-action="switchBillingMainTab" data-tab="billing">🧾 ออกบิล</button>
     <button id="bill-main-tab-btn-live" class="year-tab" data-action="switchBillingMainTab" data-tab="live">🔔 Live Feed <span id="paymentBadge2" style="display:none;background:var(--red-dark);color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
     <button id="bill-main-tab-btn-history" class="year-tab" data-action="switchBillingMainTab" data-tab="history">📜 ประวัติตามห้อง</button>
@@ -4490,11 +4490,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
                   <option value="daily">รายวัน (~400 บาท/คืน)</option>
                 </select>
               </div>
-              <div class="form-field" id="dailyNightsField" style="display:none;">
+              <div class="form-field u-init-hide" id="dailyNightsField" >
                 <label>จำนวนคืน</label>
                 <input type="number" id="f-nights" value="1" min="1" data-action="calcBill">
               </div>
-              <div class="form-field" id="dailyRateField" style="display:none;">
+              <div class="form-field u-init-hide" id="dailyRateField" >
                 <label>ราคา/คืน (บาท)</label>
                 <input type="number" id="f-daily-rate" value="400" data-action="calcBill">
               </div>
@@ -4573,7 +4573,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <div class="slip-drop-area" id="slipDropArea"
                  data-action="clickInput" data-target="slipFileInput"
                  data-drop-handler="handleSlipDrop">
-              <input type="file" id="slipFileInput" accept="image/*" style="display:none" data-action="verifySlipFromInput">
+              <input type="file" id="slipFileInput" accept="image/*" class="u-init-hide" data-action="verifySlipFromInput">
               <div id="slipDropText" style="font-size:.86rem;color:var(--text-muted);line-height:1.8;">
                 🖼️ แตะเพื่ออัปโหลดสลิป หรือลากมาวางที่นี่<br>
                 <small>SlipOK ตรวจสอบชื่อ ยอด วันเวลา สลิปซ้ำ ภายใน 3 วินาที</small>
@@ -4637,10 +4637,10 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div><!-- /bill-main-tab-billing -->
 
   <!-- Live Feed -->
-  <div id="pv-tab-live" style="display:none;">
+  <div id="pv-tab-live" class="u-init-hide">
 
   <!-- Stats row -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
+  <div class="dash-grid-3col">
     <div class="card cell-center">
       <div class="dash-kpi-green" id="pv-today-count">—</div>
       <div class="text-sm-muted">ห้องชำระวันนี้</div>
@@ -4658,7 +4658,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- Date filter -->
-  <div class="year-tabs" style="margin-bottom:1rem;">
+  <div class="year-tabs dash-mb-4" >
     <button id="pvf-today" class="year-tab active" data-action="setPVFilter" data-filter="today">วันนี้</button>
     <button id="pvf-week" class="year-tab" data-action="setPVFilter" data-filter="week">7 วันล่าสุด</button>
     <button id="pvf-month" class="year-tab" data-action="setPVFilter" data-filter="month">เดือนนี้</button>
@@ -4680,10 +4680,10 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div><!-- /pv-tab-live -->
 
   <!-- TAB 2: ประวัติตามห้อง -->
-  <div id="pv-tab-history" style="display:none;">
+  <div id="pv-tab-history" class="u-init-hide">
 
     <!-- Stats row -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
+    <div class="dash-grid-3col">
       <div class="card cell-center">
         <div class="dash-kpi-green" id="pvh-total-count">—</div>
         <div class="text-sm-muted">จำนวนครั้งที่จ่าย</div>
@@ -4718,11 +4718,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB 3: สถานะชำระรายเดือน & ห้องว่าง -->
-  <div id="pv-tab-monthly" style="display:none;">
+  <div id="pv-tab-monthly" class="u-init-hide">
     <div class="section-title" style="margin-top:0;" id="pvm-section-title">📋 สถานะชำระรายเดือน &amp; ห้องว่าง — ห้องแถว</div>
 
     <!-- Building selector -->
-    <div id="pvm-building-tabs" class="year-tabs" style="margin-bottom:1rem;">
+    <div id="pvm-building-tabs" class="year-tabs dash-mb-4" >
       <span class="year-tab-label">อาคาร:</span>
       <button id="pvm-bld-rooms" class="year-tab active" data-action="setPVMBuilding" data-building="rooms">🏠 ห้องแถว</button>
       <button id="pvm-bld-nest" class="year-tab" data-action="setPVMBuilding" data-building="nest">🏢 Nest</button>
@@ -4731,7 +4731,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <!-- Tracking start date setting -->
     <div class="card" style="margin-bottom:1rem;padding:.7rem 1rem;background:#fffde7;border-left:4px solid #fbc02d;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.85rem;">
-        <span style="font-weight:700;">⚙️ เริ่มติดตามการชำระตั้งแต่:</span>
+        <span class="u-bold">⚙️ เริ่มติดตามการชำระตั้งแต่:</span>
         <select id="tracking-start-month" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.82rem;">
           <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
           <option value="3">มีนาคม</option><option value="4">เมษายน</option>
@@ -4744,7 +4744,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <button data-action="saveTrackingStart" style="padding:5px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-size:.8rem;font-weight:700;">💾 บันทึก</button>
         <span id="tracking-start-info" style="color:var(--text-muted);font-size:.76rem;margin-left:auto;"></span>
       </div>
-      <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">ก่อนเดือนนี้จะแสดงเป็น "📦 Archived" (ข้อมูลเก่า ไม่นับเป็นค้างชำระ) — ใช้สำหรับระบบเพิ่งเริ่ม track</div>
+      <div class="dash-tiny-note">ก่อนเดือนนี้จะแสดงเป็น "📦 Archived" (ข้อมูลเก่า ไม่นับเป็นค้างชำระ) — ใช้สำหรับระบบเพิ่งเริ่ม track</div>
     </div>
 
     <!-- Vacant room checker (moved above meter table per UX request) -->
@@ -4793,7 +4793,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div class="section-title" role="heading" aria-level="2">👨‍💼 People Management</div>
 
   <!-- Tab Navigation -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
+  <div class="year-tabs dash-tabs-bar" >
     <button id="tab-owner-btn" class="year-tab active" data-action="switchPeopleTab" data-tab="owner">🏢 Owner</button>
     <button id="tab-providers-btn" class="year-tab" data-action="switchPeopleTab" data-tab="providers">📞 Service Providers</button>
     <button id="tab-policies-btn" class="year-tab" data-action="switchPeopleTab" data-tab="policies">📋 Policies</button>
@@ -4806,12 +4806,12 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB 4: Insights -->
-  <div id="people-tab-insights" class="people-mgmt-content" style="display:none;">
+  <div id="people-tab-insights" class="people-mgmt-content u-init-hide" >
     <div id="insightsContainer"></div>
   </div>
 
   <!-- TAB 3: Policies (SSoT → Firestore system/policies → tenant app reads live) -->
-  <div id="people-tab-policies" class="people-mgmt-content" style="display: none;">
+  <div id="people-tab-policies" class="people-mgmt-content u-init-hide" >
     <div class="card dash-mb-6" >
       <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.5rem;">เขียนเนื้อหาพร้อมจัดรูปแบบ (ตัวหนา/เอียง/ขีดเส้นใต้/ขนาด/หัวข้อ/รายการ) — บันทึกแล้วลูกบ้านเห็นทันที</p>
       <div style="display:flex;flex-direction:column;gap:1.5rem;">
@@ -4844,16 +4844,16 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB 2: Service Providers -->
-  <div id="people-tab-providers" class="people-mgmt-content" style="display: none;">
+  <div id="people-tab-providers" class="people-mgmt-content u-init-hide" >
     <div class="card dash-mb-6" >
-      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-        <input type="text" id="providerSearch" placeholder="Search providers..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-        <button data-action="toggleAddProviderForm" class="btn-invoice" style="padding: 10px 20px;">➕ Add Provider</button>
+      <div class="dash-flex-gap-4-mb">
+        <input type="text" id="providerSearch" placeholder="Search providers..." class="dash-flex-input">
+        <button data-action="toggleAddProviderForm" class="btn-invoice dash-p-10-20" >➕ Add Provider</button>
       </div>
 
       <!-- Add Provider Form (Hidden) -->
-      <div id="addProviderForm" class="u-hidden" style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
-        <div style="font-weight: 700; margin-bottom: 1rem;">Add New Service Provider</div>
+      <div id="addProviderForm" class="u-hidden dash-form-panel" >
+        <div class="dash-bold-mb-4">Add New Service Provider</div>
         <div class="grid-2col">
           <select id="providerType" class="pad-box">
             <option value="">ประเภท…</option>
@@ -4877,9 +4877,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </div>
         <input type="text" id="providerWebsite" placeholder="Website" class="input-pad10">
         <textarea id="providerDetails" placeholder="รายละเอียด (ช่วงเวลาเปิด-ปิด, พื้นที่ให้บริการ, หมายเหตุ ฯลฯ)" rows="3" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);resize:vertical;margin-bottom:1rem;"></textarea>
-        <div style="display: flex; gap: 1rem;">
+        <div class="dash-flex-gap-4">
           <button data-action="saveServiceProvider" class="btn-receipt">💾 Save</button>
-          <button data-action="toggleAddProviderForm" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+          <button data-action="toggleAddProviderForm" class="btn-invoice dash-bg-gray" >✕ Cancel</button>
         </div>
       </div>
 
@@ -4977,7 +4977,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB: Broadcast Announcement (in-app notification) -->
-  <div id="requests-tab-broadcast" class="requests-mgmt-content" style="display:none;">
+  <div id="requests-tab-broadcast" class="requests-mgmt-content u-init-hide" >
     <div class="card" style="margin-bottom:1.2rem;">
       <div class="card-title" role="heading" aria-level="3">📣 เผยแพร่ประกาศใหม่</div>
       <div style="display:flex;flex-direction:column;gap:1rem;">
@@ -5017,19 +5017,19 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB: Deposits -->
-  <div id="requests-tab-deposits" class="requests-mgmt-content" style="display:none;">
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
+  <div id="requests-tab-deposits" class="requests-mgmt-content u-init-hide" >
+    <div class="dash-grid-3col">
       <div class="card cell-center">
         <div id="dep-kpi-holding" style="font-size:1.5rem;font-weight:800;color:#d97706;">0</div>
-        <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">💰 ถือมัดจำ</div>
+        <div class="dash-deposit-label">💰 ถือมัดจำ</div>
       </div>
       <div class="card cell-center">
         <div id="dep-kpi-returned" style="font-size:1.5rem;font-weight:800;color:#059669;">0</div>
-        <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">✅ คืนแล้ว</div>
+        <div class="dash-deposit-label">✅ คืนแล้ว</div>
       </div>
       <div class="card cell-center">
         <div id="dep-kpi-total" style="font-size:1.5rem;font-weight:800;color:#334435;">฿0</div>
-        <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">รวมมัดจำ</div>
+        <div class="dash-deposit-label">รวมมัดจำ</div>
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
@@ -5051,7 +5051,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB: LINE Link Requests -->
-  <div id="requests-tab-liff" class="requests-mgmt-content" style="display:none;">
+  <div id="requests-tab-liff" class="requests-mgmt-content u-init-hide" >
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.8rem;margin-bottom:1.2rem;">
       <div class="card cell-center">
         <div style="font-size:1.8rem;font-weight:800;color:#f57c00;" id="liff-pending-count">—</div>
@@ -5103,7 +5103,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB 2: Housekeeping -->
-  <div id="requests-tab-housekeeping" class="requests-mgmt-content" style="display:none;">
+  <div id="requests-tab-housekeeping" class="requests-mgmt-content u-init-hide" >
     <div class="mx-kpi-grid">
       <div class="mx-kpi"><div class="mx-kpi-val dash-color-accent" id="hk-kpi-pending" >0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
       <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
@@ -5140,7 +5140,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB 3: Complaints -->
-  <div id="requests-tab-complaints" class="requests-mgmt-content" style="display:none;">
+  <div id="requests-tab-complaints" class="requests-mgmt-content u-init-hide" >
     <div class="card" class="mb-6">
       <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
         <input type="text" id="complaintSearch" placeholder="Search complaints..." style="flex:1;min-width:200px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);">
@@ -5174,7 +5174,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB 4: Pet Approvals -->
-  <div id="requests-tab-pets" class="requests-mgmt-content" style="display:none;">
+  <div id="requests-tab-pets" class="requests-mgmt-content u-init-hide" >
     <div class="card" class="mb-6">
       <div style="display:flex;gap:1rem;margin-bottom:1rem;">
         <select id="petFilterStatus" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;" data-action="filterPetsByStatus">
@@ -5190,7 +5190,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB: Facility Bookings (Tier 3G) -->
-  <div id="requests-tab-facility" class="requests-mgmt-content" style="display:none;">
+  <div id="requests-tab-facility" class="requests-mgmt-content u-init-hide" >
 
     <!-- Building + Facility type filter -->
     <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
@@ -5211,7 +5211,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <div class="card" style="margin-bottom:1.25rem;">
       <div class="card-title" role="heading" aria-level="3">📋 รายการจอง</div>
       <div id="facility-admin-bookings-list" style="min-height:100px;">
-        <div style="color:var(--text-muted);text-align:center;padding:2rem;">เลือกอาคาร + วันที่เพื่อดูข้อมูล</div>
+        <div class="dash-empty-center">เลือกอาคาร + วันที่เพื่อดูข้อมูล</div>
       </div>
     </div>
 
@@ -5258,7 +5258,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
 
   <!-- TAB: Checklists (Tier 3I-9) — admin co-sign panel + PNG export -->
-  <div id="requests-tab-checklist" class="requests-mgmt-content" style="display:none;">
+  <div id="requests-tab-checklist" class="requests-mgmt-content u-init-hide" >
 
     <!-- Building + status filter -->
     <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
@@ -5277,7 +5277,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <div class="card">
       <div class="card-title" role="heading" aria-level="3">📋 รายการ Checklist</div>
       <div id="checklist-admin-list" class="dash-min-h-120">
-        <div style="color:var(--text-muted);text-align:center;padding:2rem;">เลือกอาคารเพื่อดูข้อมูล</div>
+        <div class="dash-empty-center">เลือกอาคารเพื่อดูข้อมูล</div>
       </div>
     </div>
 
@@ -5317,9 +5317,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div class="card dash-mb-6" >
     <!-- Tabs -->
     <div style="border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
-      <button data-action="switchGamificationTab" data-tab="leaderboard" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🏅 Leaderboard</button>
-      <button data-action="switchGamificationTab" data-tab="badges" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🎖️ Badges</button>
-      <button data-action="switchGamificationTab" data-tab="rewards" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🎁 Rewards</button>
+      <button data-action="switchGamificationTab" data-tab="leaderboard" class="dash-tab-btn">🏅 Leaderboard</button>
+      <button data-action="switchGamificationTab" data-tab="badges" class="dash-tab-btn">🎖️ Badges</button>
+      <button data-action="switchGamificationTab" data-tab="rewards" class="dash-tab-btn">🎁 Rewards</button>
     </div>
 
     <!-- Leaderboard Tab -->
@@ -5331,7 +5331,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
               <th class="w-50">#</th>
               <th>Tenant Name</th>
               <th style="width: 100px;">Points</th>
-              <th style="width: 140px;">Level</th>
+              <th class="dash-w-140">Level</th>
             </tr>
           </thead>
           <tbody id="leaderboardTable">
@@ -5342,7 +5342,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     </div>
 
     <!-- Badges Tab -->
-    <div id="gamificationBadges" style="display: none;">
+    <div id="gamificationBadges" class="u-init-hide">
       <div class="dash-footnote">แสดงผลจาก BADGE_CATALOG ใน shared/gamification-rules.js — อัปเดตอัตโนมัติเมื่อเปิดแท็บนี้</div>
       <div id="gamificationBadgesContent" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1.2rem;">
         <p class="u-color-muted">เปิดแท็บ Badges เพื่อโหลด</p>
@@ -5350,7 +5350,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     </div>
 
     <!-- Rewards Tab -->
-    <div id="gamificationRewards" style="display: none;">
+    <div id="gamificationRewards" class="u-init-hide">
       <!-- Earning rates (read-only reference) -->
       <div style="background: var(--green-pale); padding: 1rem 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
         <div style="font-weight: 700; margin-bottom: .5rem; font-size: .95rem;">Point Earning Rates (defined in Cloud Functions)</div>
@@ -5376,8 +5376,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
               <th>Name</th>
               <th style="width: 100px;">Cost (Pts)</th>
               <th style="width: 80px;">Active</th>
-              <th style="width: 140px;">Quota / เดือน</th>
-              <th style="width: 140px;">Actions</th>
+              <th class="dash-w-140">Quota / เดือน</th>
+              <th class="dash-w-140">Actions</th>
             </tr>
           </thead>
           <tbody id="rewardsAdminTable">
@@ -5390,7 +5390,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
 
       <!-- Edit modal -->
-      <div class="ui-modal ui-modal--top" id="rewardEditModal" role="dialog" aria-modal="true" aria-labelledby="rewardEditTitle" style="display:none;">
+      <div class="ui-modal ui-modal--top u-init-hide" id="rewardEditModal" role="dialog" aria-modal="true" aria-labelledby="rewardEditTitle" >
         <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 500px;">
           <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="rewardEditTitle">Add Reward</div>
           <input type="hidden" id="rewardEditId">
@@ -5424,19 +5424,19 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
   <div style="padding:14px;">
     <div style="margin-bottom:12px;padding:10px;background:#f0f7ff;border-radius:6px;border-left:3px solid var(--blue-bright);">
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Status</div>
+      <div class="dash-caption-12">Status</div>
       <div style="font-weight:700;font-size:14px;color:#1a2332;">
         <span id="firebaseStatus">🔄 Connecting...</span>
       </div>
     </div>
 
     <div style="margin-bottom:12px;padding:10px;background:var(--green-pale);border-radius:6px;border-left:3px solid var(--green);">
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Connection Test</div>
+      <div class="dash-caption-12">Connection Test</div>
       <div id="firebaseTestResult" style="font-weight:600;font-size:13px;color:var(--green);">⏳ Testing...</div>
     </div>
 
     <div style="margin-bottom:12px;padding:10px;background:#fff8e1;border-radius:6px;border-left:3px solid #ff8f00;">
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Last Updated</div>
+      <div class="dash-caption-12">Last Updated</div>
       <div id="firebaseLastUpdate" style="font-weight:600;font-size:12px;color:#ff8f00;">Initializing...</div>
     </div>
 
@@ -5524,7 +5524,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 </div>
 
 <!-- ===== CHANGE PASSWORD MODAL ===== -->
-<div class="ui-modal" id="changePasswordModal" role="dialog" aria-modal="true" aria-labelledby="changePasswordModalTitle" style="display:none;">
+<div class="ui-modal u-init-hide" id="changePasswordModal" role="dialog" aria-modal="true" aria-labelledby="changePasswordModalTitle" >
   <div style="background:#fff;border-radius:var(--radius);max-width:420px;width:100%;max-height:95vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;">
     <!-- Modal Header -->
     <div style="background:linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
@@ -5543,11 +5543,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <!-- Form -->
       <form data-action="changePassword" style="display:flex;flex-direction:column;gap:1.2rem;">
         <!-- Old Password -->
-        <div style="display:flex;flex-direction:column;">
-          <label style="font-weight:600;font-size:.9rem;margin-bottom:.5rem;color:var(--text);">รหัสผ่านเดิม</label>
-          <div style="position:relative;display:flex;align-items:center;">
+        <div class="dash-col">
+          <label class="dash-section-label">รหัสผ่านเดิม</label>
+          <div class="dash-rel-flex">
             <input type="password" id="oldPassword" placeholder="กรอกรหัสผ่านเดิม"
-              style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
+              class="dash-search-field"
               >
             <button type="button" data-action="togglePasswordVisibility" data-field="oldPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
               <span id="icon-oldPassword">👁️</span>
@@ -5556,11 +5556,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </div>
 
         <!-- New Password -->
-        <div style="display:flex;flex-direction:column;">
-          <label style="font-weight:600;font-size:.9rem;margin-bottom:.5rem;color:var(--text);">รหัสผ่านใหม่</label>
-          <div style="position:relative;display:flex;align-items:center;">
+        <div class="dash-col">
+          <label class="dash-section-label">รหัสผ่านใหม่</label>
+          <div class="dash-rel-flex">
             <input type="password" id="newPassword" placeholder="กรอกรหัสผ่านใหม่ (อย่างน้อย 6 ตัว)"
-              style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
+              class="dash-search-field"
               >
             <button type="button" data-action="togglePasswordVisibility" data-field="newPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
               <span id="icon-newPassword">👁️</span>
@@ -5569,11 +5569,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </div>
 
         <!-- Confirm Password -->
-        <div style="display:flex;flex-direction:column;">
-          <label style="font-weight:600;font-size:.9rem;margin-bottom:.5rem;color:var(--text);">ยืนยันรหัสผ่านใหม่</label>
-          <div style="position:relative;display:flex;align-items:center;">
+        <div class="dash-col">
+          <label class="dash-section-label">ยืนยันรหัสผ่านใหม่</label>
+          <div class="dash-rel-flex">
             <input type="password" id="confirmPassword" placeholder="พิมพ์รหัสผ่านใหม่ซ้ำ"
-              style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
+              class="dash-search-field"
               >
             <button type="button" data-action="togglePasswordVisibility" data-field="confirmPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
               <span id="icon-confirmPassword">👁️</span>

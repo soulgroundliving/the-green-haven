@@ -621,6 +621,36 @@ body.gh-tour-open {
 .dash-kpi-green   { font-size: 2rem; font-weight: 800; color: var(--green, #2d8653); }
 .dash-kpi-accent  { font-size: 1.4rem; font-weight: 800; color: var(--accent, #b45309); }
 .dash-form-input-6 { width: 100%; padding: .6rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; margin-bottom: .85rem; }
+/* pass 3 — 3× patterns */
+.dash-flex-gap-4   { display: flex; gap: 1rem; }
+.dash-skel-60      { height: 1.25rem; width: 60%; border-radius: 3px; }
+.dash-section-label { font-weight: 600; font-size: .9rem; margin-bottom: .5rem; color: var(--text, #333); }
+.dash-mb-4         { margin-bottom: 1rem; }
+.dash-bg-gray      { background: #999; }
+.dash-p-10-20      { padding: 10px 20px; }
+.dash-caption-12   { font-size: 12px; color: var(--text-muted, #666); margin-bottom: 4px; }
+.dash-grid-3col    { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; margin-bottom: 1.2rem; }
+.dash-w-140        { width: 140px; }
+.dash-rel-flex     { position: relative; display: flex; align-items: center; }
+.dash-tab-btn      { padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted, #666); border-bottom: 3px solid transparent; margin-bottom: -2px; }
+.dash-search-field { padding: .8rem; border: 1px solid var(--border, #ddd); border-radius: var(--radius-sm, 6px); font-family: var(--font-brand, 'Sarabun', sans-serif); font-size: .9rem; transition: all .2s; width: 100%; padding-right: 38px; }
+.dash-flex-input   { flex: 1; padding: 10px; border: 1px solid var(--border, #ddd); border-radius: var(--radius-sm, 6px); }
+/* pass 4 */
+.dash-mb-20        { margin-bottom: 20px; }
+.dash-ok-heading   { font-size: 1.2rem; font-weight: 600; color: var(--ok-dark, #166534); }
+.dash-deposit-label { font-size: var(--fs-sm, .8rem); color: #6b7280; margin-top: 2px; }
+.dash-flex-gap-4-mb { display: flex; gap: 1rem; margin-bottom: 1rem; }
+.dash-list-title   { font-size: .95rem; font-weight: 600; color: var(--text, #333); margin-bottom: 10px; }
+.dash-col          { display: flex; flex-direction: column; }
+.dash-btn-green    { padding: .8rem 1.5rem; background: var(--green, #2d8653); color: white; border: none; border-radius: var(--radius-sm, 6px); cursor: pointer; font-weight: 600; font-family: var(--font-brand, 'Sarabun', sans-serif); font-size: .9rem; }
+.dash-tabs-bar     { margin-bottom: 1.2rem; border-bottom: 2px solid var(--border, #ddd); padding-bottom: .5rem; }
+/* pass 5 */
+.dash-skel-55      { height: .65rem; width: 55%; margin-bottom: .5rem; border-radius: 3px; }
+.dash-tiny-note    { font-size: .72rem; color: var(--text-muted, #666); margin-top: 4px; }
+.dash-bold-mb-4    { font-weight: 700; margin-bottom: 1rem; }
+.dash-empty-center { color: var(--text-muted, #666); text-align: center; padding: 2rem; }
+.dash-form-label-8 { display: block; margin-bottom: .8rem; font-weight: 600; font-size: .9rem; color: var(--text, #333); }
+.dash-form-panel   { background: var(--green-pale, #e8f5e9); padding: 1.5rem; border-radius: var(--radius-sm, 6px); margin-bottom: 1.5rem; }
 
 /* ─── Tenant app utility classes (inline style migration, pass 6) ──────────── */
 .ta-flex-fixed-sm { flex: 0 0 auto; font-size: var(--fs-sm); font-weight: 600; margin-right: 10px; }
