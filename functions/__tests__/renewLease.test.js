@@ -363,9 +363,12 @@ describe('renewLease — S1 (auth + validation)', () => {
     });
 
     it('rejects newStartDate >= newEndDate (zero or negative term)', async () => {
-      const sameAsEnd = futureDate(365); // identical to default newEndDate
+      // Pin newEndDate so both fields use the exact same timestamp — avoids a
+      // sub-millisecond race where futureDate(365) called twice would produce
+      // newStartDate < newEndDate (making it silently valid).
+      const endDate = futureDate(365);
       await expectHttpsError(
-        _validateInput({ ...goodInput(), newStartDate: sameAsEnd }),
+        _validateInput({ ...goodInput(), newEndDate: endDate, newStartDate: endDate }),
         'invalid-argument'
       );
       const afterEnd = futureDate(400);
