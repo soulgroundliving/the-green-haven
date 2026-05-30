@@ -105,6 +105,7 @@
     <script src="./shared/checklist-manager.js" defer></script>
     <script src="./shared/tenant-marketplace.js" defer></script>
     <script src="./shared/tenant-subscriptions.js" defer></script>
+    <script src="./shared/tenant-community.js" defer></script>
     <script src="./shared/tenant-phone-otp.js" defer></script>
     <script src="./shared/tenant-profile-edit.js" defer></script>
     <script src="./shared/tenant-lease-request.js" defer></script>
@@ -6003,94 +6004,9 @@
         // Implementation extracted to shared/tenant-render.js (loaded via <script defer>).
         // Exports: window.renderHomePage, window.showBillsSkeleton, window.renderBillsList
 
-        // ---- COMMUNITY UNIFIED FEED — C4 S3 (2026-05-27): dead DOM + render fns removed ----
-        // setCommunityFilter / renderCommunityFeed / renderAnnouncements / renderCommunityEvents
-        // dropped. Bell panel (_renderBroadcastsList) is the sole community surface.
-        // _subscribeAnnouncementsFromFirestore (banners) + _subscribeNewAnnouncementsEvents
-        // (events) still live — they hydrate localStorage for badge counts.
-
-        // ---- COMMUNITY BANNERS — C4 dual-read (2026-05-17) ----
-        // After C4: announcements collection holds {notice|event|banner} docs with
-        // unified audience field. For the banner panel we filter type='banner' +
-        // audience match. Legacy banner docs (pre-C4 backfilled by
-        // tools/c4-backfill-legacy-announcements.js) carry type='banner' + audience
-        // from the same merge — single query covers both populations. Anti-pattern
-        // §7-U: claim-guard FIRST, error callback resets unsub for liffLinked retry.
-        let _taAnnUnsub = null;
-        function _subscribeAnnouncementsFromFirestore() {
-            if (_taAnnUnsub) return;
-            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-            if (!_taBuilding) return;  // §7-U claim-presence guard
-            try {
-                const db = window.firebase.firestore();
-                const fs = window.firebase.firestoreFunctions;
-                const audience = _taBuilding;
-                const q = fs.query(
-                    fs.collection(db, 'announcements'),
-                    fs.where('type', '==', 'banner'),
-                    fs.where('audience', 'in', ['all', audience]),
-                    fs.limit(20)
-                );
-                _taAnnUnsub = fs.onSnapshot(q, snap => {
-                    const docs = snap.docs.map(d => {
-                        const data = d.data() || {};
-                        // Safely resolve sentAt → Date. Manually-backfilled docs may
-                        // lack sentAt; `??` doesn't catch NaN from Date.parse('').
-                        let sentMs = data.sentAt?.toDate?.()?.getTime?.();
-                        if (sentMs == null) sentMs = Date.parse(data.sentAt || '');
-                        if (!Number.isFinite(sentMs)) sentMs = Date.now();
-                        const sentDate = new Date(sentMs);
-                        return {
-                            id: d.id,
-                            icon: data.icon || '📢',
-                            title: data.title || '',
-                            content: data.body || '',
-                            date: sentDate.toISOString().split('T')[0],
-                            time: '',
-                            building: data.audience || 'all',
-                            createdAt: sentDate.toISOString(),
-                            createdBy: data.sender?.email || '📌 Admin',
-                        };
-                    });
-                    const local = JSON.parse(localStorage.getItem('announcements_data') || '[]');
-                    const byId = new Map();
-                    local.forEach(a => byId.set(a.id, a));
-                    docs.forEach(a => byId.set(a.id, a));
-                    localStorage.setItem('announcements_data', JSON.stringify(Array.from(byId.values())));
-                    _updateCommunityBadge(docs);
-                }, err => {
-                    console.warn('[announcements/banner] subscribe failed:', err?.message || err);
-                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                        _taAnnUnsub = null;
-                    }
-                });
-            } catch(e) { console.warn('tenant announcements subscribe failed:', e); }
-        }
-        _onLiffClaimsReady(_subscribeAnnouncementsFromFirestore);
-
-        function _updateCommunityBadge(docs) {
-            const badge = document.getElementById('nav-badge-community');
-            if (!badge) return;
-            let lastSeen = localStorage.getItem('ta_community_seen_at');
-            if (!lastSeen) {
-                // First open: treat all existing announcements as seen — no badge on fresh install
-                localStorage.setItem('ta_community_seen_at', new Date().toISOString());
-                badge.style.display = 'none';
-                return;
-            }
-            const hasNew = docs.some(a => (a.createdAt || '') > lastSeen);
-            badge.style.display = hasNew ? 'block' : 'none';
-        }
-
-        function markCommunityRead() {
-            localStorage.setItem('ta_community_seen_at', new Date().toISOString());
-            const badge = document.getElementById('nav-badge-community');
-            if (badge) badge.style.display = 'none';
-            _setMarketSeenAt();
-            if (typeof window._renderBellVisibility === 'function') window._renderBellVisibility();
-            renderQuizHub();
-            renderQuizHistory();
-        }
+        // ---- COMMUNITY SUBSCRIPTIONS + BADGE ----
+        // Extracted to shared/tenant-community.js (loaded via <script defer>).
+        // Exports: window.markCommunityRead, window._updateCommunityBadge
 
         // ===== QUIZ HUB + QUIZ HISTORY =====
         // Moved to shared/tenant-quiz.js — they depend on private quiz IIFE state
@@ -6201,55 +6117,8 @@
         // Implementation extracted to shared/tenant-usage-chart.js (loaded via <script defer>).
         // Reads window._tenantAppBills + window._meterHistoryCache (mirrored at every write site above).
 
-        // ---- COMMUNITY EVENTS — C4 single-source subscriber (S2 2026-05-18) ----
-        // Legacy communityEvents subscriber dropped post-migration. Events come from
-        // announcements/ WHERE type='event' only, audience-scoped. Anti-pattern §7-U guard.
-        let _taNewEventsUnsub = null;
-        function _subscribeNewAnnouncementsEvents() {
-            if (_taNewEventsUnsub) return;
-            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-            if (!_taBuilding) return;  // §7-U claim-presence guard
-            try {
-                const db = window.firebase.firestore();
-                const fs = window.firebase.firestoreFunctions;
-                const audience = _taBuilding;
-                const q = fs.query(
-                    fs.collection(db, 'announcements'),
-                    fs.where('type', '==', 'event'),
-                    fs.where('audience', 'in', ['all', audience]),
-                    fs.limit(50)
-                );
-                _taNewEventsUnsub = fs.onSnapshot(q, snap => {
-                    // Normalize C4 event shape → legacy event shape (title/date/time/location/description/building).
-                    const docs = snap.docs.map(d => {
-                        const data = d.data() || {};
-                        const dt = data.eventDate?.toDate?.() || (data.eventDate ? new Date(data.eventDate) : null);
-                        const dateStr = dt ? dt.toISOString().split('T')[0] : '';
-                        const timeStr = dt ? dt.toISOString().split('T')[1]?.slice(0, 5) : '';
-                        return {
-                            id: d.id,
-                            title: data.title || '',
-                            date: dateStr,
-                            time: timeStr,
-                            location: data.location || '',
-                            description: data.body || '',
-                            building: data.audience || 'all',
-                        };
-                    });
-                    const local = JSON.parse(localStorage.getItem('community_events_data') || '[]');
-                    const byId = new Map();
-                    local.forEach(e => byId.set(e.id, e));
-                    docs.forEach(e => byId.set(e.id, e));
-                    localStorage.setItem('community_events_data', JSON.stringify(Array.from(byId.values())));
-                }, err => {
-                    console.warn('[announcements/event] subscribe failed:', err?.message || err);
-                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                        _taNewEventsUnsub = null;
-                    }
-                });
-            } catch(e) { console.warn('tenant new-events subscribe failed:', e); }
-        }
-        _onLiffClaimsReady(_subscribeNewAnnouncementsEvents);
+        // ---- COMMUNITY EVENTS SUBSCRIPTION ----
+        // Extracted to shared/tenant-community.js (loaded via <script defer>).
 
         // ===== PROFILE + PET + CONTRACT + NAV + PAYMENT RENDER =====
         // Implementation extracted to shared/tenant-render.js (loaded via <script defer>).
