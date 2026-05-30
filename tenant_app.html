@@ -5921,133 +5921,17 @@
         //          window.saveNewPet, window.prepareEditPet, window.resetPetForm,
         //          window.toggleVaccineInputs, window.updateFilePreview, window.viewVaccineBook
 
-        // ฟังก์ชันเปิด Modal
-        function openRewardsShop() {
-            const modal = document.getElementById('rewards-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            // ล็อกหน้าจอหลักไม่ให้เลื่อนตาม (ในคอมจะไม่เวียนหัว)
-            document.body.style.overflow = 'hidden';
-            // Show skeleton until first snapshot lands (or until cache renders if already populated)
-            if (!_rewardsCache.length) {
-                const list = document.getElementById('rewards-list');
-                if (list) {
-                    list.innerHTML =
-                        '<div class="gh-skeleton gh-skeleton--card ta-my-10" ></div>' +
-                        '<div class="gh-skeleton gh-skeleton--card ta-my-10" ></div>' +
-                        '<div class="gh-skeleton gh-skeleton--card ta-my-10" ></div>';
-                }
-            }
-        }
+        // ===== REWARDS SHOP (openRewardsShop / closeRewardsShop) =====
+        // Moved to shared/tenant-subscriptions.js — needs _rewardsCache in scope (§7-CC fix).
+        // Exports: window.openRewardsShop, window.closeRewardsShop
 
-        // ฟังก์ชันปิด Modal
-        function closeRewardsShop() {
-            const modal = document.getElementById('rewards-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            // คืนค่าให้หน้าหลักเลื่อนได้ปกติ
-            document.body.style.overflow = 'auto';
-        }
+        // ===== REDEEM REWARD (redeemReward) =====
+        // Moved to shared/tenant-leaderboard.js — needs userPoints + updateUserPointsUI in scope.
+        // Exports: window.redeemReward
 
-        // เพิ่มความอัจฉริยะ: กดพื้นที่ดำๆ รอบๆ Modal แล้วให้มันปิดเอง
-        window.onclick = function (event) {
-            const modal = document.getElementById('rewards-modal');
-            if (event.target == modal) {
-                closeRewardsShop();
-            }
-        }
-
-        // 1. กำหนดคะแนนเริ่มต้นของลูกบ้าน — เริ่มที่ 0 เสมอ (pre-launch, TEST MODE)
-        //    loadGamificationData() จะ override จาก Firestore/localStorage หากมีค่า
+        // userPoints initial declaration — must stay here as var so tenant-leaderboard.js
+        // can read/write it cross-module via window.userPoints (§7-CC: var = window property).
         var userPoints = 0; // var = window.userPoints — shared with tenant-leaderboard.js
-
-        // 2. ฟังก์ชันหลักสำหรับแลกของรางวัล (Nest only — guarded by gamification visibility)
-        // rewardId is the Firestore doc id (passed by _renderRewardsList; legacy onclick callers omit it)
-        async function redeemReward(btnElement, rewardName, cost, rewardId) {
-            if (window._gamificationDisabled) return;
-            if (userPoints < cost) {
-                toast(`คะแนนไม่พอ — คุณมี ${userPoints} Pts ต้องใช้ ${cost} Pts`, 'error');
-                window.GhHaptic?.warning();
-                return;
-            }
-            const ok = await window.ghConfirm(
-                `แลก "${rewardName}"? แต้มจะถูกหัก ${cost} Pts`,
-                { title: 'ยืนยันการแลก', confirmLabel: 'แลก' }
-            );
-            if (!ok) return;
-            window.GhHaptic?.tap();
-
-            // Optimistic UI
-            const prevPoints = userPoints;
-            userPoints -= cost;
-            updateUserPointsUI();
-            btnElement.disabled = true;
-            btnElement.innerText = "กำลังบันทึก...";
-
-            // Server-side atomic redemption via Cloud Function — validates points server-side,
-            // runs decrement + redemption-record write in a single Firestore transaction so a
-            // tenant cannot exploit concurrent calls or browser-debugger to fake points.
-            try {
-                if (!rewardId) {
-                    // Legacy callers (old hardcoded onclick) won't work — they predate Firestore catalog
-                    throw new Error('Missing rewardId — refresh page to load latest rewards');
-                }
-                const fns = window.firebase?.functions;
-                if (!fns) throw new Error('Firebase Functions SDK not loaded');
-                const callable = fns.httpsCallable('redeemReward');
-                const isPlayerRedeem = window._isPlayerMode && window._playerProfile?.tenantId;
-                const payload = isPlayerRedeem
-                    ? { tenantId: window._playerProfile.tenantId, rewardId }
-                    : { building: _taBuilding, roomId: String(_taRoom), rewardId };
-                const resp = await callable(payload);
-                // _subscribeEcoPoints will pick up the canonical points value via onSnapshot,
-                // but update local UI immediately for responsiveness
-                if (resp.data && typeof resp.data.pointsAfter === 'number') {
-                    userPoints = resp.data.pointsAfter;
-                    updateUserPointsUI();
-                }
-                btnElement.innerText = "แลกแล้ว";
-                btnElement.classList.remove('bg-[#2d8653]', 'active:scale-90');
-                btnElement.classList.add('bg-gray-300', 'cursor-not-allowed');
-                toast(`แลกสำเร็จ! คงเหลือ ${userPoints} Pts — ทีมงานจะดำเนินการให้`, 'success');
-                window.GhHaptic?.success();
-            } catch (e) {
-                // Rollback optimistic update on failure
-                userPoints = prevPoints;
-                updateUserPointsUI();
-                btnElement.disabled = false;
-                btnElement.innerText = "แลกใหม่";
-                console.error('redeemReward failed:', e);
-                toast('แลกไม่สำเร็จ — กรุณาลองใหม่', 'error');
-                window.GhHaptic?.error();
-            }
-        }
-
-        // 3. ฟังก์ชันอัปเดตตัวเลขคะแนนบนหน้าจอ
-        function updateUserPointsUI() {
-            // หา Element ที่โชว์คะแนน (สมมติว่าคุณใช้ ID หรือ Class ที่ชื่อสะสมวันนี้)
-            const pointsDisplay = document.querySelectorAll('.font-bold');
-            // หมายเหตุ: ในแอปจริงควรใส่ ID ให้ตัวเลขคะแนน เช่น <span id="current-points">1,250</span>
-            // เพื่อให้ฟังก์ชันนี้เจาะจงไปแก้ที่ตัวเลขนั้นได้แม่นยำครับ
-
-            // ตัวอย่างการอัปเดตแบบเจาะจง (ถ้าคุณเพิ่ม id="user-total-points" ใน UI)
-            const pointEl = document.getElementById('user-total-points');
-            if (pointEl) {
-                pointEl.innerText = userPoints.toLocaleString();
-            }
-        }
-
-        function updateUI() {
-            // 1. อัปเดตตัวเลขพ้อยท์รวมบนหน้าจอ
-            const pointsEl = document.getElementById('user-total-points');
-            if (pointsEl) {
-                // ใช้ toLocaleString() เพื่อให้มีคอมม่า (เช่น 1,250) ดูเป็นมืออาชีพ
-                pointsEl.innerText = userPoints.toLocaleString();
-            }
-
-            // 2. stock UI (reserved for future implementation)
-        }
-
 
         function toggleNightMode() {
             const nightSwitch = document.getElementById('night-switch');
