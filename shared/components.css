@@ -576,3 +576,28 @@ body.gh-tour-open {
 /* ─── Dashboard hover effects (CSP: replaces inline onmouseover/onmouseout) ─── */
 .dash-kyc-doc-link:hover { box-shadow: 0 4px 16px rgba(0,0,0,.15); }
 .dash-room-chip:hover { background: #ffe0b2; }
+
+/* ─── Dashboard utility classes (inline style migration, 2026-05-30) ──────── */
+.dash-cur-ptr     { cursor: pointer; }
+.dash-form-label  { display: block; margin-bottom: .5rem; font-weight: 600; font-size: .9rem; }
+.dash-field-label { display: block; margin-bottom: .4rem; font-size: .88rem; font-weight: 600; }
+.dash-note        { font-size: .9rem; color: var(--text-muted, #666); }
+.dash-form-input  { width: 100%; padding: .65rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; margin-bottom: .85rem; }
+.dash-brand-input { width: 100%; padding: .7rem; border: 1px solid var(--border, #ddd); border-radius: 6px; font-family: var(--font-brand, 'Sarabun', sans-serif); }
+.dash-input-sm    { padding: 9px 12px; border: 1px solid var(--border, #ddd); border-radius: 8px; font-family: inherit; font-size: .88rem; }
+.dash-text-lg     { font-size: 1.3rem; }
+.dash-mb-6        { margin-bottom: 1.5rem; }
+.dash-mb-8        { margin-bottom: 2rem; }
+.dash-label-bold  { font-weight: 700; margin-bottom: .5rem; }
+.dash-title-green { font-weight: 700; color: var(--green-dark, #1a5c38); }
+.dash-color-accent { color: var(--accent-dark, #b45309); }
+.dash-color-red   { color: var(--red-dark, #b91c1c); }
+.dash-min-h-60    { min-height: 60px; }
+.dash-min-h-120   { min-height: 120px; }
+.dash-flex-gap-sm { display: flex; gap: .5rem; }
+.dash-option-row  { display: flex; align-items: center; gap: 8px; padding: 10px; border: 1.5px solid #e0e0e0; border-radius: 6px; cursor: pointer; }
+.dash-border-card { border-color: var(--border, #ddd); background: var(--card, #fff); }
+.dash-btn-submit  { margin-top: .5rem; padding: 8px 20px; background: var(--green-dark, #1a5c38); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-family: var(--font-brand, 'Sarabun', sans-serif); font-weight: 600; }
+.dash-skel-lg     { height: 1.5rem; width: 65%; margin-bottom: .35rem; }
+.dash-skel-md     { height: 1.1rem; width: 50%; margin-bottom: .5rem; }
+.dash-skel-sm     { height: .75rem; width: 40%; }
