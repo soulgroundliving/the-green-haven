@@ -13,7 +13,7 @@ const DATA = {};
 window._showPageImpl = function(page,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.sidebar-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(b=>{b.classList.remove('active');b.removeAttribute('aria-current');});
   document.getElementById('page-'+page).classList.add('active');
   // Auto-locate the sidebar item if caller didn't pass one. Many call
   // sites (notif click, payment-verify back-link, tenant modal "→ บิล"
@@ -21,7 +21,7 @@ window._showPageImpl = function(page,btn){
   // which would leave sidebar with NO item highlighted at all. Falling
   // back to the [data-page] sidebar item keeps the visual in sync.
   if(!btn) btn = document.querySelector('.sidebar-item[data-action="showPage"][data-page="'+page+'"]');
-  if(btn)btn.classList.add('active');
+  if(btn){btn.classList.add('active');btn.setAttribute('aria-current','page');}
   window.scrollTo(0,0);
   // Close sidebar on mobile after navigation
   if(window.innerWidth <= 600){

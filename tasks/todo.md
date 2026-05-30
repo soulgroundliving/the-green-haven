@@ -1,262 +1,327 @@
-# Nest Marketplace — Spec v1.0 → 6 Sprint Roadmap
+# 9-Dimension Audit Remediation Plan
+**สร้าง:** 2026-05-31 · **Audit score:** 3.12 / 4.0 (เทียบ 3.29 ครั้งก่อน)
+**Source:** 9-agent parallel audit — Architecture / Security / Code Quality / Testing / DevOps / Docs / Performance / UX / Tech Debt
 
-**Status:** plan-first, awaiting ✅ from user. Do NOT edit code until approved.
-
-**Previous plan:** Quiz Session B (server-trusted quiz claim) — archived to `tasks/todo-quiz-session-b-pending-archive.md` for later pickup. Quiz design doc still in `tasks/todo-quiz-expansion.md`.
-
-**Triggered by:** User-supplied `Nest_Marketplace_Specification.pdf` v1.0 (MVP for 20-room Nest sandbox). Comparison vs current state found 6 missing features + 2 schema migrations.
-
-**Reference:** `Nest_Marketplace_Specification.pdf` (PDF in `~/Downloads/`); current state per [memory/lifecycle_marketplace.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\lifecycle_marketplace.md).
+> Marketplace sprint plan ย้ายไป [tasks/marketplace-sprints.md](tasks/marketplace-sprints.md) (active: S0.2 คือ next step)
+>
+> **รอ user approval ก่อน execute** — ตาม CLAUDE.md §1 Plan-First Protocol
 
 ---
 
-## Locked decisions (user-confirmed 2026-05-24)
+## สรุปคะแนนและเป้าหมาย
 
-| # | Decision | Value | Reason |
-|---|----------|-------|--------|
-| 1 | Category key naming | **Keep existing `item/service/free` + add new (`request` for Wishlist)** | Avoids data migration of every existing post + ruleset; new categories slot in cleanly. Spec values `SELL/SERVICE/FREE` are display labels only. |
-| 2 | `status` enum | **Migrate `active/closed` → `AVAILABLE/RESERVED/COMPLETED`** | Spec needs `RESERVED` to drive self-destruct of chat on `COMPLETED`; current 2-state model can't express "reserved but not final". |
-| 3 | Image storage | **Migrate to Firebase Storage** | Lifts ~1MB doc cap; enables multi-image; aligns with `lifecycle_storage_uploads.md` pattern. |
-| 4 | Owner identity | **Keep `ownerUid = line:<LINE_USER_ID>`** (no change) | Already canonical via `liffSignIn` per `auth_liff_sot.md`. Spec's `users.uid = LINE ID` matches by construction. |
-| 5 | Sprint order | **3.2 → 3.3 → 4.2 → 4.4 → 4.1 → 4.3** (per earlier ROI ranking) | Unblock privacy (3.2) before notification (3.3); easy wins (4.2/4.4) before model expansion (4.1) before badges (4.3 depends on 4.1/4.2 stats). |
-
----
-
-## Sprint 0 — Foundations (architectural, ship before Sprint 1)
-
-**Why:** Sprint 1 self-destruct logic depends on `status='COMPLETED'`; Sprint 1+ chat carries post-image previews and benefits from URL-based images. Doing schema work upfront avoids two migrations.
-
-- [x] **S0.1 — Status enum migration (writer-tolerant transition)** ✅ 2026-05-24
-  - **Why:** Cannot hard-cutover existing `active/closed` posts; readers must handle BOTH during transition (per §7-T fix pattern).
-  - ✅ Helper `_normalizeMarketStatus()` + `MARKET_STATUS_VISIBLE` const in [tenant_app.html:6367](tenant_app.html:6367)
-  - ✅ Subscribe filter `where status in ['AVAILABLE','RESERVED','active']` — uses existing `building+status+createdAt` composite index (Firestore `in` query)
-  - ✅ Writer: new posts write `'AVAILABLE'`, close handler writes `'COMPLETED'`
-  - ✅ `tools/migrate-marketplace-status.js` — dry-run default, REST API via firebase-tools OAuth, status field-only update via updateMask
-  - ⚠️ Firestore rules: NO change (current rule has no status validator; tightening defer to later sprint per §7-T avoidance)
-  - **Files touched:** `tenant_app.html`, `tools/migrate-marketplace-status.js` (new)
-
-- [ ] **S0.2 — Image storage migration (lazy + dual-read)**
-  - **Why:** Existing base64 posts stay valid (per §7-L "code-only ≠ data migrated"); only NEW posts write to Storage.
-  - Storage path: `marketplace/{building}/{postId}/img.jpg`
-  - `storage.rules`: signed-in read for `marketplace/**`, owner-write (match via Firestore lookup of `ownerUid`)
-  - Add post → upload to Storage → set `imageUrl: <downloadURL>` (NOT `imageData`)
-  - Reader: prefer `item.imageUrl`, fallback to `item.imageData` (base64)
-  - `tools/migrate-marketplace-images.js` (optional one-shot, deferred — old posts naturally expire in ≤30d via `expiresAt`)
-  - **Files:** `tenant_app.html`, `storage.rules`, `tools/migrate-marketplace-images.js` (new, optional)
-
-- [ ] **S0.3 — Lifecycle doc update**
-  - Update [memory/lifecycle_marketplace.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\lifecycle_marketplace.md) — new schema + migration plan + verifier rows
-  - Run `npm run verify:memory` — exit 0 required
-
-**Ship gate S0:** dry-run migration shows expected diff; reader tolerates both shapes; rules deploy + smoke (post + close + delete); push → Vercel → Chrome MCP verify on https://the-green-haven.vercel.app
+| มิติ | ปัจจุบัน | เป้าหมาย | Gap |
+|------|---------|---------|-----|
+| 🏛️ Architecture | 3.1 | 3.4 | window.X ceiling / dashboard god file |
+| 🔐 Security | 3.2 | 3.8 | 2 XSS sites, 1 dead auth CF |
+| 💎 Code Quality | 3.1 | 3.5 | oversized files, prompt(), console.info |
+| 🧪 Testing | 3.1 | 3.5 | 0% frontend coverage |
+| 🚀 DevOps | 3.2 | 3.7 | staging ไม่ wire, CSP CI gap |
+| 📚 Docs & Memory | 3.8 | 4.0 | stale 1 claim, minor doc gaps |
+| ⚡ Performance | 2.7 | 3.3 | unbounded queries, xlsx eager, no cache |
+| 🎨 UX/UI | 3.3 | 3.7 | broken skip link, contrast, aria-current |
+| 🧹 Tech Debt | 2.6 | 3.2 | 21 oversized modules, dead code, duplicates |
 
 ---
 
-## Sprint 1 — Privacy-First Temporary Chat (Spec §3.2) — `~3-4 sessions`
+## P0 — ต้องแก้ก่อน deploy ครั้งถัดไป
 
-**Why:** Current `contactSeller()` opens `line.me/ti/p/<lineUserId>` directly, leaking the seller's personal LINE. Spec's #1 design goal is privacy-first; this sprint replaces the leak with in-LIFF chat.
+### 🔐 Security
 
-- [ ] **S1.1 — Firestore schema + rules**
-  - `marketplace_chats/{chatId}` — `{ postId, postTitle, postImageUrl, postPrice, participants: [ownerUid, interestedUid], lastMessage, lastMessageTime, unreadCount: {<uid>: N}, createdAt }`
-  - `marketplace_chats/{chatId}/messages/{messageId}` — `{ senderId, text, timestamp, isRead }`
-  - Rules: read/write only if `request.auth.uid in resource.data.participants`; create requires authed user adds self + post-owner to participants
-  - `firestore.indexes.json`: composite on `participants` array + `lastMessageTime desc`
-  - **Files:** `firestore.rules`, `firestore.indexes.json`
-  - **§7 hazards:** §7-N (onSnapshot error callback required), §7-V (cleanup before re-attach), §7-KK (cached-snapshot reconciliation)
+- [ ] **[SEC-XSS-1] Escape Firestore data ใน wellness content renderer**
+  - **Why:** `a.category`, `a.icon`, `a.readtime`, `a.reward` inject เข้า innerHTML โดยตรง — stored XSS สำหรับ admin ที่อาจถูก compromise
+  - **ไฟล์:** `shared/dashboard-wellness-content.js:436,440,450`
+  - **Fix:** wrap แต่ละ field ด้วย `_escWC(value)` ก่อน template literal
+  - **Verify:** `grep -n "a\.category\|a\.icon\|a\.reward\|a\.readtime" shared/dashboard-wellness-content.js` — ทุก hit ต้องผ่าน escape
 
-- [ ] **S1.2 — Chat list sub-page in tenant_app.html**
-  - New page `#market-chat-list-page` accessible from marketplace nav
-  - Subscribe `marketplace_chats where participants array-contains _authUid order by lastMessageTime desc`
-  - Card: post thumbnail + title + last message preview + unread badge
-  - **§7 hazards:** §7-A (use `_onLiffClaimsReady`), §7-U (claim-first guard before subscribe)
+- [ ] **[SEC-XSS-2] Escape CF response ใน admin-ops panel**
+  - **Why:** `json.email`, `json.uid`, `json.error` จาก `setAdminClaim` CF response → innerHTML โดยตรง
+  - **ไฟล์:** `shared/dashboard-admin-ops.js:74,77,108,110`
+  - **Fix:** เพิ่ม local `function _esc(s){ return String(s).replace(...) }` + wrap ทุก interpolation
+  - **Verify:** `grep -n "json\." shared/dashboard-admin-ops.js | grep innerHTML`
 
-- [ ] **S1.3 — Active chat view + message send**
-  - New page `#market-chat-page` with context header (post image + title + price — locked at chat-creation time)
-  - Message list subscribe on `messages` sub-collection
-  - Send: `addDoc` to messages + `setDoc merge` on parent chat (lastMessage, lastMessageTime, increment unreadCount)
-  - Mark-read on focus: clear `unreadCount[myUid]` + `isRead: true` on visible messages
-  - **§7 hazards:** §7-CC (use `window.` prefix for cross-script state)
-
-- [ ] **S1.4 — Rewire `contactSeller()`**
-  - Replace `liff.openWindow('https://line.me/ti/p/' + lineUserId)` with:
-    1. Find existing chat: `query(chats, where('postId','==',postId), where('participants','array-contains',_authUid))`
-    2. If none: create with `addDoc(chats, {postId, postTitle, postImageUrl, postPrice, participants:[ownerUid, _authUid], ...})`
-    3. Navigate to `#market-chat-page` with chatId
-  - **Files:** `tenant_app.html:6623-6636`
-
-- [ ] **S1.5 — Self-destruct on `COMPLETED`**
-  - New CF `cleanupMarketplaceChat.js` — Firestore onUpdate trigger on `marketplace/{postId}`; when `status` transitions to `COMPLETED`:
-    - Find all chats `where postId == updated postId`
-    - Delete each `messages` sub-collection (batched, recursive)
-    - Delete each chat doc
-  - **Files:** `functions/cleanupMarketplaceChat.js` (new), `functions/index.js`
-  - **§7 hazards:** §7-DD (sibling collection cleanup), §7-AA (grep `functions/` for existing similar CFs before writing)
-
-- [ ] **S1.6 — Lifecycle doc + tests**
-  - New `memory/lifecycle_marketplace_chat.md` — full schema + flow + verifier
-  - Update `lifecycle_marketplace.md` — link to chat lifecycle
-  - Unit tests: chat create idempotency, self-destruct trigger
-  - Rules tests: non-participant cannot read; owner cannot write to other chat
-  - **Files:** `memory/lifecycle_marketplace_chat.md` (new), `functions/__tests__/cleanupMarketplaceChat.test.js` (new), `test/firestore-rules.spec.js`
-
-**Ship gate S1:** Chat E2E live on Vercel — tenant A posts → tenant B opens detail → "ติดต่อผู้ขาย" creates chat → real-time message exchange → owner closes post → chat disappears from both sides within ~5s. `npm run test:rules` passes (+ ~6 new cases).
+- [ ] **[SEC-CLEANUP-CF] ตรวจสอบและลบ/gate cleanup CFs**
+  - **Why:** `cleanupRoomData.js` + `cleanupRealtimeDB.js` auth ด้วย `req.query.token` (URL token = logs/history leak)
+  - **ไฟล์:** `functions/cleanupRoomData.js:50`, `functions/cleanupRealtimeDB.js:20,93`
+  - **Fix:** ยืนยัน 4 exports (`cleanupRoomData`, `analyzeRoomData`, `verifyMigrationComplete`, `deleteRealtimeDBData`) ไม่ได้อยู่ใน `functions/index.js` → ถ้าไม่ได้ deploy ให้ลบไฟล์ทิ้ง
+  - **Verify:** `grep -n "cleanupRoomData\|analyzeRoomData\|verifyMigrationComplete\|deleteRealtimeDBData" functions/index.js` → ต้อง 0 hits
 
 ---
 
-## Sprint 2 — LINE OA Notification Broker (Spec §3.3) — `~1-2 sessions`
+### 🎨 UX/Accessibility
 
-**Why:** Without notification, new chat messages are invisible — privacy chat becomes useless because nobody checks.
+- [ ] **[A11Y-MAIN] เพิ่ม `<main id="main-content">` ใน tenant_app.html**
+  - **Why:** Skip link บรรทัด 2400 ชี้ไป `#main-content` แต่ element ไม่มีอยู่ → WCAG 2.4.1 (A) ล้มเหลว; ไม่มี landmark เลย (WCAG 1.3.1)
+  - **ไฟล์:** `tenant_app.html` บรรทัด ~2420 (หลัง `#app-loading-splash`)
+  - **Fix:** เพิ่ม `<main id="main-content">` ครอบ `.page-container` div และปิด `</main>` ก่อน bottom-nav
+  - **Verify:** `grep -n "main-content\|<main" tenant_app.html` → ต้องมี `<main id="main-content">`
 
-- [ ] **S2.1 — `notifyMarketplaceChat` CF**
-  - Firestore onCreate trigger on `marketplace_chats/{chatId}/messages/{messageId}`
-  - Compute recipient = the participant who is NOT `senderId`
-  - Lookup recipient's `lineUserId` from `liffUsers/{lineUserId}` (reverse lookup via `linkedAuthUid` field) — or store `lineUserId` per participant directly in chat doc to skip lookup
-  - Enqueue via existing `enqueueLineRetry` infra (per [memory/lifecycle_line_notification.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\lifecycle_line_notification.md))
-  - Message: `📩 ข้อความใหม่จาก {senderDisplayName}: {messageText[:80]}` + LIFF deep-link back to chat
-  - **Files:** `functions/notifyMarketplaceChat.js` (new), `functions/index.js`
-  - **§7 hazards:** §7-AA (grep existing notifiers — `notifyMaintenanceTenant.js` pattern), idempotency via `idempotencyKey: messageId`
-
-- [ ] **S2.2 — Anti-spam throttle**
-  - Track per `(chatId, recipientUid)` last-notify timestamp in CF memory or Firestore counter
-  - Suppress if < 30s since last push (rapid typing scenario)
-
-- [ ] **S2.3 — Deep-link handler in tenant_app.html**
-  - URL param `?chat=<chatId>` on LIFF entry → navigate to `#market-chat-page` after auth
-  - Per §7-GG: persist via localStorage in case LIFF strips query
-
-- [ ] **S2.4 — Tests + memory**
-  - Unit test: notification on new message; suppression on throttle; no notification when sender = recipient
-  - Update `lifecycle_marketplace_chat.md` + add CF to `lifecycle_scheduled_jobs.md`
-  - **Files:** `functions/__tests__/notifyMarketplaceChat.test.js` (new)
-
-**Ship gate S2:** Send message from tenant A to tenant B → tenant B's LINE OA receives push within ~3s with deep-link → tap → LIFF opens directly to chat.
+- [ ] **[A11Y-ARIA] เพิ่ม `aria-current="page"` ใน admin sidebar**
+  - **Why:** `showPage()` toggle แค่ `.active` class — screen reader ไม่รู้ว่า page ไหนกำลัง active (WCAG 4.1.2)
+  - **ไฟล์:** `shared/dashboard-main.js:14-24` (`_showPageImpl` / `showPage`)
+  - **Fix:** ใน `showPage()` — clear `aria-current` บน sidebar items ทั้งหมด แล้ว set `btn.setAttribute('aria-current','page')` บน active item
+  - **Verify:** Chrome MCP → inspect sidebar button เมื่อเปลี่ยน page → `aria-current="page"` ต้องเปลี่ยนตาม
 
 ---
 
-## Sprint 3 — Vertical Delivery Tag / Sky Hook (Spec §4.2) — `~0.5 session`
+## P1 — Sprint ถัดไป (เน้น Performance + Code Quality)
 
-**Why:** Unique-to-Nest physical-link feature; quick win (~1 boolean + 1 checkbox + 1 filter pill + 1 badge).
+### ⚡ Performance — Unbounded Queries
 
-- [ ] **S3.1 — Field + form + UI**
-  - Add `skyHookReady: boolean` to `marketplace` doc
-  - Checkbox in `#add-market-page` form with label "📦 ส่งผ่านรอก (ชั้น 3 หรือ 4)"
-  - Badge on card when true: `📦 Sky Hook`
-  - Filter pill in `#market-filter-pills`
-  - **Files:** `tenant_app.html`, `memory/lifecycle_marketplace.md`
+- [ ] **[PERF-Q1] ปิด 7 unbounded Firestore queries ที่เหลือ**
+  - **Why:** ขยายตามจำนวน user/ข้อมูล — Firestore billing + latency โตไม่มีเพดาน
+  - **ไฟล์และ fix:**
+    - `shared/dashboard-insights.js:284-285` — add `limit(500)` ให้ `wellnessQuizPassed` + `contractQuizPassed` collectionGroup
+    - `shared/dashboard-insights.js:1209` — add `limit(500)` ให้ `complaints` getDocs
+    - `shared/dashboard-insights.js:1215` — แทน `getDocs(collection(db,'liffUsers'))` ด้วย `getCountFromServer()`
+    - `shared/dashboard-insights.js:1481` — add `where('building','==',selectedBuilding)` + `limit(500)` ให้ `meter_data`
+    - `shared/dashboard-domain-stores.js:581` — add `orderBy('createdAt','desc'), limit(200)` ให้ complaints onSnapshot
+    - `shared/dashboard-wellness-content.js:314` — add `limit(100)` ให้ `wellness_articles` subscription
+    - `shared/lease-config.js:118` — add `where('status','==','active'), limit(100)` ให้ lease list
+  - **Verify:** `npm run audit:size` + grep แต่ละไฟล์ยืนยัน `.limit(` อยู่ติดกัน
 
-- [ ] **S3.2 — Verifier + ship**
-  - Add verifier row to lifecycle doc; `npm run verify:memory`
-  - Push → Chrome MCP verify
+- [ ] **[PERF-XLSX] Lazy-load xlsx.full.min.js (~300KB gzip)**
+  - **Why:** โหลดทุก admin session แม้ไม่ได้ import ไฟล์ — เสีย 300KB เปล่าสำหรับทุก page ที่ไม่ใช่ meter/billing import
+  - **ไฟล์:** `dashboard.html:75`, `shared/dashboard-meter-import.js`, `shared/dashboard-bills.js`
+  - **Fix:** ลบ `<script defer src="...xlsx...">` จาก HTML → dynamic `import('...xlsx...')` ใน change handler ของ `#importFileInput` และ `#billingFileInput` (pattern เดียวกับ jsPDF ที่ทำแล้ว)
+  - **Verify:** Chrome DevTools Network → โหลด dashboard → xlsx ไม่ควรอยู่ใน initial requests
 
-**Ship gate S3:** Tenant creates post with Sky Hook checkbox checked → card shows 📦 badge → filter pill correctly narrows to Sky Hook posts.
+- [ ] **[PERF-CACHE] Enable Firestore persistent local cache**
+  - **Why:** `tenant_app.html` เปิด/ปิดบ่อยผ่าน LIFF — persistent cache ทำให้ bill/room data โหลดจาก IndexedDB ก่อน revalidate
+  - **ไฟล์:** Firebase init ใน `shared/tenant-liff-auth.js` หรือ `shared/firebase-init.js`
+  - **Fix:** แทน `getFirestore(app)` ด้วย `initializeFirestore(app, { localCache: persistentLocalCache() })`
+  - **Verify:** Chrome → Application → IndexedDB → `firebaseLocalStorageDb` ปรากฏหลัง first visit
 
----
+- [ ] **[PERF-N1] แก้ N+1 deposit check ใน requests-admin**
+  - **Why:** `getDoc` per tenant ใน loop สำหรับ building ที่มี 50 ห้อง = 50 round-trips
+  - **ไฟล์:** `shared/dashboard-requests-admin.js:1438-1445`
+  - **Fix:** batch-fetch ทุก `deposits` docs ของ building ใน getDocs เดียว → build Map → `Map.has(key)` แทน
+  - **Verify:** Network panel → `getDocs` 1 call แทน N calls
 
-## Sprint 4 — Pet-Friendly Filter (Spec §4.4) — `~0.5 session`
-
-**Why:** 1-boolean ergonomic win for pet-owner sub-community; foundation for Sprint 6 Pet Whisperer badge.
-
-- [ ] **S4.1 — Field + form + filter**
-  - Add `isPetCategory: boolean` to `marketplace` doc
-  - Checkbox in add form: "🐾 เกี่ยวกับสัตว์เลี้ยง"
-  - Filter pill: 🐾 สัตว์เลี้ยง
-  - **Files:** `tenant_app.html`, `memory/lifecycle_marketplace.md`
-
-**Ship gate S4:** Filter pill correctly narrows.
-
----
-
-## Sprint 5 — Wishlist & Requests (Spec §4.1) — `~1 session`
-
-**Why:** Expands marketplace from one-way (sell) to two-way (request) — major UX expansion. Foundation for community Engagement metrics.
-
-- [ ] **S5.1 — New category `request`**
-  - Per Decision #1: add `request` to category enum (NOT replace existing); price field becomes optional/N/A for requests
-  - Filter pill: 🙋 ตามหา / ขอความช่วยเหลือ
-  - Add-form: when category = `request`, hide price input + show description hint "ระบุสิ่งที่ต้องการ"
-  - Detail modal CTA: "✋ ฉันช่วยได้" instead of "ติดต่อผู้ขาย"
-  - **Files:** `tenant_app.html`, `firestore.rules` (no change — `category` is free-form string already), `memory/lifecycle_marketplace.md`
-
-- [ ] **S5.2 — Stats for badge unlock prep**
-  - Count `requests fulfilled` per user (foundation for Sprint 6 Pet Whisperer if request is petCategory)
-  - Increment counter on chat close with `status=COMPLETED` AND original post was `request` category
-  - **Files:** prep only — actual badge unlock lands in Sprint 6
-
-**Ship gate S5:** Create request post → other tenant opens → "✋ ฉันช่วยได้" → chat opens → close as COMPLETED → counter increments.
+- [ ] **[PERF-LEAK] แก้ interval leak ใน facility-booking-ui.js**
+  - **Why:** `setInterval(_writePresence, 60000)` ที่บรรทัด 344 ไม่มี `clearInterval` เลย — fire ทุก 60s ตลอด session
+  - **ไฟล์:** `shared/facility-booking-ui.js:344,347`
+  - **Fix:** `const _presenceInterval = setInterval(...)` → เพิ่ม `pagehide`/`visibilitychange` handler ที่ call `clearInterval(_presenceInterval)` และ `document.removeEventListener(...)` เมื่อ hidden
+  - **Verify:** console → เปิด facility booking → navigate away → ไม่ควรมี presence write ใหม่
 
 ---
 
-## Sprint 6 — Trophies & Badges (Spec §4.3) — `~1-2 sessions`
+### 💎 Code Quality
 
-**Why:** Engagement layer that recognizes 3 community archetypes (Giver / Sky Walker / Pet Whisperer); depends on stats from S3/S4/S5.
+- [ ] **[CQ-PROMPT] แทน `prompt()` 3 จุดด้วย `window.ghConfirm`**
+  - **Why:** `prompt()` block event loop, style ไม่ได้, §7-Q ระบุชัดว่าต้องแทน
+  - **ไฟล์:** `shared/dashboard-main.js:427` (evidence input), `shared/dashboard-main.js:485` (reject reason), `shared/dashboard-tenant-modal.js:992` (type label)
+  - **Fix:** แทนด้วย `window.ghConfirm(message, { input: true })` pattern ที่ไฟล์เดียวกันใช้อยู่แล้ว (ดู line 467, 506)
+  - **Verify:** `grep -rn "= prompt(" shared/ dashboard.html` → 0 hits
 
-- [ ] **S6.1 — Badge definitions in gamification engine**
-  - Per [memory/gamification_ssot.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\gamification_ssot.md): add 3 badge entries to rules engine
-  - `the_giver` — unlock when user has posted ≥3 `free` items that reached `COMPLETED` (icon: leaf 🍃 Olive Green)
-  - `sky_walker` — unlock when user has ≥5 transactions where `skyHookReady=true` AND `status=COMPLETED` (icon: cloud ☁️ grey)
-  - `pet_whisperer` — unlock when user has ≥1 completed pet-related help (`isPetCategory=true` AND `status=COMPLETED`) (icon: paw 🐾)
-  - **Files:** `shared/gamification-rules.js` (or wherever badge defs live — grep first per §7-AA)
+- [ ] **[CQ-CONSOLE] ลบ console.info 239+ calls ใน tenant-system.js**
+  - **Why:** debug logging ที่ fire ทุก tenant operation — banned by project standards
+  - **ไฟล์:** `shared/tenant-system.js` (239 instances)
+  - **Fix:** `sed`-style bulk remove all `console.info(...)` calls in the file
+  - **Verify:** `grep -c "console\.info" shared/tenant-system.js` → 0
 
-- [ ] **S6.2 — Server-side stats counter CF**
-  - New CF `marketplaceStatsAggregator.js` — Firestore onUpdate trigger on `marketplace/{postId}`; when status → COMPLETED:
-    - Increment `people/{ownerUid}.marketplaceStats.{freeGiven|skyHookCompleted|petHelped}` atomically
-    - Trigger badge unlock check via existing gamification engine
-  - **Files:** `functions/marketplaceStatsAggregator.js` (new), `functions/index.js`
+- [ ] **[CQ-MUTATE] แก้ mutation pattern ใน TenantConfigManager**
+  - **Why:** `delete tenants[tenantId]` + `tenants[tenantId] = {...}` mutate object in-place — violates immutability rule
+  - **ไฟล์:** `shared/tenant-system.js:82,96`
+  - **Fix:**
+    - delete: `const updated = Object.fromEntries(Object.entries(tenants).filter(([k]) => k !== tenantId))`
+    - update: `const updated = { ...tenants, [tenantId]: { ...tenants[tenantId], ...changes } }`
+  - **Verify:** `grep -n "delete tenants\[" shared/tenant-system.js` → 0 hits
 
-- [ ] **S6.3 — UI integration**
-  - Badges appear in existing `_unlockedBadges` UI in tenant_app profile/feed
-  - Icons follow Muji-minimal aesthetic per [memory/brand_living_os.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\brand_living_os.md)
-  - **Files:** `tenant_app.html` (badge render), possibly `shared/gamification-display.js`
-
-- [ ] **S6.4 — Tests + memory**
-  - Unit test each badge unlock condition + idempotency (closing same post twice doesn't double-count)
-  - Update `gamification_ssot.md` + `lifecycle_marketplace.md` with badge section
-  - **Files:** `functions/__tests__/marketplaceStatsAggregator.test.js` (new)
-
-**Ship gate S6:** Test tenant completes 3 free giveaways → "The Giver" badge unlocks + appears in profile + Firestore confirms.
-
----
-
-## Cross-sprint hazards (CLAUDE.md §7 patterns to watch)
-
-| Pattern | Where it might bite |
-|---------|---------------------|
-| §7-A (auth-gated reads) | Every chat/marketplace subscribe must use `_onLiffClaimsReady` |
-| §7-N (onSnapshot error cb) | Every new subscribe must have error callback that resets unsub on permission-denied |
-| §7-U (claim-first guard) | First check inside subscribe MUST be `if (!_taBuilding) return;` |
-| §7-V (cleanup before rebind) | Chat list re-subscribes when building changes — must tear down old listener |
-| §7-CC (`let` vs `window.`) | Chat state vars (`_chatItems`, etc.) accessed across scripts must be `window.X` |
-| §7-DD (sibling cleanup) | S1.5 self-destruct must delete BOTH chat doc AND messages sub-collection |
-| §7-II (CSP hash regen) | Every HTML edit that touches inline `<style>`/`<script>` must run `npm run csp:hash` + `node tools/update-vercel-csp.js` |
-| §7-KK (cached-snapshot race) | Optimistic message-send + cached snapshot reconciliation — gate on `snap.metadata?.fromCache` |
-| §7-J (live-verify) | Every sprint ships with Chrome MCP smoke on production, not just unit-test green |
-| §7-Z (custom claims persist) | NOT applicable directly, but participants array filtering via rules must survive token refresh |
-
-## Out-of-scope (explicitly deferred)
-
-- Payment integration (spec §5 note: "ไม่จำเป็นต้องมี Payment Gateway" for MVP)
-- Escrow service (same reason)
-- Marketplace-specific admin moderation dashboard (use existing Firestore console for MVP)
-- Bulk-migration of legacy base64 images (S0.2 covers lazy migration; ~30d expiry handles rest)
-- Cross-building marketplace (per-building scope is intentional)
-- Image upload multi-photo (single image in S0.2; multi can land post-MVP)
-
-## Estimated total: ~6-9 sessions across all 6 sprints
-
-| Sprint | Sessions | Cumulative |
-|--------|----------|------------|
-| S0 (Foundations) | 1 | 1 |
-| S1 (Chat) | 3-4 | 4-5 |
-| S2 (Notification) | 1-2 | 5-7 |
-| S3 (Sky Hook) | 0.5 | ~6-7 |
-| S4 (Pet Filter) | 0.5 | ~6-8 |
-| S5 (Wishlist) | 1 | ~7-9 |
-| S6 (Badges) | 1-2 | ~8-11 |
+- [ ] **[CQ-ONSNAPSHOT] เพิ่ม error callback ใน 2 onSnapshot ที่ขาด**
+  - **Why:** §7-N — silent failure เมื่อ index ขาด หรือ permission-denied
+  - **ไฟล์:**
+    - `shared/dashboard-extra.js:770` — `setupAnnouncementListener` inner onSnapshot
+    - `shared/billing-system.js:458` — `createBillListener`
+  - **Fix:** เพิ่ม `(err) => { console.warn('[module] subscription failed:', err); _xxxUnsub = null; }` เป็น 3rd argument
+  - **Verify:** `grep -A5 "onSnapshot" shared/dashboard-extra.js | grep -c "err =>"` ≥ 1
 
 ---
 
-## ✅ Approved 2026-05-24 — execution begins
+### 🚀 DevOps
 
-- **Sprint order:** S0 → S1 → S2 → S3 → S4 → S5 → S6 (confirmed)
-- **Ship cadence:** Push every sprint gate (6+ pushes) — small blast radius, easy rollback
-- **Start:** S0.1 status enum migration now
+- [ ] **[DEVOPS-STAGING] Wire staging environment เข้า CI/CD**
+  - **Why:** `.firebaserc` มี staging alias แต่ทุก CI deploy ไป production ตรง — ไม่มี safety gate
+  - **Fix:** สร้าง `.github/workflows/deploy-staging.yml` — triggered on PR → staging branch: run unit tests → deploy CFs ไป `the-green-haven-staging` → run E2E กับ staging URL → require manual approval ก่อน production
+  - **Verify:** PR ไปยัง main → GitHub Actions แสดง staging deploy step ก่อน production
+
+- [ ] **[DEVOPS-CSP-CI] เพิ่ม CSP hash validation ใน GitHub Actions**
+  - **Why:** pre-commit hook bypass ได้ (`--no-verify`) — drift จะไม่ถูกจับจนกว่าจะ deploy แล้ว production เสีย (§7-II incident)
+  - **ไฟล์:** `.github/workflows/validate.yml` (เพิ่ม step)
+  - **Fix:** เพิ่ม step: `node tools/compute-csp-hashes.js && diff tools/csp-hashes.json <(git show HEAD:tools/csp-hashes.json) || (echo "CSP drift detected" && exit 1)`
+  - **Verify:** แก้ inline style ใน HTML โดยไม่ regen → CI fail
+
+---
+
+## P2 — ภายใน 2-3 Sprint
+
+### 🎨 UX/Accessibility
+
+- [ ] **[UX-CONTRAST] แก้ badge + placeholder contrast**
+  - **Why:** `--warn` badge = 2.81:1, `--info` = 3.15:1 (ต้องการ 4.5:1 — WCAG 1.4.3 AA ล้มเหลว)
+  - **ไฟล์:** `shared/components.css:249-264`, `shared/brand.css:273-278`
+  - **Fix:**
+    - เพิ่ม `--warn-text: #b45309` (≥4.5:1 บน amber tint) + `--info-text: #1d4ed8` (≥4.5:1 บน blue tint)
+    - แก้ `--pebble` placeholder light mode จาก `#a8b5b0` → `#798c87` (≥4.5:1 บน white)
+  - **Verify:** Chrome DevTools → color contrast checker บน badge elements → ≥4.5:1
+
+- [ ] **[UX-DARK] Tokenize overlay/modal inline hex สำหรับ dark mode**
+  - **Why:** hardcoded `#fff`, `#f0fdf4`, `#1a5c38`, `#666` ใน overlays ไม่ flip เมื่อ dark mode toggle
+  - **ไฟล์:** `tenant_app.html:2402-2422` (`#liff-link-overlay`, `#app-loading-splash`), JS-built modal panels
+  - **Fix:** แทน hardcoded hex ด้วย `var(--surface-card)`, `var(--surface-page)`, `var(--muted)`, `var(--brand-primary)`
+  - **Verify:** toggle dark mode → overlays/modals ต้อง flip สี
+
+- [ ] **[UX-THEME] แก้ `theme-color` meta + รัน dark mode gap audit**
+  - **Why:** `<meta name="theme-color" content="#2d8653">` เป็น old green, ไม่ใช่ current teal `#0f766e`
+  - **ไฟล์:** `tenant_app.html:11`, `booking.html:11`
+  - **Fix:** update เป็น `content="#0f766e"`; update `memory/dark_mode_audit_state.md` ว่า `night-mode` mechanism migrate แล้ว เหลือแค่ `data-theme`
+  - **Verify:** Chrome → Application → Manifest → theme_color แสดง teal
+
+- [ ] **[UX-LOADING] เพิ่ม `role="status"` บน loading splash + `role="alert"` บน error boxes**
+  - **Why:** ผู้ใช้ screen reader ไม่ได้รับ announcement ระหว่าง LIFF auth wait
+  - **ไฟล์:** `tenant_app.html:2415` (`#app-loading-splash`), inline error boxes
+  - **Fix:** `<div id="app-loading-splash" role="status" aria-live="polite" aria-label="กำลังโหลด...">`
+  - **Verify:** macOS VoiceOver → เปิด LIFF → ต้องได้ยิน "กำลังโหลด"
+
+---
+
+### 💎 Code Quality
+
+- [ ] **[CQ-SPLIT-AUTH] Split `_callLiffSignIn` (178 บรรทัด) เป็น 4 functions**
+  - **Why:** 178 บรรทัดผสม 4 responsibilities — เกิน 50-line rule, test ยาก
+  - **ไฟล์:** `shared/tenant-liff-auth.js:247`
+  - **Fix:** extract → `_getFastPathToken()`, `_fetchWithAbort(url, timeout)`, `_handleLiffSignInResponse(resp)`, `_callLiffSignIn()` เป็น orchestrator เรียก 3 อัน
+  - **Verify:** `wc -l` แต่ละ function ≤ 50; unit test `_fetchWithAbort` แยกได้
+
+- [ ] **[CQ-OVERSIZED] Split shared modules ที่ใหญ่สุด 3 อันดับ**
+  - **Why:** 21 ไฟล์เกิน 800 บรรทัด — ทำให้ review/test ยาก; เป็น god file แบบใหม่
+  - **Priority:**
+    - `shared/dashboard-requests-admin.js` (1,928 บรรทัด) → แยก `dashboard-pets-admin.js`, `dashboard-deposits-admin.js`, `dashboard-facility-admin.js`
+    - `shared/dashboard-insights.js` (1,767 บรรทัด) → แยก insights เป็น per-card modules
+    - `shared/tenant-system.js` (1,583 บรรทัด) → แยก `TenantFirebaseSync` ออก
+  - **Verify:** `npm run audit:size` → ทุกไฟล์ที่แยกออกมา ≤ 800 บรรทัด
+
+---
+
+### 📚 Docs & Memory
+
+- [ ] **[DOC-DASHBOARD] แก้ MEMORY.md: dashboard.html = 5,621 บรรทัด (ไม่ใช่ ~4,100)**
+  - **Why:** claim ใน MEMORY.md ผิด — agent วัดจริงได้ 5,621 บรรทัด ทำให้ประเมิน debt ต่ำเกินไป
+  - **ไฟล์:** `~/.claude/projects/.../memory/MEMORY.md` + `dashboard_architecture.md`
+  - **Fix:** อัปเดต "~4,100 lines" → "5,621 lines" ใน dashboard_architecture.md + verify grep
+  - **Verify:** `wc -l dashboard.html` → ตรงกับ doc
+
+- [ ] **[DOC-DARKMODE] อัปเดต dark_mode_audit_state.md**
+  - **Why:** doc บอกว่า "dual mechanism (body.night-mode + html[data-theme])" แต่ `night-mode` migrate แล้ว — เหลือแค่ `data-theme`
+  - **ไฟล์:** `~/.../memory/dark_mode_audit_state.md`
+  - **Fix:** แก้ให้ระบุว่า `data-theme` เป็น canonical เพียงตัวเดียว, `night-mode` เป็น comment เก่าเท่านั้น
+  - **Verify:** `grep -c "night-mode" tenant_app.html` → เหลือแค่ comment ไม่มี live styling
+
+- [ ] **[DOC-SA-KEY] เพิ่ม SA key rotation SLA + frozen CF guide ใน CLAUDE.md §5**
+  - **Why:** Service account key ไม่มี rotation schedule — long-lived credential risk
+  - **Fix:** เพิ่มใน CLAUDE.md §5 (Commands table): "Service account key: rotate annually (next: 2027-05). Frozen CF `generateBillsOnMeterUpdate` on Node 20 — see `generate_bills_cf_frozen.md` for manual mitigation steps"
+
+---
+
+## P3 — Tech Debt (ทยอยทำ)
+
+### 🧹 Tech Debt — Quick Wins
+
+- [ ] **[DEBT-SMOKE] ลบ smoke HTML files ที่ commit เข้า repo (906KB)**
+  - **Why:** `smoke_tenant.html` (10,566 บรรทัด) + `smoke_dashboard.html` (4,143 บรรทัด) เป็น test artifacts ที่ไม่มี runtime use
+  - **Fix:** `git rm smoke_tenant.html smoke_dashboard.html` + เพิ่มบรรทัดใน `.gitignore`: `smoke_*.html`
+  - **Verify:** `ls smoke_*.html` → no such file
+
+- [ ] **[DEBT-DEAD1] ลบ `window.generateInvoiceWithDetails` (zero callers)**
+  - **Why:** function 40+ บรรทัดใน `shared/tenant-legacy.js:627` — §7-K pattern, ไม่มีใครเรียกเลย
+  - **Fix:** `grep -rn "generateInvoiceWithDetails" shared/ *.html` ยืนยัน 0 callers → ลบ function + window assignment
+  - **Verify:** grep returns 0 hits after deletion
+
+- [ ] **[DEBT-FIELD] แก้ `invoice-pdf-generator.js:34` ยังอ่าน `promptpayNumber` (legacy field)**
+  - **Why:** §7-T fix ทำ canonical writer เป็น `promptPayId` แล้ว แต่ generator.js ยังอ่าน legacy name + hardcode `'089-1234567'` เป็น fallback
+  - **Fix:** `_owner.promptPayId || _owner.promptpayNumber || ''` (dual-read ระหว่าง migration) แล้วลบ hardcoded phone
+  - **Verify:** Invoice PDF แสดง PromptPay จริงจาก Firestore ไม่ใช่ `089-1234567`
+
+- [ ] **[DEBT-ESC] Extract shared `_esc()` utility (12 identical copies)**
+  - **Why:** DRY violation ที่ใหญ่ที่สุดใน codebase — function เหมือนกัน 12 ไฟล์
+  - **ไฟล์:** `shared/utils.js` (สร้างใหม่) หรือเพิ่มใน `shared/brand-utils.js`
+  - **Fix:** สร้าง `window._esc = function(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }` ใน utils → ลบทั้ง 12 local copies
+  - **Files affected:** `shared/checklist-page.js`, `dashboard-buildings.js`, `dashboard-checklist-admin.js`, `dashboard-lease-renew-roompicker.js`, `dashboard-pdpa-erasure.js`, `dashboard-property.js`, `dashboard-tenant-lease.js`, `facility-booking-ui.js`, `marketplace-chat.js`, `tenant-maintenance.js`, `tenant-marketplace.js`, `tenant-subscriptions.js`
+  - **Verify:** `grep -rn "function _esc(" shared/` → เหลือ 1 (ใน utils)
+
+- [ ] **[DEBT-FETCH] แทน `node-fetch` v2 ด้วย native `fetch` ใน 7 CFs**
+  - **Why:** `node-fetch@2` เป็น legacy CJS; Node 22 runtime มี `globalThis.fetch` built-in — ไม่ต้องใช้ dependency
+  - **ไฟล์:** `liffSignIn.js`, `verifySlip.js`, `verifyBookingSlip.js`, `liffBookingSignIn.js`, `requestRoomRelink.js`, `keepLiffWarm.js`, `adminApprovedLink.js`
+  - **Fix:** ลบ `const fetch = require('node-fetch')` → ใช้ global `fetch` แทน → ลบ `node-fetch` จาก `functions/package.json`
+  - **Verify:** `npm run test:unit` ผ่าน + `grep -rn "node-fetch" functions/` → 0 hits
+
+- [ ] **[DEBT-PLAN] แก้ tasks/marketplace-sprints.md S1.5 + S2.1 ที่ plan เป็น Firestore trigger**
+  - **Why:** S1.5 `cleanupMarketplaceChat` + S2.1 `notifyMarketplaceChat` ถูก plan เป็น Firestore triggers — จะล้ม deploy เพราะ SE3 region constraint (§7-NN)
+  - **Fix:** update แต่ละ task ให้ระบุว่าเป็น HTTPS callable (Gen2 onCall) ไม่ใช่ Firestore trigger + เพิ่มลิงก์ §7-NN
+  - **Verify:** grep plan ไม่มี `onWrite` / `onCreate` ใน S1.5/S2.1
+
+---
+
+### ⚡ Performance — Minor
+
+- [ ] **[PERF-FONT] เพิ่ม preload hint สำหรับ IBM Plex Sans Thai Looped 400**
+  - **Why:** Google Fonts ต้องผ่าน 2 waterfall hops (CSS → font file) — preload ลด 1 hop
+  - **ไฟล์:** `tenant_app.html:32-33`, `booking.html` head
+  - **Fix:** เพิ่ม `<link rel="preload" as="font" crossorigin href="https://fonts.gstatic.com/s/ibmplexsansthailooped/...wght@400.woff2">` (ต้องหา URL จริงจาก Google Fonts response)
+
+- [ ] **[PERF-TRANSITION] แทน `transition: all` ด้วย specific properties (5 occurrences)**
+  - **Why:** `transition: all` evaluate ทุก animatable property ทุกครั้ง style เปลี่ยน
+  - **ไฟล์:** `shared/components.css:636,672,713`, `shared/brand.css:440,467`
+  - **Fix:** `transition: color 0.2s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s`
+  - **Verify:** `grep -n "transition: all" shared/brand.css shared/components.css` → 0 hits
+
+- [ ] **[PERF-BLOCKING] เพิ่ม `defer` ให้ `gamification-rules.js`**
+  - **Why:** โหลดโดยไม่มี `defer` ที่ `tenant_app.html:129` — block HTML parsing 9KB
+  - **ไฟล์:** `tenant_app.html:129`
+  - **Fix:** ย้าย `GamificationRules` reference ใน inline script เข้า `DOMContentLoaded` callback → เพิ่ม `defer` ให้ script tag
+  - **Verify:** Lighthouse → no parser-blocking scripts
+
+---
+
+### 🧪 Testing
+
+- [ ] **[TEST-FRONTEND] Setup Jest/Vitest สำหรับ frontend JS**
+  - **Why:** 0% frontend test coverage — UI bugs ไม่ถูกจับโดย automated tests เลย
+  - **Fix:** เพิ่ม `vitest` + `jsdom` ใน root `package.json`; สร้าง `tests/shared/` directory; เริ่มด้วย:
+    - `tests/shared/tenant-system.test.js` — `TenantConfigManager` CRUD + immutability
+    - `tests/shared/building-registry.test.js` — cache + fallback
+    - `tests/shared/gamification-rules.test.js` — badge unlock conditions
+  - **Target:** ≥50% coverage บน tested files ใน pass แรก
+  - **Verify:** `npm run test:frontend` → passes; coverage report แสดงตัวเลข
+
+- [ ] **[TEST-E2E-BOOKING] เพิ่ม E2E สำหรับ booking flow**
+  - **Why:** booking.html เป็น critical flow แต่ไม่มี E2E เลย (24 tests ปัจจุบันไม่ครอบ)
+  - **ไฟล์:** `e2e/booking.spec.js` (new)
+  - **Fix:** test: room selection → date picker → confirm → payment QR render → slip upload UI
+
+---
+
+## Review section (กรอกหลัง execute)
+
+_กรอกหลังจาก implement แต่ละ section_
+
+- [ ] P0 Security XSS — แก้แล้ว commit: `___`
+- [ ] P0 A11y main landmark — แก้แล้ว commit: `___`
+- [ ] P1 Performance queries — แก้แล้ว commit: `___`
+- [ ] P1 Code quality — แก้แล้ว commit: `___`
+
+---
+
+## สรุปจำนวน tasks
+
+| Priority | Security | Perf | CodeQ | DevOps | UX | Docs | Tech Debt | Testing | รวม |
+|----------|----------|------|-------|--------|----|----- |-----------|---------|-----|
+| P0 | 3 | — | — | — | 2 | — | — | — | **5** |
+| P1 | — | 5 | 4 | 2 | — | — | — | — | **11** |
+| P2 | — | — | 2 | — | 4 | 3 | — | — | **9** |
+| P3 | — | 3 | — | — | — | — | 6 | 2 | **11** |
+| **รวม** | **3** | **8** | **6** | **2** | **6** | **3** | **6** | **2** | **36** |
+
+**Estimated sessions:** P0 (~1-2) + P1 (~3-4) + P2 (~4-5) + P3 (~5-6) = **13-17 sessions** รวม
+
+> หมายเหตุ: Marketplace sprint (S0.2, S1-S6) แยกอยู่ใน [tasks/marketplace-sprints.md](tasks/marketplace-sprints.md) — ทำควบคู่ได้

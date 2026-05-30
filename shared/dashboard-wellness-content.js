@@ -433,11 +433,11 @@ async function renderWellnessArticlesList() {
       const title = _escWC(a.title || '');
       const excerpt = _escWC(a.excerpt || '');
       return `<div style="padding:1rem;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;">
-        <div style="width:36px;height:36px;background:var(--green-pale);color:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas ${a.icon || 'fa-leaf'}"></i></div>
+        <div style="width:36px;height:36px;background:var(--green-pale);color:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas ${_escWC(a.icon || 'fa-leaf')}"></i></div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:700;margin-bottom:4px;">${title}</div>
           <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px;">${excerpt}</div>
-          <div style="font-size:.75rem;color:var(--text-muted);">${a.category || 'Wellness'} • อ่าน ${a.readtime || 3} นาที • ${a.reward > 0 ? '+' + a.reward + ' pts' : 'ไม่ให้แต้ม'}</div>
+          <div style="font-size:.75rem;color:var(--text-muted);">${_escWC(a.category || 'Wellness')} • อ่าน ${Number(a.readtime || 3)} นาที • ${a.reward > 0 ? '+' + Number(a.reward) + ' pts' : 'ไม่ให้แต้ม'}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
           <button data-action="editWellness" data-id="${_escWC(d.id)}" style="padding:6px 10px;background:var(--green);color:${DashColors.WHITE};border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">✏️ แก้</button>
@@ -447,7 +447,7 @@ async function renderWellnessArticlesList() {
     }).join('');
   } catch (e) {
     console.error('renderWellnessArticlesList failed:', e);
-    el.innerHTML = '<div style="color:var(--danger);padding:20px;">โหลดรายการไม่สำเร็จ: ' + (e.message || e) + '</div>';
+    el.innerHTML = '<div style="color:var(--danger);padding:20px;">โหลดรายการไม่สำเร็จ: ' + _escWC(String(e.message || e)) + '</div>';
   }
 }
 
