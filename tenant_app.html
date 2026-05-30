@@ -110,6 +110,7 @@
     <script src="./shared/tenant-profile-edit.js" defer></script>
     <script src="./shared/tenant-lease-request.js" defer></script>
     <script src="./shared/tenant-usage-chart.js" defer></script>
+    <script src="./shared/tenant-meter.js" defer></script>
     <script src="./shared/tenant-world-map.js" defer></script>
     <script src="./shared/tenant-standard-clean-modal.js" defer></script>
     <script src="./shared/tenant-leaderboard.js" defer></script>
@@ -5794,8 +5795,7 @@
             const billYM   = b => (Number(b.year)  || 0) * 100 + (Number(b.month)  || 0);
             const meterYM  = m => (Number(m.year)  || 0) * 100 + (Number(m.month)  || 0);
             _taBills            = window.BillStore.filterByTenantBoundary(_taBills,            billYM,  _taLease);
-            _meterHistoryCache  = window.BillStore.filterByTenantBoundary(_meterHistoryCache,  meterYM, _taLease);
-            window._meterHistoryCache = _meterHistoryCache; // mirror for tenant-usage-chart.js
+            window._meterHistoryCache = window.BillStore.filterByTenantBoundary(window._meterHistoryCache || [], meterYM, _taLease);
             window._tenantAppBills = _taBills;
         }
 
@@ -5811,7 +5811,7 @@
             // 2. SUBSCRIBE: idempotent, safe to call when Firebase isn't ready (no-ops + retries
             //    via authReady/liffLinked listeners). Bills uses RTDB scoped by claims.
             _subscribeBillsRealtime();
-            _loadMeterHistoryFromFirestore();
+            if (typeof window._loadMeterHistoryFromFirestore === 'function') window._loadMeterHistoryFromFirestore();
 
             // 3. BACKGROUND: refresh from Firestore + re-render specific sections when fresh
             //    data arrives. If Firebase isn't ready yet, retry once it initializes.
@@ -5952,7 +5952,7 @@
             } catch (e) { console.warn('subscribeBillsRealtime failed:', e.message); }
         }
         _onLiffClaimsReady(_subscribeBillsRealtime);
-        _onLiffClaimsReady(_loadMeterHistoryFromFirestore);
+        // _loadMeterHistoryFromFirestore wiring moved to shared/tenant-meter.js
         // Re-run after liffLinked so _taBuilding/_taRoom are available for the
         // tenants/{b}/list/{r} subscription (active tenant branch of _subscribeEcoPoints).
         // Closure wrapper: loadGamificationData is set by the defer module tenant-leaderboard.js,
@@ -6014,104 +6014,9 @@
         // Exports: window.renderQuizHub, window.renderQuizHistory
 
         // ---- METER HISTORY ----
-        // ===== FIRESTORE METER HISTORY LOADER =====
-        // Firestore: meter_data/{building_year_month_roomId} — each doc has
-        // {building, roomId, year(BE 2-digit), month, eOld, eNew, wOld, wNew, yearMonth}
-        // Cache populated by _loadMeterHistoryFromFirestore(); used by:
-        //   1. _getMeterHistory for the 6-month usage chart (elec/water visualization)
-        //   2. _backfillCashLegacyBills to retroactively render past months when admin
-        //      hadn't yet pushed bills to RTDB (pre-SlipOK era — tenant paid in cash).
-        //      Current+future months are NOT synthesized — admin's forecast-revenue
-        //      tool owns that view; tenants only see bills admin has actually issued.
-        let _meterHistoryCache = []; window._meterHistoryCache = _meterHistoryCache; // sorted newest first, normalized rows
-        let _meterHistoryLoading = false;
-        async function _loadMeterHistoryFromFirestore() {
-            if (!_taBuilding || !_taRoom) return;
-            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-            if (_meterHistoryLoading) return;
-            _meterHistoryLoading = true;
-            try {
-                const fs = window.firebase.firestoreFunctions;
-                const db = window.firebase.firestore();
-                const q = fs.query(
-                    fs.collection(db, 'meter_data'),
-                    fs.where('building', '==', _taBuilding),
-                    fs.where('roomId', '==', String(_taRoom)),
-                    fs.limit(24)
-                );
-                const snap = await fs.getDocs(q);
-                _meterHistoryCache = snap.docs.map(d => {
-                    const m = d.data() || {};
-                    // SSoT year normalization (handles 2-digit BE / 4-digit BE / 4-digit CE)
-                    const yrCE = window.YearUtils.toCE(m.year) || 0;
-                    const mo = Number(m.month) || 0;
-                    return {
-                        monthKey: `${yrCE}-${String(mo).padStart(2,'0')}`, // "2026-04"
-                        year: yrCE, month: mo,
-                        eOld: Number(m.eOld)||0, eNew: Number(m.eNew)||0,
-                        wOld: Number(m.wOld)||0, wNew: Number(m.wNew)||0,
-                        createdAt: m.createdAt || m.updatedAt || null
-                    };
-                }).sort((a,b) => b.monthKey.localeCompare(a.monthKey));
-                // Hide previous tenant's meter rows — synthesizeFromMeter already filters
-                // synthetic bills, but the raw cache also drives _renderUsageChart and
-                // any future direct meter views. SSoT helper handles the no-lease case.
-                if (window.BillStore?.filterByTenantBoundary) {
-                    _meterHistoryCache = window.BillStore.filterByTenantBoundary(
-                        _meterHistoryCache, m => (Number(m.year)||0)*100 + (Number(m.month)||0), _taLease);
-                }
-                window._meterHistoryCache = _meterHistoryCache; // mirror for tenant-usage-chart.js
-                // Mirror to localStorage so offline/early-render has data
-                try { localStorage.setItem(`meter_history_${_taBuilding}_${_taRoom}`, JSON.stringify(_meterHistoryCache)); } catch(e) {}
-                _backfillCashLegacyBills();
-                if (typeof renderBillsList === 'function') renderBillsList();
-                if (typeof _renderUsageChart === 'function') _renderUsageChart();
-            } catch (e) {
-                console.warn('⚠️ meter history load failed:', e.message);
-            } finally {
-                _meterHistoryLoading = false;
-            }
-        }
-
-        // Synthesize bills from meter_data — meter_data is the SoT for bills.
-        // Past months → status='paid' method='cash_legacy' (pre-SlipOK).
-        // Current month → status='pending' (newly uploaded meter, awaiting payment).
-        function _backfillCashLegacyBills() {
-            if (!_meterHistoryCache.length) return;
-            if (!window.BillStore?.synthesizeFromMeter) return;
-            // Resolve rates: prefer RoomConfigManager, fallback to lease rentAmount, then defaults
-            let rent = 0, eRate = 8, wRate = 20, trash = 40;
-            try {
-                if (typeof RoomConfigManager !== 'undefined') {
-                    const rc = RoomConfigManager.getRoom?.(_taBuilding, _taRoom);
-                    if (rc) {
-                        rent  = Number(rc.rentPrice    ?? rc.rent)     || 0;
-                        eRate = Number(rc.electricRate ?? rc.elecRate) || 8;
-                        wRate = Number(rc.waterRate)                   || 20;
-                        trash = Number(rc.trashRate    ?? rc.trashFee) || 40;
-                    }
-                }
-            } catch(e) {}
-            if (!rent && _taLease?.rentAmount) rent = Number(_taLease.rentAmount) || 0;
-
-            const synth = window.BillStore.synthesizeFromMeter({
-                meterHistory: _meterHistoryCache,
-                existingBills: _taBills,
-                rates: { rent, eRate, wRate, trash },
-                moveInDate: _taLease?.moveInDate,
-                building: _taBuilding,
-                room: _taRoom,
-                pastOnly: false
-            });
-            if (synth.length) _taBills.push(...synth);
-            _taBills.sort((a,b) => {
-                const aCE = window.YearUtils.toCE(a.year) || 0;
-                const bCE = window.YearUtils.toCE(b.year) || 0;
-                return (bCE*100+Number(b.month)) - (aCE*100+Number(a.month));
-            });
-            _dedupBills();
-            window._tenantAppBills = _taBills;
-        }
+        // Extracted to shared/tenant-meter.js (loaded via <script defer>).
+        // Exports: window._loadMeterHistoryFromFirestore, window._backfillCashLegacyBills
+        // State:   window._meterHistoryCache (initialized by module)
 
         // ===== 12-month Usage Chart (elec + water tab toggle, tap-for-detail) =====
         // Implementation extracted to shared/tenant-usage-chart.js (loaded via <script defer>).
