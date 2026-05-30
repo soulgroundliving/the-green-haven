@@ -2950,16 +2950,16 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <div class="ui-modal u-init-hide" id="tenantModal" role="dialog" aria-modal="true" aria-labelledby="tenantModalTitle" >
   <div style="background:#fff;border-radius:var(--radius);max-width:680px;width:100%;max-height:95vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;">
     <!-- Modal Header with Gradient -->
-    <div style="background:linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+    <div class="dash-modal-header-green">
       <div>
-        <h2 id="tenantModalTitle" style="margin:0;font-size:1.25rem;font-weight:700;">📋 จัดการข้อมูลห้อง</h2>
+        <h2 id="tenantModalTitle" class="dash-heading-lg">📋 จัดการข้อมูลห้อง</h2>
         <small class="dash-sub-dim">แก้ไขข้อมูลผู้เช่าและสัญญา</small>
       </div>
       <button data-action="closeTenantModal" style="background:rgba(255,255,255,.2);border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:all .2s;hover:background:rgba(255,255,255,.3);">✕</button>
     </div>
 
     <!-- Modal Content -->
-    <div style="padding:2rem;overflow-y:auto;flex:1;">
+    <div class="dash-modal-body">
 
       <!-- Room Status Section -->
       <div style="background:linear-gradient(135deg, var(--green-pale) 0%, #f0f7f0 100%);padding:1.5rem;border-radius:var(--radius-sm);margin-bottom:2rem;border:2px solid var(--green-light);">
@@ -3153,8 +3153,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 </div>
 
 <!-- ===== PDPA §32 ERASURE (ADMIN) — Step 1: Disclosure ===== -->
-<div id="pdpaAdmStep1Modal" class="u-hidden" role="dialog" aria-modal="true" aria-labelledby="pdpaAdmStep1-title" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;align-items:center;justify-content:center;padding:16px;">
-  <div style="background:#fff;max-width:560px;width:100%;max-height:90vh;overflow:auto;border-radius:16px;padding:22px;">
+<div id="pdpaAdmStep1Modal" class="u-hidden dash-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pdpaAdmStep1-title" >
+  <div class="dash-modal-box-560">
     <h3 id="pdpaAdmStep1-title" style="margin:0 0 8px;color:#b91c1c;font-size:1.15rem;">🗑️ ลบข้อมูลผู้เช่า (PDPA §32)</h3>
     <p style="margin:0 0 12px;font-size:.88rem;color:#374151;">การกระทำนี้ <b>ไม่สามารถยกเลิกได้</b> — โปรดตรวจสอบข้อมูลเป้าหมายและอ่านรายละเอียดให้ครบก่อนยืนยัน</p>
 
@@ -3175,26 +3175,26 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     </div>
 
     <label style="display:flex;align-items:flex-start;gap:8px;margin:14px 0 8px;font-size:.85rem;cursor:pointer;">
-      <input type="checkbox" id="pdpaAdmAckActive" style="margin-top:3px;">
+      <input type="checkbox" id="pdpaAdmAckActive" class="dash-mt-3px">
       <span>ฉันยืนยันว่าผู้เช่าคนนี้ <b>ไม่ใช่ active tenant</b> แล้ว (transitioned หรือ archived)</span>
     </label>
     <label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 12px;font-size:.85rem;cursor:pointer;">
-      <input type="checkbox" id="pdpaAdmAckRetention" style="margin-top:3px;">
+      <input type="checkbox" id="pdpaAdmAckRetention" class="dash-mt-3px">
       <span>ฉันเข้าใจว่าบิล/สัญญา/ประวัติชำระเงินจะถูกเก็บต่อ 5 ปี ตามกฎหมายภาษีและแพ่ง</span>
     </label>
 
     <label style="display:block;margin-bottom:6px;font-size:.85rem;font-weight:600;">เหตุผล (audit log) — เช่น "PDPA request via LINE 2026-05-14"</label>
     <input type="text" id="pdpaAdmReason" maxlength="500" placeholder="เหตุผลสำหรับ audit (ไม่บังคับ แต่แนะนำ)" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;box-sizing:border-box;font-size:.88rem;margin-bottom:14px;">
 
-    <div style="display:flex;gap:10px;justify-content:flex-end;">
-      <button data-action="_pdpaAdmCancel" style="padding:9px 18px;border-radius:10px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-weight:500;">ยกเลิก</button>
-      <button id="pdpaAdmStep1Continue" data-action="_pdpaAdmStep1Continue" disabled style="padding:9px 18px;border-radius:10px;border:none;background:#dc2626;color:#fff;cursor:not-allowed;font-weight:600;opacity:.5;">ดำเนินการต่อ</button>
+    <div class="dash-row-end-10">
+      <button data-action="_pdpaAdmCancel" class="dash-btn-cancel">ยกเลิก</button>
+      <button id="pdpaAdmStep1Continue" data-action="_pdpaAdmStep1Continue" disabled class="dash-btn-danger-dis">ดำเนินการต่อ</button>
     </div>
   </div>
 </div>
 
 <!-- ===== PDPA §32 ERASURE (ADMIN) — Step 2: Friction phrase ===== -->
-<div id="pdpaAdmStep2Modal" class="u-hidden" role="dialog" aria-modal="true" aria-labelledby="pdpaAdmStep2-title" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;align-items:center;justify-content:center;padding:16px;">
+<div id="pdpaAdmStep2Modal" class="u-hidden dash-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pdpaAdmStep2-title" >
   <div style="background:#fff;max-width:480px;width:100%;max-height:90vh;overflow:auto;border-radius:16px;padding:22px;">
     <h3 id="pdpaAdmStep2-title" style="margin:0 0 12px;color:#b91c1c;font-size:1.15rem;">⚠️ ยืนยันการลบข้อมูล</h3>
     <p style="margin:0 0 14px;font-size:.9rem;color:#374151;">พิมพ์ข้อความด้านล่างเพื่อยืนยัน — การลบจะเริ่มทันทีเมื่อกด <b>"ลบข้อมูล"</b></p>
@@ -3206,15 +3206,15 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <input type="text" id="pdpaAdmPhrase" autocomplete="off" placeholder="พิมพ์ข้อความข้างบน..." style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #d1d5db;font-size:1rem;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
 
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
-      <button data-action="_pdpaAdmBackToStep1" style="padding:9px 18px;border-radius:10px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-weight:500;">ย้อนกลับ</button>
-      <button id="pdpaAdmStep2Confirm" data-action="_pdpaAdmConfirm" disabled style="padding:9px 18px;border-radius:10px;border:none;background:#dc2626;color:#fff;cursor:not-allowed;font-weight:600;opacity:.5;">✅ ลบข้อมูล</button>
+      <button data-action="_pdpaAdmBackToStep1" class="dash-btn-cancel">ย้อนกลับ</button>
+      <button id="pdpaAdmStep2Confirm" data-action="_pdpaAdmConfirm" disabled class="dash-btn-danger-dis">✅ ลบข้อมูล</button>
     </div>
   </div>
 </div>
 
 <!-- ===== PDPA §32 ERASURE (ADMIN) — Summary ===== -->
-<div id="pdpaAdmSummaryModal" class="u-hidden" role="dialog" aria-modal="true" aria-labelledby="pdpaAdmSummary-title" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;align-items:center;justify-content:center;padding:16px;">
-  <div style="background:#fff;max-width:560px;width:100%;max-height:90vh;overflow:auto;border-radius:16px;padding:22px;">
+<div id="pdpaAdmSummaryModal" class="u-hidden dash-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pdpaAdmSummary-title" >
+  <div class="dash-modal-box-560">
     <h3 id="pdpaAdmSummary-title" style="margin:0 0 12px;color:#065f46;font-size:1.15rem;">✅ ลบข้อมูลเรียบร้อย</h3>
     <div id="pdpaAdmSummaryBody" style="font-size:.9rem;color:#374151;line-height:1.6;"></div>
     <div style="display:flex;justify-content:flex-end;margin-top:18px;">
@@ -3263,8 +3263,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <div class="kpi-card"><div class="gh-skeleton dash-skel-md" ></div><div class="gh-skeleton dash-skel-lg" ></div><div class="gh-skeleton dash-skel-sm" ></div></div>
       </div>
       <div class="dash-skel-chart-grid">
-        <div class="card"><div class="gh-skeleton dash-skel-xs" ></div><div class="gh-skeleton" style="height:200px;border-radius:8px;"></div></div>
-        <div class="card"><div class="gh-skeleton dash-skel-xs" ></div><div class="gh-skeleton" style="height:200px;border-radius:8px;"></div></div>
+        <div class="card"><div class="gh-skeleton dash-skel-xs" ></div><div class="gh-skeleton dash-img-preview" ></div></div>
+        <div class="card"><div class="gh-skeleton dash-skel-xs" ></div><div class="gh-skeleton dash-img-preview" ></div></div>
       </div>
       <div class="dash-skel-insight-grid">
         <div class="insight-card dash-border-card" ><div class="gh-skeleton dash-skel-55" ></div><div class="gh-skeleton dash-skel-60" ></div></div>
@@ -3350,8 +3350,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
       <div>
         <div class="fin-util-grid">
-          <div class="card"><div class="card-title">⚡ ค่าไฟรายเดือน</div><div style="height:105px;"><canvas id="chartElec"></canvas></div></div>
-          <div class="card"><div class="card-title">💧 ค่าน้ำรายเดือน</div><div style="height:105px;"><canvas id="chartWater"></canvas></div></div>
+          <div class="card"><div class="card-title">⚡ ค่าไฟรายเดือน</div><div class="dash-h-105"><canvas id="chartElec"></canvas></div></div>
+          <div class="card"><div class="card-title">💧 ค่าน้ำรายเดือน</div><div class="dash-h-105"><canvas id="chartWater"></canvas></div></div>
         </div>
       </div>
     </div>
@@ -3467,7 +3467,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div class="year-tabs dash-tabs-bar" >
     <button id="tenant-main-tab-btn-tenants" class="year-tab active" data-action="switchTenantMainTab" data-tab="tenants">👥 ผู้เช่า</button>
     <button id="tenant-main-tab-btn-leases" class="year-tab" data-action="switchTenantMainTab" data-tab="leases">📋 สัญญา</button>
-    <button id="tenant-main-tab-btn-requests" class="year-tab" data-action="switchTenantMainTab" data-tab="requests">📨 คำขอ <span id="leaseRequestsBadge" style="display:none;background:var(--red-dark);color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
+    <button id="tenant-main-tab-btn-requests" class="year-tab" data-action="switchTenantMainTab" data-tab="requests">📨 คำขอ <span id="leaseRequestsBadge" class="dash-badge-err">0</span></button>
     <button id="tenant-main-tab-btn-bookings" class="year-tab" data-action="switchTenantMainTab" data-tab="bookings">🗓️ จอง <span id="bookingsBadge" style="display:none;background:var(--blue-dark);color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
   </div>
   <div id="tenant-main-tab-tenants">
@@ -3489,15 +3489,15 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <span class="color-silver">|</span>
       <span class="dash-color-accent">🚪 <b id="occupancy-vacant">0</b> ว่าง</span>
       <span class="color-silver">|</span>
-      <span style="color:#6a1b9a;">📊 <b id="occupancy-rate">0%</b></span>
+      <span class="dash-text-purple">📊 <b id="occupancy-rate">0%</b></span>
       <span class="color-silver">|</span>
       <span class="dash-color-red">⏰ <b id="occupancy-soon">0</b> ใกล้หมด</span>
       <span style="margin-left:auto;color:var(--green-dark);font-weight:700;">💰 <span id="rooms-total-income">—</span></span>
     </div>
     <!-- Lease Expiry Alerts -->
-    <div id="lease-expiry-alerts" style="display:none;margin-bottom:8px;">
+    <div id="lease-expiry-alerts" class="dash-hidden-mb2">
       <div class="dash-warn-note">
-        <span style="font-weight:700;color:#f57f17;">⚠️ หมดสัญญาใน 30 วัน</span>
+        <span class="dash-text-amber">⚠️ หมดสัญญาใน 30 วัน</span>
         <div id="lease-expiry-list" class="dash-tags-row"></div>
       </div>
     </div>
@@ -3514,15 +3514,15 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <span class="color-silver">|</span>
       <span class="dash-color-accent">🚪 <b id="nest-occupancy-vacant">0</b> ว่าง</span>
       <span class="color-silver">|</span>
-      <span style="color:#6a1b9a;">📊 <b id="nest-occupancy-rate">0%</b></span>
+      <span class="dash-text-purple">📊 <b id="nest-occupancy-rate">0%</b></span>
       <span class="color-silver">|</span>
       <span class="dash-color-red">⏰ <b id="nest-occupancy-soon">0</b> ใกล้หมด</span>
       <span style="margin-left:auto;color:var(--blue-dark);font-weight:700;">💰 <span id="nest-total-income">—</span></span>
     </div>
     <!-- Lease Expiry Alerts -->
-    <div id="nest-lease-expiry-alerts" style="display:none;margin-bottom:8px;">
+    <div id="nest-lease-expiry-alerts" class="dash-hidden-mb2">
       <div class="dash-warn-note">
-        <span style="font-weight:700;color:#f57f17;">⚠️ หมดสัญญาใน 30 วัน</span>
+        <span class="dash-text-amber">⚠️ หมดสัญญาใน 30 วัน</span>
         <div id="nest-lease-expiry-list" class="dash-tags-row"></div>
       </div>
     </div>
@@ -3637,7 +3637,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
 
       <!-- Action Buttons -->
-      <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <div class="dash-row-end-10">
         <button data-action="closeBatchRentAdjustmentModal" style="padding:10px 20px;border-radius:6px;border:1.5px solid #999;background:white;color:var(--text);font-size:.9rem;font-weight:600;cursor:pointer;font-family:var(--font-brand);">ยกเลิก</button>
         <button data-action="applyBatchRentAdjustment" style="padding:10px 20px;border-radius:6px;border:none;background:var(--ok-bright);color:white;font-size:.9rem;font-weight:600;cursor:pointer;font-family:var(--font-brand);">✓ ปรับค่าเช่า</button>
       </div>
@@ -3652,8 +3652,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <table class="data-table" id="tenantTable" style="width:100%;border-collapse:collapse;">
           <thead style="background:var(--green-pale);">
             <tr>
-              <th style="padding:10px;text-align:left;border-bottom:2px solid var(--border);">ห้อง</th>
-              <th style="padding:10px;text-align:left;border-bottom:2px solid var(--border);">ชื่อ-นามสกุล</th>
+              <th class="dash-th-cell">ห้อง</th>
+              <th class="dash-th-cell">ชื่อ-นามสกุล</th>
               <th class="table-cell-center">เบอร์โทร</th>
               <th class="table-cell-center">เข้า</th>
               <th class="table-cell-center">สัญญา</th>
@@ -3676,15 +3676,15 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <!-- TAB 3: คำขอจากลูกบ้าน -->
   <div id="tenant-main-tab-requests" class="u-init-hide">
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div class="dash-row-sb-mb4">
         <div>
           <div style="font-size:1.05rem;font-weight:700;">📨 คำขอต่อสัญญา / แจ้งย้ายออก</div>
           <small class="u-color-muted">ลูกบ้านส่งจากหน้า Profile → "แจ้งต่อสัญญา / ย้ายออก" — real-time</small>
         </div>
         <div class="dash-flex-gap-sm">
           <button id="leaseFilterAllBtn" data-action="setLeaseRequestFilter" data-filter="all" class="lease-req-filter-btn" style="padding:6px 14px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-size:.85rem;">ทั้งหมด</button>
-          <button id="leaseFilterPendingBtn" data-action="setLeaseRequestFilter" data-filter="pending" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:var(--text);border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-size:.85rem;">รอดำเนินการ</button>
-          <button id="leaseFilterDoneBtn" data-action="setLeaseRequestFilter" data-filter="done" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:var(--text);border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-size:.85rem;">ดำเนินการแล้ว</button>
+          <button id="leaseFilterPendingBtn" data-action="setLeaseRequestFilter" data-filter="pending" class="lease-req-filter-btn dash-btn-gray" >รอดำเนินการ</button>
+          <button id="leaseFilterDoneBtn" data-action="setLeaseRequestFilter" data-filter="done" class="lease-req-filter-btn dash-btn-gray" >ดำเนินการแล้ว</button>
         </div>
       </div>
       <div id="leaseRequestsList" style="display:grid;gap:1rem;">
@@ -3795,10 +3795,10 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
       <!-- Entry Mode Toggle -->
       <div style="margin-bottom:1rem;display:flex;gap:1.5rem;">
-        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;color:var(--text);">
+        <label class="dash-clickable-row">
           <input type="radio" name="addMode" value="manual" checked data-action="toggleAddMode"> ป้อนข้อมูลใหม่
         </label>
-        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;color:var(--text);">
+        <label class="dash-clickable-row">
           <input type="radio" name="addMode" value="copy" data-action="toggleAddMode"> Copy from template
         </label>
       </div>
@@ -3832,16 +3832,16 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <div class="section-title" role="heading" aria-level="2">📥 นำเข้าข้อมูลมิเตอร์</div>
 
     <!-- Building Selection -->
-    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;">
+    <div class="dash-panel-lg">
 
       <!-- File Upload -->
       <div class="mb-6">
         <label class="dash-form-label-8">📤 อัพโหลดไฟล์ Excel:</label>
-        <div class="import-drop-zone" id="importDropZone"
-             style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
+        <div class="import-drop-zone dash-drop-zone" id="importDropZone"
+             
              data-drop-handler="handleImportDrop">
-          <div style="font-size:2rem;margin-bottom:0.5rem;">📊</div>
-          <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์มาวางที่นี่ หรือคลิก</div>
+          <div class="dash-icon-lg">📊</div>
+          <div class="dash-field-name">ลากไฟล์มาวางที่นี่ หรือคลิก</div>
           <div class="text-xs-muted">ไฟล์ Excel (.xlsx, .xls)</div>
         </div>
         <input type="file" id="importFileInput" accept=".xlsx,.xls" class="u-init-hide" data-action="handleImportFile">
@@ -3872,17 +3872,17 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
       <!-- Import Results -->
       <div id="importResultsSection" class="u-hidden dash-mb-6" >
-        <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;">
-          <h3 style="color:var(--text);margin-bottom:1rem;font-size:0.95rem;">✅ ตรวจสอบข้อมูล</h3>
+        <div class="dash-accent-panel">
+          <h3 class="dash-body-text">✅ ตรวจสอบข้อมูล</h3>
           <div id="importPreviewData" style="background:white;padding:1.2rem;border-radius:var(--radius-sm);"></div>
         </div>
 
         <!-- Data Continuity Validation Results -->
         <div id="importMatchSummary" style="background:var(--green-pale);border:1px solid var(--green-light);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;"></div>
 
-        <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
+        <div class="dash-flex-wrap-8">
           <button id="approveImportBtn" data-action="approveImportData" class="dash-btn-green">✅ อนุมัติและบันทึก</button>
-          <button data-action="cancelImportProcess" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">❌ ยกเลิก</button>
+          <button data-action="cancelImportProcess" class="dash-btn-muted">❌ ยกเลิก</button>
         </div>
       </div>
 
@@ -3962,9 +3962,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
 
       <!-- Instructions -->
-      <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:1rem;color:var(--text-muted);font-size:0.85rem;">
+      <div class="dash-info-box">
         <strong>ขั้นตอน:</strong>
-        <ol style="margin:0.5rem 0 0 1.5rem;padding:0;">
+        <ol class="dash-list-indent">
           <li>อัพโหลดไฟล์ Excel (ระบบอ่านอาคารจากชื่อห้องอัตโนมัติ)</li>
           <li>ตรวจสอบข้อมูลตรวจสอบความต่อเนื่องจากเดือนที่แล้ว</li>
           <li>อนุมัติและบันทึกข้อมูล</li>
@@ -3978,16 +3978,16 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div id="meter-import-billing-content" class="meter-tab-content u-init-hide" >
     <div class="section-title" role="heading" aria-level="2">📥 นำเข้าข้อมูลบิล</div>
 
-    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;">
+    <div class="dash-panel-lg">
       <!-- File Upload -->
       <div class="mb-6">
         <label class="dash-form-label-8">📤 อัพโหลดไฟล์บิล Excel:</label>
-        <div class="import-drop-zone" id="billingDropZone"
-             style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
+        <div class="import-drop-zone dash-drop-zone" id="billingDropZone"
+             
              data-drop-handler="handleBillingImportDrop"
              data-action="clickInput" data-target="billingFileInput">
-          <div style="font-size:2rem;margin-bottom:0.5rem;">💳</div>
-          <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์บิล Excel มาวางที่นี่ หรือคลิก</div>
+          <div class="dash-icon-lg">💳</div>
+          <div class="dash-field-name">ลากไฟล์บิล Excel มาวางที่นี่ หรือคลิก</div>
           <div class="text-xs-muted">ไฟล์ Excel (.xlsx, .xls) เช่น บิลปี68.xlsx</div>
         </div>
         <input type="file" id="billingFileInput" accept=".xlsx,.xls" class="u-init-hide" data-action="handleBillingImportFile">
@@ -3999,21 +3999,21 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
 <!-- Import Results -->
       <div id="billingResultsSection" class="u-hidden dash-mb-6" >
-        <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;">
-          <h3 style="color:var(--text);margin-bottom:1rem;font-size:0.95rem;">✅ ตรวจสอบข้อมูล</h3>
+        <div class="dash-accent-panel">
+          <h3 class="dash-body-text">✅ ตรวจสอบข้อมูล</h3>
           <div id="billingPreviewData" style="background:white;padding:1.2rem;border-radius:var(--radius-sm);font-family:monospace;font-size:0.85rem;"></div>
         </div>
 
-        <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
+        <div class="dash-flex-wrap-8">
           <button id="approveBillingBtn" data-action="approveBillingImportData" class="dash-btn-green">✅ อนุมัติและบันทึก</button>
-          <button data-action="cancelBillingImportProcess" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">❌ ยกเลิก</button>
+          <button data-action="cancelBillingImportProcess" class="dash-btn-muted">❌ ยกเลิก</button>
         </div>
       </div>
 
       <!-- Instructions -->
-      <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:1rem;color:var(--text-muted);font-size:0.85rem;">
+      <div class="dash-info-box">
         <strong>ขั้นตอน:</strong>
-        <ol style="margin:0.5rem 0 0 1.5rem;padding:0;">
+        <ol class="dash-list-indent">
           <li>อัพโหลดไฟล์ Excel บิล (เช่น บิลปี68.xlsx)</li>
           <li>ระบบจะอ่าน H32 (รายได้รวม) จากแต่ละเดือน</li>
           <li>ตรวจสอบข้อมูลและอนุมัติ</li>
@@ -4085,11 +4085,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           📊 สรุปประจำเดือน
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <select id="exp-filter-building" data-action="renderExpensePage" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.8rem;">
+            <select id="exp-filter-building" data-action="renderExpensePage" class="dash-input-mini">
               <option value="rooms">🏠 ห้องแถว</option>
               <option value="nest">🏢 Nest</option>
             </select>
-            <select id="exp-filter-month" data-action="renderExpensePage" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.8rem;">
+            <select id="exp-filter-month" data-action="renderExpensePage" class="dash-input-mini">
               <option value="1">ม.ค.</option><option value="2">ก.พ.</option><option value="3">มี.ค.</option>
               <option value="4">เม.ย.</option><option value="5">พ.ค.</option><option value="6">มิ.ย.</option>
               <option value="7">ก.ค.</option><option value="8">ส.ค.</option><option value="9">ก.ย.</option>
@@ -4155,7 +4155,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <div class="grid-2col">
         <div>
           <label class="field-label">วันที่ (optional)</label>
-          <input type="date" id="ann-date" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px;">
+          <input type="date" id="ann-date" class="dash-input-base">
         </div>
 
         <div>
@@ -4201,7 +4201,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <option value="nest">🏢 Nest เท่านั้น</option>
         </select>
         <input type="text" id="eventLocation" placeholder="Location" class="input-pad10">
-        <textarea id="eventDescription" placeholder="Description" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
+        <textarea id="eventDescription" placeholder="Description" class="dash-textarea-sm"></textarea>
         <div class="dash-flex-gap-4">
           <button data-action="saveCommunityEvent" class="btn-receipt">💾 Save</button>
           <button data-action="toggleAddEventForm" class="btn-invoice dash-bg-gray" >✕ Cancel</button>
@@ -4243,7 +4243,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <small style="display:block; color:var(--text-muted); font-size:.78rem; margin-top:.4rem;">ถ้าอัพไฟล์แล้ว URL ด้านล่างจะถูกสร้างให้อัตโนมัติ (เก็บใน Firebase Storage)</small>
         </div>
         <input type="text" id="docUrl" placeholder="Document URL / Link (กรอกเองถ้าไม่อัพไฟล์)" class="input-pad10">
-        <textarea id="docDescription" placeholder="Description (optional)" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
+        <textarea id="docDescription" placeholder="Description (optional)" class="dash-textarea-sm"></textarea>
         <div class="dash-flex-gap-4">
           <button data-action="saveCommunityDocument" class="btn-receipt">💾 Save</button>
           <button data-action="toggleAddDocForm" class="btn-invoice dash-bg-gray" >✕ Cancel</button>
@@ -4291,7 +4291,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <!-- Cover image upload (single, shown as thumbnail in tenant article list) -->
       <div class="mb-4">
         <label class="field-label">🖼️ ภาพปก (แสดงหน้าปกในแอพลูกบ้าน)</label>
-        <input type="file" id="wellness-cover-input" accept="image/*" data-action="onWellnessCoverPicked" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:var(--font-brand);">
+        <input type="file" id="wellness-cover-input" accept="image/*" data-action="onWellnessCoverPicked" class="dash-input-dashed">
         <div id="wellness-cover-preview" style="margin-top:8px;display:none;">
           <img id="wellness-cover-img" src="" alt="ภาพปก" style="width:120px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
           <button type="button" data-action="clearWellnessCover" style="display:block;margin-top:4px;font-size:.72rem;background:none;border:none;color:var(--danger);cursor:pointer;font-family:var(--font-brand);">✕ ลบภาพปก</button>
@@ -4302,7 +4302,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <!-- Image upload (multiple, compressed inline base64) -->
       <div class="mb-4">
         <label class="field-label">📷 รูปประกอบ (เลือกหลายรูปได้)</label>
-        <input type="file" id="wellness-images-input" accept="image/*" multiple data-action="onWellnessImagesPicked" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:var(--font-brand);">
+        <input type="file" id="wellness-images-input" accept="image/*" multiple data-action="onWellnessImagesPicked" class="dash-input-dashed">
         <div id="wellness-images-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
         <div class="dash-tiny-note">รูปจะถูกย่อเป็น 800px width + แทรกเข้าเนื้อหาให้อัตโนมัติ — รองรับ JPG/PNG/WEBP</div>
       </div>
@@ -4339,11 +4339,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </div>
         <div>
           <label class="field-label">เวลาอ่าน (นาที)</label>
-          <input type="number" id="wellness-readtime" min="1" max="30" value="3" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px;">
+          <input type="number" id="wellness-readtime" min="1" max="30" value="3" class="dash-input-base">
         </div>
         <div>
           <label class="field-label">Reward (pts)</label>
-          <input type="number" id="wellness-reward" min="0" max="200" value="5" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px;">
+          <input type="number" id="wellness-reward" min="0" max="200" value="5" class="dash-input-base">
           <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px;">0 = ไม่ให้แต้ม</div>
         </div>
       </div>
@@ -4393,7 +4393,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <!-- Main Tab Nav -->
   <div class="year-tabs dash-tabs-bar" >
     <button id="bill-main-tab-btn-billing" class="year-tab active" data-action="switchBillingMainTab" data-tab="billing">🧾 ออกบิล</button>
-    <button id="bill-main-tab-btn-live" class="year-tab" data-action="switchBillingMainTab" data-tab="live">🔔 Live Feed <span id="paymentBadge2" style="display:none;background:var(--red-dark);color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
+    <button id="bill-main-tab-btn-live" class="year-tab" data-action="switchBillingMainTab" data-tab="live">🔔 Live Feed <span id="paymentBadge2" class="dash-badge-err">0</span></button>
     <button id="bill-main-tab-btn-history" class="year-tab" data-action="switchBillingMainTab" data-tab="history">📜 ประวัติตามห้อง</button>
     <button id="bill-main-tab-btn-monthly" class="year-tab" data-action="switchBillingMainTab" data-tab="monthly">📋 สถานะชำระรายเดือน</button>
   </div>
@@ -4614,7 +4614,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
               <div class="doc-placeholder">
                 <div class="icon">📄</div>
                 <div class="dash-note-600">กรอกข้อมูลและกด "ส่งใบวางบิล"</div>
-                <div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 1 — แจ้งยอดก่อนชำระ</div>
+                <div class="dash-hint-77">ขั้นตอนที่ 1 — แจ้งยอดก่อนชำระ</div>
               </div>
             </div>
           </div>
@@ -4625,7 +4625,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
               <div class="doc-placeholder">
                 <div class="icon">✅</div>
                 <div class="dash-note-600">กด "ออกใบเสร็จรับเงิน" หลังรับเงินแล้ว</div>
-                <div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 2 — ยืนยันการชำระเงิน</div>
+                <div class="dash-hint-77">ขั้นตอนที่ 2 — ยืนยันการชำระเงิน</div>
               </div>
             </div>
           </div>
@@ -4667,7 +4667,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
   <!-- Real-time feed -->
   <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+    <div class="dash-row-sb-mb4">
       <div class="card-title u-m0" >🔔 การโอนเงินที่ผ่านการยืนยัน</div>
       <div id="pv-live-dot" style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--green);">
         <span style="width:8px;height:8px;background:var(--green);border-radius:50%;display:inline-block;animation:pulse 1.5s infinite;"></span>
@@ -4907,15 +4907,15 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <!-- Buildings: add/edit modal -->
 <div id="buildingFormModal" class="u-hidden" role="dialog" aria-modal="true" aria-labelledby="bld-modal-title" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
   <div style="background:#fff;border-radius:12px;max-width:520px;width:100%;padding:1.5rem;max-height:90vh;overflow-y:auto;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+    <div class="dash-row-sb-mb4">
       <h3 id="bld-modal-title" style="margin:0;font-size:1.1rem;">เพิ่มอาคารใหม่</h3>
       <button data-action="closeBuildingModal" aria-label="ปิด" style="background:none;border:none;font-size:1.5rem;cursor:pointer;line-height:1;">×</button>
     </div>
 
-    <label class="dash-form-label">Building ID (slug) <span style="color:#f44336;">*</span></label>
+    <label class="dash-form-label">Building ID (slug) <span class="dash-text-danger">*</span></label>
     <input type="text" id="bld-form-id" placeholder="เช่น 'rooms', 'nest', 'green_tower_1'" maxlength="40" style="width:100%;padding:.65rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.85rem;font-family:monospace;">
 
-    <label class="dash-form-label">ชื่ออาคาร (display) <span style="color:#f44336;">*</span></label>
+    <label class="dash-form-label">ชื่ออาคาร (display) <span class="dash-text-danger">*</span></label>
     <input type="text" id="bld-form-displayName" placeholder="เช่น 'Nature Haven', 'Green Tower 1'" maxlength="80" class="dash-form-input">
 
     <label class="dash-form-label">ที่อยู่</label>
@@ -4947,14 +4947,14 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <!-- ===== CHECKLIST TEMPLATE EDITOR MODAL (Tier 3I) ===== -->
 <div id="checklist-template-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9997;align-items:center;justify-content:center;">
   <div style="position:relative;background:#fff;border-radius:16px;padding:1.5rem;width:94%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);">
-    <button data-action="closeChecklistEditor" aria-label="ปิด" style="position:absolute;top:.75rem;right:.75rem;width:32px;height:32px;border-radius:50%;background:var(--green-dark);color:#fff;border:none;cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;">✕</button>
+    <button data-action="closeChecklistEditor" aria-label="ปิด" class="dash-card-btn-abs">✕</button>
     <div style="font-weight:700;font-size:1.05rem;margin-bottom:.25rem;padding-right:2rem;">🗒️ Checklist Template</div>
     <div class="dash-footnote">อาคาร: <strong id="clt-building-label"></strong></div>
     <label class="dash-field-label">รายการตรวจ (หนึ่งบรรทัด = หนึ่งรายการ)</label>
     <textarea id="clt-items" rows="12" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;font-family:inherit;font-size:.875rem;margin-bottom:1rem;" placeholder="เช่น:&#10;ประตูห้อง&#10;กุญแจ&#10;เครื่องปรับอากาศ&#10;ตู้เย็น&#10;..."></textarea>
     <div class="dash-flex-gap-sm">
-      <button data-action="closeChecklistEditor" style="flex:1;padding:.7rem;background:#fff;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-weight:600;">ยกเลิก</button>
-      <button data-action="saveChecklistTemplate" style="flex:2;padding:.7rem;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">💾 บันทึก</button>
+      <button data-action="closeChecklistEditor" class="dash-btn-flex-white">ยกเลิก</button>
+      <button data-action="saveChecklistTemplate" class="dash-btn-flex-green">💾 บันทึก</button>
     </div>
   </div>
 </div>
@@ -4982,12 +4982,12 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <div class="card-title" role="heading" aria-level="3">📣 เผยแพร่ประกาศใหม่</div>
       <div style="display:flex;flex-direction:column;gap:1rem;">
         <label class="dash-col-gap-xs">
-          <span class="dash-bold-92">หัวข้อ <span id="bc-title-counter" style="color:var(--text-muted);font-weight:400;font-size:.85rem;">(0/80)</span></span>
+          <span class="dash-bold-92">หัวข้อ <span id="bc-title-counter" class="dash-meta-text">(0/80)</span></span>
           <input type="text" id="bc-title-input" maxlength="80" placeholder="เช่น ค่าน้ำส่วนกลางขึ้น"
                  style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
         </label>
         <label class="dash-col-gap-xs">
-          <span class="dash-bold-92">ข้อความ <span id="bc-body-counter" style="color:var(--text-muted);font-weight:400;font-size:.85rem;">(0/500)</span></span>
+          <span class="dash-bold-92">ข้อความ <span id="bc-body-counter" class="dash-meta-text">(0/500)</span></span>
           <textarea id="bc-body-input" maxlength="500" rows="4" placeholder="รายละเอียดประกาศ..."
                  style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;resize:vertical;"></textarea>
         </label>
@@ -5033,12 +5033,12 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
-      <select id="dep-filter-building" data-action="renderDepositsPage" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
+      <select id="dep-filter-building" data-action="renderDepositsPage" class="dash-select-sm">
         <option value="all">🏠 ทุกอาคาร</option>
         <option value="rooms">rooms</option>
         <option value="nest">nest</option>
       </select>
-      <select id="dep-filter-status" data-action="renderDepositsPage" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
+      <select id="dep-filter-status" data-action="renderDepositsPage" class="dash-select-sm">
         <option value="all">📋 ทุกสถานะ</option>
         <option value="holding">💰 ถือมัดจำ</option>
         <option value="returned">✅ คืนแล้ว</option>
@@ -5083,18 +5083,18 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     </div>
     <div class="mx-kpi-grid">
       <div class="mx-kpi"><div class="mx-kpi-val dash-color-accent" id="mx-kpi-pending" >0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
-      <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
+      <div class="mx-kpi"><div class="mx-kpi-val dash-text-blue" id="mx-kpi-inprogress" >0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
       <div class="mx-kpi"><div class="mx-kpi-val u-color-green-dk" id="mx-kpi-done" >0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
     </div>
-    <div style="display:flex;gap:12px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
-      <input type="text" id="mx-filter-room" data-action="renderMaintenancePage" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
-      <select id="mx-filter-status" data-action="renderMaintenancePage" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
+    <div class="dash-row-wrap-mb6">
+      <input type="text" id="mx-filter-room" data-action="renderMaintenancePage" placeholder="🔍 ค้นหาห้อง..." class="dash-flex-select">
+      <select id="mx-filter-status" data-action="renderMaintenancePage" class="dash-select-base">
         <option value="all">📋 ทั้งหมด</option>
         <option value="pending">⏳ รอดำเนินการ</option>
         <option value="inprogress">🔨 กำลังดำเนินการ</option>
         <option value="done">✅ เสร็จแล้ว</option>
       </select>
-      <button data-action="showAddMaintenanceModal" style="padding:10px 18px;background:linear-gradient(135deg,var(--ok-bright),var(--ok-dark));color:#fff;border:none;border-radius:8px;font-family:var(--font-brand);font-weight:700;cursor:pointer;">➕ แจ้งซ่อมใหม่</button>
+      <button data-action="showAddMaintenanceModal" class="dash-btn-ok">➕ แจ้งซ่อมใหม่</button>
     </div>
     <div class="card">
       <div class="card-title" role="heading" aria-level="3">📋 รายการงานซ่อมทั้งหมด</div>
@@ -5106,32 +5106,32 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div id="requests-tab-housekeeping" class="requests-mgmt-content u-init-hide" >
     <div class="mx-kpi-grid">
       <div class="mx-kpi"><div class="mx-kpi-val dash-color-accent" id="hk-kpi-pending" >0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
-      <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
+      <div class="mx-kpi"><div class="mx-kpi-val dash-text-blue" id="hk-kpi-inprogress" >0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
       <div class="mx-kpi"><div class="mx-kpi-val u-color-green-dk" id="hk-kpi-done" >0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
     </div>
     <!-- Standard Clean monthly campaign: opens popup on all Nest tenants' phones -->
     <div class="card" style="margin-bottom:1.5rem; background:linear-gradient(135deg,#e8f5e9,#f1f8e9); border:1px solid #a5d6a7;">
-      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-        <div style="flex:1; min-width:200px;">
+      <div class="dash-row-wrap-14">
+        <div class="dash-flex-min-200">
           <div style="font-weight:700; color:var(--green-dark); margin-bottom:4px;">🧹 รอบเก็บคำขอ Standard Clean</div>
-          <div id="hkCampaignStatus" style="font-size:.88rem; color:var(--text-muted);">กำลังตรวจสอบ...</div>
+          <div id="hkCampaignStatus" class="dash-dim-88">กำลังตรวจสอบ...</div>
         </div>
         <button data-action="toggleCleaningCampaign" id="hkCampaignToggleBtn" data-state="off"
-          style="padding:10px 16px; background:var(--green-dark); color:#fff; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer; min-width:200px;">
+          class="dash-btn-primary-wide">
           🚀 เปิดรอบทำความสะอาด
         </button>
       </div>
     </div>
-    <div style="display:flex;gap:12px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
-      <input type="text" id="hk-filter-room" data-action="renderHousekeepingList" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
-      <select id="hk-filter-status" data-action="renderHousekeepingList" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
+    <div class="dash-row-wrap-mb6">
+      <input type="text" id="hk-filter-room" data-action="renderHousekeepingList" placeholder="🔍 ค้นหาห้อง..." class="dash-flex-select">
+      <select id="hk-filter-status" data-action="renderHousekeepingList" class="dash-select-base">
         <option value="all">📋 ทั้งหมด</option>
         <option value="pending">⏳ รอดำเนินการ</option>
         <option value="pending_payment">💳 รอชำระเงิน</option>
         <option value="inprogress">🔨 กำลังดำเนินการ</option>
         <option value="done">✅ เสร็จแล้ว</option>
       </select>
-      <button data-action="showAddHousekeepingModal" style="padding:10px 18px;background:linear-gradient(135deg,var(--ok-bright),var(--ok-dark));color:#fff;border:none;border-radius:8px;font-family:var(--font-brand);font-weight:700;cursor:pointer;">➕ ขอบริการใหม่</button>
+      <button data-action="showAddHousekeepingModal" class="dash-btn-ok">➕ ขอบริการใหม่</button>
     </div>
     <div class="card">
       <div class="card-title" role="heading" aria-level="3">📋 รายการบริการทำความสะอาดทั้งหมด</div>
@@ -5152,7 +5152,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </select>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem;">
-        <div style="background:var(--green-pale);padding:1rem;border-radius:var(--radius-sm);text-align:center;">
+        <div class="dash-green-pale-box">
           <div style="font-size:1.5rem;font-weight:700;color:var(--green-dark);" id="totalComplaintsCount">0</div>
           <div class="dash-note">Total Complaints</div>
         </div>
@@ -5164,7 +5164,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <div style="font-size:1.5rem;font-weight:700;color:var(--blue-bright);" id="inProgressComplaintsCount">0</div>
           <div class="dash-note">In Progress</div>
         </div>
-        <div style="background:var(--green-pale);padding:1rem;border-radius:var(--radius-sm);text-align:center;">
+        <div class="dash-green-pale-box">
           <div style="font-size:1.5rem;font-weight:700;color:#388e3c;" id="resolvedComplaintsCount">0</div>
           <div class="dash-note">Resolved</div>
         </div>
@@ -5193,7 +5193,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div id="requests-tab-facility" class="requests-mgmt-content u-init-hide" >
 
     <!-- Building + Facility type filter -->
-    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
+    <div class="dash-filter-row">
       <select id="facility-admin-building" class="dash-input-sm" data-action="facilityAdminFilter">
         <!-- populated dynamically -->
       </select>
@@ -5229,7 +5229,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <!-- Config edit modal -->
     <div id="facility-config-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9998;align-items:center;justify-content:center;">
       <div style="position:relative;background:#fff;border-radius:16px;padding:1.5rem;width:94%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);">
-        <button data-action="facilityCloseConfig" aria-label="ปิด" style="position:absolute;top:.75rem;right:.75rem;width:32px;height:32px;border-radius:50%;background:var(--green-dark);color:#fff;border:none;cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;">✕</button>
+        <button data-action="facilityCloseConfig" aria-label="ปิด" class="dash-card-btn-abs">✕</button>
         <div style="font-weight:700;font-size:1.05rem;margin-bottom:1rem;padding-right:2rem;">⚙️ ตั้งค่า Facility</div>
         <label class="dash-field-label">ประเภท</label>
         <select id="fc-type" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;margin-bottom:.85rem;">
@@ -5241,17 +5241,17 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <label class="dash-field-label">ชื่อที่แสดง</label>
         <input type="text" id="fc-displayName" placeholder="เช่น ที่จอดรถ ชั้น 1" maxlength="60" class="dash-form-input-6">
         <label class="dash-field-label">Slots (JSON array) <span style="font-weight:400;color:#888;font-size:.8rem;">เช่น: [{"id":"A1","label":"A1","enabled":true}]</span></label>
-        <textarea id="fc-slots" rows="4" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;font-family:monospace;font-size:.82rem;margin-bottom:.85rem;" placeholder='[{"id":"A1","label":"A1","enabled":true}]'></textarea>
+        <textarea id="fc-slots" rows="4" class="dash-input-mono" placeholder='[{"id":"A1","label":"A1","enabled":true}]'></textarea>
         <label class="dash-field-label">Time Slots (JSON array หรือเว้นว่างเพื่อใช้ค่าเริ่มต้น)</label>
-        <textarea id="fc-timeSlots" rows="3" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;font-family:monospace;font-size:.82rem;margin-bottom:.85rem;" placeholder='[{"id":"morning","label":"เช้า"},{"id":"afternoon","label":"บ่าย"},{"id":"evening","label":"เย็น"}]'></textarea>
+        <textarea id="fc-timeSlots" rows="3" class="dash-input-mono" placeholder='[{"id":"morning","label":"เช้า"},{"id":"afternoon","label":"บ่าย"},{"id":"evening","label":"เย็น"}]'></textarea>
         <label class="dash-field-label">จองล่วงหน้าได้ (วัน)</label>
         <input type="number" id="fc-maxDays" value="14" min="1" max="90" class="dash-form-input-6">
         <label style="display:flex;align-items:center;gap:.5rem;margin-bottom:1.25rem;">
           <input type="checkbox" id="fc-active" checked> <span style="font-size:.88rem;font-weight:600;">เปิดใช้งาน</span>
         </label>
         <div class="dash-flex-gap-sm">
-          <button data-action="facilityCloseConfig" style="flex:1;padding:.7rem;background:#fff;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-weight:600;">ยกเลิก</button>
-          <button data-action="facilitySaveConfig" style="flex:2;padding:.7rem;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">💾 บันทึก</button>
+          <button data-action="facilityCloseConfig" class="dash-btn-flex-white">ยกเลิก</button>
+          <button data-action="facilitySaveConfig" class="dash-btn-flex-green">💾 บันทึก</button>
         </div>
       </div>
     </div>
@@ -5261,7 +5261,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div id="requests-tab-checklist" class="requests-mgmt-content u-init-hide" >
 
     <!-- Building + status filter -->
-    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
+    <div class="dash-filter-row">
       <select id="checklist-admin-building" data-action="checklistAdminFilter" class="dash-input-sm">
         <!-- populated dynamically -->
       </select>
@@ -5303,13 +5303,13 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div class="section-title" role="heading" aria-level="2">🏆 Gamification & Rewards Management</div>
   <!-- Gamification live toggle — writes system/config.gamificationLive via Firestore -->
   <div class="card" style="margin-bottom:1.5rem; background:linear-gradient(135deg,#f3e5f5,#fce4ec); border:1px solid #ce93d8;">
-    <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-      <div style="flex:1; min-width:200px;">
+    <div class="dash-row-wrap-14">
+      <div class="dash-flex-min-200">
         <div style="font-weight:700; color:#6a1b9a; margin-bottom:4px;">🎮 สถานะ Gamification</div>
-        <div id="gamificationLiveStatus" style="font-size:.88rem; color:var(--text-muted);">กำลังโหลด…</div>
+        <div id="gamificationLiveStatus" class="dash-dim-88">กำลังโหลด…</div>
       </div>
       <button data-action="toggleGamification" id="gamificationToggleBtn" data-state="off"
-        style="padding:10px 16px; background:var(--green-dark); color:#fff; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer; min-width:200px;">
+        class="dash-btn-primary-wide">
         🚀 เปิด Gamification
       </button>
     </div>
@@ -5330,7 +5330,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <tr>
               <th class="w-50">#</th>
               <th>Tenant Name</th>
-              <th style="width: 100px;">Points</th>
+              <th class="dash-w-100">Points</th>
               <th class="dash-w-140">Level</th>
             </tr>
           </thead>
@@ -5374,7 +5374,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
               <th class="w-50">Order</th>
               <th class="w-50">Icon</th>
               <th>Name</th>
-              <th style="width: 100px;">Cost (Pts)</th>
+              <th class="dash-w-100">Cost (Pts)</th>
               <th style="width: 80px;">Active</th>
               <th class="dash-w-140">Quota / เดือน</th>
               <th class="dash-w-140">Actions</th>
@@ -5527,16 +5527,16 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <div class="ui-modal u-init-hide" id="changePasswordModal" role="dialog" aria-modal="true" aria-labelledby="changePasswordModalTitle" >
   <div style="background:#fff;border-radius:var(--radius);max-width:420px;width:100%;max-height:95vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;">
     <!-- Modal Header -->
-    <div style="background:linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+    <div class="dash-modal-header-green">
       <div>
-        <h2 id="changePasswordModalTitle" style="margin:0;font-size:1.25rem;font-weight:700;">🔐 เปลี่ยนรหัสผ่าน</h2>
+        <h2 id="changePasswordModalTitle" class="dash-heading-lg">🔐 เปลี่ยนรหัสผ่าน</h2>
         <small class="dash-sub-dim">อัปเดตรหัสผ่านของคุณ</small>
       </div>
       <button data-action="closeChangePasswordModal" style="background:rgba(255,255,255,.2);border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:all .2s;">✕</button>
     </div>
 
     <!-- Modal Content -->
-    <div style="padding:2rem;overflow-y:auto;flex:1;">
+    <div class="dash-modal-body">
       <!-- Message Box -->
       <div id="cpMessage" style="display:none;padding:1rem;border-radius:var(--radius-sm);margin-bottom:1.5rem;font-weight:600;font-size:.9rem;"></div>
 
@@ -5549,7 +5549,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <input type="password" id="oldPassword" placeholder="กรอกรหัสผ่านเดิม"
               class="dash-search-field"
               >
-            <button type="button" data-action="togglePasswordVisibility" data-field="oldPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
+            <button type="button" data-action="togglePasswordVisibility" data-field="oldPassword" class="dash-modal-close-btn">
               <span id="icon-oldPassword">👁️</span>
             </button>
           </div>
@@ -5562,7 +5562,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <input type="password" id="newPassword" placeholder="กรอกรหัสผ่านใหม่ (อย่างน้อย 6 ตัว)"
               class="dash-search-field"
               >
-            <button type="button" data-action="togglePasswordVisibility" data-field="newPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
+            <button type="button" data-action="togglePasswordVisibility" data-field="newPassword" class="dash-modal-close-btn">
               <span id="icon-newPassword">👁️</span>
             </button>
           </div>
@@ -5575,7 +5575,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <input type="password" id="confirmPassword" placeholder="พิมพ์รหัสผ่านใหม่ซ้ำ"
               class="dash-search-field"
               >
-            <button type="button" data-action="togglePasswordVisibility" data-field="confirmPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
+            <button type="button" data-action="togglePasswordVisibility" data-field="confirmPassword" class="dash-modal-close-btn">
               <span id="icon-confirmPassword">👁️</span>
             </button>
           </div>

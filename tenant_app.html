@@ -2625,7 +2625,7 @@
 
     <!-- Standard Clean Monthly Opt-in Modal: pops up when admin opens a cleaning campaign month -->
     <div id="standard-clean-modal" role="dialog" aria-modal="true" aria-labelledby="scm-title"
-        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1500; align-items:center; justify-content:center; padding:16px; overflow-y:auto;">
+        class="ta-modal-overlay">
         <div class="ta-modal-card">
             <div class="ta-col-gap-14">
                 <div class="u-text-center">
@@ -2669,7 +2669,7 @@
 
     <!-- Deep Cleaning Payment Modal: requires 500฿ slip before booking is saved -->
     <div id="cleaning-payment-modal" role="dialog" aria-modal="true" aria-labelledby="cpm-title"
-        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1500; align-items:center; justify-content:center; padding:16px; overflow-y:auto;">
+        class="ta-modal-overlay">
         <div class="ta-modal-card">
             <div class="ta-col-gap-14">
                 <!-- Header -->
@@ -2874,7 +2874,7 @@
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
                 <div class="accordion-content">
-                    <div id="internetSpeedSection" style="display:none; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div id="internetSpeedSection" class="ta-grid-2col u-init-hide">
                         <div class="ta-icon-box">
                             <small class="u-color-muted">⬇️ Download</small>
                             <div id="internetDownloadSpeed" class="u-bold">-</div>
@@ -2884,7 +2884,7 @@
                             <div id="internetUploadSpeed" class="u-bold">-</div>
                         </div>
                     </div>
-                    <div id="internetProviderSection" style="display:none; margin-top:10px; font-size:var(--fs-sm);">
+                    <div id="internetProviderSection" class="ta-hint-sm">
                         <div>ผู้ให้บริการ: <strong id="internetProvider">-</strong></div>
                         <div>ติดต่อ: <span id="internetContact">-</span></div>
                     </div>
@@ -2902,7 +2902,7 @@
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
                 <div class="accordion-content">
-                    <div id="roomInternetSpeedSection" style="display:none; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div id="roomInternetSpeedSection" class="ta-grid-2col u-init-hide">
                         <div class="ta-icon-box">
                             <small class="u-color-muted">⬇️ ความเร็วประมาณ</small>
                             <div id="roomInternetDownloadSpeed" class="u-bold">-</div>
@@ -2912,7 +2912,7 @@
                             <div id="roomInternetUploadSpeed" class="u-bold">-</div>
                         </div>
                     </div>
-                    <div id="roomInternetProviderSection" style="display:none; margin-top:10px; font-size:var(--fs-sm);">
+                    <div id="roomInternetProviderSection" class="ta-hint-sm">
                         <div>ห้อง: <strong id="roomInternetRoom">-</strong></div>
                         <div>ชนิดเครือข่าย: <span id="roomInternetSSID">-</span></div>
                     </div>
@@ -2958,7 +2958,7 @@
             <!-- Building documents (accordion) -->
             <div class="menu-item-group">
                 <div class="menu-item" data-action="toggleAccordion">
-                    <div class="icon-box" style="background:#dbeafe; color:#1d4ed8;"><i class="fas fa-file-lines"></i></div>
+                    <div class="icon-box ta-badge-blue" ><i class="fas fa-file-lines"></i></div>
                     <span>เอกสารอาคาร</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
@@ -3875,7 +3875,7 @@
 
     <!-- ===== FACILITY BOOKING PAGE (Tier 3G) ===== -->
     <div id="facility-booking" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom:20px;">
+        <div class="app-bar ta-row-pb20" >
             <div class="ta-icon-circle"
                 data-action="goBackToService">
                 <i class="fas fa-chevron-left u-color-green" ></i>
@@ -3923,7 +3923,7 @@
 
     <!-- ===== CHECKLIST — Move-In / Move-Out (Tier 3I) ===== -->
     <div id="checklist" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom:20px;">
+        <div class="app-bar ta-row-pb20" >
             <div class="ta-icon-circle"
                 data-action="goBackToService">
                 <i class="fas fa-chevron-left u-color-green" ></i>
@@ -4638,7 +4638,7 @@
                 <option value="renew">✅ ขอต่อสัญญาเช่า (Renew Lease)</option>
                 <option value="moveout">❌ แจ้งย้ายออก (Move-out Notice)</option>
             </select>
-            <div id="renew-form" style="display: none; animation: slideUp 0.3s ease;">
+            <div id="renew-form" class="ta-slide-hidden">
                 <label class="ta-md-600">ระยะเวลาที่ต้องการต่อสัญญาใหม่</label>
                 <select id="renew-duration" class="u-mb-15">
                     <option value="1y">1 ปี</option>
@@ -4648,7 +4648,7 @@
                 <button class="btn-main" data-action="confirmLeaseRequest" data-arg="renew"><i
                         class="fas fa-paper-plane"></i> ส่งคำขอต่อสัญญา</button>
             </div>
-            <div id="moveout-form" style="display: none; animation: slideUp 0.3s ease;">
+            <div id="moveout-form" class="ta-slide-hidden">
                 <label style="font-size: var(--fs-md); font-weight: 600; color: var(--danger);">วันที่คาดว่าจะย้ายออก</label>
                 <input type="date" id="moveout-date" data-thai-date style="margin-bottom: 10px;">
                 <label class="ta-md-600">บัญชีธนาคารสำหรับรับเงินมัดจำคืน</label>
@@ -5075,7 +5075,7 @@
             <!-- Police -->
             <div class="menu-item-group">
                 <div class="menu-item" data-action="toggleAccordion">
-                    <div class="icon-box" style="background:#dbeafe; color:#1d4ed8;">🚓</div>
+                    <div class="icon-box ta-badge-blue" >🚓</div>
                     <span>แจ้งความ / เรียกตำรวจ</span>
                     <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
@@ -5174,11 +5174,11 @@
         </button>
         <button type="button" id="nav-community-btn" class="nav-item u-pos-rel" aria-label="Quiz" data-action="showPage--markCommunityRead" data-page="community" >
             <i class="fas fa-question-circle" aria-hidden="true"></i>Quiz
-            <span id="nav-badge-community" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:var(--alert); border-radius:50%;"></span>
+            <span id="nav-badge-community" aria-live="polite" class="ta-dot-badge"></span>
         </button>
         <button type="button" class="nav-item u-pos-rel" aria-label="บิล" data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3" >
             <i class="fas fa-wallet" aria-hidden="true"></i>บิล
-            <span id="nav-badge-bills" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:var(--alert); border-radius:50%;"></span>
+            <span id="nav-badge-bills" aria-live="polite" class="ta-dot-badge"></span>
         </button>
         <button type="button" class="nav-item" aria-label="โปรไฟล์" data-action="showPage--updateNavActiveIndex" data-page="profile" data-nav-index="4"><i class="fas fa-user" aria-hidden="true"></i>โปรไฟล์</button>
     </nav>

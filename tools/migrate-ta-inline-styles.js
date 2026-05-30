@@ -191,6 +191,22 @@ const MIGRATIONS = [
   ['style="background:white; width:100%; max-width:380px; border-radius:24px; padding:20px; position:relative; margin:auto; box-sizing:border-box;"',
    'ta-modal-card'],
   ['style="background:#fee2e2; color:#dc2626;"',       'ta-badge-error'],
+
+  // ── Pass 7 (2× patterns remaining after CSS migration passes 1-6) ────────
+  ['style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1500; align-items:center; justify-content:center; padding:16px; overflow-y:auto;"',
+   'ta-modal-overlay'],
+  ['style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:var(--alert); border-radius:50%;"',
+   'ta-dot-badge'],
+  ['style="display:none; margin-top:10px; font-size:var(--fs-sm);"',
+   'ta-hint-sm'],
+  ['style="display:none; grid-template-columns:1fr 1fr; gap:10px;"',
+   'ta-grid-2col'],
+  ['style="display:flex; align-items:center; gap:15px; padding-bottom:20px;"',
+   'ta-row-pb20'],
+  ['style="display: none; animation: slideUp 0.3s ease;"',
+   'ta-slide-hidden'],
+  ['style="background:#dbeafe; color:#1d4ed8;"',
+   'ta-badge-blue'],
 ];
 
 function esc(s) {

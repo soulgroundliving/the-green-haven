@@ -666,3 +666,80 @@ body.gh-tour-open {
 .ta-divider-12    { border: none; border-top: 1px dashed #ddd; margin: 12px 0; }
 .ta-modal-card    { background: white; width: 100%; max-width: 380px; border-radius: 24px; padding: 20px; position: relative; margin: auto; box-sizing: border-box; }
 .ta-badge-error   { background: #fee2e2; color: #dc2626; }
+
+/* ── Pass 6: dashboard modal patterns ────────────────────────────────────── */
+.dash-modal-overlay     { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 10000; align-items: center; justify-content: center; padding: 16px; }
+.dash-modal-close-btn   { position: absolute; right: 8px; background: none; border: none; cursor: pointer; font-size: 1.2rem; color: var(--text-muted, #666); padding: 4px; z-index: 10; pointer-events: auto; transition: all .2s; }
+.dash-row-sb-mb4        { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.dash-modal-body        { padding: 2rem; overflow-y: auto; flex: 1; }
+.dash-modal-header-green { background: linear-gradient(135deg, var(--green-dark, #1a5c38) 0%, var(--green, #2d8653) 100%); color: #fff; padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.dash-modal-box-560     { background: #fff; max-width: 560px; width: 100%; max-height: 90vh; overflow: auto; border-radius: 16px; padding: 22px; }
+
+/* ── Pass 6: inputs & selects ────────────────────────────────────────────── */
+.dash-input-base        { width: 100%; padding: .7rem; border: 1px solid var(--border, #ddd); border-radius: 6px; }
+.dash-input-dashed      { width: 100%; padding: 8px; border: 1.5px dashed var(--border, #ddd); border-radius: 6px; font-family: var(--font-brand, 'Sarabun', sans-serif); }
+.dash-input-mono        { width: 100%; padding: .6rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: monospace; font-size: .82rem; margin-bottom: .85rem; }
+.dash-textarea-sm       { width: 100%; padding: 10px; border: 1px solid var(--border, #ddd); border-radius: var(--radius-sm, 6px); margin-bottom: 1rem; height: 80px; }
+.dash-input-mini        { padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border, #ddd); font-family: var(--font-brand, 'Sarabun', sans-serif); font-size: .8rem; }
+.dash-select-sm         { padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: var(--fs-sm, .8rem); }
+.dash-select-base       { padding: 10px 14px; border: 1px solid var(--border, #ddd); border-radius: 8px; font-family: inherit; background: #fff; font-size: .95rem; }
+.dash-flex-select       { flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid var(--border, #ddd); border-radius: 8px; font-family: inherit; font-size: .95rem; }
+
+/* ── Pass 6: buttons ─────────────────────────────────────────────────────── */
+.dash-btn-muted         { padding: .8rem 1.5rem; background: var(--border, #ddd); color: var(--text, #333); border: none; border-radius: var(--radius-sm, 6px); cursor: pointer; font-weight: 600; font-family: var(--font-brand, 'Sarabun', sans-serif); font-size: .9rem; }
+.dash-btn-cancel        { padding: 9px 18px; border-radius: 10px; border: 1px solid #d1d5db; background: #fff; cursor: pointer; font-weight: 500; }
+.dash-btn-danger-dis    { padding: 9px 18px; border-radius: 10px; border: none; background: #dc2626; color: #fff; cursor: not-allowed; font-weight: 600; opacity: .5; }
+.dash-btn-ok            { padding: 10px 18px; background: linear-gradient(135deg, var(--ok-bright, #4caf50), var(--ok-dark, #2e7d32)); color: #fff; border: none; border-radius: 8px; font-family: var(--font-brand, 'Sarabun', sans-serif); font-weight: 700; cursor: pointer; }
+.dash-btn-primary-wide  { padding: 10px 16px; background: var(--green-dark, #1a5c38); color: #fff; border: none; border-radius: 8px; font-family: inherit; font-weight: 700; cursor: pointer; min-width: 200px; }
+.dash-btn-gray          { padding: 6px 14px; background: #eee; color: var(--text, #333); border: none; border-radius: 6px; cursor: pointer; font-family: var(--font-brand, 'Sarabun', sans-serif); font-size: .85rem; }
+.dash-btn-flex-green    { flex: 2; padding: .7rem; background: var(--green-dark, #1a5c38); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.dash-btn-flex-white    { flex: 1; padding: .7rem; background: #fff; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: 600; }
+
+/* ── Pass 6: layout helpers ──────────────────────────────────────────────── */
+.dash-row-wrap-mb6      { display: flex; gap: 12px; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap; }
+.dash-row-end-10        { display: flex; gap: 10px; justify-content: flex-end; }
+.dash-flex-wrap-8       { display: flex; gap: .8rem; flex-wrap: wrap; }
+.dash-filter-row        { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
+.dash-clickable-row     { display: flex; align-items: center; gap: .5rem; cursor: pointer; color: var(--text, #333); }
+.dash-row-wrap-14       { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.dash-flex-min-200      { flex: 1; min-width: 200px; }
+.dash-card-btn-abs      { position: absolute; top: .75rem; right: .75rem; width: 32px; height: 32px; border-radius: 50%; background: var(--green-dark, #1a5c38); color: #fff; border: none; cursor: pointer; font-size: .95rem; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
+
+/* ── Pass 6: panels & cards ──────────────────────────────────────────────── */
+.dash-panel-lg          { background: white; border: 1px solid var(--border, #ddd); border-radius: var(--radius, 8px); padding: 2rem; margin-bottom: 2rem; }
+.dash-green-pale-box    { background: var(--green-pale, #e8f5e9); padding: 1rem; border-radius: var(--radius-sm, 6px); text-align: center; }
+.dash-info-box          { background: var(--bg-secondary, #f5f5f5); border-radius: var(--radius-sm, 6px); padding: 1rem; color: var(--text-muted, #666); font-size: .85rem; }
+.dash-accent-panel      { background: var(--accent-light, #fff8e1); border: 1px solid var(--accent, #b45309); border-radius: var(--radius, 8px); padding: 1.5rem; margin-bottom: 1.5rem; }
+.dash-drop-zone         { border: 2px dashed var(--green, #2d8653); border-radius: var(--radius, 8px); padding: 2rem; text-align: center; background: var(--accent-light, #fff8e1); cursor: pointer; transition: all .3s ease; }
+
+/* ── Pass 6: typography ──────────────────────────────────────────────────── */
+.dash-heading-lg        { margin: 0; font-size: 1.25rem; font-weight: 700; }
+.dash-meta-text         { color: var(--text-muted, #666); font-weight: 400; font-size: .85rem; }
+.dash-body-text         { color: var(--text, #333); margin-bottom: 1rem; font-size: .95rem; }
+.dash-field-name        { color: var(--text, #333); font-weight: 600; margin-bottom: .3rem; }
+.dash-text-blue         { color: var(--blue, #1565c0); }
+.dash-text-danger       { color: #f44336; }
+.dash-text-purple       { color: #6a1b9a; }
+.dash-text-amber        { font-weight: 700; color: #f57f17; }
+.dash-icon-lg           { font-size: 2rem; margin-bottom: .5rem; }
+.dash-dim-88            { font-size: .88rem; color: var(--text-muted, #666); }
+.dash-hint-77           { font-size: .77rem; margin-top: 5px; }
+
+/* ── Pass 6: misc ────────────────────────────────────────────────────────── */
+.dash-w-100             { width: 100px; }
+.dash-img-preview       { height: 200px; border-radius: 8px; }
+.dash-h-105             { height: 105px; }
+.dash-th-cell           { padding: 10px; text-align: left; border-bottom: 2px solid var(--border, #ddd); }
+.dash-list-indent       { margin: .5rem 0 0 1.5rem; padding: 0; }
+.dash-mt-3px            { margin-top: 3px; }
+.dash-hidden-mb2        { display: none; margin-bottom: 8px; }
+.dash-badge-err         { display: none; background: var(--red-dark, #b91c1c); color: white; border-radius: 10px; padding: 2px 8px; font-size: .72rem; margin-left: 4px; }
+
+/* ── Pass 6: tenant_app additions ────────────────────────────────────────── */
+.ta-modal-overlay  { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 1500; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+.ta-dot-badge      { display: none; position: absolute; top: 4px; right: 10px; width: 8px; height: 8px; background: var(--alert, #f44336); border-radius: 50%; }
+.ta-hint-sm        { display: none; margin-top: 10px; font-size: var(--fs-sm, .8rem); }
+.ta-grid-2col      { grid-template-columns: 1fr 1fr; gap: 10px; }
+.ta-row-pb20       { display: flex; align-items: center; gap: 15px; padding-bottom: 20px; }
+.ta-slide-hidden   { display: none; animation: slideUp .3s ease; }
+.ta-badge-blue     { background: #dbeafe; color: #1d4ed8; }
