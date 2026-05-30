@@ -365,6 +365,41 @@
     // [audit-skip] reads system/emergencyContacts — public-read (firestore.rules:33).
     window.addEventListener('authReady', _subscribeEmergencyContacts);
 
+    // Rewards modal open/close — live here (not inline) so _rewardsCache is in scope (§7-CC).
+    function openRewardsShop() {
+        const modal = document.getElementById('rewards-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+        if (!_rewardsCache.length) {
+            const list = document.getElementById('rewards-list');
+            if (list) {
+                list.innerHTML =
+                    '<div class="gh-skeleton gh-skeleton--card ta-my-10"></div>' +
+                    '<div class="gh-skeleton gh-skeleton--card ta-my-10"></div>' +
+                    '<div class="gh-skeleton gh-skeleton--card ta-my-10"></div>';
+            }
+        }
+    }
+
+    function closeRewardsShop() {
+        const modal = document.getElementById('rewards-modal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = 'auto';
+    }
+
+    // Overlay click closes the modal (replaces window.onclick which overwrites global handler).
+    document.addEventListener('click', (e) => {
+        const modal = document.getElementById('rewards-modal');
+        if (modal && e.target === modal) closeRewardsShop();
+    });
+
+    window.openRewardsShop  = openRewardsShop;
+    window.closeRewardsShop = closeRewardsShop;
+
     // [audit-skip] reads rewards/* — public-read (firestore.rules:29).
     window.addEventListener('authReady', _subscribeRewards);
 

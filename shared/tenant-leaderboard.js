@@ -406,6 +406,59 @@
             .catch(e => console.warn('badge check failed:', e.message));
     }
 
+    // redeemReward lives here (not inline) so userPoints + updateUserPointsUI are in scope.
+    // Called from _renderRewardsList event delegation in tenant-subscriptions.js.
+    async function redeemReward(btnElement, rewardName, cost, rewardId) {
+        if (window._gamificationDisabled) return;
+        if (userPoints < cost) {
+            toast(`คะแนนไม่พอ — คุณมี ${userPoints} Pts ต้องใช้ ${cost} Pts`, 'error');
+            window.GhHaptic?.warning();
+            return;
+        }
+        const ok = await window.ghConfirm(
+            `แลก "${rewardName}"? แต้มจะถูกหัก ${cost} Pts`,
+            { title: 'ยืนยันการแลก', confirmLabel: 'แลก' }
+        );
+        if (!ok) return;
+        window.GhHaptic?.tap();
+
+        const prevPoints = userPoints;
+        userPoints -= cost;
+        updateUserPointsUI();
+        btnElement.disabled = true;
+        btnElement.innerText = 'กำลังบันทึก...';
+
+        try {
+            if (!rewardId) throw new Error('Missing rewardId — refresh page to load latest rewards');
+            const fns = window.firebase?.functions;
+            if (!fns) throw new Error('Firebase Functions SDK not loaded');
+            const callable = fns.httpsCallable('redeemReward');
+            const isPlayerRedeem = window._isPlayerMode && window._playerProfile?.tenantId;
+            const payload = isPlayerRedeem
+                ? { tenantId: window._playerProfile.tenantId, rewardId }
+                : { building: _taBuilding, roomId: String(_taRoom), rewardId };
+            const resp = await callable(payload);
+            if (resp.data && typeof resp.data.pointsAfter === 'number') {
+                userPoints = resp.data.pointsAfter;
+                updateUserPointsUI();
+            }
+            btnElement.innerText = 'แลกแล้ว';
+            btnElement.classList.remove('bg-[#2d8653]', 'active:scale-90');
+            btnElement.classList.add('bg-gray-300', 'cursor-not-allowed');
+            toast(`แลกสำเร็จ! คงเหลือ ${userPoints} Pts — ทีมงานจะดำเนินการให้`, 'success');
+            window.GhHaptic?.success();
+        } catch (e) {
+            userPoints = prevPoints;
+            updateUserPointsUI();
+            btnElement.disabled = false;
+            btnElement.innerText = 'แลกใหม่';
+            console.error('redeemReward failed:', e);
+            toast('แลกไม่สำเร็จ — กรุณาลองใหม่', 'error');
+            window.GhHaptic?.error();
+        }
+    }
+
     window.loadGamificationData = loadGamificationData;
     window.updateUserPointsUI   = updateUserPointsUI;
+    window.redeemReward         = redeemReward;
 })();
