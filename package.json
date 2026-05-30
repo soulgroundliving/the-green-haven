@@ -6,6 +6,7 @@
     "test:rtdb:rules": "node --test database.rules.test.js",
     "test:unit": "npm run sync-shared --prefix functions && node --experimental-test-coverage --test functions/__tests__/*.test.js",
     "test:unit:plain": "npm run sync-shared --prefix functions && node --test functions/__tests__/*.test.js",
+    "test:shared": "node --test shared/__tests__/*.test.js",
     "csp:hash": "node tools/compute-csp-hashes.js",
     "csp:print": "node tools/generate-vercel-csp.js",
     "tailwind:build": "tailwindcss -i shared/tailwind.input.css -o shared/tailwind.css --minify",

@@ -79,7 +79,7 @@ After ANY correction from the user, decide where to log it:
 |-------|---------------------|-------|
 | Markup | Vanilla HTML | `tenant_app.html`, `dashboard.html`, `login.html`, `tax-filing.html` |
 | Styling | **Tailwind CSS v3** (pre-built, NOT CDN JIT) + custom CSS variables | `shared/tailwind.input.css` → `shared/tailwind.css` (built via `npm run tailwind:build`); brand tokens in `shared/brand.css` |
-| Logic | Vanilla JS modules (UMD-ish; `window.X = ...` exports) | `shared/*.js` (~29 files; verify with `ls shared/*.js \| wc -l`) |
+| Logic | Vanilla JS modules (UMD-ish; `window.X = ...` exports) | `shared/*.js` (~92 files incl. 25 `tenant-*.js` god-file extracts; verify with `ls shared/*.js \| wc -l`) |
 | Backend | **Firebase** v11 — Auth · Firestore · Realtime DB · Cloud Functions · Storage | `functions/` (Node CFs); rules in `firestore.rules`, `storage.rules`, `database.rules.json` |
 | Hosting | **Vercel** (not Firebase Hosting) | `vercel.json`, `/api/*` serverless fns (e.g. `/api/config`) |
 | Build | `esbuild` (bundle minify) | `build.js` |

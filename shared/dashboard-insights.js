@@ -104,11 +104,11 @@
       throw new Error('Firebase ยังไม่พร้อม');
     }
     const db = window.firebase.firestore();
-    const { collection, getDocs } = window.firebase.firestoreFunctions;
+    const { collection, getDocs, query, limit } = window.firebase.firestoreFunctions;
     const all = [];
     for (const building of (window.BuildingRegistry?.list()?.map(b=>b.id)) || ['rooms','nest']) {
       try {
-        const snap = await getDocs(collection(db, `tenants/${building}/list`));
+        const snap = await getDocs(query(collection(db, `tenants/${building}/list`), limit(500)));
         snap.forEach(d => all.push({ building, roomId: d.id, ...d.data() }));
       } catch (e) {
         console.warn('[insights] failed to load tenants for', building, e);
@@ -134,7 +134,7 @@
 
       // Load articles + claims (parallel) + tenant total for occupancy denominator
       const [articleSnap, claimSnap, tenants] = await Promise.all([
-        getDocs(collection(db, 'wellness_articles')),
+        getDocs(query(collection(db, 'wellness_articles'), limit(200))),
         getDocs(query(collectionGroup(db, 'wellnessClaimed'), limit(1000))),
         loadAllTenantDocs()
       ]);
@@ -277,12 +277,12 @@
         throw new Error('Firebase ยังไม่พร้อม');
       }
       const db = window.firebase.firestore();
-      const { collection, collectionGroup, getDocs, query } = window.firebase.firestoreFunctions;
+      const { collection, collectionGroup, getDocs, query, limit } = window.firebase.firestoreFunctions;
 
       const [articleSnap, wqSnap, cqSnap] = await Promise.all([
-        getDocs(collection(db, 'wellness_articles')),
-        getDocs(query(collectionGroup(db, 'wellnessQuizPassed'))),
-        getDocs(query(collectionGroup(db, 'contractQuizPassed'))),
+        getDocs(query(collection(db, 'wellness_articles'), limit(200))),
+        getDocs(query(collectionGroup(db, 'wellnessQuizPassed'), limit(1000))),
+        getDocs(query(collectionGroup(db, 'contractQuizPassed'), limit(1000))),
       ]);
 
       const articles = new Map();
@@ -1202,17 +1202,16 @@
       if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions)
         throw new Error('Firestore ยังไม่พร้อม');
       const db = window.firebase.firestore();
-      const { collection, getDocs } = window.firebase.firestoreFunctions;
+      const { collection, collectionGroup, getDocs, query, limit } = window.firebase.firestoreFunctions;
 
-      const { collectionGroup } = window.firebase.firestoreFunctions;
       const [complaintsSnap, maintSnap, houseSnap, petsSnap, liffSnap] = await Promise.all([
-        getDocs(collection(db, 'complaints')),
+        getDocs(query(collection(db, 'complaints'), limit(1000))),
         window.firebaseGet(window.firebaseRef(window.firebaseDatabase, 'maintenance'))
           .catch(() => ({ val: () => ({}) })),
         window.firebaseGet(window.firebaseRef(window.firebaseDatabase, 'housekeeping'))
           .catch(() => ({ val: () => ({}) })),
-        getDocs(collectionGroup(db, 'pets')).catch(() => ({ forEach: () => {} })),
-        getDocs(collection(db, 'liffUsers')).catch(() => ({ forEach: () => {} }))
+        getDocs(query(collectionGroup(db, 'pets'), limit(500))).catch(() => ({ forEach: () => {} })),
+        getDocs(query(collection(db, 'liffUsers'), limit(2000))).catch(() => ({ forEach: () => {} }))
       ]);
 
       // Complaints — last 90 days
@@ -1477,8 +1476,8 @@
         if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions)
           throw new Error('Firestore ยังไม่พร้อม');
         const db = window.firebase.firestore();
-        const { collection, getDocs } = window.firebase.firestoreFunctions;
-        const snap = await getDocs(collection(db, 'meter_data'));
+        const { collection, getDocs, query, limit } = window.firebase.firestoreFunctions;
+        const snap = await getDocs(query(collection(db, 'meter_data'), limit(5000)));
 
         const byRoom = {};
         snap.forEach(d => {

@@ -75,7 +75,7 @@
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
     try {
-      const snap = await fs.getDocs(fs.collection(db, 'buildings'));
+      const snap = await fs.getDocs(fs.query(fs.collection(db, 'buildings'), fs.limit(100)));
       const byCanonical = new Map();
       const docIdsForPrivate = [];
       snap.forEach(doc => {
