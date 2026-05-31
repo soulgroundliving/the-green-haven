@@ -157,7 +157,7 @@
 
 ### 🎨 UX/Accessibility
 
-- [ ] **[UX-CONTRAST] แก้ badge + placeholder contrast**
+- [x] **[UX-CONTRAST] แก้ badge + placeholder contrast**
   - **Why:** `--warn` badge = 2.81:1, `--info` = 3.15:1 (ต้องการ 4.5:1 — WCAG 1.4.3 AA ล้มเหลว)
   - **ไฟล์:** `shared/components.css:249-264`, `shared/brand.css:273-278`
   - **Fix:**
@@ -165,19 +165,19 @@
     - แก้ `--pebble` placeholder light mode จาก `#a8b5b0` → `#798c87` (≥4.5:1 บน white)
   - **Verify:** Chrome DevTools → color contrast checker บน badge elements → ≥4.5:1
 
-- [ ] **[UX-DARK] Tokenize overlay/modal inline hex สำหรับ dark mode**
+- [x] **[UX-DARK] Tokenize overlay/modal inline hex สำหรับ dark mode**
   - **Why:** hardcoded `#fff`, `#f0fdf4`, `#1a5c38`, `#666` ใน overlays ไม่ flip เมื่อ dark mode toggle
   - **ไฟล์:** `tenant_app.html:2402-2422` (`#liff-link-overlay`, `#app-loading-splash`), JS-built modal panels
   - **Fix:** แทน hardcoded hex ด้วย `var(--surface-card)`, `var(--surface-page)`, `var(--muted)`, `var(--brand-primary)`
   - **Verify:** toggle dark mode → overlays/modals ต้อง flip สี
 
-- [ ] **[UX-THEME] แก้ `theme-color` meta + รัน dark mode gap audit**
+- [x] **[UX-THEME] แก้ `theme-color` meta + รัน dark mode gap audit**
   - **Why:** `<meta name="theme-color" content="#2d8653">` เป็น old green, ไม่ใช่ current teal `#0f766e`
   - **ไฟล์:** `tenant_app.html:11`, `booking.html:11`
   - **Fix:** update เป็น `content="#0f766e"`; update `memory/dark_mode_audit_state.md` ว่า `night-mode` mechanism migrate แล้ว เหลือแค่ `data-theme`
   - **Verify:** Chrome → Application → Manifest → theme_color แสดง teal
 
-- [ ] **[UX-LOADING] เพิ่ม `role="status"` บน loading splash + `role="alert"` บน error boxes**
+- [x] **[UX-LOADING] เพิ่ม `role="status"` บน loading splash + `role="alert"` บน error boxes**
   - **Why:** ผู้ใช้ screen reader ไม่ได้รับ announcement ระหว่าง LIFF auth wait
   - **ไฟล์:** `tenant_app.html:2415` (`#app-loading-splash`), inline error boxes
   - **Fix:** `<div id="app-loading-splash" role="status" aria-live="polite" aria-label="กำลังโหลด...">`
@@ -187,13 +187,13 @@
 
 ### 💎 Code Quality
 
-- [ ] **[CQ-SPLIT-AUTH] Split `_callLiffSignIn` (178 บรรทัด) เป็น 4 functions**
+- [x] **[CQ-SPLIT-AUTH] Split `_callLiffSignIn` (178 บรรทัด) เป็น 4 functions**
   - **Why:** 178 บรรทัดผสม 4 responsibilities — เกิน 50-line rule, test ยาก
   - **ไฟล์:** `shared/tenant-liff-auth.js:247`
   - **Fix:** extract → `_getFastPathToken()`, `_fetchWithAbort(url, timeout)`, `_handleLiffSignInResponse(resp)`, `_callLiffSignIn()` เป็น orchestrator เรียก 3 อัน
   - **Verify:** `wc -l` แต่ละ function ≤ 50; unit test `_fetchWithAbort` แยกได้
 
-- [ ] **[CQ-OVERSIZED] Split shared modules ที่ใหญ่สุด 3 อันดับ**
+- [x] **[CQ-OVERSIZED] Split shared modules ที่ใหญ่สุด 3 อันดับ** _(partial — TenantFirebaseSync→687L, deposits→269L, facility→258L extracted; dashboard-insights.js split deferred to P3)_
   - **Why:** 21 ไฟล์เกิน 800 บรรทัด — ทำให้ review/test ยาก; เป็น god file แบบใหม่
   - **Priority:**
     - `shared/dashboard-requests-admin.js` (1,928 บรรทัด) → แยก `dashboard-pets-admin.js`, `dashboard-deposits-admin.js`, `dashboard-facility-admin.js`
@@ -205,19 +205,19 @@
 
 ### 📚 Docs & Memory
 
-- [ ] **[DOC-DASHBOARD] แก้ MEMORY.md: dashboard.html = 5,621 บรรทัด (ไม่ใช่ ~4,100)**
+- [x] **[DOC-DASHBOARD] แก้ MEMORY.md: dashboard.html = 5,621 บรรทัด (ไม่ใช่ ~4,100)** _(already correct in memory)_
   - **Why:** claim ใน MEMORY.md ผิด — agent วัดจริงได้ 5,621 บรรทัด ทำให้ประเมิน debt ต่ำเกินไป
   - **ไฟล์:** `~/.claude/projects/.../memory/MEMORY.md` + `dashboard_architecture.md`
   - **Fix:** อัปเดต "~4,100 lines" → "5,621 lines" ใน dashboard_architecture.md + verify grep
   - **Verify:** `wc -l dashboard.html` → ตรงกับ doc
 
-- [ ] **[DOC-DARKMODE] อัปเดต dark_mode_audit_state.md**
+- [x] **[DOC-DARKMODE] อัปเดต dark_mode_audit_state.md**
   - **Why:** doc บอกว่า "dual mechanism (body.night-mode + html[data-theme])" แต่ `night-mode` migrate แล้ว — เหลือแค่ `data-theme`
   - **ไฟล์:** `~/.../memory/dark_mode_audit_state.md`
   - **Fix:** แก้ให้ระบุว่า `data-theme` เป็น canonical เพียงตัวเดียว, `night-mode` เป็น comment เก่าเท่านั้น
   - **Verify:** `grep -c "night-mode" tenant_app.html` → เหลือแค่ comment ไม่มี live styling
 
-- [ ] **[DOC-SA-KEY] เพิ่ม SA key rotation SLA + frozen CF guide ใน CLAUDE.md §5**
+- [x] **[DOC-SA-KEY] เพิ่ม SA key rotation SLA + frozen CF guide ใน CLAUDE.md §5**
   - **Why:** Service account key ไม่มี rotation schedule — long-lived credential risk
   - **Fix:** เพิ่มใน CLAUDE.md §5 (Commands table): "Service account key: rotate annually (next: 2027-05). Frozen CF `generateBillsOnMeterUpdate` on Node 20 — see `generate_bills_cf_frozen.md` for manual mitigation steps"
 
@@ -310,6 +310,10 @@ _กรอกหลังจาก implement แต่ละ section_
 - [x] P1 Performance (5 tasks) — commit: `7e5ef7b`
 - [x] P1 Code Quality (4 tasks) — commit: `7e5ef7b`
 - [x] P1 DevOps (2 tasks) — commit: `7e5ef7b`
+- [x] P2 UX (4 tasks: contrast, dark tokens, theme-color, loading role) — this session
+- [x] P2 CQ-SPLIT-AUTH (_callLiffSignIn → 5 functions ≤47 lines each) — this session
+- [x] P2 CQ-OVERSIZED (partial: 3 files → 5 files extracted; dashboard-insights.js deferred) — this session
+- [x] P2 Docs (DOC-DARKMODE, DOC-SA-KEY; DOC-DASHBOARD was already correct) — this session
 
 ---
 

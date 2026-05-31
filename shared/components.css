@@ -252,7 +252,7 @@
 }
 .gh-badge--warning {
   background: rgba(217, 119, 6, 0.12);
-  color: var(--warn);
+  color: var(--warn-text);
 }
 .gh-badge--danger {
   background: rgba(220, 38, 38, 0.10);
@@ -260,7 +260,7 @@
 }
 .gh-badge--info {
   background: rgba(107, 138, 157, 0.14);
-  color: var(--info);
+  color: var(--info-text);
 }
 .gh-badge--neutral {
   background: var(--mist);

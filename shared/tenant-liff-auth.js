@@ -242,61 +242,37 @@ function _setupClaimLossListener() {
     });
 }
 
-// Call liffSignIn CF: verify LIFF ID token server-side → Firebase custom token.
-// Returns: { linked: true, room, building } | { linked: false, status } | null (error)
-async function _callLiffSignIn() {
-    const auth = window.firebaseAuth;
-    // Fast-path: already signed in with custom token (non-anonymous) + claims present.
-    // Covers returning users whose session persisted in IndexedDB.
-    // Force-refresh (true) — getIdTokenResult() without it returns the CACHED
-    // token, which still carries pre-unlink claims for up to ~1 h after admin
-    // strips them. force=true makes the SDK fetch a fresh token; if the user
-    // was unlinked + revokeRefreshTokens was called, this throws and we fall
-    // through to the liffSignIn POST → 403 'unlinked' → _applyUnlinkedMode.
-    // One extra round-trip on every LIFF open is the correctness cost.
-    if (auth?.currentUser && !auth.currentUser.isAnonymous) {
-        try {
-            const tr = await auth.currentUser.getIdTokenResult(true);
-            if (tr.claims.room && tr.claims.building) {
-                window.dispatchEvent(new Event('liffLinked'));
-                return { linked: true, room: tr.claims.room, building: tr.claims.building };
-            }
-            // Community member (player) — has role:'player' claim, no room/building.
-            if (tr.claims.role === 'player') {
-                window._isPlayerMode = true;
-                try { window._playerProfile = JSON.parse(localStorage.getItem('player_profile') || 'null'); } catch(_) {}
-                _applyPlayerMode();
-                window.dispatchEvent(new Event('liffLinked'));
-                return { linked: true, role: 'player' };
-            }
-            // Token refreshed successfully but no useful claims → user was
-            // unlinked server-side. Fall through to the LIFF POST which will
-            // return 403 'unlinked' and trigger _applyUnlinkedMode.
-        } catch (e) {
-            // auth/user-token-expired (post-revokeRefreshTokens) or transient.
-            // Either way: fall through to liffSignIn POST. Don't swallow the
-            // error silently — log for debugging, drop the local user state
-            // so the POST path can install a fresh sign-in cleanly.
-            console.warn('fast-path token refresh failed → falling to liffSignIn:', e?.code || e?.name, e?.message);
-            try { await auth.signOut(); } catch(_) {}
-        }
-    }
-
-    // Get LIFF ID token — the sole credential sent to the CF.
-    let idToken;
+// Fast-path: check if user is already signed in with valid claims.
+// Returns the linked result if claims are fresh, null to fall through to liffSignIn POST.
+// Force-refresh (true) — avoids serving cached tokens that may carry stale pre-unlink
+// claims. If revokeRefreshTokens was called, this throws → fall through to POST.
+async function _getFastPathToken(auth) {
+    if (!auth?.currentUser || auth.currentUser.isAnonymous) return null;
     try {
-        idToken = liff.getIDToken();
-        if (!idToken) throw new Error('getIDToken returned null');
+        const tr = await auth.currentUser.getIdTokenResult(true);
+        if (tr.claims.room && tr.claims.building) {
+            window.dispatchEvent(new Event('liffLinked'));
+            return { linked: true, room: tr.claims.room, building: tr.claims.building };
+        }
+        if (tr.claims.role === 'player') {
+            window._isPlayerMode = true;
+            try { window._playerProfile = JSON.parse(localStorage.getItem('player_profile') || 'null'); } catch(_) {}
+            _applyPlayerMode();
+            window.dispatchEvent(new Event('liffLinked'));
+            return { linked: true, role: 'player' };
+        }
+        return null; // token fresh but no useful claims → fall through
     } catch (e) {
-        console.error('⛔ liffSignIn: getIDToken failed:', e.message);
-        _showAuthErrorBanner(`ดึง LIFF token ไม่สำเร็จ: ${e.message}`);
+        // auth/user-token-expired (post-revokeRefreshTokens) or transient.
+        console.warn('fast-path token refresh failed → falling to liffSignIn:', e?.code || e?.name, e?.message);
+        try { await auth.signOut(); } catch(_) {}
         return null;
     }
+}
 
-    // Fetch with per-attempt timeout — without AbortController, a stale
-    // LINE in-app TLS connection can leave this hanging indefinitely
-    // (the "🔐 กำลังตั้งค่าสิทธิ์..." overlay shown forever). Two attempts
-    // give the LINE webview a chance to renegotiate the TLS connection.
+// POST idToken to liffSignIn CF with per-attempt AbortController timeout (§7-R).
+// Returns { resp, data } on success, null on network failure (error banner already shown).
+async function _fetchLiffSignIn(idToken) {
     let resp, data, fetchErr;
     for (let attempt = 1; attempt <= 2; attempt++) {
         const ctrl = new AbortController();
@@ -326,52 +302,23 @@ async function _callLiffSignIn() {
             : `เชื่อมห้องไม่สำเร็จ (network): ${fetchErr.message}`);
         return null;
     }
+    return { resp, data };
+}
 
-    if (resp.status === 404) return { linked: false, status: null }; // first-time user
-    if (resp.status === 403) {
-        // Admin-initiated unlink: caller expects linked===true for "render the
-        // app shell"; UI gate from _applyUnlinkedMode keeps user on world map.
-        // Same shape as player path so init flow stays uniform.
-        if (data.status === 'unlinked') {
-            window._unlinkedMode = true;
-            _applyUnlinkedMode();
-            return { linked: true, role: 'unlinked' };
-        }
-        return { linked: false, status: data.status || 'pending' };
-    }
-    if (!resp.ok) {
-        const msg = data.error || `HTTP ${resp.status}`;
-        console.error('⛔ liffSignIn CF rejected:', msg);
-        _showAuthErrorBanner(`เชื่อมห้องไม่สำเร็จ: ${msg} — ลองเปิด LINE LIFF ใหม่`);
-        return null;
-    }
-
-    // 200 — sign in with custom token (replaces anonymous/previous session user).
-    const { customToken, room, building } = data;
-    if (!auth) { _showAuthErrorBanner('Firebase ยังไม่พร้อม'); return null; }
+// Sign in with customToken with 5-attempt TLS-recovery retry (§7-R).
+// Wipes any stale session on first attempt to prevent LIFF-reopen race (§7-HH).
+// Returns true on success, null on failure (error banner already shown).
+async function _signInWithRetry(auth, customToken) {
     const signInFn = window.firebaseSignInWithCustomToken;
     if (!signInFn) { _showAuthErrorBanner('signInWithCustomToken ไม่พร้อม'); return null; }
-
-    // Sign-in is fragile inside the LINE in-app browser:
-    //   • A stale auth session from a previous LIFF open can collide with the new
-    //     custom-token sign-in (Firebase tries to atomically swap users; if the old
-    //     IndexedDB persistence is half-restored the swap can race).
-    //   • LINE keeps TLS connections to googleapis.com cached aggressively — a
-    //     stale connection produces auth/network-request-failed even though the
-    //     network is fine. Retrying with a small delay forces a new connection.
-    // See memory/auth_liff_sot.md §4 for the full failure-mode table.
+    // 5 attempts × 1000ms*attempt = ~10s TLS recovery window (§7-R).
+    // Synced with booking.html. See memory/auth_liff_sot.md §4.
     const TRANSIENT = new Set(['auth/network-request-failed', 'auth/internal-error', 'auth/timeout']);
-    // 5 attempts × 1000ms*attempt cumulative delay = ~10s window for TLS state recovery.
-    // LINE in-app browser caches TLS connections aggressively — too short a window
-    // (3×400ms = ~1.2s prior) shows the "ค้าง" banner before TLS has had time to refresh.
-    // Synced with booking.html so both pages have the same recovery characteristics.
     const MAX_ATTEMPTS = 5;
     let signInErr;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         try {
             if (attempt === 1 && auth.currentUser) {
-                // Wipe any stale session before swapping to the new custom-token
-                // identity — prevents LIFF reopen → race between restore and signIn.
                 try { await auth.signOut(); } catch (_) { /* best-effort */ }
             }
             await signInFn(auth, customToken);
@@ -387,20 +334,41 @@ async function _callLiffSignIn() {
             await new Promise(r => setTimeout(r, 1000 * attempt)); // 1s, 2s, 3s, 4s
         }
     }
-    if (signInErr) {
-        console.error('⛔ signInWithCustomToken exhausted retries:', signInErr.message);
-        const isTLS = /network-request-failed/i.test(signInErr?.message || '');
-        _showAuthErrorBanner(isTLS
-            ? 'LINE in-app browser ค้าง — กรุณาปิด LINE จาก app switcher แล้วเปิดใหม่ (1 ครั้ง) แล้วลองอีกที'
-            : `sign-in ไม่สำเร็จ: ${signInErr.message}`);
+    if (!signInErr) return true;
+    console.error('⛔ signInWithCustomToken exhausted retries:', signInErr.message);
+    const isTLS = /network-request-failed/i.test(signInErr?.message || '');
+    _showAuthErrorBanner(isTLS
+        ? 'LINE in-app browser ค้าง — กรุณาปิด LINE จาก app switcher แล้วเปิดใหม่ (1 ครั้ง) แล้วลองอีกที'
+        : `sign-in ไม่สำเร็จ: ${signInErr.message}`);
+    return null;
+}
+
+// Process liffSignIn CF response: route by status code, sign in, set globals.
+// Returns the linked result or null on failure (error banner already shown).
+async function _handleLiffSignInResponse(auth, resp, data) {
+    if (resp.status === 404) return { linked: false, status: null }; // first-time user
+    if (resp.status === 403) {
+        // Admin-initiated unlink: app shell still renders; _applyUnlinkedMode gates UI.
+        if (data.status === 'unlinked') {
+            window._unlinkedMode = true;
+            _applyUnlinkedMode();
+            return { linked: true, role: 'unlinked' };
+        }
+        return { linked: false, status: data.status || 'pending' };
+    }
+    if (!resp.ok) {
+        const msg = data.error || `HTTP ${resp.status}`;
+        console.error('⛔ liffSignIn CF rejected:', msg);
+        _showAuthErrorBanner(`เชื่อมห้องไม่สำเร็จ: ${msg} — ลองเปิด LINE LIFF ใหม่`);
         return null;
     }
 
-    // Community member (player) path — no room/building in response.
+    const { customToken, room, building } = data;
+    if (!auth) { _showAuthErrorBanner('Firebase ยังไม่พร้อม'); return null; }
+    if (!await _signInWithRetry(auth, customToken)) return null;
+
     if (data.role === 'player') {
         window._isPlayerMode = true;
-        // Cache identity from liffSignIn response for profile page rendering.
-        // Falls back to a previous session's localStorage copy if CF didn't return name.
         if (data.name || data.phone) {
             window._playerProfile = { name: data.name || '', phone: data.phone || '', tenantId: data.tenantId || '' };
             try { localStorage.setItem('player_profile', JSON.stringify(window._playerProfile)); } catch(_) {}
@@ -418,9 +386,32 @@ async function _callLiffSignIn() {
     localStorage.setItem('tenant_app_room', _taRoom);
     window._tenantAppRoom = _taRoom;
     window._tenantAppBuilding = _taBuilding;
-
     window.dispatchEvent(new Event('liffLinked'));
     return { linked: true, room: _taRoom, building: _taBuilding };
+}
+
+// Call liffSignIn CF: verify LIFF ID token server-side → Firebase custom token.
+// Returns: { linked: true, room, building } | { linked: false, status } | null (error)
+async function _callLiffSignIn() {
+    const auth = window.firebaseAuth;
+
+    const fastResult = await _getFastPathToken(auth);
+    if (fastResult) return fastResult;
+
+    let idToken;
+    try {
+        idToken = liff.getIDToken();
+        if (!idToken) throw new Error('getIDToken returned null');
+    } catch (e) {
+        console.error('⛔ liffSignIn: getIDToken failed:', e.message);
+        _showAuthErrorBanner(`ดึง LIFF token ไม่สำเร็จ: ${e.message}`);
+        return null;
+    }
+
+    const fetchResult = await _fetchLiffSignIn(idToken);
+    if (!fetchResult) return null;
+
+    return await _handleLiffSignInResponse(auth, fetchResult.resp, fetchResult.data);
 }
 function _showAuthErrorBanner(msg) {
     try {

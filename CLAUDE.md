@@ -137,6 +137,7 @@ After ANY correction from the user, decide where to log it:
 | `npm run csp:hash` / `csp:print` | CSP hash regen / print Vercel CSP | If/when CSP comes back from report-only |
 | `firebase deploy --only functions:<name>` | Deploy a single CF | After editing `functions/<name>.js` |
 | `firebase deploy --only firestore:rules,storage,database` | Deploy rules without CFs | After editing rules files |
+| **Service account key** | Rotate annually. **Next rotation: 2027-05.** Frozen CF `generateBillsOnMeterUpdate` is on Node 20 — see `memory/generate_bills_cf_frozen.md` for manual mitigation steps if Node 20 reaches EOL before rotation. | Annual reminder |
 
 Service Worker auto-versions from `VERCEL_GIT_COMMIT_SHA` — no manual `CACHE_VERSION` bump needed.
 
