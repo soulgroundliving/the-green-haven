@@ -711,11 +711,16 @@ function setupMeterDataListener() {
   }
 
   const db = window.firebase.firestore();
-  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
+  const { collection, onSnapshot, query, limit } = window.firebase.firestoreFunctions;
 
   try {
+    // meter_data grows per room × month × year (can reach thousands of docs). This
+    // callback only pings updateDashboardLive() — it never reads the snapshot payload —
+    // so cap the watch with limit() to avoid replaying the entire collection on every
+    // admin open and fanning out on every meter write. Other triggers (per-building
+    // watch in billing-system.js, the import flow) keep the dashboard refresh covered.
     const meterUnsubscribe = onSnapshot(
-      collection(db, 'meter_data'),
+      query(collection(db, 'meter_data'), limit(500)),
       (snapshot) => {
         updateDashboardLive();
       },

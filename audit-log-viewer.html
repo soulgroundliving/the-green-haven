@@ -579,6 +579,13 @@
     /**
      * Render logs table
      */
+    // HTML-escape — audit log rows contain user-controlled fields (email, attempted
+    // page, role) recorded by the auth gate, including on unauthenticated denials.
+    // Escape every field before innerHTML so a crafted value cannot inject markup.
+    const esc = (s) => String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+
     function renderLogs() {
       const tbody = document.getElementById('logsBody');
       const logCount = document.getElementById('logCount');
@@ -596,9 +603,9 @@
       tbody.innerHTML = logsToShow.map(log => `
         <tr>
           <td class="timestamp">${new Date(log.timestamp).toLocaleString('th-TH')}</td>
-          <td>${log.userEmail}</td>
-          <td><span class="role-badge">${log.userRole || 'none'}</span></td>
-          <td>${log.attemptedPage}</td>
+          <td>${esc(log.userEmail)}</td>
+          <td><span class="role-badge">${esc(log.userRole || 'none')}</span></td>
+          <td>${esc(log.attemptedPage)}</td>
           <td>
             <span class="status-badge ${log.result === 'SUCCESS' ? 'status-success' : 'status-denied'}">
               ${log.result === 'SUCCESS' ? '✅ Success' : '❌ Denied'}

@@ -361,18 +361,18 @@ function updatePaymentNotificationsPanel(notifications) {
       if (notif.type === 'payment_verified') {
         return `
           <div style="background: white; border-left: 4px solid ${DashColors.GREEN_ACTIVE}; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.9rem;">
-            <div style="font-weight: 600; color: ${DashColors.GREEN_DARK};">✅ ห้อง ${notif.room} - โอนเงิน ฿${notif.amount?.toLocaleString('th-TH')}</div>
+            <div style="font-weight: 600; color: ${DashColors.GREEN_DARK};">✅ ห้อง ${_esc(notif.room)} - โอนเงิน ฿${notif.amount?.toLocaleString('th-TH')}</div>
             <div style="font-size: 0.8rem; color: ${DashColors.TEXT_MUTED}; margin-top: 0.3rem;">
-              ${dateStr} ${timeStr} | SlipID: ${notif.slipId?.substring(0, 10) || 'N/A'}...
+              ${dateStr} ${timeStr} | SlipID: ${_esc(notif.slipId?.substring(0, 10) || 'N/A')}...
             </div>
           </div>
         `;
       } else if (notif.type === 'receipt_generated') {
         return `
           <div style="background: white; border-left: 4px solid ${DashColors.BLUE_MED}; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.9rem;">
-            <div style="font-weight: 600; color: ${DashColors.BLUE_DARK};">📄 ห้อง ${notif.room} - ใบเสร็จ ฿${notif.amount?.toLocaleString('th-TH')}</div>
+            <div style="font-weight: 600; color: ${DashColors.BLUE_DARK};">📄 ห้อง ${_esc(notif.room)} - ใบเสร็จ ฿${notif.amount?.toLocaleString('th-TH')}</div>
             <div style="font-size: 0.8rem; color: ${DashColors.TEXT_MUTED}; margin-top: 0.3rem;">
-              ${dateStr} ${timeStr} | ReceiptID: ${notif.receiptId?.substring(0, 10) || 'N/A'}... | Verified: ${notif.verified ? '✅' : '❌'}
+              ${dateStr} ${timeStr} | ReceiptID: ${_esc(notif.receiptId?.substring(0, 10) || 'N/A')}... | Verified: ${notif.verified ? '✅' : '❌'}
             </div>
           </div>
         `;
@@ -1252,6 +1252,6 @@ function showBillingImportStatus(message, type) {
     borderColor = DashColors.RED_DEEP;
   }
 
-  statusDiv.innerHTML = `<div style="padding:0.8rem;background:${bgColor};border:1px solid ${borderColor};border-radius:var(--radius-sm);color:var(--text);">${message}</div>`;
+  statusDiv.innerHTML = `<div style="padding:0.8rem;background:${bgColor};border:1px solid ${borderColor};border-radius:var(--radius-sm);color:var(--text);">${_esc(message)}</div>`;
 }
 
