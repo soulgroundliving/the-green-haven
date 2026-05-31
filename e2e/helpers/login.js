@@ -53,6 +53,26 @@ async function loginAsAdmin(page) {
   await expect(
     page.locator('button[data-action="showPage"][data-page="bill"]')
   ).toBeVisible({ timeout: 10_000 });
+
+  // Dismiss the first-run onboarding tour (shared/onboarding-tour.js). It drops
+  // a full-page .gh-tour-overlay that intercepts pointer events, so every
+  // subsequent sidebar/nav click times out. The tour is gated by a localStorage
+  // "seen" flag, so a fresh CI browser shows it on EVERY run. Escape triggers the
+  // tour's own finish() → removes the overlay. Best-effort: if no tour appears
+  // (already seen), the wait just times out and we proceed.
+  const tourOverlay = page.locator('.gh-tour-overlay');
+  try {
+    await tourOverlay.waitFor({ state: 'visible', timeout: 6_000 });
+    await page.keyboard.press('Escape');
+    await tourOverlay.waitFor({ state: 'detached', timeout: 5_000 });
+  } catch (_) {
+    // No tour shown, or it didn't dismiss — fall back to clicking the skip button.
+    const skip = page.locator('.gh-tour-tooltip button', { hasText: /ข้าม|ปิด/ });
+    if (await skip.isVisible().catch(() => false)) {
+      await skip.click().catch(() => {});
+      await tourOverlay.waitFor({ state: 'detached', timeout: 5_000 }).catch(() => {});
+    }
+  }
 }
 
 module.exports = { loginAsAdmin };
