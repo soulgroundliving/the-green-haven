@@ -6,7 +6,7 @@ Loaded at every session start. Overrides any default behavior — follow exactly
 
 Two docs auto-load at session start; they are **complementary, not duplicates**:
 
-- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-RR** (project-specific lessons that auto-load every session).
+- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-SS** (project-specific lessons that auto-load every session).
 - **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, archive.
 
 **Boundary rule for new content:**
@@ -79,7 +79,7 @@ After ANY correction from the user, decide where to log it:
 |-------|---------------------|-------|
 | Markup | Vanilla HTML | `tenant_app.html`, `dashboard.html`, `login.html`, `tax-filing.html` |
 | Styling | **Tailwind CSS v3** (pre-built, NOT CDN JIT) + custom CSS variables | `shared/tailwind.input.css` → `shared/tailwind.css` (built via `npm run tailwind:build`); brand tokens in `shared/brand.css` |
-| Logic | Vanilla JS modules (UMD-ish; `window.X = ...` exports) | `shared/*.js` (~92 files incl. 25 `tenant-*.js` god-file extracts; verify with `ls shared/*.js \| wc -l`) |
+| Logic | Vanilla JS modules (UMD-ish; `window.X = ...` exports) | `shared/*.js` (101 files incl. 26 `tenant-*.js` god-file extracts; verify with `ls shared/*.js \| wc -l`) |
 | Backend | **Firebase** v11 — Auth · Firestore · Realtime DB · Cloud Functions · Storage | `functions/` (Node CFs); rules in `firestore.rules`, `storage.rules`, `database.rules.json` |
 | Hosting | **Vercel** (not Firebase Hosting) | `vercel.json`, `/api/*` serverless fns (e.g. `/api/config`) |
 | Build | `esbuild` (bundle minify) | `build.js` |
@@ -1203,6 +1203,41 @@ grep -rh "window\." shared/tenant-*.js | grep -oE "window\.[a-zA-Z]+" | sort -u 
 5. Push and verify live: `typeof window.functionName` must return `'function'` before marking done
 
 **Difference from §7-K (defined ≠ wired):** §7-K is "function exists in codebase but 0 callers." QQ is "function had callers and worked, then was deleted during refactor while callers remained." §7-CC (`let X` at top-level ≠ on window) is the scope-sibling — different mistake, same consequence.
+
+### SS. CSS migration from `style="display:none"` to `u-init-hide` breaks tab switchers that clear inline style to show panels
+
+Tab switchers in this codebase hide non-active panels by adding `.u-hidden` (display:none !important) and show the active panel by removing `.u-hidden` + clearing inline style (`if (el.style.display) el.style.display = ''`). This pattern relies on panels having an inline `style="display:none"` that gets cleared. When CSS migration passes replace that inline style with class `u-init-hide`, the switchers stop working:
+
+- `.u-hidden { display:none !important }` — wins over everything when present
+- `.u-init-hide { display:none }` — no `!important`, overrideable only by inline `style="block"` or by a higher-specificity rule
+
+After switching to `u-init-hide`, clearing the inline style (`el.style.display = ''`) leaves the element with only `.u-init-hide` → still hidden. No error, no warning, panel silently stays `display:none`.
+
+Incident (2026-05-31): CSS migration pass 3-6 changed all non-default tab panels from `style="display:none"` to `class="u-init-hide"`. Six tab switchers (`switchTenantMainTab`, `switchBillingMainTab`, `_switchMeterTabImpl`, `switchContentTab`, `switchGamificationTab`, `switchRequestsTab`, `switchPeopleTab`) stopped showing tabs 2+ on click. Default tab (tab 1) still showed because it had neither `u-hidden` nor `u-init-hide`.
+
+**Rule:** any tab switcher "show" step must set `el.style.display = 'block'` (not just clear it) to override `u-init-hide`. The "hide" step should add `u-hidden` and clear inline (`el.style.display = ''`) so `u-hidden !important` wins.
+
+```js
+// ❌ WRONG — works only if panels use inline style="display:none", not u-init-hide class
+el.classList.toggle('u-hidden', !isActive);
+if (el.style.display) el.style.display = '';    // clearing ≠ showing
+
+// ✅ CORRECT — explicitly set 'block' overrides u-init-hide; '' lets u-hidden !important win
+const isActive = (t === tab);
+el.classList.toggle('u-hidden', !isActive);
+el.style.display = isActive ? 'block' : '';
+```
+
+**Detection recipe** — any time a tab panel is invisible after clicking its button:
+```bash
+# Find panels that use u-init-hide (not inline style) in tracked tab switcher groups
+grep -n "u-init-hide" dashboard.html | grep -E "tab-|mgmt-content|meter-tab|content-mgmt"
+# Then find the corresponding switcher — if it uses `if (el.style.display) el.style.display = ''`
+# it is broken for u-init-hide panels.
+grep -n "if.*style\.display.*style\.display" shared/dashboard-main.js shared/dashboard-config.js shared/dashboard-wellness-content.js
+```
+
+**Family:** §7-C (modal display — inline style wins over class) is the close cousin — same class vs inline style precedence trap, different context.
 
 ### RR. `document.createElement('style')` is blocked by CSP `style-src-elem` — CSS must live in a static file
 
