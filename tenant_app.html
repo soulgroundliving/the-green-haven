@@ -101,6 +101,7 @@
     <!-- Shared logic scripts — all deferred.
          gamification-rules.js must precede tenant-leaderboard.js in DOM order so
          it executes first and window.GamificationRules is available when leaderboard runs. -->
+    <script src="./shared/tenant-navigation.js" defer></script>
     <script src="./shared/firebase-config-loader.js" defer></script>
     <script src="./shared/rich-text-policy.js" defer></script>
     <script src="./shared/utils.js" defer></script>
@@ -5857,7 +5858,7 @@
         window.addEventListener('load', async () => {
             if (!(await window._enforceAccessGate())) return;
             // 1. สั่งเปิดหน้าแผนที่เป็นหน้าแรก (แก้จาก 'home' เป็น 'world-map-page')
-            showPage('world-map-page');
+            window.showPage('world-map-page');
             // อัปเดต bg ตามเวลาไทยทันที (ไม่รอ weather API) — updateDashboard จะเติม weather code ตามมา
             if (typeof updateWorldMapBg === 'function') updateWorldMapBg(null);
             // refresh bg ทุก 30 นาที เพื่อเปลี่ยนจาก day → night ตามเวลาจริง
