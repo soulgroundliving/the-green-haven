@@ -823,7 +823,7 @@ function switchGamificationTab(tabName, btn) {
   const sel = document.getElementById('gamification' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
   if (sel) {
     sel.classList.remove('u-hidden');
-    if (sel.style.display) sel.style.display = '';
+    sel.style.display = 'block';
   }
   // Scope to the 3 tab buttons only (Leaderboard/Badges/Rewards) — not every
   // button under #page-gamification. The earlier broad selector applied the
