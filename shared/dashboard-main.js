@@ -277,7 +277,7 @@ function switchRequestsTab(tabName, btn) {
   const tabElement = document.getElementById('requests-tab-' + tabName);
   if(tabElement) {
     tabElement.classList.remove('u-hidden');
-    if (tabElement.style.display) tabElement.style.display = '';
+    tabElement.style.display = 'block';
     if(btn) btn.classList.add('active');
     // Initialize content for each tab
     if(tabName === 'maintenance') initMaintenancePage();
@@ -545,7 +545,7 @@ function switchPeopleTab(tabName, btn) {
   const tabElement = document.getElementById('people-tab-' + tabName);
   if(tabElement) {
     tabElement.classList.remove('u-hidden');
-    if (tabElement.style.display) tabElement.style.display = '';
+    tabElement.style.display = 'block';
   }
 
   // Highlight active button
