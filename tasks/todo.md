@@ -50,8 +50,8 @@ All edited JS passes `node --check`. ⚠️ A prompt-injection was detected mid-
 - [ ] **UX HIGH — keyboard-operable tenant nav** — 53 `div.menu-item`/`div[data-action]` tiles lack `role`/`tabindex`/keydown. Add `role="button"`+`tabindex="0"` or a global Enter/Space handler in the delegation hub. **Why:** WCAG 2.1.1 — keyboard/switch users can't navigate the tenant app.
 - [ ] **UX HIGH — tab ARIA + dynamic `aria-current`** — 7 tab switchers have `role="tab"/"tablist"/"tabpanel"/"aria-selected"` = 0; `aria-current` hardcoded on Home nav. **Why:** SC 1.4.1 / 4.1.2 — visual-only state.
 - [ ] **UX HIGH — contrast tokens** — `--muted` 4.40:1, `--pebble` 3.55:1, `--ok`/`--brand-primary-light` 2.49:1 as text (`shared/brand.css`); fix false "≥4.5:1" comment; dark `--alert` 3.19, `--brand-primary` 2.81 as text.
-- [ ] **Code Quality — replace 6 `prompt()`** with `window.ghPrompt` — `dashboard-bills.js:121/125/126/180`, `dashboard-extra.js:548`, `dashboard-tenant-lease.js:253` (§7-Q; financial/lease write paths).
-- [ ] **Code Quality — log silent billing catches** — `dashboard-bill.js:599-665` empty `catch(e){}` cluster around `PaymentStore._ingest`/`renderPaymentStatus` → add `console.warn`.
+- [x] **Code Quality — replace 6 `prompt()`** with `window.ghPrompt` — DONE 2026-06-01 (PR #197, `a706b05`). All 6 → async `await window.ghPrompt(...)` (null-on-cancel semantics preserved). NOTE: `generateMonthlyBillsUI`/`downloadInvoicesPDF` are orphaned (0 callers, §7-K) — converted for consistency; **wire-or-delete still open** (see P2).
+- [x] **Code Quality — log silent billing catches** — DONE 2026-06-01 (PR #197). 7 bare `catch(e){}` in `_subscribeGlobalVerifiedSlips`/`PaymentStore.onChange` cluster → `console.warn('[billing] …')`. 4 best-effort catches outside the cluster (`_notify` listener isolation, print-window teardown) left per minimal-change.
 
 ---
 
@@ -68,6 +68,7 @@ All edited JS passes `node --check`. ⚠️ A prompt-injection was detected mid-
 - [ ] **Testing — frontend unit tests** for `billing-system.js`, `bill-generator.js`, `lease-config.js`, `checklist-manager.js` via the existing `vm`-sandbox harness.
 - [ ] **Architecture — collapse `detectBuilding`** (duplicated 4× with magic `101-405` range) to one registry-aware caller (`building-config.js`).
 - [ ] **Tech Debt — archive 28 one-shot migration scripts** → `tools/migrations/done/` with executed-date headers.
+- [ ] **Tech Debt — wire-or-delete orphaned bill-gen UI** — `generateMonthlyBillsUI` + `downloadInvoicesPDF` (`dashboard-bills.js`) have 0 callers (§7-K), surfaced during the prompt()→ghPrompt pass (PR #197). Decide: wire to an admin button, or delete (`BillGenerator.generateMonthlyBills` is the real entry used elsewhere). Product decision — needs user.
 - [ ] **Tech Debt — decide on root `bill69-final.xlsx` (PII), `S__91643910.jpg`, `Nature Haven Design System.zip`** (gitignored; left untouched this session).
 
 ---
