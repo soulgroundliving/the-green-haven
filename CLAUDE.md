@@ -6,7 +6,7 @@ Loaded at every session start. Overrides any default behavior — follow exactly
 
 Two docs auto-load at session start; they are **complementary, not duplicates**:
 
-- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-QQ** (project-specific lessons that auto-load every session).
+- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-RR** (project-specific lessons that auto-load every session).
 - **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, archive.
 
 **Boundary rule for new content:**
@@ -1203,6 +1203,39 @@ grep -rh "window\." shared/tenant-*.js | grep -oE "window\.[a-zA-Z]+" | sort -u 
 5. Push and verify live: `typeof window.functionName` must return `'function'` before marking done
 
 **Difference from §7-K (defined ≠ wired):** §7-K is "function exists in codebase but 0 callers." QQ is "function had callers and worked, then was deleted during refactor while callers remained." §7-CC (`let X` at top-level ≠ on window) is the scope-sibling — different mistake, same consequence.
+
+### RR. `document.createElement('style')` is blocked by CSP `style-src-elem` — CSS must live in a static file
+
+Any JS module that injects its own styles via `document.createElement('style') + appendChild` is blocked silently when `style-src-elem` is in enforced CSP mode with only specific hashes whitelisted. The dynamically created `<style>` tag has no hash, so the browser silently discards it. The JS runs without errors, the code appears to succeed (no exception), and a `_stylesInjected = true` flag says "done" — but `getComputedStyle()` returns 0 / transparent for every affected element.
+
+Incident (2026-05-31): `rich-text-policy.js` injected `.rt-wrap / .rt-toolbar / .rt-content` CSS via `document.createElement('style')`. After CSP was enforced (2026-05-23), the editor in the Policy page lost all visual styling — no border, no gray toolbar background, no padding. The page "worked" functionally but looked broken. Root cause took a full diagnostic cycle to find because the failure is invisible: `_stylesInjected = true`, no console error, no CSP violation shown in console (only in DevTools Issues panel).
+
+**Rule:** never use `document.createElement('style')` for CSS that must survive CSP. Put the CSS in `shared/components.css` (or another static `.css` file that's already loaded). External `.css` files don't require `style-src-elem` hashes — only inline `<style>` blocks and `style=""` attributes do.
+
+```js
+// ❌ WRONG — silently blocked by CSP style-src-elem
+const style = document.createElement('style');
+style.textContent = '.my-widget { border: 1px solid #d1d5db; }';
+document.head.appendChild(style);
+
+// ✅ CORRECT — add CSS to shared/components.css instead
+// .my-widget { border: 1px solid var(--border, #d1d5db); }
+```
+
+**Detection recipe:**
+1. `getComputedStyle(el).border` returns `'0px none'` even though the element has the expected CSS class
+2. `document.styleSheets` has no rule for `.my-class` — the style tag was either never inserted or silently removed
+3. DevTools → Issues panel (NOT console) shows "Refused to apply inline style" CSP violation
+
+```bash
+# Audit all JS files for dynamic style injection:
+grep -rn "createElement.*'style'\|createElement.*\"style\"" shared/ --include="*.js"
+# Each hit must be replaced with a static CSS rule in components.css
+```
+
+**Affected pages when CSP is enforced:** any page that loads the offending JS module. This project has `style-src-elem` with explicit hashes for tracked HTML files since 2026-05-23.
+
+**Sibling:** §7-II (CSP hash drift kills inline `<style>` blocks on deploy). Both are "CSP kills styles silently" — II is about pre-existing inline blocks whose hash went stale; RR is about JS-injected blocks that never had a hash.
 
 ---
 
