@@ -25,6 +25,14 @@
     }
   </script>
 
+  <!-- Font preconnect + preload — same critical subsets as tenant_app.html -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="https://fonts.gstatic.com/s/ibmplexsansthailooped/v12/tss_AoJJRAhL3BTrK3r2xxbFhvKfyBB6l7hHT30L9AGKoWGo.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="https://fonts.gstatic.com/s/ibmplexsansthailooped/v12/tss_AoJJRAhL3BTrK3r2xxbFhvKfyBB6l7hHT30L9BWKoQ.woff2">
+
   <!-- Brand fonts + tokens (load BEFORE Tailwind so brand vars take precedence) -->
   <link rel="stylesheet" href="/shared/brand.css">
   <link rel="stylesheet" href="/shared/components.css">

@@ -31,6 +31,12 @@
     <!-- Font preconnect — cuts ~200ms from Google Fonts handshake on first load -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Preload critical IBM Plex Sans Thai Looped subsets (Thai + Latin) to avoid 2-hop
+         CSS→font waterfall. URLs verified 2026-05-31 via fonts.googleapis.com/css2 API. -->
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+          href="https://fonts.gstatic.com/s/ibmplexsansthailooped/v12/tss_AoJJRAhL3BTrK3r2xxbFhvKfyBB6l7hHT30L9AGKoWGo.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+          href="https://fonts.gstatic.com/s/ibmplexsansthailooped/v12/tss_AoJJRAhL3BTrK3r2xxbFhvKfyBB6l7hHT30L9BWKoQ.woff2">
     <!-- Tailwind: pre-built via `npm run tailwind:build` (committed to repo) instead of CDN JIT (~200KB JS) -->
     <link rel="stylesheet" href="/shared/tailwind.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" data-gh-lazy-style>
@@ -92,9 +98,9 @@
     </script>
     <!-- LINE LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js" defer></script>
-    <!-- Shared logic scripts — all deferred except gamification-rules.js which has a
-         top-level alias in the inline script (window.GamificationRules.BADGE_CATALOG,
-         .badgeId at lines ~9888-9889) that must be resolved during parse, not post-parse. -->
+    <!-- Shared logic scripts — all deferred. Note: gamification-rules.js is deferred
+         after the god-file refactor moved BADGE_CATALOG/.badgeId usage into
+         shared/tenant-leaderboard.js (which is also deferred). -->
     <script src="./shared/firebase-config-loader.js" defer></script>
     <script src="./shared/rich-text-policy.js" defer></script>
     <script src="./shared/utils.js" defer></script>
@@ -127,7 +133,7 @@
     <script src="./shared/tenant-legacy.js" defer></script>
     <script src="./shared/tenant-slip-verify.js" defer></script>
     <script src="./shared/marketplace-chat.js" defer></script>
-    <script src="./shared/gamification-rules.js"></script>
+    <script src="./shared/gamification-rules.js" defer></script>
     <script src="./shared/room-config.js" defer></script>
     <script src="./shared/tenant-system.js" defer></script>
     <script src="./shared/tenant-firebase-sync.js" defer></script>

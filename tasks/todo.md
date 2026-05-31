@@ -264,7 +264,7 @@
 
 ### ⚡ Performance — Minor
 
-- [ ] **[PERF-FONT] เพิ่ม preload hint สำหรับ IBM Plex Sans Thai Looped 400**
+- [x] **[PERF-FONT] เพิ่ม preload hint สำหรับ IBM Plex Sans Thai Looped 400**
   - **Why:** Google Fonts ต้องผ่าน 2 waterfall hops (CSS → font file) — preload ลด 1 hop
   - **ไฟล์:** `tenant_app.html:32-33`, `booking.html` head
   - **Fix:** เพิ่ม `<link rel="preload" as="font" crossorigin href="https://fonts.gstatic.com/s/ibmplexsansthailooped/...wght@400.woff2">` (ต้องหา URL จริงจาก Google Fonts response)
@@ -275,7 +275,7 @@
   - **Fix:** `transition: color 0.2s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s`
   - **Verify:** `grep -n "transition: all" shared/brand.css shared/components.css` → 0 hits
 
-- [ ] **[PERF-BLOCKING] เพิ่ม `defer` ให้ `gamification-rules.js`**
+- [x] **[PERF-BLOCKING] เพิ่ม `defer` ให้ `gamification-rules.js`**
   - **Why:** โหลดโดยไม่มี `defer` ที่ `tenant_app.html:129` — block HTML parsing 9KB
   - **ไฟล์:** `tenant_app.html:129`
   - **Fix:** ย้าย `GamificationRules` reference ใน inline script เข้า `DOMContentLoaded` callback → เพิ่ม `defer` ให้ script tag
@@ -285,7 +285,7 @@
 
 ### 🧪 Testing
 
-- [ ] **[TEST-FRONTEND] Setup Jest/Vitest สำหรับ frontend JS**
+- [x] **[TEST-FRONTEND] Setup Jest/Vitest สำหรับ frontend JS**
   - **Why:** 0% frontend test coverage — UI bugs ไม่ถูกจับโดย automated tests เลย
   - **Fix:** เพิ่ม `vitest` + `jsdom` ใน root `package.json`; สร้าง `tests/shared/` directory; เริ่มด้วย:
     - `tests/shared/tenant-system.test.js` — `TenantConfigManager` CRUD + immutability
@@ -294,7 +294,7 @@
   - **Target:** ≥50% coverage บน tested files ใน pass แรก
   - **Verify:** `npm run test:frontend` → passes; coverage report แสดงตัวเลข
 
-- [ ] **[TEST-E2E-BOOKING] เพิ่ม E2E สำหรับ booking flow**
+- [x] **[TEST-E2E-BOOKING] เพิ่ม E2E สำหรับ booking flow**
   - **Why:** booking.html เป็น critical flow แต่ไม่มี E2E เลย (24 tests ปัจจุบันไม่ครอบ)
   - **ไฟล์:** `e2e/booking.spec.js` (new)
   - **Fix:** test: room selection → date picker → confirm → payment QR render → slip upload UI
@@ -315,7 +315,12 @@ _กรอกหลังจาก implement แต่ละ section_
 - [x] P2 CQ-OVERSIZED (partial: 3 files → 5 files extracted; dashboard-insights.js deferred) — this session
 - [x] P2 Docs (DOC-DARKMODE, DOC-SA-KEY; DOC-DASHBOARD was already correct) — this session
 - [x] P3 Tech Debt quick wins (DEBT-DEAD1, DEBT-FIELD, DEBT-ESC, DEBT-FETCH, DEBT-PLAN) — this session
-- [x] P3 PERF-TRANSITION (5× transition:all → specific properties) — this session
+- [x] P3 PERF-TRANSITION (5× transition:all → specific properties) — commit: `2cb408e`
+- [x] P3 PERF-BLOCKING (gamification-rules.js defer — blocker removed by god-file refactor) — this session
+- [x] P3 PERF-FONT (IBM Plex Sans Thai Looped woff2 preload — Thai + Latin subsets) — this session
+- [x] P3 TEST-FRONTEND (35 tests: gamification-rules.test.js + building-registry.test.js in shared/__tests__/) — this session
+- [x] P3 TEST-E2E-BOOKING (e2e/booking.spec.js — structural + LIFF-gate + tab interaction, 12 tests) — this session
+- [x] P3 CQ-OVERSIZED (dashboard-insights.js 1766L → 5 files: 362/412/250/365/483L; window._ins delegation) — this session
 
 ---
 
