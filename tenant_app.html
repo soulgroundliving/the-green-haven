@@ -98,9 +98,9 @@
     </script>
     <!-- LINE LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js" defer></script>
-    <!-- Shared logic scripts — all deferred. Note: gamification-rules.js is deferred
-         after the god-file refactor moved BADGE_CATALOG/.badgeId usage into
-         shared/tenant-leaderboard.js (which is also deferred). -->
+    <!-- Shared logic scripts — all deferred.
+         gamification-rules.js must precede tenant-leaderboard.js in DOM order so
+         it executes first and window.GamificationRules is available when leaderboard runs. -->
     <script src="./shared/firebase-config-loader.js" defer></script>
     <script src="./shared/rich-text-policy.js" defer></script>
     <script src="./shared/utils.js" defer></script>
@@ -108,6 +108,7 @@
     <script src="./shared/config-unified.js" defer></script>
     <script src="./shared/building-config.js" defer></script>
     <script src="./shared/building-registry.js" defer></script>
+    <script src="./shared/gamification-rules.js" defer></script>
     <script src="./shared/facility-booking.js" defer></script>
     <script src="./shared/checklist-manager.js" defer></script>
     <script src="./shared/tenant-marketplace.js" defer></script>
@@ -133,7 +134,6 @@
     <script src="./shared/tenant-legacy.js" defer></script>
     <script src="./shared/tenant-slip-verify.js" defer></script>
     <script src="./shared/marketplace-chat.js" defer></script>
-    <script src="./shared/gamification-rules.js" defer></script>
     <script src="./shared/room-config.js" defer></script>
     <script src="./shared/tenant-system.js" defer></script>
     <script src="./shared/tenant-firebase-sync.js" defer></script>
