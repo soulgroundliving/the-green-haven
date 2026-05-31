@@ -6,7 +6,7 @@ Loaded at every session start. Overrides any default behavior — follow exactly
 
 Two docs auto-load at session start; they are **complementary, not duplicates**:
 
-- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-JJ** (project-specific lessons that auto-load every session).
+- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-QQ** (project-specific lessons that auto-load every session).
 - **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, archive.
 
 **Boundary rule for new content:**
@@ -1178,6 +1178,31 @@ grep -n "gamification-rules\|tenant-leaderboard" tenant_app.html
 4. Fix: swap the script order in HTML — the definer before the consumer
 
 **Sibling:** §7-EE (self-recursion with `window.X = wrapper`) — same family of "script ordering in a non-module world produces subtle bugs." §7-CC (`let X` at top-level ≠ on window) is the scope-level cousin.
+
+### QQ. God-file extraction silently drops `function X()` from global scope — always export as `window.X`
+
+A top-level `function X()` inside a `<script>` tag is automatically on `window` (in non-strict mode, function declarations hoist to global). When refactoring that script into a separate `shared/*.js` file, the function is NO LONGER global unless you add an explicit `window.X = X` (or define it as `window.X = function() {...}` directly). There is no compiler error, no lint warning, and no test failure — the function is simply absent from `window` at runtime. Callers that check `if (_ta.X)` silently skip. Callers that use the bareword `X()` throw `ReferenceError` only at runtime.
+
+Incident (2026-05-31): god-file refactor (PRs #158–#185) slimmed `tenant_app.html` from 13,911 → 5,930 lines. `function showPage(id, element)` at line 3038 of the original was never moved to any module. All navigation buttons silently failed; `showPage('world-map-page')` in the `load` event threw `ReferenceError`. Discovered only after the refactor was complete and pushed — no automated check caught it. Fix: created `shared/tenant-navigation.js` with explicit `window.showPage = function(...)`.
+
+**Rule:** when extracting any function from an inline `<script>` to a `shared/*.js` module, IMMEDIATELY add `window.X = X` at the bottom of the new file. If the function is also called by bareword inside the SAME `<script>`, change those callers to `window.X(...)` at the same time.
+
+```bash
+# Audit recipe — find any function that the delegation hub expects on _ta (= window)
+# but is not explicitly exported as window.X in any module:
+grep -h "if (a === '\|_ta\." tenant_app.html | grep -oE "'[a-zA-Z]+'" | sort -u > /tmp/expected.txt
+grep -rh "window\." shared/tenant-*.js | grep -oE "window\.[a-zA-Z]+" | sort -u > /tmp/exported.txt
+# Names in expected but not in exported are candidates for missing window.X
+```
+
+**Pre-extract checklist** (run BEFORE removing any function from an inline `<script>`):
+1. `grep -n "functionName" tenant_app.html` — find every call site (delegation hub, event handlers, load callback, other inline calls)
+2. Decide which module the function belongs in
+3. Add `window.functionName = function(...) {...}` to that module
+4. Change any remaining bareword calls in the inline `<script>` to `window.functionName(...)`
+5. Push and verify live: `typeof window.functionName` must return `'function'` before marking done
+
+**Difference from §7-K (defined ≠ wired):** §7-K is "function exists in codebase but 0 callers." QQ is "function had callers and worked, then was deleted during refactor while callers remained." §7-CC (`let X` at top-level ≠ on window) is the scope-sibling — different mistake, same consequence.
 
 ---
 
