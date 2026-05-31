@@ -158,32 +158,9 @@
       <button type="button" data-rt-cmd="removeFormat" title="ล้างรูปแบบ">✕ ล้าง</button>
     </div>`;
 
-  // Inject base styles once.
-  let _stylesInjected = false;
-  function _injectStyles() {
-    if (_stylesInjected) return;
-    _stylesInjected = true;
-    const css = `
-      .rt-wrap { border: 1px solid var(--border, #d1d5db); border-radius: 8px; overflow: hidden; background: #fff; color: #1a1a1a; }
-      .rt-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; background: #f8fafc; border-bottom: 1px solid var(--border, #d1d5db); align-items: center; }
-      .rt-toolbar button { background: #fff; color: #1a1a1a; border: 1px solid #e5e7eb; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 0.85rem; min-width: 30px; line-height: 1.2; }
-      .rt-toolbar button:hover { background: var(--green-pale, #e8f5e9); color: #1a1a1a; }
-      .rt-toolbar button:active { background: var(--green-dark, #2e7d32); color: #fff; }
-      .rt-toolbar select { background: #fff; color: #1a1a1a; border: 1px solid #e5e7eb; padding: 4px 6px; border-radius: 4px; font-family: inherit; font-size: 0.85rem; }
-      .rt-toolbar .rt-sep { width: 1px; height: 22px; background: #e5e7eb; margin: 0 4px; }
-      .rt-content { min-height: 180px; padding: 12px; outline: none; font-family: 'Sarabun', sans-serif; font-size: 0.9rem; line-height: 1.6; color: #1a1a1a; background: #fff; }
-      .rt-content:focus { background: #fafafa; }
-      .rt-content[data-empty="1"]::before { content: attr(data-placeholder); color: #9ca3af; pointer-events: none; }
-      .rt-content h2 { font-size: 1.25rem; margin: 0.6em 0 0.3em; font-weight: 700; }
-      .rt-content h3 { font-size: 1.1rem; margin: 0.5em 0 0.25em; font-weight: 700; }
-      .rt-content h4 { font-size: 1rem; margin: 0.4em 0 0.2em; font-weight: 700; }
-      .rt-content blockquote { border-left: 3px solid var(--green-dark, #2e7d32); margin: 0.5em 0; padding: 0.3em 0.8em; color: #555; background: #f9fafb; }
-      .rt-content ul, .rt-content ol { padding-left: 1.5em; margin: 0.4em 0; }
-    `;
-    const style = document.createElement('style');
-    style.textContent = css;
-    document.head.appendChild(style);
-  }
+  // CSS moved to shared/components.css (rt-wrap, rt-toolbar, rt-content, etc.)
+  // to satisfy CSP style-src-elem hash — dynamic style injection is blocked.
+  function _injectStyles() { /* no-op: styles live in components.css */ }
 
   function mountEditor(placeholderEl, initialContent, opts) {
     if (!placeholderEl) return null;
