@@ -3,9 +3,17 @@
  * Phase 4E — CSP hash generator.
  *
  * Extracts every inline <script> and <style> block from the HTML files below,
- * computes the SHA-256 hash of each block's exact content (no trimming), and
- * writes tools/csp-hashes.json. The generator in tools/generate-vercel-csp.js
+ * computes the SHA-256 hash of each block's content, and writes
+ * tools/csp-hashes.json. The generator in tools/generate-vercel-csp.js
  * consumes that JSON to render the vercel.json headers block.
+ *
+ * IMPORTANT — trimming:
+ *   build.js runs html-minifier-terser with collapseWhitespace:true, which
+ *   strips the leading/trailing whitespace (newlines + indentation) from every
+ *   inline <script> and <style> block at deploy time. Browsers hash what they
+ *   actually receive, so we must hash the TRIMMED content here — or every
+ *   multi-line inline script hash will mismatch in production.
+ *   Single-line scripts (no surrounding whitespace) are unaffected by this.
  *
  * Run: npm run csp:hash  (regenerate when any inline script/style changes)
  */
@@ -35,12 +43,13 @@ function sha256b64(content) {
 }
 
 // Extract inline <script>...</script> blocks (no src= attribute).
+// Trim matches build.js html-minifier-terser collapseWhitespace:true behaviour.
 function extractInlineScripts(html) {
   const re = /<script(?![^>]*\bsrc\s*=)([^>]*)>([\s\S]*?)<\/script>/gi;
   const hashes = new Set();
   let m;
   while ((m = re.exec(html)) !== null) {
-    const body = m[2];
+    const body = m[2].trim(); // minifier strips outer newlines/indentation
     if (body.length === 0) continue; // skip empty <script></script>
     hashes.add(sha256b64(body));
   }
@@ -48,12 +57,13 @@ function extractInlineScripts(html) {
 }
 
 // Extract inline <style>...</style> blocks.
+// Trim matches build.js html-minifier-terser collapseWhitespace:true behaviour.
 function extractInlineStyles(html) {
   const re = /<style([^>]*)>([\s\S]*?)<\/style>/gi;
   const hashes = new Set();
   let m;
   while ((m = re.exec(html)) !== null) {
-    const body = m[2];
+    const body = m[2].trim(); // minifier strips outer newlines/indentation
     if (body.length === 0) continue;
     hashes.add(sha256b64(body));
   }
