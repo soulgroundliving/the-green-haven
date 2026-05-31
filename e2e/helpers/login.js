@@ -24,37 +24,29 @@ async function loginAsAdmin(page) {
   await page.fill('#loginPassword', password);
   await page.click('#loginBtn');
 
-  // Race the dashboard redirect (Vercel serves /dashboard, also accepts
-  // /dashboard.html) against a surfaced login error. login.html reports auth
-  // failures AND "not an admin account" type-mismatches in #errorMessage
-  // (role="alert"). Catching it turns a cryptic 25s navigation timeout into an
-  // actionable message: a failed SMOKE_ADMIN login is an account/secret problem
-  // (wrong password / missing admin custom claim), NOT a code regression.
-  const redirected = page
-    .waitForURL(/\/dashboard(\.html)?([?#]|$)/, { timeout: 25_000 })
-    .then(() => 'dashboard', () => null);
-  const errored = page
-    .waitForFunction(() => {
-      const el = document.getElementById('errorMessage');
-      return !!(el && el.offsetParent !== null && el.textContent.trim());
-    }, { timeout: 25_000 })
-    .then(() => 'error', () => null);
-
-  const outcome = await Promise.race([redirected, errored]);
-  if (outcome === 'error') {
+  // Wait for the dashboard redirect — Vercel serves /dashboard (no .html
+  // extension) but also accepts /dashboard.html, so match both. On the success
+  // path this resolves well before the timeout; we deliberately do NOT race it
+  // against #errorMessage, because login.html reuses #errorMessage for a
+  // transient "กำลังโหลด… โปรดรอสักครู่" loading state during the sign-in — racing
+  // it produced false "login failed" results on slow loads.
+  try {
+    await page.waitForURL(/\/dashboard(\.html)?([?#]|$)/, { timeout: 25_000 });
+  } catch (navErr) {
+    // No redirect within 25s — surface a real login error if one is shown. By
+    // now the transient loading text is gone (login.html replaces it with the
+    // error via showMessage + setLoading(false)); still exclude the loading
+    // wording defensively so only a genuine auth error is treated as actionable.
     const msg = ((await page.locator('#errorMessage').textContent().catch(() => '')) || '').trim();
-    throw new Error(
-      `Admin login failed — login page reported: "${msg}". ` +
-      'The SMOKE_ADMIN_EMAIL/SMOKE_ADMIN_PASSWORD account is invalid, has the wrong ' +
-      'password, or lacks the admin custom claim. This is an account/secret issue, ' +
-      'NOT a code regression — verify the GitHub secret, and run tools/grant-admin-claim.js ' +
-      'if the admin claim is missing.'
-    );
-  }
-  if (outcome !== 'dashboard') {
-    // Neither a redirect nor a surfaced error within 25s — re-await briefly so the
-    // original navigation timeout (a genuine page/redirect failure) is surfaced.
-    await page.waitForURL(/\/dashboard(\.html)?([?#]|$)/, { timeout: 5_000 });
+    if (msg && !/กำลังโหลด|โปรดรอ|loading/i.test(msg)) {
+      throw new Error(
+        `Admin login failed — login page reported: "${msg}". The SMOKE_ADMIN_EMAIL/` +
+        'SMOKE_ADMIN_PASSWORD account is invalid, has the wrong password, or lacks the ' +
+        'admin custom claim. This is an account/secret issue, NOT a code regression — ' +
+        'verify the GitHub secret, and run tools/grant-admin-claim.js if the claim is missing.'
+      );
+    }
+    throw navErr;
   }
 
   // Sidebar presence confirms the dashboard rendered successfully
