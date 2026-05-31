@@ -1274,6 +1274,33 @@ grep -rn "createElement.*'style'\|createElement.*\"style\"" shared/ --include="*
 
 **Sibling:** §7-II (CSP hash drift kills inline `<style>` blocks on deploy). Both are "CSP kills styles silently" — II is about pre-existing inline blocks whose hash went stale; RR is about JS-injected blocks that never had a hash.
 
+### TT. Bulk `sed`/regex edits across UTF-8 Thai files can silently double-encode the file — verify encoding after, never trust "it still parses"
+
+A find-and-replace pass that rewrites a file (bulk `console.info` removal, license-header swap, mass rename) can re-save it through the wrong codepage, turning correct UTF-8 Thai (`ผู้เช่า`, bytes `e0 b8 9c …`) into double-encoded mojibake (`เธเธนเนเน€เธเนเธฒ` = those bytes read as CP874/TIS-620 then re-saved as UTF-8). The file **still parses and lints clean** — the corruption is inside string literals + comments — so `node --check` and ESLint pass and the bad bytes ship. Users see garbled Thai in every affected surface; the only automated tripwire is a test that asserts an exact Thai string.
+
+Incident (2026-05-31): commit `7e5ef7b` (the prior session's P1 `[CQ-CONSOLE]` bulk `console.info` sed) double-encoded 13 user-facing lines in `shared/tenant-system.js` (default tenant name, `ห้อง <id>` label, maintenance titles/content, payment-status text) + 2 comments in `tenant-firebase-sync.js`, plus 7 em-dash `—`→`โ€"`. Last clean commit was `0ad1d8a`. It survived 3 commits because `node --check`/lint stayed green; only `npm run test:shared` was RED (84/86) — and that failure was *misread by a 9-dim audit as a CRLF/`.gitattributes` Windows flake*. It is NOT a line-ending issue: CRLF only swaps `0A`/`0D0A`, it cannot make `ผ`→`เธ`. The bytes were corrupt on every OS.
+
+**Rule:** any bulk/scripted edit of a file containing non-ASCII (Thai UI strings live in `shared/tenant-*.js`, `dashboard-*.js`, all `*.html`) MUST be encoding-verified afterward, not just syntax-checked:
+
+```bash
+# After ANY sed/regex pass over a Thai-bearing file, scan for the mojibake signature
+# ("เธ" digraph 3+ times on a line is near-certain double-encoding; clean Thai almost
+#  never produces it). Run over the whole repo — corruption can spread via later extracts.
+node -e 'const fs=require("fs"),cp=require("child_process");
+cp.execSync("git ls-files shared/*.js functions/*.js *.html accounting/*.js",{encoding:"utf8"}).trim().split(/\n/).forEach(f=>{
+  const ls=fs.readFileSync(f,"utf8").split(/\r?\n/); const bad=[];
+  ls.forEach((l,i)=>{ if((l.match(/เธ/g)||[]).length>=3 || /โ€[”"]/.test(l)) bad.push(i+1); });
+  if(bad.length) console.log(f+": "+bad.join(","));
+});'
+# 0 output = clean. Any hit = the edit corrupted encoding — DO NOT COMMIT.
+```
+
+Prefer line-oriented tools that preserve encoding (the Edit tool, or `node` reading/writing `utf8` explicitly) over shell `sed -i` on Windows, where the active console codepage (874 here) can leak into the rewrite. **Recovery** (when already shipped): never hand-retype Thai (the recovery edit can re-corrupt). Source byte-exact from the last-clean commit via ASCII-anchor matching — see `tools/fix-thai-mojibake.js` (locates each corrupted line by a unique ASCII substring, copies the clean line from `git show <good>:<file>`, types zero Thai).
+
+**Diagnostic signature:** (1) `test:shared` RED with `actual: 'เธ...'` vs `expected: 'ผู้...'`; (2) `node --check` + lint GREEN; (3) `git ls-files --eol` shows `i/lf` (committed blob fine on the ASCII axis) yet the assert still fails → it's byte corruption, not EOL. Confirm with `git log -S'<clean-thai>' -- <file>` to find the last-good commit, then diff its bytes.
+
+**Family:** §7-H (grep-verify identifiers before typing in memory) and §7-QQ/CC (refactors silently breaking things that still "look" fine). All are "the edit looked successful — parsed, linted, committed — but changed bytes/scope/encoding in a way no syntax check catches." Mechanical edits over non-ASCII need a mechanical encoding check, the same way memory claims need a grep.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
