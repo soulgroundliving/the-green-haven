@@ -15,7 +15,7 @@ function switchContentTab(tabName, btn) {
   const resolvedBtn = btn || document.getElementById('tab-' + tabName + '-btn');
   if(tabElement) {
     tabElement.classList.remove('u-hidden');
-    if (tabElement.style.display) tabElement.style.display = '';
+    tabElement.style.display = 'block';
     if(resolvedBtn) resolvedBtn.classList.add('active');
     // Lazy-init tab content
     if(tabName === 'announcements') initAnnouncementsPage();

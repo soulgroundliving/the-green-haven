@@ -100,10 +100,11 @@ window.switchTenantMainTab = function(tab, btn) {
   ['tenants','leases','requests','alerts','bookings'].forEach(t => {
     const el = document.getElementById('tenant-main-tab-' + t);
     if(el) {
-      el.classList.toggle('u-hidden', !((t === tab)));
-      // Static HTML ships non-default tabs with inline display:none, which
-      // overrides the class toggle. Clear it so u-hidden controls visibility.
-      if (el.style.display) el.style.display = '';
+      const isActive = (t === tab);
+      el.classList.toggle('u-hidden', !isActive);
+      // Panels use u-init-hide (no !important) — inline style overrides it when showing;
+      // clearing inline style lets u-hidden (!important) win when hiding.
+      el.style.display = isActive ? 'block' : '';
     }
   });
   document.querySelectorAll('#tenant-main-tab-btn-tenants,#tenant-main-tab-btn-leases,#tenant-main-tab-btn-requests,#tenant-main-tab-btn-alerts,#tenant-main-tab-btn-bookings').forEach(b => b.classList.remove('active'));
@@ -119,8 +120,9 @@ window.switchBillingMainTab = function(tab, btn) {
   Object.entries(PANEL_ID).forEach(([t, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.classList.toggle('u-hidden', t !== tab);
-    if (el.style.display) el.style.display = '';
+    const isActive = (t === tab);
+    el.classList.toggle('u-hidden', !isActive);
+    el.style.display = isActive ? 'block' : '';
   });
   document.querySelectorAll('#bill-main-tab-btn-billing,#bill-main-tab-btn-live,#bill-main-tab-btn-history,#bill-main-tab-btn-monthly').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
@@ -149,7 +151,7 @@ window._switchMeterTabImpl = function(tabName, btnElement) {
   const resolvedBtn = btnElement || document.getElementById('tab-' + tabName + '-btn');
   if (contentEl) {
     contentEl.classList.remove('u-hidden');
-    if (contentEl.style.display) contentEl.style.display = '';
+    contentEl.style.display = 'block';
     if (resolvedBtn) resolvedBtn.classList.add('active');
   }
 
