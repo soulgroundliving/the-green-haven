@@ -41,11 +41,6 @@
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  function _esc(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
 
   function _statusBadge(status) {
     if (status === 'admin_signed') return `<span style="background:${DashColors.GREEN_BORDER};color:${DashColors.GREEN_DEEP};padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700;">✅ เสร็จ</span>`;

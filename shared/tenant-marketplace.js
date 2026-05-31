@@ -35,14 +35,6 @@
 
     // ── Local wrappers for globals defined in the main inline script ───────
 
-    function _esc(str) {
-        return String(str == null ? '' : str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
 
     function _toast(msg, kind) {
         if (typeof window.toast === 'function') window.toast(msg, kind);

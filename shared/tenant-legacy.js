@@ -623,44 +623,6 @@ function generateReceiptForBill(billId, monthName, year) {
     }
 }
 
-// ---- INVOICE WITH DETAILS (ported, lightweight) ----
-function generateInvoiceWithDetails(bill, monthYear) {
-    try {
-        const target = document.getElementById('invoiceContent') || document.getElementById('receiptContent');
-        if (!target) { console.warn('generateInvoiceWithDetails: no target container'); return; }
-        const billNo = bill?.billId || ('INV-' + Date.now());
-        const ppNumber = localStorage.getItem('promptpay') || '';
-        const rent  = bill?.charges?.rent || bill?.rent || 0;
-        const elec  = bill?.charges?.electric?.cost || bill?.electric || 0;
-        const water = bill?.charges?.water?.cost || bill?.water || 0;
-        const trash = bill?.charges?.trash || bill?.trash || 0;
-        const total = bill?.totalCharge || bill?.total || (rent+elec+water+trash);
-        target.style.display = 'block';
-        target.innerHTML = `
-            <div style="padding:1rem; background:#fff; border-radius:8px;">
-                <div class="ta-section-heading">
-                    <strong style="font-size:1.1rem;">🌿 ${_esc(getOwnerName())}</strong>
-                    <div class="ta-color-sm">ใบวางบิล · เลขที่ ${_esc(billNo)}</div>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:var(--fs-sm); margin-bottom:10px;">
-                    <div><small>ห้อง</small><div><strong>${_esc(_legacyRoom())}</strong></div></div>
-                    <div><small>ประจำเดือน</small><div><strong>${_esc(monthYear||'-')}</strong></div></div>
-                </div>
-                <div style="border:1px solid #eee; border-radius:8px; overflow:hidden;">
-                    <div style="background:var(--primary-green); color:#fff; padding:8px;">รายละเอียด</div>
-                    <div class="u-p-10">
-                        <div class="ta-row-split"><span>💰 ค่าเช่า</span><strong>฿${rent.toLocaleString('th-TH')}</strong></div>
-                        <div class="ta-row-split"><span>⚡ ค่าไฟ</span><strong>฿${elec.toLocaleString('th-TH')}</strong></div>
-                        <div class="ta-row-split"><span>💧 ค่าน้ำ</span><strong>฿${water.toLocaleString('th-TH')}</strong></div>
-                        <div class="ta-row-split"><span>🗑️ ค่าขยะ</span><strong>฿${trash.toLocaleString('th-TH')}</strong></div>
-                        <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:2px solid var(--primary-green); margin-top:6px;"><strong>รวม</strong><strong class="u-color-green">฿${total.toLocaleString('th-TH')}</strong></div>
-                    </div>
-                </div>
-                ${ppNumber ? `<div style="text-align:center; margin-top:10px; font-size:var(--fs-sm); color:#666;">PromptPay: ${_esc(ppNumber)}</div>` : ''}
-            </div>`;
-    } catch(e) { console.warn('generateInvoiceWithDetails:', e); }
-}
-
 // ---- ADMIN NOTIFY (localStorage events) ----
 function notifyAdminPaymentVerified() {
     try {
@@ -1117,7 +1079,6 @@ window.uploadPhotoToStorage = uploadPhotoToStorage;
 window.generateReceipt = generateReceipt;
 window.notifyAdminPaymentVerified = notifyAdminPaymentVerified;
 window.notifyAdminReceiptGenerated = notifyAdminReceiptGenerated;
-window.generateInvoiceWithDetails = generateInvoiceWithDetails;
 window.updateBillTemplateWithOwnerInfo = updateBillTemplateWithOwnerInfo;
 window.displayBuildingInternetStatus = displayBuildingInternetStatus;
 window.displayRoomInternetStatus = displayRoomInternetStatus;

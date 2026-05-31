@@ -21,11 +21,6 @@
   const CONFIRM_PHRASE = 'ลบข้อมูลของฉัน';
   let _ctx = null; // current erasure target context
 
-  function _esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
-  }
 
   // ── Modal open/close — anti-pattern C: class binds display:none, so
   //    close clears inline display to let the class win again. ──

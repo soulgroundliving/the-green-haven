@@ -84,8 +84,8 @@
     3. Navigate to `#market-chat-page` with chatId
   - **Files:** `tenant_app.html:6623-6636`
 
-- [ ] **S1.5 — Self-destruct on `COMPLETED`**
-  - New CF `cleanupMarketplaceChat.js` — Firestore onUpdate trigger on `marketplace/{postId}`; when `status` transitions to `COMPLETED`:
+- [ ] **S1.5 — Self-destruct on `COMPLETED`** _(must be HTTPS callable — NOT a Firestore trigger; §7-NN: SE3 region blocks all Eventarc triggers)_
+  - New CF `cleanupMarketplaceChat.js` — HTTPS callable invoked by client when `status` transitions to `COMPLETED`:
     - Find all chats `where postId == updated postId`
     - Delete each `messages` sub-collection (batched, recursive)
     - Delete each chat doc
@@ -107,8 +107,8 @@
 
 **Why:** Without notification, new chat messages are invisible — privacy chat becomes useless because nobody checks.
 
-- [ ] **S2.1 — `notifyMarketplaceChat` CF**
-  - Firestore onCreate trigger on `marketplace_chats/{chatId}/messages/{messageId}`
+- [ ] **S2.1 — `notifyMarketplaceChat` CF** _(must be HTTPS callable — NOT a Firestore trigger; §7-NN: SE3 region blocks all Eventarc triggers)_
+  - Client invokes after writing message doc to `marketplace_chats/{chatId}/messages/{messageId}`
   - Compute recipient = the participant who is NOT `senderId`
   - Lookup recipient's `lineUserId` from `liffUsers/{lineUserId}` (reverse lookup via `linkedAuthUid` field) — or store `lineUserId` per participant directly in chat doc to skip lookup
   - Enqueue via existing `enqueueLineRetry` infra (per [memory/lifecycle_line_notification.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\lifecycle_line_notification.md))

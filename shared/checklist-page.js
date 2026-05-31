@@ -244,9 +244,6 @@
     `).join('');
   }
 
-  function _esc(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
 
   // First-time permission notice. Shown ONCE per LIFF install (gated by
   // localStorage) before the first 📷 or 🖼️ tap actually opens the OS

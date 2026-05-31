@@ -443,7 +443,7 @@ button:not(:disabled):not([aria-disabled="true"]):hover {
 .u-photo-overlay { background: rgba(0,0,0,.85) !important; }
 .u-photo-img     { max-width: 100%; max-height: 90vh; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.4); }
 /* Wellness icon picker */
-.u-wellness-icon-btn { padding: 8px 12px; background: #fff; border: 1.5px solid var(--border, #d1d5db); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: 'Sarabun', sans-serif; font-size: .8rem; transition: all .15s; }
+.u-wellness-icon-btn { padding: 8px 12px; background: #fff; border: 1.5px solid var(--border, #d1d5db); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: 'Sarabun', sans-serif; font-size: .8rem; transition: background-color .15s, border-color .15s, color .15s; }
 .u-wellness-icon-btn:hover { background: #f0f9f3; }
 .u-wellness-icon-btn.u-icon-sel { background: var(--green-pale, #e8f5e9) !important; border-color: var(--green, #2d8653) !important; }
 :root[data-theme="dark"] .u-wellness-icon-btn { background: var(--surface-card); border-color: var(--stone); color: var(--ink); }
@@ -470,7 +470,7 @@ button:not(:disabled):not([aria-disabled="true"]):hover {
 .year-tab {
   padding: 6px 16px; border-radius: 20px; border: 2px solid var(--border, #d1d5db);
   background: #fff; cursor: pointer; font-family: 'Sarabun', sans-serif;
-  font-size: .87rem; font-weight: 600; color: var(--text-muted, #666); transition: all .2s;
+  font-size: .87rem; font-weight: 600; color: var(--text-muted, #666); transition: background-color .2s, border-color .2s, color .2s;
 }
 .year-tab:hover, .year-tab.active { background: var(--green, #2d8653); border-color: var(--green, #2d8653); color: #fff; }
 .year-tab-label { font-size: .78rem; color: var(--text-muted, #666); margin-right: 3px; }

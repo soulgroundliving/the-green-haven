@@ -163,10 +163,6 @@ window._leaseRequestsUnsub = null;
 let _leaseRequestsCache = [];
 let _leaseRequestsFilter = 'all';
 
-function _esc(s) {
-  const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'};
-  return String(s == null ? '' : s).replace(/[&<>"']/g, m => map[m]);
-}
 
 function initLeaseRequestsPage() {
   if (window._leaseRequestsUnsub) return; // idempotent

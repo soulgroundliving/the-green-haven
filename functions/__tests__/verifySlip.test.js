@@ -204,7 +204,6 @@ Module._load = function (request, parent, isMain) {
   if (request === 'firebase-admin') return adminStub;
   if (request === 'firebase-functions/v1') return functionsStub;
   if (request === 'firebase-functions/params') return paramStub;
-  if (request === 'node-fetch') return fetchStub;
   if (request === 'form-data') return FormDataStub;
   if (request === './_auth') return authStub;
   if (request === './_billFlex') return billFlexStub;
@@ -213,6 +212,8 @@ Module._load = function (request, parent, isMain) {
   };
   return _origLoad.call(this, request, parent, isMain);
 };
+
+global.fetch = fetchStub;
 
 // Load module under test — capturedHandler is set by onRequest() above
 require('../verifySlip');

@@ -190,7 +190,7 @@ exports.adminApprovedLink = functions
     }
 
     // ── Best-effort LINE push so tenant knows to open LIFF ───────────────────
-    require('node-fetch')(NOTIFY_URL, {
+    fetch(NOTIFY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lineUserId }),

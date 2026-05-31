@@ -150,10 +150,11 @@ Module._load = function (req, parent, isMain) {
   if (req === 'firebase-admin') return adminStub;
   if (req === 'firebase-functions/v1') return functionsStub;
   if (req === 'firebase-functions/params') return paramStub;
-  if (req === 'node-fetch') return fetchStub;
   if (req === 'form-data') return FormDataStub;
   return _origLoad.call(this, req, parent, isMain);
 };
+
+global.fetch = fetchStub;
 
 // Require after stubs are wired
 require('../verifyBookingSlip');

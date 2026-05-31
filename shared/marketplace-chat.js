@@ -81,16 +81,6 @@
     const fn = window.ghConfirm || ((m) => Promise.resolve(window.confirm(m)));
     return fn(msg, opts);
   }
-  // Local _esc — tenant_app.html's _esc is a local function (not on window),
-  // so we re-implement here. Same XSS escape set: <, >, &, ", '.
-  function _esc(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
   function _formatChatTime(iso) {
     if (!iso) return '';
     const d = new Date(iso);

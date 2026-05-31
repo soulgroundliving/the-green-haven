@@ -178,10 +178,11 @@ Module._load = function (id, parent, ...rest) {
       }),
     };
   }
-  if (id === 'node-fetch') return makeFetchStub();
   if (id.endsWith('/buildingRegistry') || id === './buildingRegistry') return buildingRegistryStub;
   return _origLoad.call(this, id, parent, ...rest);
 };
+
+global.fetch = makeFetchStub();
 
 // ── Load CF under test ────────────────────────────────────────────────────────
 

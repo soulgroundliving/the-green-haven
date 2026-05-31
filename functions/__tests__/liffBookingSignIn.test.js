@@ -94,7 +94,6 @@ const _origLoad = Module._load;
 
 Module._load = function (request, parent, ...rest) {
   if (request === 'firebase-admin') return adminStub;
-  if (request === 'node-fetch') return nodeFetchStub;
   if (request === 'firebase-functions/v1') {
     return {
       region: () => ({
@@ -108,6 +107,8 @@ Module._load = function (request, parent, ...rest) {
   }
   return _origLoad.apply(this, arguments);
 };
+
+global.fetch = nodeFetchStub;
 
 // ── Load CF under test ────────────────────────────────────────────────────────
 

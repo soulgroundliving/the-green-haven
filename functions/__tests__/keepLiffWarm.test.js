@@ -78,11 +78,10 @@ Module._load = function (request, parent, ...rest) {
       }),
     };
   }
-  if (request === 'node-fetch') {
-    return nodeFetchStub;
-  }
   return _origLoad.call(this, request, parent, ...rest);
 };
+
+global.fetch = nodeFetchStub;
 
 // Require CF after all stubs are in place
 delete require.cache[require.resolve('../keepLiffWarm.js')];

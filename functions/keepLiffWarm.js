@@ -6,7 +6,6 @@
  * Schedule: every 5 minutes (well within Cloud Scheduler free tier of 3 jobs/month free).
  */
 const functions = require('firebase-functions/v1');
-const fetch = require('node-fetch');
 
 const CF_BASE = 'https://asia-southeast1-the-green-haven.cloudfunctions.net';
 

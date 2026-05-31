@@ -93,7 +93,7 @@ const buildingRegistryStub = {
   getValidBuildings: async () => stubState.validBuildings,
 };
 
-// ── node-fetch stub ───────────────────────────────────────────────────────────
+// ── fetch stub ───────────────────────────────────────────────────────────────
 
 const fetchStub = (url, opts) => {
   captured.fetchCalls.push({ url, opts });
@@ -106,7 +106,6 @@ const originalLoad = Module._load;
 Module._load = function (request, parent, isMain) {
   if (request === 'firebase-admin') return adminStub;
   if (request.endsWith('/buildingRegistry') || request === './buildingRegistry') return buildingRegistryStub;
-  if (request === 'node-fetch') return fetchStub;
   if (request === 'firebase-functions/v1') {
     class HttpsError extends Error {
       constructor(code, message) { super(message); this.code = code; }
@@ -116,6 +115,8 @@ Module._load = function (request, parent, isMain) {
   }
   return originalLoad.call(this, request, parent, isMain);
 };
+
+global.fetch = fetchStub;
 
 // ── Load CF under test ────────────────────────────────────────────────────────
 

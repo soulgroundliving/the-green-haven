@@ -31,7 +31,7 @@ class InvoicePDFGenerator {
         ? `${_baseCompanyName} (อยู่ระหว่างจดทะเบียน)`
         : _baseCompanyName;
       const _headerName = _isCompanyRcpt ? _companyHeaderName : 'Nature Haven';
-      const _promptpay = _owner.promptpayNumber || '089-1234567';
+      const _promptpay = _owner.promptPayId || _owner.promptpayNumber || '';
 
       // Header — use 🏢 emoji for company-recipient bills (formal vibe), 🌿 for personal default
       doc.setFontSize(20);

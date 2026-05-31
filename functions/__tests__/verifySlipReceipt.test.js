@@ -29,6 +29,11 @@ resetStubs();
 // ── Module._load stubs ─────────────────────────────────────────────────────────
 const Module = require('module');
 const _origLoad = Module._load;
+
+global.fetch = async (url, opts) => {
+  stubState.fetchCalls.push({ url, body: JSON.parse(opts?.body || '{}') });
+  return { ok: true, status: 200, json: async () => ({}) };
+};
 Module._load = function (id, parent, ...rest) {
   if (id === 'firebase-admin') {
     return {
@@ -82,12 +87,6 @@ Module._load = function (id, parent, ...rest) {
         __secretType: name
       }),
       defineString: (name) => ({ value: () => 'https://api.slipok.com/test' })
-    };
-  }
-  if (id === 'node-fetch') {
-    return async (url, opts) => {
-      stubState.fetchCalls.push({ url, body: JSON.parse(opts?.body || '{}') });
-      return { ok: true, status: 200, json: async () => ({}) };
     };
   }
   if (id === 'form-data') {

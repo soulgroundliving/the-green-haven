@@ -113,7 +113,6 @@ const buildingRegistryStub = {
 const originalLoad = Module._load;
 Module._load = function (request, parent, isMain) {
   if (request === 'firebase-admin') return adminStub;
-  if (request === 'node-fetch') return fetchStub;
   if (
     request === './buildingRegistry' ||
     request.endsWith('/buildingRegistry')
@@ -130,6 +129,8 @@ Module._load = function (request, parent, isMain) {
   }
   return originalLoad.call(this, request, parent, isMain);
 };
+
+global.fetch = fetchStub;
 
 const { requestRoomRelink: handler } = require('../requestRoomRelink');
 

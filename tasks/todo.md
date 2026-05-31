@@ -227,35 +227,35 @@
 
 ### 🧹 Tech Debt — Quick Wins
 
-- [ ] **[DEBT-SMOKE] ลบ smoke HTML files ที่ commit เข้า repo (906KB)**
+- [x] **[DEBT-SMOKE] ลบ smoke HTML files ที่ commit เข้า repo (906KB)** _(smoke_login.html was never committed — already in .gitignore)_
   - **Why:** `smoke_tenant.html` (10,566 บรรทัด) + `smoke_dashboard.html` (4,143 บรรทัด) เป็น test artifacts ที่ไม่มี runtime use
   - **Fix:** `git rm smoke_tenant.html smoke_dashboard.html` + เพิ่มบรรทัดใน `.gitignore`: `smoke_*.html`
   - **Verify:** `ls smoke_*.html` → no such file
 
-- [ ] **[DEBT-DEAD1] ลบ `window.generateInvoiceWithDetails` (zero callers)**
+- [x] **[DEBT-DEAD1] ลบ `window.generateInvoiceWithDetails` (zero callers)**
   - **Why:** function 40+ บรรทัดใน `shared/tenant-legacy.js:627` — §7-K pattern, ไม่มีใครเรียกเลย
   - **Fix:** `grep -rn "generateInvoiceWithDetails" shared/ *.html` ยืนยัน 0 callers → ลบ function + window assignment
   - **Verify:** grep returns 0 hits after deletion
 
-- [ ] **[DEBT-FIELD] แก้ `invoice-pdf-generator.js:34` ยังอ่าน `promptpayNumber` (legacy field)**
+- [x] **[DEBT-FIELD] แก้ `invoice-pdf-generator.js:34` ยังอ่าน `promptpayNumber` (legacy field)**
   - **Why:** §7-T fix ทำ canonical writer เป็น `promptPayId` แล้ว แต่ generator.js ยังอ่าน legacy name + hardcode `'089-1234567'` เป็น fallback
   - **Fix:** `_owner.promptPayId || _owner.promptpayNumber || ''` (dual-read ระหว่าง migration) แล้วลบ hardcoded phone
   - **Verify:** Invoice PDF แสดง PromptPay จริงจาก Firestore ไม่ใช่ `089-1234567`
 
-- [ ] **[DEBT-ESC] Extract shared `_esc()` utility (12 identical copies)**
+- [x] **[DEBT-ESC] Extract shared `_esc()` utility (12 identical copies)**
   - **Why:** DRY violation ที่ใหญ่ที่สุดใน codebase — function เหมือนกัน 12 ไฟล์
   - **ไฟล์:** `shared/utils.js` (สร้างใหม่) หรือเพิ่มใน `shared/brand-utils.js`
   - **Fix:** สร้าง `window._esc = function(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }` ใน utils → ลบทั้ง 12 local copies
   - **Files affected:** `shared/checklist-page.js`, `dashboard-buildings.js`, `dashboard-checklist-admin.js`, `dashboard-lease-renew-roompicker.js`, `dashboard-pdpa-erasure.js`, `dashboard-property.js`, `dashboard-tenant-lease.js`, `facility-booking-ui.js`, `marketplace-chat.js`, `tenant-maintenance.js`, `tenant-marketplace.js`, `tenant-subscriptions.js`
   - **Verify:** `grep -rn "function _esc(" shared/` → เหลือ 1 (ใน utils)
 
-- [ ] **[DEBT-FETCH] แทน `node-fetch` v2 ด้วย native `fetch` ใน 7 CFs**
+- [x] **[DEBT-FETCH] แทน `node-fetch` v2 ด้วย native `fetch` ใน 7 CFs**
   - **Why:** `node-fetch@2` เป็น legacy CJS; Node 22 runtime มี `globalThis.fetch` built-in — ไม่ต้องใช้ dependency
   - **ไฟล์:** `liffSignIn.js`, `verifySlip.js`, `verifyBookingSlip.js`, `liffBookingSignIn.js`, `requestRoomRelink.js`, `keepLiffWarm.js`, `adminApprovedLink.js`
   - **Fix:** ลบ `const fetch = require('node-fetch')` → ใช้ global `fetch` แทน → ลบ `node-fetch` จาก `functions/package.json`
   - **Verify:** `npm run test:unit` ผ่าน + `grep -rn "node-fetch" functions/` → 0 hits
 
-- [ ] **[DEBT-PLAN] แก้ tasks/marketplace-sprints.md S1.5 + S2.1 ที่ plan เป็น Firestore trigger**
+- [x] **[DEBT-PLAN] แก้ tasks/marketplace-sprints.md S1.5 + S2.1 ที่ plan เป็น Firestore trigger**
   - **Why:** S1.5 `cleanupMarketplaceChat` + S2.1 `notifyMarketplaceChat` ถูก plan เป็น Firestore triggers — จะล้ม deploy เพราะ SE3 region constraint (§7-NN)
   - **Fix:** update แต่ละ task ให้ระบุว่าเป็น HTTPS callable (Gen2 onCall) ไม่ใช่ Firestore trigger + เพิ่มลิงก์ §7-NN
   - **Verify:** grep plan ไม่มี `onWrite` / `onCreate` ใน S1.5/S2.1
@@ -269,7 +269,7 @@
   - **ไฟล์:** `tenant_app.html:32-33`, `booking.html` head
   - **Fix:** เพิ่ม `<link rel="preload" as="font" crossorigin href="https://fonts.gstatic.com/s/ibmplexsansthailooped/...wght@400.woff2">` (ต้องหา URL จริงจาก Google Fonts response)
 
-- [ ] **[PERF-TRANSITION] แทน `transition: all` ด้วย specific properties (5 occurrences)**
+- [x] **[PERF-TRANSITION] แทน `transition: all` ด้วย specific properties (5 occurrences)**
   - **Why:** `transition: all` evaluate ทุก animatable property ทุกครั้ง style เปลี่ยน
   - **ไฟล์:** `shared/components.css:636,672,713`, `shared/brand.css:440,467`
   - **Fix:** `transition: color 0.2s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s`
@@ -314,6 +314,8 @@ _กรอกหลังจาก implement แต่ละ section_
 - [x] P2 CQ-SPLIT-AUTH (_callLiffSignIn → 5 functions ≤47 lines each) — this session
 - [x] P2 CQ-OVERSIZED (partial: 3 files → 5 files extracted; dashboard-insights.js deferred) — this session
 - [x] P2 Docs (DOC-DARKMODE, DOC-SA-KEY; DOC-DASHBOARD was already correct) — this session
+- [x] P3 Tech Debt quick wins (DEBT-DEAD1, DEBT-FIELD, DEBT-ESC, DEBT-FETCH, DEBT-PLAN) — this session
+- [x] P3 PERF-TRANSITION (5× transition:all → specific properties) — this session
 
 ---
 

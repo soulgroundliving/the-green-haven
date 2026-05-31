@@ -30,7 +30,6 @@
 const functions = require('firebase-functions/v1');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
-const fetch = require('node-fetch');
 const FormData = require('form-data');
 
 if (!admin.apps.length) admin.initializeApp();
