@@ -536,7 +536,7 @@ function downloadContractAsFile(roomId, tenantName) {
   link.click();
 }
 
-function recordPayment(roomId) {
+async function recordPayment(roomId) {
   const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
   const tenant = tenantData.tenants?.[roomId];
 
@@ -545,7 +545,7 @@ function recordPayment(roomId) {
     return;
   }
 
-  const amount = prompt(`💰 บันทึกค่าเช่า — ห้อง ${roomId}\n\nชื่อผู้เช่า: ${tenant.name}\nค่าเช่า: ฿${tenant.rent?.toLocaleString() || '0'}\n\nกรุณาระบุจำนวนเงินที่ชำระ:`);
+  const amount = await window.ghPrompt(`💰 บันทึกค่าเช่า — ห้อง ${roomId}\n\nชื่อผู้เช่า: ${tenant.name}\nค่าเช่า: ฿${tenant.rent?.toLocaleString() || '0'}\n\nกรุณาระบุจำนวนเงินที่ชำระ:`, '', { title: '💰 บันทึกค่าเช่า' });
 
   if (amount === null) return;
 

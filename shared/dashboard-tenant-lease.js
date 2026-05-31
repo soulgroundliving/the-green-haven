@@ -250,7 +250,7 @@ function renderLeaseRequestsList() {
 }
 
 async function actLeaseRequest(id, action) {
-  const note = prompt(action === 'approve' ? 'หมายเหตุ (ถ้ามี) — เช่น เงื่อนไขสัญญาใหม่' : 'เหตุผลที่ปฏิเสธ:') || '';
+  const note = (await window.ghPrompt(action === 'approve' ? 'หมายเหตุ (ถ้ามี) — เช่น เงื่อนไขสัญญาใหม่' : 'เหตุผลที่ปฏิเสธ:', '', { title: action === 'approve' ? '✅ อนุมัติคำขอ' : '❌ ปฏิเสธคำขอ' })) || '';
   if (action === 'reject' && !note.trim()) {
     showToast('กรุณาระบุเหตุผลที่ปฏิเสธ', 'warning');
     return;
