@@ -1,7 +1,7 @@
 ﻿/**
  * Tenant System - Consolidated Tenant Management
  * Consolidates: tenant-config.js, tenant-manager.js, tenant-firebase-sync.js
- * เธฃเธฐเธเธเธเธฑเธ”เธเธฒเธฃเธเนเธญเธกเธนเธฅเธเธนเนเน€เธเนเธฒ เน€เธฃเธงเธกเธจเธนเธเธขเนเธเธฒเธเนเธเธฅเนเธชเธฒเธกเนเธเธฅเน
+ * ระบบจัดการข้อมูลผู้เช่า เรวมศูนย์จากไฟล์สามไฟล์
  *
  * Part 1: TenantConfigManager - Master data storage and CRUD operations
  * Part 2: TenantManager - Tenant data loading utilities for tenant app
@@ -189,7 +189,7 @@ class TenantConfigManager {
         return this.getAllTenants(building);
       }
 
-      // Skip if not authenticated โ€” Firestore rules require auth
+      // Skip if not authenticated — Firestore rules require auth
       if (!window.firebaseAuth?.currentUser) {
         return this.getAllTenants(building);
       }
@@ -261,7 +261,7 @@ class TenantConfigManager {
     const success = this.deleteTenant(building, tenantId);
 
     // 2. Phase 4 SSoT: delete the canonical roomId-keyed doc.
-    //    Don't delete the doc itself โ€” clear identity fields only, so linkedAuthUid
+    //    Don't delete the doc itself — clear identity fields only, so linkedAuthUid
     //    + lease history archive references survive. Admin can re-assign tenant later.
     try {
       if (!window.firebase) {
@@ -358,7 +358,7 @@ class TenantManager {
    * Get display name for tenant
    */
   static getTenantDisplayName(tenantData) {
-    return tenantData?.tenant?.name || 'เธเธนเนเน€เธเนเธฒ';
+    return tenantData?.tenant?.name || 'ผู้เช่า';
   }
 
   /**
@@ -366,7 +366,7 @@ class TenantManager {
    */
   static getRoomDisplayInfo(tenantData) {
     const { room, roomId, building } = tenantData;
-    const roomName = room?.name || `เธซเนเธญเธ ${roomId}`;
+    const roomName = room?.name || `ห้อง ${roomId}`;
     const floor = Math.floor(parseInt(roomId.replace(/[^0-9]/g, '')) / 100) || 1;
 
     return {
@@ -544,31 +544,31 @@ class TenantManager {
     return [
       {
         id: 'ANN_001',
-        title: 'เนเธเนเธเธเธดเธ”เธเนเธณ',
+        title: 'แจ้งปิดน้ำ',
         date: '2026-06-15',
         time: '10:00 - 14:00',
         icon: '๐’ง',
-        content: 'เธกเธตเธเธฒเธฃเธ”เธณเน€เธเธดเธเธเธฒเธฃเธเนเธญเธกเธ—เนเธญเธเนเธณเนเธเธญเธฒเธเธฒเธฃเธเธถเธเธ•เนเธญเธเธเธดเธ”เธเนเธณ',
+        content: 'มีการดำเนินการซ่อมท่อน้ำในอาคารจึงต้องปิดน้ำ',
         priority: 'high',
         createdDate: '2026-06-10'
       },
       {
         id: 'ANN_002',
-        title: 'เธ—เธณเธเธงเธฒเธกเธชเธฐเธญเธฒเธ”เนเธซเธเน',
+        title: 'ทำความสะอาดใหญ่',
         date: '2026-06-20',
         time: 'all day',
         icon: '๐งน',
-        content: 'เธเธฒเธฃเธ—เธณเธเธงเธฒเธกเธชเธฐเธญเธฒเธ”เธชเธ–เธฒเธเธ—เธตเนเธ—เธฑเนเธงเนเธเนเธเธญเธฒเธเธฒเธฃ',
+        content: 'การทำความสะอาดสถานที่ทั่วไปในอาคาร',
         priority: 'normal',
         createdDate: '2026-06-12'
       },
       {
         id: 'ANN_003',
-        title: 'เธเนเธญเธกเธฅเธดเธเธ•เน',
+        title: 'ซ่อมลิฟต์',
         date: '2026-06-22',
         time: '08:00 - 12:00',
         icon: '๐”ง',
-        content: 'เธเธฒเธฃเธ•เธฃเธงเธเธชเธญเธเนเธฅเธฐเธเธณเธฃเธธเธเธฃเธฑเธเธฉเธฒเธฃเธฐเธเธเธฅเธดเธเธ•เน',
+        content: 'การตรวจสอบและบำรุงรักษาระบบลิฟต์',
         priority: 'normal',
         createdDate: '2026-06-14'
       }
@@ -615,12 +615,12 @@ class TenantManager {
    */
   static getBillStatusDisplay(bill) {
     if (bill.status === 'paid') {
-      return { icon: 'โ…', text: 'เธเนเธฒเธขเนเธฅเนเธง', color: 'green' };
+      return { icon: '✅', text: 'จ่ายแล้ว', color: 'green' };
     } else if (bill.status === 'overdue') {
-      return { icon: 'โ ๏ธ', text: 'เน€เธเธดเธเธเธณเธซเธเธ”', color: 'red' };
+      return { icon: '⚠️', text: 'เกินกำหนด', color: 'red' };
     } else {
       const daysLeft = this.daysUntilDue(bill.dueDate);
-      return { icon: 'โณ', text: `เธฃเธญเธเธณเธฃเธฐ (${daysLeft} เธงเธฑเธ)`, color: 'orange' };
+      return { icon: '⏳', text: `รอชำระ (${daysLeft} วัน)`, color: 'orange' };
     }
   }
 
@@ -769,7 +769,7 @@ class TenantManager {
         // Tenant info
         tenant: {
           id: lease.tenantId,
-          name: tenant?.name || 'เธเธนเนเน€เธเนเธฒ',
+          name: tenant?.name || 'ผู้เช่า',
           phone: tenant?.phone || '-',
           email: tenant?.email || '-',
           address: tenant?.address || '-'

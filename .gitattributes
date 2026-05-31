@@ -1,0 +1,30 @@
+# Normalize line endings: store LF in the repo, check out native on Windows only
+# where it doesn't matter. Source files that are read byte-for-byte by tests (vm
+# sandbox in shared/__tests__) MUST be LF so UTF-8 Thai literals aren't disturbed
+# and diffs stay clean across OSes.
+* text=auto eol=lf
+
+# Explicitly treat these as text + LF (UTF-8 Thai content lives here)
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.cjs  text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.css  text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.rules text eol=lf
+
+# Binary assets — never normalize
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.avif binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.xlsx binary
+*.zip  binary
+*.pdf  binary

@@ -48,8 +48,8 @@ class TenantFirebaseSync {
    * Priority: Firestore FIRST โ’ localStorage FALLBACK
    */
   // Canonical building id IS the Firestore doc id since B4 migration (rooms โ’ buildings/rooms).
-  // Room IDs: เนเธเนเธ•เธฒเธกเธ—เธตเน admin เธ•เธฑเนเธเนเธ Firestore เธ•เธฃเธเน (เน€เธเนเธ '15เธ', 'เธฃเนเธฒเธเนเธซเธเน' เธ เธฒเธฉเธฒเนเธ—เธข)
-  // เธซเธฒเธ Firestore docId เนเธกเนเธ•เธฃเธ โ’ loadLease() เธเธทเธ null + console เนเธเนเธ path เธ—เธตเนเธเนเธ
+  // Room IDs: ใช้ตามที่ admin ตั้งใน Firestore ตรงๆ (เช่น '15ก', 'ร้านใหญ่' ภาษาไทย)
+  // หาก Firestore docId ไม่ตรง → loadLease() คืน null + console แจ้ง path ที่ค้น
   static _fsBuilding(b) { return b; }
   static _fsRoomId(r) { return r; }
 
@@ -70,7 +70,7 @@ class TenantFirebaseSync {
           if (ssotSnap.exists()) {
             const d = ssotSnap.data();
             const lease = d.lease || {};
-            // Phase 3d: tenant.lease mirror is reduced โ€” fetch full lease
+            // Phase 3d: tenant.lease mirror is reduced — fetch full lease
             // record when leaseId is present so amounts + contract docs
             // resolve correctly even when the mirror omits them.
             let fullLease = {};
@@ -81,14 +81,14 @@ class TenantFirebaseSync {
                 const leaseSnap = await fs.getDoc(leaseRef);
                 if (leaseSnap.exists()) fullLease = leaseSnap.data() || {};
               } catch (e) {
-                // Permission errors aren't fatal โ€” fall back to mirror.
+                // Permission errors aren't fatal — fall back to mirror.
                 console.debug(`  โ ๏ธ leases lookup failed for ${leaseId}:`, e.message);
               }
             }
             const leaseData = {
               building,
               roomId,
-              // Lease โ€” read from .lease subobject; fall back to full lease
+              // Lease — read from .lease subobject; fall back to full lease
               // record; then top-level for unmigrated docs (Phase 6 will
               // remove top-level dupes).
               rentAmount: lease.rentAmount ?? fullLease.rentAmount ?? d.rentAmount ?? 0,
@@ -500,7 +500,7 @@ class TenantFirebaseSync {
           this.loadMeterDataFromFirebase().catch(e => { console.warn('Warning loading meter data:', e); return {}; })
         ]);
 
-      // Tenant info โ€” when loadLease returned data from SSoT (tenants/{b}/list/{roomId}),
+      // Tenant info — when loadLease returned data from SSoT (tenants/{b}/list/{roomId}),
       // it already includes ALL tenant identity fields (name, phone, email, lineID,
       // idCardNumber, etc.) plus the lease subobject. Don't call loadTenant() in that
       // case because localStorage has a different (legacy-flat) shape that would
@@ -514,7 +514,7 @@ class TenantFirebaseSync {
       }
 
       // Phase 6: overlay canonical identity from people/{tenantId}. After
-      // Phase 6 slim-down, tenant docs no longer carry identity fields โ€”
+      // Phase 6 slim-down, tenant docs no longer carry identity fields —
       // people/ is the SSoT. Falls through to tenant-doc fields when person
       // doc is missing (legacy tenants pre-people/ creation).
       if (tenant?.tenantId && typeof window !== 'undefined' && window.PersonManager) {

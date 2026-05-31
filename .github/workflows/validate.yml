@@ -31,6 +31,9 @@ jobs:
       run: npm test
       working-directory: functions
 
+    - name: Run shared frontend unit tests
+      run: npm run test:shared
+
     - name: Lint
       run: npm run lint
 
@@ -143,6 +146,7 @@ jobs:
         echo "✅ All Validation Checks Passed"
         echo "=========================================="
         echo "✓ CF Unit Tests Passed"
+        echo "✓ Shared Frontend Unit Tests Passed"
         echo "✓ ESLint Passed"
         echo "✓ HTML Syntax Valid"
         echo "✓ Security Checks Passed"
