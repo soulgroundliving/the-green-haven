@@ -27,16 +27,34 @@ on:
     workflows: ['Deploy Cloud Functions']
     types: [completed]
     branches: [main]
+  # Run after every successful Vercel PRODUCTION deploy. This is the path that
+  # covers FRONTEND-only pushes (HTML / shared JS), which the workflow_run above
+  # does NOT — a frontend change deploys via Vercel but triggers no CF deploy.
+  # Closes the gap where §7-SS / §7-QQ / §7-II (all frontend) shipped with no
+  # live smoke. Vercel emits a GitHub deployment_status; the job gates on
+  # Production + success below so PR "Preview" deploys don't trigger it.
+  deployment_status:
+
+# A push fires deployment_status here and (for CF changes) the workflow_run
+# above — keep only the latest run per ref instead of piling up duplicates.
+concurrency:
+  group: e2e-${{ github.event.workflow_run.head_branch || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   e2e:
     name: playwright-e2e
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # For workflow_run trigger: only run when the preceding deploy succeeded
+    # Gate each trigger:
+    #  - workflow_dispatch          → always (manual)
+    #  - workflow_run (CF deploy)   → only when that deploy succeeded
+    #  - deployment_status (Vercel) → only a successful PRODUCTION deploy
+    #    (skip "Preview" deploys from PRs; the specs target the prod URL anyway)
     if: >
       github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' && github.event.deployment_status.environment == 'Production')
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
