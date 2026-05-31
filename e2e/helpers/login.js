@@ -76,15 +76,20 @@ async function loginAsAdmin(page) {
 }
 
 // Open a Requests & Approvals sub-tab, resilient to the page's default-tab race.
-// showPage('requests-approvals') schedules a switch to the Maintenance tab at
-// +80ms (dashboard-main.js); an immediate sub-tab click gets overridden by it,
-// leaving the requested panel hidden (flaky). Wait for the Maintenance panel to
-// land first, THEN select the target tab so our click wins deterministically.
+// showPage('requests-approvals') schedules a switch BACK to the Maintenance tab
+// ~80ms after navigation (dashboard-main.js:43). Maintenance is also the
+// default-visible panel (no u-init-hide), so "wait until Maintenance is visible"
+// resolves instantly — BEFORE that deferred timer — and an immediate sub-tab
+// click then gets clobbered when the timer fires. Instead, retry the click until
+// the target panel actually STAYS visible: once the +80ms default has fired, a
+// click sticks. No fixed waitForTimeout — deterministic via expect.toPass.
 async function openRequestsTab(page, tab) {
   await page.click('button[data-action="showPage"][data-page="requests-approvals"]');
-  await expect(page.locator('#requests-tab-maintenance')).toBeVisible({ timeout: 10_000 });
-  await page.click(`button[data-action="switchRequestsTab"][data-tab="${tab}"]`);
-  await expect(page.locator(`#requests-tab-${tab}`)).toBeVisible({ timeout: 10_000 });
+  const panel = page.locator(`#requests-tab-${tab}`);
+  await expect(async () => {
+    await page.click(`button[data-action="switchRequestsTab"][data-tab="${tab}"]`);
+    await expect(panel).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
 }
 
 module.exports = { loginAsAdmin, openRequestsTab };
