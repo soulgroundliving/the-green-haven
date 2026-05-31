@@ -14,7 +14,7 @@
 // Corresponds to: tasks/smoke-test-admin-playbook.md § Deposit flow
 
 const { test, expect } = require('@playwright/test');
-const { loginAsAdmin } = require('./helpers/login');
+const { loginAsAdmin, openRequestsTab } = require('./helpers/login');
 
 test.describe('Deposit admin view', () => {
   test.skip(
@@ -24,11 +24,8 @@ test.describe('Deposit admin view', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
-    // Navigate to Requests & Approvals page → Deposits tab
-    await page.click('button[data-action="showPage"][data-page="requests-approvals"]');
-    await page.click('button[data-action="switchRequestsTab"][data-tab="deposits"]');
-    // Wait for the tab to become visible
-    await expect(page.locator('#requests-tab-deposits')).toBeVisible({ timeout: 10_000 });
+    // Navigate to Requests & Approvals → Deposits (race-resilient — see helper).
+    await openRequestsTab(page, 'deposits');
   });
 
   test('deposit KPI cards are present in the DOM', async ({ page }) => {

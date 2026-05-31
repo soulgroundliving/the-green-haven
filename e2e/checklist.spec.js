@@ -9,7 +9,7 @@
 // Corresponds to: tasks/smoke-test-admin-playbook.md § Checklist flow
 
 const { test, expect } = require('@playwright/test');
-const { loginAsAdmin } = require('./helpers/login');
+const { loginAsAdmin, openRequestsTab } = require('./helpers/login');
 
 test.describe('Checklist admin view', () => {
   test.skip(
@@ -22,20 +22,12 @@ test.describe('Checklist admin view', () => {
   });
 
   test('navigates to checklist tab without error', async ({ page }) => {
-    // Open Requests & Approvals page
-    await page.click('button[data-action="showPage"][data-page="requests-approvals"]');
-
-    // Click the Checklists tab
-    await page.click('button[data-action="switchRequestsTab"][data-tab="checklist"]');
-
-    // Tab content must become visible
-    const checklistTab = page.locator('#requests-tab-checklist');
-    await expect(checklistTab).toBeVisible({ timeout: 10_000 });
+    // openRequestsTab asserts #requests-tab-checklist becomes visible.
+    await openRequestsTab(page, 'checklist');
   });
 
   test('checklist filter dropdowns are present', async ({ page }) => {
-    await page.click('button[data-action="showPage"][data-page="requests-approvals"]');
-    await page.click('button[data-action="switchRequestsTab"][data-tab="checklist"]');
+    await openRequestsTab(page, 'checklist');
 
     // Building and status filters must exist (they gate the list query)
     await expect(page.locator('#checklist-admin-building')).toBeAttached({ timeout: 10_000 });
@@ -43,8 +35,7 @@ test.describe('Checklist admin view', () => {
   });
 
   test('checklist list container renders (populated or empty)', async ({ page }) => {
-    await page.click('button[data-action="showPage"][data-page="requests-approvals"]');
-    await page.click('button[data-action="switchRequestsTab"][data-tab="checklist"]');
+    await openRequestsTab(page, 'checklist');
 
     const list = page.locator('#checklist-admin-list');
     await expect(list).toBeVisible({ timeout: 10_000 });
@@ -62,8 +53,7 @@ test.describe('Checklist admin view', () => {
       }
     });
 
-    await page.click('button[data-action="showPage"][data-page="requests-approvals"]');
-    await page.click('button[data-action="switchRequestsTab"][data-tab="checklist"]');
+    await openRequestsTab(page, 'checklist');
 
     const list = page.locator('#checklist-admin-list');
     await expect(list).toBeVisible({ timeout: 10_000 });

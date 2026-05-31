@@ -75,4 +75,16 @@ async function loginAsAdmin(page) {
   }
 }
 
-module.exports = { loginAsAdmin };
+// Open a Requests & Approvals sub-tab, resilient to the page's default-tab race.
+// showPage('requests-approvals') schedules a switch to the Maintenance tab at
+// +80ms (dashboard-main.js); an immediate sub-tab click gets overridden by it,
+// leaving the requested panel hidden (flaky). Wait for the Maintenance panel to
+// land first, THEN select the target tab so our click wins deterministically.
+async function openRequestsTab(page, tab) {
+  await page.click('button[data-action="showPage"][data-page="requests-approvals"]');
+  await expect(page.locator('#requests-tab-maintenance')).toBeVisible({ timeout: 10_000 });
+  await page.click(`button[data-action="switchRequestsTab"][data-tab="${tab}"]`);
+  await expect(page.locator(`#requests-tab-${tab}`)).toBeVisible({ timeout: 10_000 });
+}
+
+module.exports = { loginAsAdmin, openRequestsTab };
