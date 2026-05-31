@@ -596,7 +596,7 @@ function _subscribeGlobalVerifiedSlips(){
           }
         };
         // Always feed PaymentStore in-memory cache (idempotent)
-        try { window.PaymentStore._ingest(yearBE, month, room, entry); } catch(e){}
+        try { window.PaymentStore._ingest(yearBE, month, room, entry); } catch(e){ console.warn('[billing] PaymentStore._ingest failed:', e?.message || e); }
         // RTDB fallback: mark bill paid — resilience if CF markBillPaidInRTDB was slow/failed.
         // Guarded by _slipSnapshotInitDone so initial replay doesn't spam RTDB writes.
         if (_slipSnapshotInitDone && ch.type === 'added' &&
@@ -625,17 +625,17 @@ function _subscribeGlobalVerifiedSlips(){
       _slipSnapshotInitDone = true; // initial replay done; next 'added' events are genuine new slips
       if (changed) {
         savePS(ps);
-        try { window.PaymentStore._notify(); } catch(e){}
+        try { window.PaymentStore._notify(); } catch(e){ console.warn('[billing] PaymentStore._notify failed:', e?.message || e); }
         // Re-render bill page pills if open
         if (typeof renderPaymentStatus === 'function' &&
             document.getElementById('page-bill')?.classList.contains('active')) {
-          try { renderPaymentStatus(); } catch(e){}
+          try { renderPaymentStatus(); } catch(e){ console.warn('[billing] renderPaymentStatus failed:', e?.message || e); }
         }
         console.info('💸 Synced tenant-app payment → PaymentStore + payment_status');
       } else {
         // Even when no new slips, fire ingestion of the snapshot's full state
         // so PaymentStore cache is populated at startup
-        try { window.PaymentStore._notify(); } catch(e){}
+        try { window.PaymentStore._notify(); } catch(e){ console.warn('[billing] PaymentStore._notify failed:', e?.message || e); }
       }
       // Perf #1: expose the full slip list so Payment Verify tab can render
       // from this cache instead of opening its own onSnapshot listener.
@@ -643,7 +643,7 @@ function _subscribeGlobalVerifiedSlips(){
         const allSlips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         window._verifiedSlipsRawCache = allSlips;
         window.dispatchEvent(new CustomEvent('verified-slips-updated', { detail: allSlips }));
-      } catch(e){}
+      } catch(e){ console.warn('[billing] verified-slips cache update failed:', e?.message || e); }
     }, err => console.warn('global verifiedSlips listen:', err?.message));
   } catch(e) { console.warn('subscribeGlobalVerifiedSlips:', e); }
 }
@@ -661,8 +661,8 @@ document.addEventListener('DOMContentLoaded', () => {
       window.PaymentStore.onChange(() => {
         if (typeof renderPaymentStatus === 'function' &&
             document.getElementById('page-bill')?.classList.contains('active')) {
-          try { renderPaymentStatus(); } catch(e){}
-          try { _updateBillActionPaidState(); } catch(e){}
+          try { renderPaymentStatus(); } catch(e){ console.warn('[billing] renderPaymentStatus failed:', e?.message || e); }
+          try { _updateBillActionPaidState(); } catch(e){ console.warn('[billing] _updateBillActionPaidState failed:', e?.message || e); }
         }
       });
     }

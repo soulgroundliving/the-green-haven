@@ -117,13 +117,13 @@ document.addEventListener('DOMContentLoaded', function() {
 /**
  * Generate monthly invoices for all rooms
  */
-function generateMonthlyBillsUI() {
-  const building = prompt('เลือกอาคาร:\n1. rooms (ห้องแถว)\n2. nest (Nest Building)', '1');
+async function generateMonthlyBillsUI() {
+  const building = await window.ghPrompt('เลือกอาคาร:\n1. rooms (ห้องแถว)\n2. nest (Nest Building)', '1', { title: '🧾 สร้างใบวางบิล' });
   if (!building) return;
 
   const buildingName = building === '2' ? 'nest' : 'rooms';
-  const month = prompt('เดือน (1-12):', new Date().getMonth() + 1);
-  const year = prompt('ปี (ค.ศ.)', new Date().getFullYear() + 543);
+  const month = await window.ghPrompt('เดือน (1-12):', new Date().getMonth() + 1, { title: '🧾 สร้างใบวางบิล' });
+  const year = await window.ghPrompt('ปี (ค.ศ.)', new Date().getFullYear() + 543, { title: '🧾 สร้างใบวางบิล' });
 
   if (!month || !year) return;
 
@@ -176,8 +176,8 @@ function showGeneratedInvoices(building, invoiceIds) {
 /**
  * Download all invoices as PDF
  */
-function downloadInvoicesPDF() {
-  const building = prompt('เลือกอาคาร:\n1. rooms\n2. nest', '1');
+async function downloadInvoicesPDF() {
+  const building = await window.ghPrompt('เลือกอาคาร:\n1. rooms\n2. nest', '1', { title: '📥 ดาวน์โหลดใบวางบิล' });
   if (!building) return;
 
   const buildingName = building === '2' ? 'nest' : 'rooms';
