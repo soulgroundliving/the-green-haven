@@ -1127,6 +1127,58 @@ The only Firestore-trigger CF that's allowed to exist (and shouldn't be touched)
 
 **Family with §7-K (defined ≠ wired)** — both are about discovering invariants the code suggests but reality violates. K is "X is defined doesn't mean X runs"; NN is "X.onWrite exists in the v1 SDK doesn't mean X.onWrite works in your project's region." Same instinct: don't trust the API surface — grep for project precedent first.
 
+### OO. `html-minifier-terser collapseWhitespace:true` strips inline script whitespace → CSP hash mismatch in production
+
+`build.js` runs html-minifier-terser at deploy time (Vercel-only, guarded by `VERCEL` env var). With `collapseWhitespace: true` + `minifyJS: false`, the minifier strips the **leading newline+indentation** and **trailing newline+indentation** from every multi-line inline `<script>` and `<style>` block. Single-line scripts (no surrounding whitespace) are unaffected.
+
+The CSP hash tool (`tools/compute-csp-hashes.js`) was hashing the **un-trimmed** source content — so the stored hashes matched the source but NOT the minified deployed output. Browsers compute the hash of exactly what they receive → CSP violation on every multi-line script.
+
+Incident (2026-05-31): login.html showed "Executing inline script violates CSP directive" for its `<script type="module">` (multi-line, 3077 chars in source → 3069 in deployed = 8-char difference from stripped `\n    `prefix/suffix). The pre-commit hook PASSED (both sides consistent at source-hash level) while production was broken.
+
+**Fix already applied:** `compute-csp-hashes.js` now calls `.trim()` on script/style body before hashing. Hash counts are still correct (script 0 was single-line, trim was a no-op for it):
+
+```bash
+# Verify the fix is in place:
+grep "m[2].trim()" tools/compute-csp-hashes.js  # must return both extractInlineScripts and extractInlineStyles
+```
+
+**Detection recipe** (when CSP errors appear on a page that "should be fine"):
+1. In Chrome DevTools → Console → filter "CSP" / "Content-Security-Policy"
+2. If the error says `login:637` or `tenant_app:NNN` (multi-line inline script) and no JavaScript changed recently — suspect hash drift
+3. In Chrome: compute `script.textContent.trim()` hash vs what's in vercel.json:
+   ```js
+   const ss=[...document.scripts].filter(s=>!s.src);
+   (async()=>{for(const s of ss){const e=new TextEncoder().encode(s.textContent.trim()),b=await crypto.subtle.digest('SHA-256',e);console.log(btoa(String.fromCharCode(...new Uint8Array(b))));}})()
+   ```
+4. Compare output hashes against `script-src-elem` in `vercel.json`
+5. If mismatch: run `npm run csp:hash && node tools/update-vercel-csp.js && git add vercel.json tools/csp-hashes.json && git commit`
+
+**Other pages affected:** dashboard.html (6 inline scripts) and tenant_app.html (6 inline scripts) were also at risk; verified correct after the trim fix.
+
+**Why the pre-commit hook didn't catch it:** the hook computes hashes from LOCAL source files and compares to `tools/csp-hashes.json`. Both sides were consistently using un-trimmed content, so the hook always passed — while the live site always failed. The fix makes both sides use `.trim()`.
+
+### PP. `defer` + DOM order matters — adding `defer` to a script that other deferred scripts depend on breaks load order
+
+All `<script defer>` tags execute in DOM order (the order they appear in the HTML), regardless of individual load times. Adding `defer` to a script that other earlier-appearing deferred scripts depend on will cause those earlier scripts to run before the newly-deferred one.
+
+Incident (2026-05-31): added `defer` to `gamification-rules.js` (line ~136 in tenant_app.html) — but `tenant-leaderboard.js` (line ~124) appears EARLIER in the HTML and uses `window.GamificationRules.BADGE_CATALOG`. After adding `defer`, `tenant-leaderboard.js` executed before `gamification-rules.js` had defined `window.GamificationRules` → ReferenceError.
+
+**Rule:** when adding `defer` to any script, check which earlier-appearing deferred scripts depend on it. If any do, move the newly-deferred script to appear BEFORE its consumers in the HTML.
+
+```bash
+# Find load order for related scripts in tenant_app.html:
+grep -n "gamification-rules\|tenant-leaderboard" tenant_app.html
+# gamification-rules MUST appear at a LOWER line number than tenant-leaderboard
+```
+
+**Detection recipe** (ReferenceError on page load after adding defer):
+1. Error: `ReferenceError: X is not defined` on first page load
+2. BUT: `typeof window.X` returns `'object'` AFTER the page finishes loading
+3. Root cause: `X` was defined by a script that appears LATER in HTML (executes later) than the script that reads it
+4. Fix: swap the script order in HTML — the definer before the consumer
+
+**Sibling:** §7-EE (self-recursion with `window.X = wrapper`) — same family of "script ordering in a non-module world produces subtle bugs." §7-CC (`let X` at top-level ≠ on window) is the scope-level cousin.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
