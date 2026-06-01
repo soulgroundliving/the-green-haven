@@ -259,7 +259,10 @@
             const record = _pendingCleaningRecord;
             record.paymentSlip = _cleaningSlipBase64;
             record.paymentVerified = true;
-            record.paymentTransRef = result.transRef || result.transactionId || null;
+            // CF returns the ref under result.data.transactionId (verifySlip onCall
+            // success shape: { success, data: slipData, ... }); top-level transRef
+            // was always undefined → paymentTransRef silently null. Read .data first.
+            record.paymentTransRef = result.data?.transactionId || result.transactionId || null;
             record.status = 'รอดำเนินการ';
             try {
                 await _saveCleaningBooking(record);
