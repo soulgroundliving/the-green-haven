@@ -268,10 +268,10 @@
       font-size: var(--text-xs);
       margin-top: var(--space-1);
     }
-    .room-status-pill.s-available { background: rgba(74,157,110,0.12); color: var(--ok); }
+    .room-status-pill.s-available { background: rgba(74,157,110,0.12); color: var(--ok-text); }
     .room-status-pill.s-locked    { background: rgba(200,157,74,0.12); color: var(--warn); }
     .room-status-pill.s-occupied  { background: rgba(168,167,160,0.18); color: var(--shadow); }
-    .room-status-pill.s-paid      { background: rgba(192,100,88,0.12); color: var(--alert); }
+    .room-status-pill.s-paid      { background: rgba(192,100,88,0.12); color: var(--alert-text); }
 
     /* ── Modal ───────────────────────────────────────────────── */
     .modal-overlay {
@@ -391,7 +391,7 @@
     }
     .btn-danger {
       background: rgba(192,100,88,0.12);
-      color: var(--alert);
+      color: var(--alert-text);
       border: 1px solid rgba(192,100,88,0.3);
     }
     .btn-danger:hover:not(:disabled) { background: rgba(192,100,88,0.2); }
@@ -438,7 +438,7 @@
       color: var(--shadow);
     }
     .countdown-strip.warning { background: rgba(200,157,74,0.12); color: var(--warn); }
-    .countdown-strip.danger  { background: rgba(192,100,88,0.12); color: var(--alert); }
+    .countdown-strip.danger  { background: rgba(192,100,88,0.12); color: var(--alert-text); }
 
     .slip-drop {
       display: block;
@@ -468,9 +468,9 @@
       margin: var(--space-3) 0;
     }
     .status-line.loading { background: var(--mist); color: var(--shadow); }
-    .status-line.success { background: rgba(74,157,110,0.10); color: var(--ok); }
+    .status-line.success { background: rgba(74,157,110,0.10); color: var(--ok-text); }
     .status-line.warn    { background: rgba(200,157,74,0.10); color: var(--warn); }
-    .status-line.error   { background: rgba(192,100,88,0.10); color: var(--alert); }
+    .status-line.error   { background: rgba(192,100,88,0.10); color: var(--alert-text); }
 
     /* ── KYC tiles (Phase 5) ─────────────────────────────────── */
     .kyc-grid {
@@ -513,7 +513,7 @@
       border-color: var(--ok);
       background: rgba(74, 157, 110, 0.06);
     }
-    .kyc-tile.uploaded .kyc-status { color: var(--ok); font-weight: var(--weight-medium); }
+    .kyc-tile.uploaded .kyc-status { color: var(--ok-text); font-weight: var(--weight-medium); }
     .kyc-tile.uploading {
       border-color: var(--warn);
       background: rgba(200, 157, 74, 0.06);
@@ -658,7 +658,7 @@
       border-radius: var(--radius-xs);
       padding: var(--space-3) var(--space-3);
       font-size: var(--text-sm);
-      color: var(--alert);
+      color: var(--alert-text);
       margin-bottom: var(--space-3);
       line-height: var(--leading-relaxed);
     }
@@ -672,7 +672,7 @@
       border-radius: var(--radius-sm);
       padding: var(--space-3) var(--space-4);
       font-size: var(--text-sm);
-      color: var(--alert);
+      color: var(--alert-text);
       font-weight: var(--weight-medium);
       text-align: center;
       margin-top: var(--space-2);
