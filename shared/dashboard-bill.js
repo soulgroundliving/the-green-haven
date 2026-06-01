@@ -862,16 +862,16 @@ function buildDocHTML(d,type,dueDate,payDate){
   const recipientBlockHTML = _useCompanyLogo
     ? `<div style="margin:10px 0;padding:10px;background:#f8faf9;border:1px dashed ${DashColors.GREEN_BORDER};border-radius:6px;font-size:.85rem;">
          <div style="font-weight:600;color:var(--green-dark);margin-bottom:6px;">📄 ออกในนาม (นิติบุคคล)</div>
-         <div class="d-row"><span>ชื่อบริษัท:</span><strong>${_recipientCo.name || '-'}</strong></div>
-         <div class="d-row"><span>เลขผู้เสียภาษี:</span><strong>${_recipientCo.taxId || '-'}</strong></div>
-         ${_recipientCo.address ? `<div class="d-row"><span>ที่อยู่:</span><span style="text-align:right;">${_recipientCo.address}</span></div>` : ''}
+         <div class="d-row"><span>ชื่อบริษัท:</span><strong>${window._esc(_recipientCo.name || '-')}</strong></div>
+         <div class="d-row"><span>เลขผู้เสียภาษี:</span><strong>${window._esc(_recipientCo.taxId || '-')}</strong></div>
+         ${_recipientCo.address ? `<div class="d-row"><span>ที่อยู่:</span><span style="text-align:right;">${window._esc(_recipientCo.address)}</span></div>` : ''}
        </div>`
     : '';
   return`
   <div id="${docId}" class="doc-body" data-room="${d.room}" data-month="${d.month}" data-year="${d.year}">
     <div class="doc-header">
       <div class="doc-logo">${logoHTML}</div>
-      <div class="doc-sub">${d.building}</div>
+      <div class="doc-sub">${window._esc(d.building)}</div>
       <div class="doc-title ${type}">${titleText}</div>
       <div class="doc-no">เลขที่: ${d.no}</div>
     </div>
@@ -889,7 +889,7 @@ function buildDocHTML(d,type,dueDate,payDate){
       ${d.trash>0?`<div class="d-row"><span>ค่าขยะ</span><span>฿${d.trash.toLocaleString()}</span></div>`:''}
       ${d.other>0?`<div class="d-row"><span>ค่าบริการอื่นๆ</span><span>฿${d.other.toLocaleString()}</span></div>`:''}
       ${d.lateFee>0?`<div class="d-row" style="color:${DashColors.RED_DEEP};"><span>⚠️ ค่าปรับ</span><span>฿${d.lateFee.toLocaleString()}</span></div>`:''}
-      ${d.note?`<div class="d-row" style="font-size:.78rem;color:var(--accent);"><span>หมายเหตุ:</span><span>${d.note}</span></div>`:''}
+      ${d.note?`<div class="d-row" style="font-size:.78rem;color:var(--accent);"><span>หมายเหตุ:</span><span>${window._esc(d.note)}</span></div>`:''}
       <div class="d-total ${type}"><span>รวมทั้งสิ้น</span><span>฿${d.total.toLocaleString()}</span></div>
     </div>
     ${isInvoice ? qrSection : ''}

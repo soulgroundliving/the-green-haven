@@ -328,10 +328,10 @@ function updateReceiptGenerationUI(notification) {
     const timeStr = new Date(notification.timestamp).toLocaleTimeString('th-TH');
     receiptItem.innerHTML = `
       <div style="font-weight: 600; color: ${DashColors.BLUE_DARK};">
-        📄 ใบเสร็จ ห้อง ${notification.room} - ฿${notification.amount?.toLocaleString('th-TH')}
+        📄 ใบเสร็จ ห้อง ${_esc(notification.room)} - ฿${notification.amount?.toLocaleString('th-TH')}
       </div>
       <div style="font-size: 12px; color: ${DashColors.TEXT_MUTED}; margin-top: 4px;">
-        เวลา: ${timeStr} | ReceiptID: ${notification.receiptId || 'N/A'} | Verified: ${notification.verified ? '✅' : '❌'}
+        เวลา: ${timeStr} | ReceiptID: ${_esc(notification.receiptId || 'N/A')} | Verified: ${notification.verified ? '✅' : '❌'}
       </div>
     `;
 
