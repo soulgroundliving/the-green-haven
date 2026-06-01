@@ -7,10 +7,9 @@
  * Community tier blocks /v2/nearest_station (permission_denied), so we use
  * WAQI as the free station-grade alternative.
  *
- * The token is server-side only, sourced from Secret Manager (set via
- * `firebase functions:secrets:set WAQI_API_TOKEN`) and bound to this function
- * via .runWith({ secrets: [...] }). Frontend calls this CF instead of
- * api.waqi.info directly so the token never reaches the browser.
+ * The token is server-side only (functions/.env → process.env.WAQI_API_TOKEN).
+ * Frontend calls this CF instead of api.waqi.info directly so the token never
+ * reaches the browser.
  *
  * Cache: Firestore system/airQualityCacheWAQI. 1-hour TTL → ~720 calls/month
  * for one location, well under WAQI's 1000/sec rate limit and unlimited daily.
@@ -23,16 +22,9 @@
  * temp, humidity, windKmh, pressure, weatherIcon, city, attribution[] }.
  */
 const functions = require('firebase-functions/v1');
-const { defineSecret } = require('firebase-functions/params');
 const admin     = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();
-
-// Server-side token from Secret Manager (set via
-// `firebase functions:secrets:set WAQI_API_TOKEN`). Bound to the function via
-// .runWith({ secrets: [...] }); .value() returns process.env.WAQI_API_TOKEN at
-// call time (Cloud Functions injects the secret as an env var).
-const WAQI_API_TOKEN = defineSecret('WAQI_API_TOKEN');
 
 const DEFAULT_LAT = 13.92;          // Sai Mai (The Green Haven)
 const DEFAULT_LON = 100.64;
@@ -85,7 +77,6 @@ function _normalize(waqiData, openMeteoData) {
 
 exports.getAirQualityWAQI = functions
   .region('asia-southeast1')
-  .runWith({ secrets: [WAQI_API_TOKEN] })
   .https.onCall(async (data, context) => {
     if (!context.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
@@ -111,7 +102,7 @@ exports.getAirQualityWAQI = functions
     }
 
     // 2. Cache stale or missing — fetch fresh
-    const token = WAQI_API_TOKEN.value();
+    const token = process.env.WAQI_API_TOKEN;
     if (!token) {
       throw new functions.https.HttpsError('failed-precondition',
         'WAQI_API_TOKEN not configured on server');

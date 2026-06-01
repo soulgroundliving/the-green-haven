@@ -1,9 +1,8 @@
 /**
  * getAirQuality — IQAir AirVisual API proxy with 1-hour Firestore cache.
  *
- * The Community-tier API key is server-side only, sourced from Secret Manager
- * (set via `firebase functions:secrets:set IQAIR_API_KEY`) and bound via
- * .runWith({ secrets: [...] }). Frontend calls this CF instead of hitting
+ * The Community-tier API key is server-side only (functions/.env →
+ * process.env.IQAIR_API_KEY). Frontend calls this CF instead of hitting
  * api.airvisual.com directly so the key never reaches the browser, where
  * it would be visible in DevTools and could be scraped to exhaust our
  * 10,000-call/month quota.
@@ -18,16 +17,9 @@
  * Better than blanking the card on a transient outage.
  */
 const functions = require('firebase-functions/v1');
-const { defineSecret } = require('firebase-functions/params');
 const admin     = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();
-
-// Server-side key from Secret Manager (set via
-// `firebase functions:secrets:set IQAIR_API_KEY`). Bound to the function via
-// .runWith({ secrets: [...] }); .value() returns process.env.IQAIR_API_KEY at
-// call time (Cloud Functions injects the secret as an env var).
-const IQAIR_API_KEY = defineSecret('IQAIR_API_KEY');
 
 // Sai Mai district coords — The Green Haven is here. /v2/nearest_city at these
 // coords resolves to "Sai Mai" city (verified via curl 2026-04-26: data.city='Sai Mai').
@@ -78,7 +70,6 @@ function _normalize(iqairData, openMeteoData) {
 
 exports.getAirQuality = functions
   .region('asia-southeast1')
-  .runWith({ secrets: [IQAIR_API_KEY] })
   .https.onCall(async (data, context) => {
     if (!context.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
@@ -104,7 +95,7 @@ exports.getAirQuality = functions
     }
 
     // 2. Cache stale or missing — fetch from IQAir
-    const apiKey = IQAIR_API_KEY.value();
+    const apiKey = process.env.IQAIR_API_KEY;
     if (!apiKey) {
       throw new functions.https.HttpsError('failed-precondition',
         'IQAIR_API_KEY not configured on server');

@@ -90,22 +90,15 @@ Module._load = function (request, parent, ...rest) {
     class HttpsError extends Error {
       constructor(code, msg) { super(msg); this.code = code; }
     }
-    const https = {
-      onCall: (fn) => { capturedCallHandler = fn; return fn; },
-      HttpsError,
-    };
-    // .region(...).runWith({ secrets }).https.onCall(...) — runWith is chainable.
-    const builder = { https, runWith: () => builder };
     return {
-      region: () => builder,
+      region: () => ({
+        https: {
+          onCall: (fn) => { capturedCallHandler = fn; return fn; },
+          HttpsError,
+        },
+      }),
       https: { HttpsError },
     };
-  }
-  if (request === 'firebase-functions/params') {
-    // defineSecret(name).value() resolves to process.env[name] (the env var
-    // Cloud Functions injects from Secret Manager), so the existing
-    // process.env-based token tests still drive .value().
-    return { defineSecret: (name) => ({ value: () => process.env[name] }) };
   }
   return _origLoad.call(this, request, parent, ...rest);
 };
