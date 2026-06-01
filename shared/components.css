@@ -164,7 +164,7 @@
   letter-spacing: 0.01em;
 }
 .gh-required-mark {
-  color: var(--alert);
+  color: var(--alert-text);
   margin-left: var(--space-1);
 }
 .gh-input,
@@ -204,7 +204,7 @@
 .gh-input[aria-invalid="true"],
 .gh-textarea[aria-invalid="true"],
 .gh-select[aria-invalid="true"] {
-  border-color: var(--alert);
+  border-color: var(--alert-text);
 }
 .gh-input[aria-invalid="true"]:focus,
 .gh-textarea[aria-invalid="true"]:focus,
@@ -230,7 +230,7 @@
   line-height: var(--leading-normal);
 }
 .gh-helper-text--error {
-  color: var(--alert);
+  color: var(--alert-text);
 }
 
 /* ─── Badges ─────────────────────────────────────────────────────────────── */
@@ -256,7 +256,7 @@
 }
 .gh-badge--danger {
   background: rgba(220, 38, 38, 0.10);
-  color: var(--alert);
+  color: var(--alert-text);
 }
 .gh-badge--info {
   background: rgba(107, 138, 157, 0.14);
@@ -417,7 +417,7 @@ body.gh-modal-open {
 .gh-empty-state__illust {
   width: 120px;
   height: 120px;
-  color: var(--brand-primary-light);
+  color: var(--brand-primary-text);
   opacity: 0.65;
   margin-bottom: var(--space-2);
 }
