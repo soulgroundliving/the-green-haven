@@ -685,6 +685,50 @@ function _insightsRenderMeterAnomaly(bills, tenants) {
 }
 
 // ===== Insight #8: CF Health Board (LINE retry queue) =====
+
+// Pure derivation of CF-health metrics from raw lineRetryQueue items. Exported
+// via a test-only shim so the field contract + 7-day math stay locked: this is
+// where a createdAt→firstFailureAt field-drift bug silently zeroed every 7-day
+// stat (queue docs only ever carry `firstFailureAt`, set at enqueue — there is
+// no `createdAt`, so the old reads saw `undefined` → epoch → never "recent").
+//   items: [{ status, firstFailureAt (ISO string), attempts, lineUserId }]
+//   nowMs: Date.now() snapshot (single source for both the cutoff and the age)
+function _computeCFHealthStats(items, nowMs) {
+  const cutoff7d = nowMs - 7 * 86400000;
+  const recent = items.filter(i => new Date(i.firstFailureAt || 0).getTime() >= cutoff7d);
+  const pending = items.filter(i => i.status === 'pending');
+
+  const sent = recent.filter(i => i.status === 'sent').length;
+  const abandoned = recent.filter(i => i.status === 'abandoned').length;
+  const settled = sent + abandoned;
+  const successRate = settled > 0 ? Math.round(sent / settled * 100) : null;
+
+  const sentItems = recent.filter(i => i.status === 'sent' && i.attempts != null);
+  const avgAttempts = sentItems.length
+    ? (sentItems.reduce((acc, i) => acc + (i.attempts || 0), 0) / sentItems.length).toFixed(1)
+    : '—';
+
+  const oldestPending = pending
+    .slice()
+    .sort((a, b) => (a.firstFailureAt || '').localeCompare(b.firstFailureAt || ''))[0] || null;
+  const oldestPendingAgeMin = (oldestPending && oldestPending.firstFailureAt)
+    ? Math.round((nowMs - new Date(oldestPending.firstFailureAt).getTime()) / 60000)
+    : null;
+
+  const recentAbandonedSamples = recent
+    .filter(i => i.status === 'abandoned')
+    .sort((a, b) => (b.firstFailureAt || '').localeCompare(a.firstFailureAt || ''))
+    .slice(0, 3)
+    .map(i => (i.lineUserId || '?').slice(-6));
+
+  return {
+    pending: pending.length,
+    sent, abandoned, successRate,
+    avgAttempts, sentItemsCount: sentItems.length,
+    oldestPending, oldestPendingAgeMin, recentAbandonedSamples
+  };
+}
+
 async function _insightsRenderCFHealth() {
   const kEl = document.getElementById('ins-cf-kpis');
   const dEl = document.getElementById('ins-cf-detail');
@@ -699,47 +743,39 @@ async function _insightsRenderCFHealth() {
 
   let snap;
   try {
-    snap = await fs.getDocs(fs.collection(db, 'lineRetryQueue'));
+    // Bounded read: settled (sent/abandoned) docs accrue forever (no cleanup
+    // CF), so an unbounded getDocs grew without limit. Order by firstFailureAt
+    // desc + a generous cap keeps the most-recent window — every pending doc is
+    // recent (drained within ~75 min by the 15-min scheduler's 5-attempt cap),
+    // so queue-depth/oldest-pending stay exact; only an extreme backlog (which
+    // is already RED) could clip the 7-day success sample.
+    snap = await fs.getDocs(fs.query(
+      fs.collection(db, 'lineRetryQueue'),
+      fs.orderBy('firstFailureAt', 'desc'),
+      fs.limit(500)
+    ));
   } catch(e) {
     kEl.innerHTML = _insightsKpiCard('CF Health', '—', 'อ่านไม่ได้: ' + (e.code || e.message), DashColors.RED_DEEP);
     return;
   }
 
   const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  const cutoff7d = Date.now() - 7 * 86400000;
-  const recent = items.filter(i => {
-    const ts = new Date(i.createdAt || 0).getTime();
-    return ts >= cutoff7d;
-  });
-
-  const pending = items.filter(i => i.status === 'pending').length;
-  const sent = recent.filter(i => i.status === 'sent').length;
-  const abandoned = recent.filter(i => i.status === 'abandoned').length;
-  const settled = sent + abandoned;
-  const successRate = settled > 0 ? Math.round(sent / settled * 100) : null;
-
-  const sentItems = recent.filter(i => i.status === 'sent' && i.attempts != null);
-  const avgAttempts = sentItems.length ? (sentItems.reduce((s, i) => s + (i.attempts || 0), 0) / sentItems.length).toFixed(1) : '—';
+  const s = _computeCFHealthStats(items, Date.now());
 
   kEl.innerHTML =
-    _insightsKpiCard('Success rate (7 วัน)', successRate !== null ? successRate + '%' : '—',
-      `${sent} sent / ${abandoned} abandoned`,
-      successRate === null ? undefined : successRate >= 95 ? 'var(--green-dark)' : successRate >= 80 ? DashColors.ORANGE_DEEP : DashColors.RED_DEEP) +
-    _insightsKpiCard('Queue depth', pending + ' items', 'pending ตอนนี้', pending > 50 ? DashColors.RED_DEEP : pending > 10 ? DashColors.ORANGE_DEEP : 'var(--green-dark)') +
-    _insightsKpiCard('Attempts ก่อน success', avgAttempts, sentItems.length ? `จาก ${sentItems.length} รายการ` : '—');
+    _insightsKpiCard('Success rate (7 วัน)', s.successRate !== null ? s.successRate + '%' : '—',
+      `${s.sent} sent / ${s.abandoned} abandoned`,
+      s.successRate === null ? undefined : s.successRate >= 95 ? 'var(--green-dark)' : s.successRate >= 80 ? DashColors.ORANGE_DEEP : DashColors.RED_DEEP) +
+    _insightsKpiCard('Queue depth', s.pending + ' items', 'pending ตอนนี้', s.pending > 50 ? DashColors.RED_DEEP : s.pending > 10 ? DashColors.ORANGE_DEEP : 'var(--green-dark)') +
+    _insightsKpiCard('Attempts ก่อน success', s.avgAttempts, s.sentItemsCount ? `จาก ${s.sentItemsCount} รายการ` : '—');
 
-  // Detail: oldest pending + recent abandoned
-  const oldestPending = items.filter(i => i.status === 'pending')
-    .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))[0];
+  // Detail: oldest pending + recent abandoned (7-day window)
   const lines = [];
-  if (oldestPending) {
-    const age = Math.round((Date.now() - new Date(oldestPending.createdAt).getTime()) / 60000);
-    lines.push(`⏳ <strong>Oldest pending:</strong> ${age} นาที (attempts ${oldestPending.attempts || 0}/5)`);
+  if (s.oldestPending) {
+    lines.push(`⏳ <strong>Oldest pending:</strong> ${s.oldestPendingAgeMin} นาที (attempts ${s.oldestPending.attempts || 0}/5)`);
   }
-  if (abandoned > 0) {
-    const recentAbandoned = recent.filter(i => i.status === 'abandoned')
-      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 3);
-    lines.push(`🚫 <strong>Abandoned (7d):</strong> ${abandoned} รายการ — ตัวอย่าง user: ${recentAbandoned.map(i => (i.lineUserId || '?').slice(-6)).join(', ')}`);
+  if (s.abandoned > 0) {
+    lines.push(`🚫 <strong>Abandoned (7d):</strong> ${s.abandoned} รายการ — ตัวอย่าง user: ${s.recentAbandonedSamples.join(', ')}`);
   }
   if (!lines.length) lines.push('✅ ไม่มี pending ค้าง — CF retry queue ทำงานปกติ');
   dEl.innerHTML = lines.join('<br>');
