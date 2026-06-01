@@ -1,133 +1,37 @@
-# 🔒 Security Policy & Incident Report
+# Security Policy
 
-## Critical Security Incident - RESOLVED ✅
+## Reporting a vulnerability
 
-**Date:** April 4, 2026
-**Issue:** Exposed API credentials in git history
-**Status:** ✅ **COMPLETELY RESOLVED**
+Please report security issues **privately** — do not open a public issue or PR that describes the vulnerability.
 
----
+- Open a [private security advisory](https://github.com/soulgroundliving/the-green-haven/security/advisories/new) for this repository, **or**
+- Contact the repository owner directly.
 
-## 🚨 Incident Summary
+Include the affected page/endpoint, reproduction steps, and impact. We aim to acknowledge promptly and will coordinate a fix and disclosure timeline with you.
 
-### What Happened
-- API keys were accidentally hardcoded in source code
-- 26+ commits contained exposed credentials
-- Credentials were public on GitHub
+## Scope
 
-### Exposed Keys (ALL REMOVED FROM HISTORY)
-- Firebase: `AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM`
-- SlipOK: `SLIPOK8P4B99Z`
-- Meter-Nest: `AIzaSyC0xJqCw4cXEE0JzCu0VjMd5h1tZ7W3mL0`
+A private property-management app: a tenant LIFF webview (`tenant_app.html`) + admin dashboard (`dashboard.html`) on a Firebase backend, hosted on Vercel.
 
----
+- **In scope:** the deployed Vercel app, Cloud Functions (`functions/`), and the Firestore / Storage / Realtime-DB security rules.
+- **Out of scope:** the third-party platforms themselves (LINE/LIFF, SlipOK, Firebase, Vercel).
 
-## ✅ Remediation Completed
+## Secret management
 
-### 1. Code Cleanup
-- ✅ Removed all hardcoded API keys
-- ✅ Replaced with environment variable fallbacks
-- ✅ Current code is 100% clean
+- **Never hardcode secrets.** Server secrets live in Cloud Functions environment config / Google Secret Manager. The client Firebase config is a browser key restricted by API-key + identity restrictions and enforced by security rules — it is not a server credential.
+- **Pre-commit secret scanning** blocks commits containing API-key patterns or secret files (`.env`, `*.key`, `*.pem`, `*credentials*`, `serviceAccountKey*.json`). Installed via `npm run install:hooks` (also runs on `npm install`).
+- **`.gitignore`** excludes env and credential files.
+- **Service-account key rotation:** annually — next rotation **2027-05** (see CLAUDE.md §5).
 
-### 2. Git History Cleanup
-- ✅ Used git-filter-repo to remove credentials from 728 commits
-- ✅ Force pushed cleaned history to GitHub
-- ✅ Verified: NO credentials in git logs anymore
+## Security controls in effect
 
-### 3. Security Controls
-- ✅ Pre-commit hook installed (blocks credential commits)
-- ✅ Enhanced .gitignore rules
-- ✅ GitHub Actions validation passing
+- **Content-Security-Policy** is enforced on every tracked HTML page; hashes are regenerated on each inline-script/style change and the pre-commit hook blocks hash drift.
+- **Branch protection** on `main`: the `validate` CI check is required; force-push and branch deletion are blocked.
+- **Security-rules test suites** gate rule changes in CI — `npm run test:rules` (Firestore), `test:storage`, `test:rtdb:rules`.
+- **Auth:** Firebase Auth + custom claims; tenant LIFF sessions persist claims via `setCustomUserClaims` (CLAUDE.md §7-Z), with a Firestore source-of-truth fallback in Storage rules for stale-claim windows.
 
-### 4. Verification Results
-```
-✅ Searching git history for credentials: NOT FOUND
-✅ Current code API key scan: CLEAN
-✅ GitHub Actions: PASSING
-✅ Pre-commit hook: ACTIVE
-```
+## History
 
----
+This file previously contained an April 2026 incident report that listed exposed credential **values inline**. Those literal values have been removed from this document. The remediation described at the time — scrubbing the credentials from git history with `git-filter-repo` and adding the pre-commit secret-scanning hook — remains in effect.
 
-## 🔑 CRITICAL: API Key Rotation Required
-
-⚠️ **IMPORTANT:** Even though credentials are removed from git history, they MUST be rotated immediately as they were publicly exposed.
-
-### Firebase Key
-- Status: 🔴 **MUST ROTATE**
-- Action: Regenerate in Firebase Console → Settings → Service Accounts
-- Update: Environment variables in Vercel/Firebase
-
-### SlipOK Key  
-- Status: 🔴 **MUST ROTATE**
-- Action: Regenerate in SlipOK Dashboard
-- Update: Firebase Cloud Functions environment
-
-### Meter-Nest Firebase Key
-- Status: 🔴 **MUST ROTATE**
-- Action: Delete and regenerate in Firebase
-- Update: All references and environment variables
-
----
-
-## 🛡️ Security Controls Active
-
-### Pre-commit Hook
-Located at: `.git/hooks/pre-commit`
-- Blocks commits containing API keys
-- Blocks commits containing secret files
-- Prevents future credential exposure
-
-### .gitignore Enhanced
-```
-.env
-.env.local
-credentials*.txt
-secrets*.txt
-*.key
-*.pem
-firebase.local.json
-```
-
-### Best Practices
-```javascript
-// ✅ ALWAYS USE ENVIRONMENT VARIABLES
-const apiKey = process.env.FIREBASE_API_KEY;
-
-// ❌ NEVER HARDCODE
-const apiKey = "AIzaSy...";
-```
-
----
-
-## 📝 Verification Commands
-
-```bash
-# Check if credentials are removed
-git log -p --all -S "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM"
-# Expected: NO results ✅
-
-# Check pre-commit hook
-ls -la .git/hooks/pre-commit
-# Expected: executable file ✅
-```
-
----
-
-## ✨ Summary
-
-| Item | Status |
-|------|--------|
-| Code cleanup | ✅ COMPLETE |
-| Git history cleanup | ✅ COMPLETE |
-| Pre-commit hook | ✅ INSTALLED |
-| .gitignore | ✅ ENHANCED |
-| Credentials in repo | ✅ REMOVED |
-| GitHub Actions | ✅ PASSING |
-| **API Key Rotation** | 🔴 **PENDING** |
-
----
-
-**Repository is now secure from credential exposure.**
-**⚠️ Remember to rotate API keys immediately!**
-
+Any credential that has ever appeared in source or git history must be treated as compromised and rotated, regardless of later history rewrites.

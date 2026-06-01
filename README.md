@@ -87,11 +87,11 @@ Cloud Functions deploy automatically via [`deploy-functions.yml`](.github/workfl
 │   ├── brand.css             # Design tokens (use these, not hardcoded hex)
 │   └── *.js                  # Feature modules
 ├── functions/                # Cloud Functions (Node 22, region SE1)
-│   └── __tests__/            # 39 CF unit tests
+│   └── __tests__/            # 86 CF unit tests
 ├── api/                      # Vercel serverless functions
-├── firestore.rules + firestore.rules.test.js  # 304 rule tests
+├── firestore.rules + firestore.rules.test.js  # 220 rule tests
 ├── storage.rules + storage.rules.test.js      # 36 rule tests
-├── database.rules.json       # RTDB rules
+├── database.rules.json + database.rules.test.js  # 48 rule tests
 ├── tools/                    # Build / migration / verification scripts
 └── .github/workflows/        # CI: rules, deploy, validate, npm-audit
 ```

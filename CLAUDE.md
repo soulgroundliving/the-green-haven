@@ -79,7 +79,7 @@ After ANY correction from the user, decide where to log it:
 |-------|---------------------|-------|
 | Markup | Vanilla HTML | `tenant_app.html`, `dashboard.html`, `login.html`, `tax-filing.html` |
 | Styling | **Tailwind CSS v3** (pre-built, NOT CDN JIT) + custom CSS variables | `shared/tailwind.input.css` → `shared/tailwind.css` (built via `npm run tailwind:build`); brand tokens in `shared/brand.css` |
-| Logic | Vanilla JS modules (UMD-ish; `window.X = ...` exports) | `shared/*.js` (101 files incl. 26 `tenant-*.js` god-file extracts; verify with `ls shared/*.js \| wc -l`) |
+| Logic | Vanilla JS modules (UMD-ish; `window.X = ...` exports) | `shared/*.js` (102 files incl. 27 `tenant-*.js` god-file extracts; verify with `ls shared/*.js \| wc -l`) |
 | Backend | **Firebase** v11 — Auth · Firestore · Realtime DB · Cloud Functions · Storage | `functions/` (Node CFs); rules in `firestore.rules`, `storage.rules`, `database.rules.json` |
 | Hosting | **Vercel** (not Firebase Hosting) | `vercel.json`, `/api/*` serverless fns (e.g. `/api/config`) |
 | Build | `esbuild` (bundle minify) | `build.js` |
@@ -127,7 +127,7 @@ After ANY correction from the user, decide where to log it:
 | `git push origin main` | Vercel auto-deploys to https://the-green-haven.vercel.app | Only verification path — never localhost |
 | `npm run build` | esbuild bundle minify (output to repo) | Pre-deploy if shared/*.js changes; usually Vercel handles via build hook |
 | `npm run tailwind:build` | Compiles `shared/tailwind.input.css` → `shared/tailwind.css` (committed) | Whenever Tailwind classes change in HTML or input file |
-| `npm run test:rules` | Firestore rules CI tests (~70 cases as of 2026-04-28) | Before deploying any `firestore.rules` change |
+| `npm run test:rules` | Firestore rules CI tests (220 cases as of 2026-06-01) | Before deploying any `firestore.rules` change |
 | `npm run verify:memory` | Mechanical re-verification of every load-bearing claim in `~/.claude/.../memory/lifecycle_*.md` against current code. Fails (exit 1) if any claim's grep returns 0 hits. | **Pre-commit hook calls this automatically.** Fast (~2 sec). Replaces "I think the memory is current" with proof. |
 | `npm run verify:memory:coverage` | Above PLUS coverage check — flags code-tick `quoted` identifiers in prose that have no matching verifier (cross-doc). Use `--strict` to fail on coverage gaps too. | When editing a lifecycle doc; before pushing big memory restructures. |
 | `npm run verify:memory:all` | Above PLUS fabricated-path scan over handoff/journal/feedback files. Catches wrong template paths (e.g. `wellnessClaimed/{roomId}_2026-04`) whose stripped shape doesn't appear in any lifecycle doc or rules file. Warn-only; `--strict` to block. | At the end of any session that edited a non-lifecycle memory file. |
