@@ -69,8 +69,8 @@ All edited JS passes `node --check`. ⚠️ A prompt-injection was detected mid-
 - [x] **Testing — frontend unit tests** — DONE. checklist-manager.js added 2026-06-01 (PR #213, +33 tests, gate 248→281); billing-system / bill-generator / lease-config already covered (prior session). All 4 target modules now have coverage.
 - [ ] **Architecture — collapse `detectBuilding`** (duplicated 4× with magic `101-405` range) to one registry-aware caller (`building-config.js`).
 - [ ] **Tech Debt — archive 28 one-shot migration scripts** → `tools/migrations/done/` with executed-date headers.
-- [ ] **Tech Debt — wire-or-delete orphaned bill-gen UI** — `generateMonthlyBillsUI` + `downloadInvoicesPDF` (`dashboard-bills.js`) have 0 callers (§7-K), surfaced during the prompt()→ghPrompt pass (PR #197). Decide: wire to an admin button, or delete (`BillGenerator.generateMonthlyBills` is the real entry used elsewhere). Product decision — needs user.
-- [ ] **Tech Debt — decide on root `bill69-final.xlsx` (PII), `S__91643910.jpg`, `Nature Haven Design System.zip`** (gitignored; left untouched this session).
+- [x] **Tech Debt — orphaned bill-gen UI** — RESOLVED. `generateMonthlyBillsUI` + `downloadInvoicesPDF` were already deleted by **#202** (a11y session) — grep 2026-06-02 returns 0 definitions. This todo line was stale (written off the PR #197 note). Nothing to do; `BillGenerator.generateMonthlyBills` remains the real entry.
+- [x] **Tech Debt — root junk files** — DELETED 2026-06-02 (`bill69-final.xlsx` PII 324K, `S__91643910.jpg` 192K, `Nature Haven Design System.zip` 20K). All were untracked + unreferenced; removed from disk (no commit — never tracked).
 
 ---
 
