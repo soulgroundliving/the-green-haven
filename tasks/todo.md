@@ -75,6 +75,13 @@ Deployed verifySlip returns **401** to POST-without-auth → `requireAdmin` (add
 - Removing client-side rate limiters (`_tenantRateLimit`, `checkDashboardRateLimit`) — keep as cheap pre-flight; server rate-limit is the real gate.
 - Re-architecting the tenant payment UX — only the auth/transport changes here.
 
+### Review (2026-06-02 PM) — SHIPPED + DEPLOYED
+- **Phase 1 (verifySlip onCall)** ✅ PR #224 (squash `ec6330b`) merged + **deployed to PROD** (`firebase deploy --only functions:verifySlip --project the-green-haven` → Successful update; onRequest→onCall in-place, no delete-first needed). Prod probe confirms onCall + handler runs (`{data:{}}` → "File is required"). Restores the ~6-week-broken tenant self-verify.
+- **Phase 2a (Sentry defer)** ✅ in #224, live on prod (`sentry-cdn…defer` + `sentry-init.<hash>.js defer` served; 0 CSP drift).
+- **Phase 2b (defer tenant-liff-auth)** ❌ AUDITED → SKIPPED — auth spine with a documented synchronous dependency + parse-time `_onLiffClaimsReady` caller (tenant_app.html:5303) reading `_taBuilding` via bareword (§7-PP/§7-CC). Not forced (breadth-trap).
+- **Process note:** first deploy accidentally hit `the-green-haven-staging` (stale `firebase use` alias) — caught from the `Project Console:` URL, re-deployed to prod with pinned `--project`. Lesson added to `feedback_branch_before_firebase_deploy.md` (check `firebase use` before deploy).
+- **Follow-up (user):** functional smoke — admin ตรวจสลิป (dashboard) + tenant LIFF rent-slip + ฿500 cleaning-slip now succeed (were 401). Tests: functions 1791 · test:shared 319 · verify:memory green.
+
 ---
 
 ## ▶ ACTIVE PLAN (2026-06-02): Content-hash caching for `shared/*.js` (P2 item, line ~61)
