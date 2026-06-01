@@ -818,6 +818,140 @@ function runDeadLinkAssertions() {
   return results;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// README count assertions: verify the in-repo README.md numeric claims against
+// live repo counts. README is the public "what's in this repo" doc; its numbers
+// drift when tests / rules / anti-patterns are added without updating it.
+//
+// Root cause: 2026-06-01 fixed "firestore rules 304→220" in the layout block but
+// MISSED the duplicate "(304 cases)" in the commands table — README then stated
+// TWO different firestore counts. This asserter checks EVERY occurrence of each
+// metric, so a half-updated README is RED, not silently inconsistent.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function countTestCases(absFile) {
+  // Count lines that begin (after leading horizontal whitespace) with `it(` or
+  // `test(`. [ \t]* (not \s*) so the anchor stays on one line — \s would let the
+  // match consume a newline and drift. Verified to equal the grep ground truth
+  // (firestore 220 / storage 36 / database 48).
+  if (!fs.existsSync(absFile)) return null;
+  const src = fs.readFileSync(absFile, 'utf8');
+  return (src.match(/^[ \t]*(it|test)\(/gm) || []).length;
+}
+
+function runReadmeCountAssertions() {
+  const results = [];
+  const readmePath = path.join(REPO_ROOT, 'README.md');
+  if (!fs.existsSync(readmePath)) return results;
+  const readme = fs.readFileSync(readmePath, 'utf8');
+
+  // CF unit-test FILES (the README "86" is a file count, not a case count —
+  // there are ~1.8k `it(` cases across the 86 files). Annotation is on the
+  // __tests__/ directory, so file count is the meaningful number.
+  const cfTestDir = path.join(REPO_ROOT, 'functions', '__tests__');
+  const cfTestFiles = fs.existsSync(cfTestDir)
+    ? fs.readdirSync(cfTestDir).filter(f => f.endsWith('.test.js')).length
+    : null;
+
+  // Each metric: live `actual`, and the README regex(es) whose captured group 1
+  // must equal it. ALL matches across ALL patterns must agree; at least one must
+  // match (so a silent wording change that drops the claim is also flagged).
+  const metrics = [
+    {
+      label: 'Firestore rules tests',
+      actual: countTestCases(path.join(REPO_ROOT, 'firestore.rules.test.js')),
+      patterns: [
+        /Firestore security rules \((\d+) cases\)/g,
+        /firestore\.rules\.test\.js\s+#\s*(\d+) rule tests/g,
+      ],
+    },
+    {
+      label: 'Storage rules tests',
+      actual: countTestCases(path.join(REPO_ROOT, 'storage.rules.test.js')),
+      patterns: [
+        /Storage security rules \((\d+) cases\)/g,
+        /storage\.rules\.test\.js\s+#\s*(\d+) rule tests/g,
+      ],
+    },
+    {
+      label: 'Database rules tests',
+      actual: countTestCases(path.join(REPO_ROOT, 'database.rules.test.js')),
+      patterns: [
+        /database\.rules\.test\.js\s+#\s*(\d+) rule tests/g,
+      ],
+    },
+    {
+      label: 'CF unit-test files',
+      actual: cfTestFiles,
+      patterns: [
+        /(\d+) CF unit-test files/g,
+      ],
+    },
+  ];
+
+  for (const m of metrics) {
+    if (m.actual === null) continue; // file/dir absent on this checkout — skip
+    const stated = [];
+    for (const re of m.patterns) {
+      let mm;
+      while ((mm = re.exec(readme)) !== null) stated.push(parseInt(mm[1], 10));
+    }
+    if (stated.length === 0) {
+      results.push({
+        comment: `README count: ${m.label} — actual ${m.actual}, but README states it nowhere`,
+        command: '[computed: README.md count claim vs live repo count]',
+        ok: false,
+        stdout: `README.md no longer states ${m.label} (expected a claim of ${m.actual}). Wording changed → update the regex in verify-memory.js or restore the count.`,
+      });
+      continue;
+    }
+    const uniq = [...new Set(stated)];
+    const ok = uniq.length === 1 && uniq[0] === m.actual;
+    results.push({
+      comment: `README count: ${m.label} = ${m.actual} (README states ${uniq.join(', ')}, ${stated.length} occurrence(s))`,
+      command: '[computed: README.md count claim vs live repo count]',
+      ok,
+      stdout: ok
+        ? `README ${m.label} count matches (${m.actual})`
+        : `MISMATCH: actual=${m.actual} but README states ${uniq.join(', ')} — fix README.md`,
+    });
+  }
+
+  // §7 anti-pattern catalog: README states a letter-range (+ a count in one
+  // place); CLAUDE.md owns the actual `### <Letter>.` headings. Catches the
+  // "A–NN / ~40 patterns" staleness when new patterns are appended.
+  const claudeMd = path.join(REPO_ROOT, 'CLAUDE.md');
+  if (fs.existsSync(claudeMd)) {
+    const headings = fs.readFileSync(claudeMd, 'utf8').match(/^### [A-Z]{1,2}\. /gm) || [];
+    const count = headings.length;
+    const lastLetter = count > 0
+      ? headings[count - 1].match(/^### ([A-Z]{1,2})\./)[1]
+      : null;
+    if (count > 0) {
+      const dash = '[\\u2013\\u2014-]'; // en / em dash or hyphen
+      const m1 = readme.match(new RegExp(`§7 \\(currently A${dash}([A-Z]{1,2}), (\\d+) patterns\\)`));
+      const m2 = readme.match(new RegExp(`anti-pattern catalog \\(§7 A${dash}([A-Z]{1,2})\\)`));
+      const statedLetters = [m1 && m1[1], m2 && m2[1]].filter(Boolean);
+      const found = statedLetters.length > 0;
+      const letterOk = found && statedLetters.every(l => l === lastLetter);
+      const countOk = !m1 || parseInt(m1[2], 10) === count;
+      const ok = found && letterOk && countOk;
+      results.push({
+        comment: `README count: §7 anti-patterns = ${count} (A–${lastLetter})`,
+        command: '[computed: count "### <Letter>." headings in CLAUDE.md vs README §7 claim]',
+        ok,
+        stdout: ok
+          ? `README §7 range/count matches CLAUDE.md (${count} patterns, A–${lastLetter})`
+          : (!found
+              ? `README states no §7 "A–X" range — expected A–${lastLetter} (${count} patterns). Wording changed?`
+              : `MISMATCH: CLAUDE.md has ${count} patterns (A–${lastLetter})${m1 ? `; README count=${m1[2]}` : ''}; README range(s) A–${statedLetters.join(', A–')} — fix README.md`),
+      });
+    }
+  }
+
+  return results;
+}
+
 function main() {
   const args = process.argv.slice(2);
   const flags = new Set(args.filter(a => a.startsWith('--')));
@@ -899,6 +1033,22 @@ function main() {
     }
     totalRows += deadLinkResults.length;
     totalRed += deadLinkResults.filter(r => !r.ok).length;
+  }
+
+  // README count sweep: verify in-repo README.md numeric claims against live counts.
+  const readmeResults = runReadmeCountAssertions();
+  if (readmeResults.length > 0) {
+    console.log('\n=== README count assertions ===');
+    for (const r of readmeResults) {
+      const label = r.ok ? '✅' : '❌';
+      console.log(`  ${label} ${r.comment}`);
+      if (!r.ok) {
+        console.log(`     ${r.stdout}`);
+        allGreen = false;
+      }
+    }
+    totalRows += readmeResults.length;
+    totalRed += readmeResults.filter(r => !r.ok).length;
   }
 
   // All-memory mode: scan handoff/journal/feedback for fabricated template paths.

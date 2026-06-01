@@ -65,7 +65,7 @@ For UI verification, push to a branch and check the Vercel preview — Firebase 
 | `git push origin main` | Vercel auto-deploys to production |
 | `npm run build` | esbuild minify + strip console noise from `shared/**/*.js` + `accounting/**/*.js` (Vercel runs this automatically) |
 | `npm run tailwind:build` | Recompile `shared/tailwind.input.css` → `shared/tailwind.css` |
-| `npm run test:rules` | Firestore security rules (304 cases) |
+| `npm run test:rules` | Firestore security rules (220 cases) |
 | `npm run test:storage` | Storage security rules (36 cases) |
 | `npm run test:unit` | Cloud Function unit tests (with coverage) |
 | `npm run verify:memory` | Verify architecture docs against current code (pre-commit hook calls this) |
@@ -87,7 +87,7 @@ Cloud Functions deploy automatically via [`deploy-functions.yml`](.github/workfl
 │   ├── brand.css             # Design tokens (use these, not hardcoded hex)
 │   └── *.js                  # Feature modules
 ├── functions/                # Cloud Functions (Node 22, region SE1)
-│   └── __tests__/            # 86 CF unit tests
+│   └── __tests__/            # 86 CF unit-test files
 ├── api/                      # Vercel serverless functions
 ├── firestore.rules + firestore.rules.test.js  # 220 rule tests
 ├── storage.rules + storage.rules.test.js      # 36 rule tests
@@ -109,14 +109,14 @@ This codebase is operated with [Claude Code](https://claude.com/claude-code). Wo
 
 - Bug fixes / single-feature changes → direct PR
 - Multi-file architectural changes → plan-first protocol (write `tasks/todo.md`, get approval)
-- Recurring anti-patterns → logged in CLAUDE.md §7 (currently A–NN, ~40 patterns)
+- Recurring anti-patterns → logged in CLAUDE.md §7 (currently A–WW, 49 patterns)
 - Memory drift → caught by pre-commit `npm run verify:memory`
 
 Pre-commit hook enforces: credential scan, memory verifier, CF unit tests (if `functions/` staged), anti-pattern audit, file-size limits, CSP hash drift.
 
 ## Documentation
 
-- [CLAUDE.md](CLAUDE.md) — workflow protocol, tech stack details, anti-pattern catalog (§7 A–NN)
+- [CLAUDE.md](CLAUDE.md) — workflow protocol, tech stack details, anti-pattern catalog (§7 A–WW)
 - `tasks/todo.md` — active plan (when above plan-first threshold)
 - `.github/workflows/*.yml` — CI documentation lives in each workflow header
 - Lifecycle docs live in the maintainer's `~/.claude/projects/...` memory (not committed)
