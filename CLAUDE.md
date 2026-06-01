@@ -1340,6 +1340,26 @@ setTimeout(decide, 12000); // fallback only
 
 ✅ **Both client auth gates now use `authStateReady()`:** dashboard.html (PR #209) + tax-filing.html (PR #211, 2026-06-01). Both live-verified — clear SW+cache → cold reload no longer bounces a signed-in user (tax-filing confirmed with a real admin session, IndexedDB-restored). The detection grep above should return ONLY these two `/login`-redirect gates, both on `authStateReady`; any NEW page with a client auth gate must follow the same pattern (no fixed `}, 4000)` timer). Family: §7-A/U/Z/HH — auth state/claims not where rule-eval expects them at the moment it checks.
 
+### WW. Migrating a CF to `defineSecret` — the deploy SA must ACCESS the secret, not just have it EXIST; one bad binding blocks ALL CF deploys
+
+Moving a CF from `process.env.X` (functions/.env) to Secret Manager (`defineSecret('X')` + `.runWith({ secrets:[X] })` + `X.value()`) is correct code, but the **deploy** has two non-obvious requirements that `firebase functions:secrets:set` alone does NOT satisfy:
+
+1. The CI **deploy service account** (`FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN`) must have `roles/secretmanager.secretAccessor` on **that specific secret**. In `--non-interactive` mode, if it can't read the value, firebase errors `have no value for the secret: X` and the deploy fails — even though `firebase functions:secrets:get X` shows the secret EXISTS (Version 1 ENABLED). **Existence ≠ deploy-SA access.** Per-secret IAM: one secret can be accessible and a sibling not (WAQI worked, IQAIR didn't, 2026-06-01).
+2. `deploy-functions.yml` deploys every CF in ONE `firebase deploy --only "<all CFs>"` command. So a single unbindable secret **fails the whole deploy → blocks EVERY CF deploy**, not just the one being migrated. This is a pipeline-wide outage, not a local feature break.
+
+Incident 2026-06-01 (PR #216 merged → reverted `adae1cc`): verified both secrets existed via `secrets:get`, declared "safe to merge", merged → prod deploy died on `IQAIR_API_KEY` → all CF deploys blocked → reverted within minutes (revert deploy succeeded, restored). The active WAQI CF reads `WAQI_API_TOKEN` from `.env` (the workflow writes it at deploy from a GitHub Actions secret) — that env-var path is why the OLD code worked and why a revert recovers instantly.
+
+**Rule — before merging any `defineSecret` CF migration:**
+```bash
+# 1. EXISTENCE is necessary but NOT sufficient (metadata only — never :access in chat, §secret-files):
+firebase functions:secrets:get  WAQI_API_TOKEN   # Version/State, not the value
+# 2. The real gate — does the DEPLOY SA have accessor on each secret? (and the runtime SA)
+gcloud secrets get-iam-policy WAQI_API_TOKEN --project the-green-haven   # look for the deploy SA + secretAccessor
+# 3. Test-deploy ONE migrated CF manually BEFORE merging — never let CI be the first deploy of a secret binding:
+firebase deploy --only functions:getAirQualityWAQI --project the-green-haven --non-interactive
+```
+If you can't run the IAM check / test-deploy (no gcloud/console access in-session), do NOT merge — hand the IAM grant + test-deploy to the user as a prerequisite. A `defineSecret` migration is an **IAM/CI task gated on SA access**, not a code-only change. Family: §7-Z/FF (Firebase auth/secret state has more than one place that must line up) + §7-AA/NN (deploy-time invariants the API surface doesn't reveal).
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
