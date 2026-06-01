@@ -1338,7 +1338,7 @@ setTimeout(decide, 12000); // fallback only
 
 **Detection:** `grep -nE "setTimeout.*(login|redirect)|authStateReady" *.html` on every page with a client auth gate.
 
-⚠️ **`tax-filing.html` STILL uses the fixed-4s accountant gate** (`🔒 No accountant auth — redirecting`, `}, 4000)` ~L1004/1009) — same latent cold-load bounce for accountants; not yet migrated. (dashboard.html fixed 2026-06-01, PR #209; verified live: clear SW+cache → cold reload no longer bounces.) Family: §7-A/U/Z/HH — auth state/claims not where rule-eval expects them at the moment it checks.
+✅ **Both client auth gates now use `authStateReady()`:** dashboard.html (PR #209) + tax-filing.html (PR #211, 2026-06-01). Both live-verified — clear SW+cache → cold reload no longer bounces a signed-in user (tax-filing confirmed with a real admin session, IndexedDB-restored). The detection grep above should return ONLY these two `/login`-redirect gates, both on `authStateReady`; any NEW page with a client auth gate must follow the same pattern (no fixed `}, 4000)` timer). Family: §7-A/U/Z/HH — auth state/claims not where rule-eval expects them at the moment it checks.
 
 ---
 
