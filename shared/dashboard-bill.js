@@ -941,13 +941,21 @@ function printDoc(docId){
 
   const el=document.getElementById(docId);
   if(!el){showToast('ไม่พบเอกสาร', 'error');return;}
-  // รวม styles ทั้งหมดจากหน้าหลัก
-  const styles=[...document.querySelectorAll('style')].map(s=>s.innerHTML).join('\n');
+  // Carry the page's CSS into the popup. CRITICAL: keep each <style> block as its
+  // OWN <style> tag, and bring external sheets (brand.css/components.css) as their
+  // own <link>. Joining every inline <style> into ONE <style> corrupts parsing and
+  // silently drops later rules — e.g. .d-row{display:flex} stops applying, so the
+  // invoice "label … value" rows collapse together (verified: separate=flex,
+  // joined=block). The external <link>s restore brand-token colours; data-theme
+  // ="light" forces print-correct light tokens regardless of OS dark mode.
+  const links=[...document.querySelectorAll('link[rel="stylesheet"]')].map(l=>`<link rel="stylesheet" href="${l.href}">`).join('\n');
+  const styles=[...document.querySelectorAll('style')].map(s=>`<style>${s.innerHTML}</style>`).join('\n');
   const fonts='<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">';
   const content=el.outerHTML;
-  const html=`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">${fonts}
-<style>
+  const html=`<!DOCTYPE html><html lang="th" data-theme="light"><head><meta charset="UTF-8">${fonts}
+${links}
 ${styles}
+<style>
 /* Print overrides - let browser print dialog handle page size */
 @page{margin:10mm;}
 @media print{
