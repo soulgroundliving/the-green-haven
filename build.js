@@ -26,6 +26,7 @@ const { minify: minifyHtml } = require('html-minifier-terser');
 const { glob } = require('glob');
 const fs = require('fs');
 const { execSync } = require('child_process');
+const assetHash = require('./tools/asset-hash');
 
 // Safety: this script rewrites source files in place. That's desirable inside
 // Vercel's ephemeral build checkout, but catastrophic if run locally against
@@ -79,36 +80,8 @@ if (!process.env.VERCEL && !process.env.FORCE_BUILD) {
     process.exit(1);
   }
 
-  // HTML minification: whitespace + comments only.
-  // CRITICAL: minifyCSS and minifyJS are OFF — inline <style>/<script> content
-  // must remain byte-for-byte identical so pre-committed CSP hashes stay valid.
-  const htmlFiles = await glob(['*.html'], { nodir: true });
-  if (htmlFiles.length > 0) {
-    console.log(`📄 Minifying ${htmlFiles.length} HTML files (whitespace + comments, keep inline scripts/styles)...`);
-    let htmlBefore = 0;
-    let htmlAfter = 0;
-    for (const file of htmlFiles) {
-      const src = fs.readFileSync(file, 'utf8');
-      htmlBefore += Buffer.byteLength(src, 'utf8');
-      const out = await minifyHtml(src, {
-        removeComments: true,
-        collapseWhitespace: true,
-        conservativeCollapse: false,
-        collapseInlineTagWhitespace: false,
-        minifyCSS: false,   // preserve inline <style> hash
-        minifyJS: false,    // preserve inline <script> hash
-        removeRedundantAttributes: false,
-        removeScriptTypeAttributes: false,
-        removeStyleLinkTypeAttributes: false,
-      });
-      htmlAfter += Buffer.byteLength(out, 'utf8');
-      fs.writeFileSync(file, out, 'utf8');
-    }
-    const htmlSavedKB = ((htmlBefore - htmlAfter) / 1024).toFixed(1);
-    const htmlPct = ((1 - htmlAfter / htmlBefore) * 100).toFixed(1);
-    console.log(`✅ HTML: ${(htmlBefore / 1024).toFixed(0)}KB → ${(htmlAfter / 1024).toFixed(0)}KB (saved ${htmlSavedKB}KB, -${htmlPct}%)\n`);
-  }
-
+  // JS minification: whitespace + syntax only, names preserved (see header).
+  // Runs BEFORE HTML so the content-hash manifest exists when we rewrite refs.
   const files = await glob(['shared/**/*.js', 'accounting/**/*.js'], { nodir: true });
   if (files.length === 0) {
     console.error('❌ No JS files matched. Aborting build.');
@@ -156,4 +129,63 @@ if (!process.env.VERCEL && !process.env.FORCE_BUILD) {
   const savedKB = ((totalBefore - totalAfter) / 1024).toFixed(1);
   const pct = ((1 - totalAfter / totalBefore) * 100).toFixed(1);
   console.log(`✅ Minified ${files.length} files: ${(totalBefore / 1024).toFixed(0)}KB → ${(totalAfter / 1024).toFixed(0)}KB (saved ${savedKB}KB, -${pct}%)`);
+
+  // Content-hash referenceable JS so it can ship `immutable` (vercel.json).
+  // Rename each minified shared/*.js + accounting/*.js → <base>.<hash>.js
+  // (hash of the MINIFIED bytes); shared/__tests__ excluded (dev-only). Source
+  // repo keeps plain names — this runs only in Vercel's ephemeral checkout /
+  // FORCE_BUILD, so local dev is unaffected. See tools/asset-hash.js. Pairs
+  // with the HTML ref-rewrite + dangling-ref verify gate below.
+  const hashableFiles = files
+    .map((f) => f.replace(/\\/g, '/'))
+    .filter(assetHash.isHashable);
+  const manifest = assetHash.computeAssetManifest(hashableFiles, (f) => fs.readFileSync(f));
+  for (const [plain, hashed] of Object.entries(manifest)) {
+    fs.renameSync(plain, hashed);
+  }
+  const emittedHashed = new Set(Object.values(manifest));
+
+  // HTML minification: whitespace + comments only, THEN rewrite <script src>
+  // to the hashed names. CRITICAL: minifyCSS and minifyJS stay OFF — inline
+  // <style>/<script> content must remain byte-for-byte identical so pre-committed
+  // CSP hashes stay valid. The rewrite only touches external <script src> values
+  // (never inline content), so CSP hashes are unaffected.
+  const htmlFiles = await glob(['*.html'], { nodir: true });
+  if (htmlFiles.length > 0) {
+    console.log(`📄 Minifying ${htmlFiles.length} HTML files (whitespace + comments, keep inline scripts/styles)...`);
+    let htmlBefore = 0;
+    let htmlAfter = 0;
+    for (const file of htmlFiles) {
+      const src = fs.readFileSync(file, 'utf8');
+      htmlBefore += Buffer.byteLength(src, 'utf8');
+      let out = await minifyHtml(src, {
+        removeComments: true,
+        collapseWhitespace: true,
+        conservativeCollapse: false,
+        collapseInlineTagWhitespace: false,
+        minifyCSS: false,   // preserve inline <style> hash
+        minifyJS: false,    // preserve inline <script> hash
+        removeRedundantAttributes: false,
+        removeScriptTypeAttributes: false,
+        removeStyleLinkTypeAttributes: false,
+      });
+      out = assetHash.rewriteHtmlRefs(out, manifest);
+      htmlAfter += Buffer.byteLength(out, 'utf8');
+      fs.writeFileSync(file, out, 'utf8');
+    }
+    const htmlSavedKB = ((htmlBefore - htmlAfter) / 1024).toFixed(1);
+    const htmlPct = ((1 - htmlAfter / htmlBefore) * 100).toFixed(1);
+    console.log(`✅ HTML: ${(htmlBefore / 1024).toFixed(0)}KB → ${(htmlAfter / 1024).toFixed(0)}KB (saved ${htmlSavedKB}KB, -${htmlPct}%)\n`);
+  }
+
+  // Verify gate: no dangling shared/accounting JS ref may survive the rewrite.
+  // A missed ref would 404 in production; fail the build instead (§7-J).
+  const finalHtmlDocs = htmlFiles.map((f) => ({ file: f, html: fs.readFileSync(f, 'utf8') }));
+  const dangling = assetHash.findDanglingRefs(finalHtmlDocs, emittedHashed);
+  if (dangling.length > 0) {
+    console.error(`❌ Build aborted: ${dangling.length} dangling shared/accounting JS ref(s) after content-hash rewrite:`);
+    for (const d of dangling.slice(0, 20)) console.error(`   ${d.file} → ${d.ref}`);
+    process.exit(1);
+  }
+  console.log(`🔗 Content-hashed ${Object.keys(manifest).length} JS assets; all HTML refs rewritten + verified.`);
 })();

@@ -5,6 +5,49 @@
 
 > This run was more adversarial and surfaced **net-new** latent issues (the prior pass fixed wellness/admin-ops XSS; this pass found 4 *different* sinks; prior PERF-Q1 capped insights queries but missed the `dashboard-extra` meter watch).
 
+---
+
+## ▶ ACTIVE PLAN (2026-06-02): Content-hash caching for `shared/*.js` (P2 item, line ~61)
+
+**Status:** ✅ APPROVED (Approach A) + IMPLEMENTED + locally verified (2026-06-02). Unit tests 18/18 + full `build.js` smoke on a temp working-tree copy (exit 0, 104 JS hashed, all HTML refs rewritten + verify-gate green). PR + preview-curl + owner in-app verify pending.
+
+### Goal & Why
+Non-SW pages (dashboard, tax-filing, login, booking, index, audit-log-viewer, privacy) currently re-fetch **every** `shared/*.js` on every navigation — `vercel.json` sets `no-cache, no-store, must-revalidate` on `/shared/(.*)\.js`. Dashboard alone pulls **71** local scripts per load. **Why it matters:** biggest LCP/TTI win available; a returning admin re-downloads ~70 files that never changed. **Why it's currently no-cache:** to guarantee freshness after deploy without `?v=` (decision 2026-04-28, [[feedback_vercel_verification]]). Content-hashed filenames make immutable caching *strictly safer* than no-cache (new bytes → new URL → staleness is impossible) **and** faster.
+
+### Research facts that de-risk this (verified 2026-06-02, grep-backed)
+- **100% of local JS loads are static `<script src>`** — only dynamic `createElement('script')` is the CDN xlsx (`dashboard-meter-import.js:10`, unpkg). → a build-time `src=` rewrite covers every load; nothing resolves a `shared/` path at runtime.
+- **0 SRI** on local scripts (minify already changes bytes) → rename needs no integrity update.
+- **CSP** `script-src`/`script-src-elem` use `'self'` for external files (sha256 only for inline) → renaming files = **no CSP change** ([[csp_pipeline]] untouched).
+- Ref shapes to rewrite: `./shared/X.js` ×137 · bare `shared/X.js` ×6 · `./accounting/X.js` ×2. (`index.html` 0 local JS.)
+- esbuild minify is **deterministic** → unchanged source ⇒ identical hash ⇒ same URL across deploys ⇒ browser keeps the cache (the entire point).
+- **Scope = the exact set `build.js` already minifies:** `shared/**/*.js` + `accounting/**/*.js` (102 + 2). CSS (`brand.css`/`components.css`/`tailwind.css`) **out of scope** this round — only 3 files, and `brand.css` is hardcoded in the SW `PRECACHE_URLS`; keep its current header.
+
+### Decision needed — which approach? (recommend A)
+- **[A] Build-time content-hash + immutable (RECOMMENDED — the todo's intent).** `build.js` (Vercel-only) renames each minified `shared/X.js`→`shared/X.<hash8>.js`, rewrites all refs from a manifest, then a **build-time verify gate fails the deploy (red) if any ref is dangling** — so a missed reference is a failed build, never a prod 404. Source files keep plain names (local dev untouched). Full win, contained risk. ~1 deploy to revert (HTML is no-cache → always points at current hashes).
+- **[C] Fallback — just relax the header.** Change `/shared/(.*)\.js` to `public, max-age=300, stale-while-revalidate=86400`. 1-line, near-zero risk, **partial** win (within-session only) and **reintroduces a small staleness window** the no-cache was chosen to avoid. Offer if A feels too heavy.
+- (Rejected: `?v=hash` query strings — Vercel header `source` matches pathname not query, so can't cleanly set immutable; and reverses the explicit "no `?v=`" decision for a worse-caching mechanism.)
+
+### Implementation steps — Approach A (✅ all done 2026-06-02)
+- [x] **build.js — hashing pass.** After the JS-minify loop, for each emitted `shared|accounting/*.js`: sha256 of the **minified** bytes → 8-char hash → rename to `<base>.<hash>.js`; record `{ 'shared/X.js': 'shared/X.<hash>.js' }` manifest. **Why:** hash the bytes the browser actually caches; deterministic across unchanged deploys.
+- [x] **build.js — ref rewrite.** One pass over all `*.html` (+ SW if it ever refs a hashed asset — it doesn't, JS-only) replacing every `(\./|/)?(shared|accounting)/<name>\.js` with the manifest value, preserving the original prefix (`./` / bare / `/`) + `defer`. **Why:** all 3 prefix shapes exist; must not change load semantics (§7-PP defer-order untouched — order in HTML is preserved, only the filename token changes).
+- [x] **build.js — verify gate (the safety net).** After rewrite: assert every remaining `(shared|accounting)/...\.js` ref in HTML maps to an on-disk emitted file, AND no referenced plain name survives. Mismatch → `console.error` + `process.exit(1)`. **Why:** converts "missed ref = silent prod 404" into "failed Vercel build" (§7-J / breadth-trap containment).
+- [x] **build.js — ordering.** Run hashing+manifest BEFORE the HTML-minify/rewrite stage so the manifest exists when HTML is processed. **Why:** rewrite needs the final names.
+- [x] **vercel.json — headers.** `/shared/(.*)\.js` and add `/accounting/(.*)\.js` → `public, max-age=31536000, immutable`. Leave HTML (`/`, page list) + `service-worker.js` + `manifest.json` + `*.css` on **no-cache** (unchanged). **Why:** hashed JS is safe to pin forever; HTML must stay fresh so it always emits current hashes. (`(.*)\.js` already matches `X.<hash>.js` — greedy.)
+- [x] **Pure-function extraction + unit tests (gate).** (`tools/asset-hash.js` + `shared/__tests__/asset-hash.test.js`, 18 tests) Extract `computeAssetManifest(files, readBytes)` + `rewriteHtmlRefs(html, manifest)` + `verifyNoDanglingRefs(htmls, emittedSet)` into a testable module (e.g. `tools/asset-hash.js`); `shared/__tests__/asset-hash.test.js`: hash determinism, all-3-prefix rewrite, defer preserved, dangling-ref → throws, unchanged-file → stable hash. **Why:** matches the project's "extract pure fn + test" gate pattern (#220/#221); lets me prove logic without running the in-place build against the real repo.
+- [x] **SW sanity.** (confirmed: no `shared/*.js` in PRECACHE_URLS; cache-first ext-regex matches hashed names; CACHE_VERSION purge unchanged — SW needs no edit) Confirm `service-worker.js` needs **no** change: cache-first matches `.js` by extension regex (works for hashed names); `PRECACHE_URLS` has no `shared/*.js`; CACHE_VERSION bump still purges per deploy. **Why:** §7-MM — verify hashing doesn't worsen the SW-stale-debug trap (it improves it: changed files get new URLs).
+
+### Verification (what I can prove vs what needs the owner)
+- [x] **Local (done):** 18/18 unit tests; integration smoke on real files (104 hashable, 10 HTML, 0 dangling, negative case flags bogus ref); **full `build.js` on a throwaway temp working-tree copy** (`FORCE_BUILD=1`, NODE_PATH→real node_modules, tailwind execSync neutralized) → exit 0, `🔗 Content-hashed 104 JS assets; all HTML refs rewritten + verified`, `shared/utils.8708c263.js` emitted + dashboard ref rewritten + 0 plain refs.
+- [ ] **Owner-gated (§7-I/J — agent can't auth):** after `git push origin main` → on https://the-green-haven.vercel.app **hard-reload (clear SW+cache first, §7-MM)** → DevTools Network: `shared/*.js` now served `200` with `cache-control: immutable` on first load, `(disk cache)` on 2nd navigation; pages render; no CSP/console errors; tenant_app (SW page) still boots.
+
+### Rollback
+`git revert` the build.js + vercel.json commit → redeploy. HTML is no-cache → next load points back at plain names + header returns to no-cache. One deploy cycle, clean.
+
+### Out of scope (named, not silently dropped)
+CSS hashing (3 files, SW-precache coupling); identifier-renaming minify (build.js Phase B, separate); the other 2 plan-first P2 items (verifySlip onCall, defer tenant-liff-auth).
+
+---
+
 ## Scores by dimension
 
 | Dim | Score | Grade | Headline gap |
@@ -58,7 +101,7 @@ All edited JS passes `node --check`. ⚠️ A prompt-injection was detected mid-
 
 ## P2 — when time allows
 
-- [ ] **Performance — content-hash caching for `shared/*.js`** — currently `no-cache, no-store` on 101 JS files (`vercel.json:57-67`) → full re-fetch every navigation. Hashed filenames + `immutable`. Biggest LCP/TTI win for the 79-script dashboard.
+- [~] **Performance — content-hash caching for `shared/*.js`** — ✅ IMPLEMENTED 2026-06-02 (Approach A — see "▶ ACTIVE PLAN" at top). `build.js` content-hashes `shared/*.js`+`accounting/*.js` (104 files) → `immutable`; HTML/CSS/SW stay no-cache. `tools/asset-hash.js` + 18 tests + build-time verify gate. Local full-build smoke green. **Pending:** PR preview-curl (headers) + owner in-app verify, then mark done.
 - [x] **Performance — analytics aggregation** — DONE 2026-06-02 (the actionable remnant). **`lineRetryQueue`** unbounded `getDocs(collection)` → `query(orderBy('firstFailureAt','desc'), limit(500))` (`dashboard-owner-insights.js`). Found + fixed a **latent bug while there**: the CF-health board read `i.createdAt`, but queue docs only carry `firstFailureAt` (enqueue, `merge:false`) → 7-day success-rate/abandoned/avg-attempts were dead and oldest-pending age showed `NaN`. Extracted pure `_computeCFHealthStats` + **+11 tests** (gate 281→292) incl. a `reads firstFailureAt not createdAt` regression guard. **N/A / already-done (per 2026-06-01 handoff):** `meter_data`/`complaints`/`pets`/`liffUsers` can't use `count()`/`sum()` (per-row processing; `liffUsers` count would undercount status-less docs); `announcements`/`wellness_articles` already bounded. ⚠️ Live-verify (owner): admin dashboard → Owner Insights → CF Health card now shows real %/age, not —/NaN.
 - [ ] **Performance — defer parser-blocking `tenant-liff-auth.js`** (47KB mid-body, `tenant_app.html:5199`) + async Sentry CDN (3 pages).
 - [x] **Security — move WAQI/IQAir tokens → Secret Manager** — ❌ DROPPED 2026-06-01 (won't do). Attempted (PR #216) → broke prod CF deploy because the secrets weren't in the prod project (`the-green-haven` 404; my `:get` had checked the wrong project) → reverted `adae1cc`. **Decision: keep `.env`** — it's gitignored + CI-injected from a GitHub Actions secret (not a leak), and Secret Manager was pure hardening not worth the per-project secret-creation + SA-accessor + test-deploy friction for non-critical AQ tokens. Lesson captured in §7-WW. Re-open only if these tokens ever become sensitive.
