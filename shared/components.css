@@ -760,3 +760,15 @@ body.gh-tour-open {
 .ta-row-pb20       { display: flex; align-items: center; gap: 15px; padding-bottom: 20px; }
 .ta-slide-hidden   { display: none; animation: slideUp .3s ease; }
 .ta-badge-blue     { background: #dbeafe; color: #1d4ed8; }
+
+/* ── Keyboard focus indicator for tenant menu tiles + bottom nav (WCAG 2.4.7) ─
+   .menu-item tiles get role="button" + tabindex via tenant-navigation.js; this
+   makes the keyboard focus ring visible. These classes exist only in
+   tenant_app.html, where --brand-primary / --brand-primary-soft resolve. */
+.menu-item:focus-visible,
+.nav-item:focus-visible {
+  outline: 2px solid var(--brand-primary, #0f766e);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+.menu-item:focus-visible { background: var(--brand-primary-soft, #ecfdf5); }

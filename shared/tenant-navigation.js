@@ -97,3 +97,52 @@ window.goBackToUsage      = function() { window.showPage('usage'); window.update
 window.goBackToProfile    = function() { window.showPage('profile'); window.updateNavActiveIndex(4); };
 window.goBackToHome       = function() { window.showPage('home'); window.updateNavActiveIndex(0); };
 window.goBackFromPayment  = function() { window.showPage('usage'); window.updateNavActiveIndex(3); };
+
+// ── Keyboard accessibility for menu tiles (WCAG 2.1.1 + 2.4.7) ───────────────
+// The .menu-item tiles are <div>s (not <button>), so by default they are neither
+// focusable nor operable with Enter/Space. We (1) tag them role="button" +
+// tabindex="0" so they join the tab order and announce correctly, and (2)
+// translate Enter/Space into a synthetic bubbling click that the existing
+// capture-phase click-delegation hub (tenant_app.html) already handles — the
+// exact same path as a tap. Native controls are skipped so they keep their
+// built-in keyboard behavior (no double activation). User-initiated only —
+// this is assistive key→click translation, NOT the §7-I auto-action pattern.
+
+function enhanceMenuItemA11y(root) {
+    const scope = (root && typeof root.querySelectorAll === 'function')
+        ? root
+        : (typeof document !== 'undefined' ? document : null);
+    if (!scope) return 0;
+    const tiles = scope.querySelectorAll('.menu-item[data-action]');
+    tiles.forEach(function (el) {
+        if (!el.getAttribute('role')) el.setAttribute('role', 'button');
+        if (el.getAttribute('tabindex') === null) el.setAttribute('tabindex', '0');
+    });
+    return tiles.length;
+}
+window.enhanceMenuItemA11y = enhanceMenuItemA11y;
+
+function _onTileKeydown(e) {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    const el = (e.target && typeof e.target.closest === 'function')
+        ? e.target.closest('[data-action]')
+        : null;
+    if (!el) return;
+    // Native interactive elements handle Enter/Space natively — don't double-fire.
+    const tag = el.tagName;
+    if (tag === 'BUTTON' || tag === 'A' || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+}
+window._onTileKeydown = _onTileKeydown;
+
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('keydown', _onTileKeydown);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { enhanceMenuItemA11y(); });
+    } else {
+        // Deferred scripts run after the DOM is parsed but before DOMContentLoaded —
+        // the tiles are already present, so enhance immediately.
+        enhanceMenuItemA11y();
+    }
+}
