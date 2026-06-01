@@ -12,6 +12,7 @@ const { defineSecret, defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const FormData = require('form-data');
 const { getValidBuildings } = require('./buildingRegistry');
+const { assertTenantAccess } = require('./_authSoT');
 
 // Initialize Firebase Admin SDK (if not already done)
 if (!admin.apps.length) {
@@ -489,224 +490,228 @@ async function sendReceiptNotification(slipData, params) {
 
 // ==================== MAIN CLOUD FUNCTION ====================
 /**
- * HTTP Cloud Function: Verify payment slip with SlipOK
+ * Callable Cloud Function: Verify payment slip with SlipOK.
  *
- * Request body:
+ * Migrated 2026-06-02 from https.onRequest → https.onCall for transport-layer
+ * auth consistency with the 7 other tenant-gated callables (_authSoT). The
+ * Firebase SDK auto-attaches the caller's ID token into `context.auth`, so the
+ * old manual `Authorization: Bearer` parse + manual CORS are gone. Auth is now
+ * "admin OR the room's own tenant" via assertTenantAccess (was admin-only,
+ * which had silently 401'd every tenant self-verify since 2026-04-24 —
+ * gamification tiers are computed from the tenant's own slip date, so tenant
+ * self-verify was always the intended design).
+ *
+ * Request data:
  * {
  *   file: "base64-encoded image",
  *   expectedAmount: 2828,
- *   building: "rooms" or "nest",
+ *   building: "rooms" | "nest" | <canonical building id>,
  *   room: "15",
- *   userId: "tenant_15" // if no room provided
+ *   userId: "tenant_15"   // legacy fallback; all live callers send room
  * }
  *
- * Response:
- * {
- *   success: true,
- *   data: {
- *     amount: 2828,
- *     sender: { displayName: "Bank Name", ... },
- *     receiver: { ... },
- *     transactionId: "...",
- *     date: "...",
- *     sendingBankCode: "..."
- *   }
- * }
+ * Resolves on success:
+ *   { success: true, data: {...}, amountValid: true, amountDiff }
+ * Resolves (NOT rejects) on slip business-outcomes so the UI shows the reason:
+ *   scb_delay (retryable), amount_mismatch, isDuplicate, slip-not-valid →
+ *   { success: false, ... }
+ * Rejects with HttpsError on true errors:
+ *   unauthenticated / permission-denied (auth), invalid-argument (bad input),
+ *   resource-exhausted (rate limit), internal (unexpected).
  */
 exports.verifySlip = functions
   .region('asia-southeast1')
   .runWith({ secrets: [SLIPOK_API_KEY, LINE_CHANNEL_ACCESS_TOKEN] })
-  .https.onRequest(async (req, res) => {
-  try {
-    // CORS headers
-    res.set('Access-Control-Allow-Origin', 'https://the-green-haven.vercel.app');
-    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  .https.onCall(async (data, context) => {
+    const { HttpsError } = functions.https;
+    // Request metadata for the audit log (v1 onCall exposes the raw request).
+    const ipAddress = context.rawRequest?.ip;
+    const userAgent = context.rawRequest?.get?.('user-agent');
 
-    if (req.method === 'OPTIONS') {
-      res.status(204).send('');
-      return;
-    }
-
-    if (req.method === 'GET') {
-      return res.status(200).json({ status: 'ok', ts: Date.now() });
-    }
-
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' });
-    }
-
-    // ===== AUTH — require Firebase ID token from signed-in admin =====
-    const { requireAdmin } = require('./_auth');
-    const decoded = await requireAdmin(req, res);
-    if (!decoded) return;
-
-    // ===== VALIDATION =====
-    const validBuildings = await getValidBuildings();
-    const validation = validateRequest(req.body, validBuildings);
-    if (!validation.valid) {
-      return res.status(400).json({ error: validation.error });
-    }
-
-    const { file, expectedAmount, building, room, userId } = req.body;
-    const identifier = room || userId;
-
-    // ===== SIZE CAP — reject payloads larger than ~5MB base64 (~3.75MB binary) =====
-    if (typeof file !== 'string' || file.length > 5 * 1024 * 1024) {
-      return res.status(413).json({ error: 'Payload too large (max 5MB base64)' });
-    }
-
-    // ===== RATE LIMITING =====
-    const rateLimited = !(
-      await checkRateLimit(identifier, 'minute') &&
-      await checkRateLimit(identifier, 'hour') &&
-      await checkRateLimit(identifier, 'day')
-    );
-
-    if (rateLimited) {
-      await logVerificationAttempt(
-        { ...req.body, ipAddress: req.ip, userAgent: req.get('user-agent') },
-        { error: 'Rate limited' },
-        'rate_limited'
-      );
-      return res.status(429).json({
-        error: 'Too many requests. Please try again later.',
-        retryAfter: 60
-      });
-    }
-
-    // ===== CONVERT BASE64 TO BUFFER =====
-    let fileBuffer;
     try {
-      fileBuffer = Buffer.from(file, 'base64');
-    } catch (error) {
-      return res.status(400).json({ error: 'Invalid base64 encoding' });
-    }
-
-    // ===== CALL SLIPOK API =====
-    let slipData;
-    try {
-      slipData = await callSlipOKAPI(fileBuffer);
-    } catch (error) {
-      // SCB-specific delay (SlipOK code 1010): ไทยพาณิชย์ takes ~2 minutes to register the slip
-      const msg = error.message || '';
-      const isSCBDelay = msg.includes('"code":1010') || msg.includes('ไทยพาณิชย์');
-      if (isSCBDelay) {
-        await logVerificationAttempt(
-          { ...req.body, ipAddress: req.ip, userAgent: req.get('user-agent') },
-          { error: 'scb_delay' },
-          'scb_delay'
-        );
-        return res.status(200).json({
-          success: false,
-          retryable: true,
-          code: 'scb_delay',
-          retryAfterSec: 120,
-          message: 'สลิปธนาคารไทยพาณิชย์ใช้เวลาตรวจสอบประมาณ 2 นาทีหลังโอน กรุณารอแล้วลองใหม่อีกครั้ง'
-        });
+      // ===== VALIDATION (before auth — assertTenantAccess needs building+room) =====
+      const validBuildings = await getValidBuildings();
+      const validation = validateRequest(data, validBuildings);
+      if (!validation.valid) {
+        throw new HttpsError('invalid-argument', validation.error);
       }
-      await logVerificationAttempt(
-        { ...req.body, ipAddress: req.ip, userAgent: req.get('user-agent') },
-        { error: error.message },
-        'failed'
-      );
-      return res.status(400).json({ error: error.message });
-    }
 
-    // ===== VALIDATE AMOUNT =====
-    // Reject (do not "warn and continue") — frontend doesn't read amountValid,
-    // so the old "warn but return success" path was data poisoning: a ฿1 slip
-    // against a ฿10,000 bill returned success and was saved as paid.
-    const amountDiff = Math.abs(slipData.amount - expectedAmount);
-    if (amountDiff > 1) {
-      console.warn(`⚠️ Amount mismatch: expected ฿${expectedAmount}, got ฿${slipData.amount}`);
-      await logVerificationAttempt(
-        { ...req.body, ipAddress: req.ip, userAgent: req.get('user-agent') },
-        slipData,
-        'amount_mismatch'
-      );
-      return res.status(400).json({
-        error: `จำนวนเงินไม่ตรงกับยอดบิล (สลิป ฿${slipData.amount} / ต้องการ ฿${expectedAmount})`,
-        code: 'amount_mismatch',
-        slipAmount: slipData.amount,
-        expectedAmount
+      const { file, expectedAmount, building, room, userId } = data;
+      const identifier = room || userId;
+
+      // ===== AUTH — admin OR the room's own tenant =====
+      // assertTenantAccess: Path 0 admin · Path 1 claim (room+building) ·
+      // Path 1b tenantId · Path 2a linkedAuthUid. Survives §7-Z claim-strip +
+      // §7-HH stale-UID. Throws unauthenticated/permission-denied on failure.
+      await assertTenantAccess({
+        building,
+        roomId: String(room || ''),
+        context,
+        firestore: db,
+        HttpsError,
       });
-    }
 
-    // ===== VALIDATE TRANSACTION ID + SAVE (atomic duplicate detection) =====
-    // doc ID = transactionId + .create() — two concurrent submissions can't
-    // both succeed; replaces the old where()+add() pattern that had a race
-    // window between check and write.
-    if (!isSafeTransactionId(slipData.transactionId)) {
-      console.warn(`⚠️ Unsafe transactionId from SlipOK: ${slipData.transactionId}`);
-      return res.status(400).json({ error: 'Invalid slip transaction id' });
-    }
+      // ===== SIZE CAP — reject payloads larger than ~5MB base64 (~3.75MB binary) =====
+      if (typeof file !== 'string' || file.length > 5 * 1024 * 1024) {
+        throw new HttpsError('invalid-argument', 'Payload too large (max 5MB base64)');
+      }
 
-    try {
-      await saveVerifiedSlip(slipData, req.body);
-    } catch (e) {
-      // gRPC code 6 = ALREADY_EXISTS → atomic duplicate detection (string form varies by SDK version)
-      if (e && (e.code === 6 || e.code === 'already-exists' || e.code === 'ALREADY_EXISTS' ||
-                e?.message?.toLowerCase().includes('already exists'))) {
-        console.warn(`🚨 Duplicate slip detected (atomic): ${slipData.transactionId}`);
+      // ===== RATE LIMITING =====
+      const rateLimited = !(
+        await checkRateLimit(identifier, 'minute') &&
+        await checkRateLimit(identifier, 'hour') &&
+        await checkRateLimit(identifier, 'day')
+      );
+
+      if (rateLimited) {
         await logVerificationAttempt(
-          { ...req.body, ipAddress: req.ip, userAgent: req.get('user-agent') },
+          { ...data, ipAddress, userAgent },
+          { error: 'Rate limited' },
+          'rate_limited'
+        );
+        throw new HttpsError('resource-exhausted', 'Too many requests. Please try again later.', { retryAfter: 60 });
+      }
+
+      // ===== CONVERT BASE64 TO BUFFER =====
+      let fileBuffer;
+      try {
+        fileBuffer = Buffer.from(file, 'base64');
+      } catch (error) {
+        throw new HttpsError('invalid-argument', 'Invalid base64 encoding');
+      }
+
+      // ===== CALL SLIPOK API =====
+      let slipData;
+      try {
+        slipData = await callSlipOKAPI(fileBuffer);
+      } catch (error) {
+        // SCB-specific delay (SlipOK code 1010): ไทยพาณิชย์ takes ~2 minutes to register the slip
+        const msg = error.message || '';
+        const isSCBDelay = msg.includes('"code":1010') || msg.includes('ไทยพาณิชย์');
+        if (isSCBDelay) {
+          await logVerificationAttempt(
+            { ...data, ipAddress, userAgent },
+            { error: 'scb_delay' },
+            'scb_delay'
+          );
+          // Business outcome (retryable) — resolve, don't reject.
+          return {
+            success: false,
+            retryable: true,
+            code: 'scb_delay',
+            retryAfterSec: 120,
+            message: 'สลิปธนาคารไทยพาณิชย์ใช้เวลาตรวจสอบประมาณ 2 นาทีหลังโอน กรุณารอแล้วลองใหม่อีกครั้ง'
+          };
+        }
+        await logVerificationAttempt(
+          { ...data, ipAddress, userAgent },
+          { error: error.message },
+          'failed'
+        );
+        // Slip-not-valid is a business outcome — resolve with the reason so the
+        // client shows the specific SlipOK message (not a generic error toast).
+        return { success: false, error: error.message, message: error.message };
+      }
+
+      // ===== VALIDATE AMOUNT — business reject (resolve, don't throw) =====
+      // Hard reject |diff| > 1 (frontend doesn't read amountValid, so the old
+      // "warn but return success" path was data poisoning: a ฿1 slip against a
+      // ฿10,000 bill saved as paid).
+      const amountDiff = Math.abs(slipData.amount - expectedAmount);
+      if (amountDiff > 1) {
+        console.warn(`⚠️ Amount mismatch: expected ฿${expectedAmount}, got ฿${slipData.amount}`);
+        await logVerificationAttempt(
+          { ...data, ipAddress, userAgent },
           slipData,
-          'duplicate'
+          'amount_mismatch'
         );
-        return res.status(400).json({
-          error: 'Duplicate slip — this transaction has already been verified.',
-          isDuplicate: true
-        });
+        const mismatchMsg = `จำนวนเงินไม่ตรงกับยอดบิล (สลิป ฿${slipData.amount} / ต้องการ ฿${expectedAmount})`;
+        return {
+          success: false,
+          error: mismatchMsg,
+          message: mismatchMsg,
+          code: 'amount_mismatch',
+          slipAmount: slipData.amount,
+          expectedAmount
+        };
       }
-      // Other errors: log but don't break (slip was proven valid by SlipOK).
-      console.error('⚠️ Failed to save verified slip (non-blocking):', e);
+
+      // ===== VALIDATE TRANSACTION ID + SAVE (atomic duplicate detection) =====
+      // doc ID = transactionId + .create() — two concurrent submissions can't
+      // both succeed; replaces the old where()+add() pattern that had a race
+      // window between check and write.
+      if (!isSafeTransactionId(slipData.transactionId)) {
+        console.warn(`⚠️ Unsafe transactionId from SlipOK: ${slipData.transactionId}`);
+        return { success: false, error: 'Invalid slip transaction id', message: 'Invalid slip transaction id' };
+      }
+
+      try {
+        await saveVerifiedSlip(slipData, data);
+      } catch (e) {
+        // gRPC code 6 = ALREADY_EXISTS → atomic duplicate detection (string form varies by SDK version)
+        if (e && (e.code === 6 || e.code === 'already-exists' || e.code === 'ALREADY_EXISTS' ||
+                  e?.message?.toLowerCase().includes('already exists'))) {
+          console.warn(`🚨 Duplicate slip detected (atomic): ${slipData.transactionId}`);
+          await logVerificationAttempt(
+            { ...data, ipAddress, userAgent },
+            slipData,
+            'duplicate'
+          );
+          return {
+            success: false,
+            error: 'Duplicate slip — this transaction has already been verified.',
+            message: 'Duplicate slip — this transaction has already been verified.',
+            isDuplicate: true
+          };
+        }
+        // Other errors: log but don't break (slip was proven valid by SlipOK).
+        console.error('⚠️ Failed to save verified slip (non-blocking):', e);
+      }
+
+      // ===== MARK RTDB BILL AS PAID (non-blocking) =====
+      try {
+        await markBillPaidInRTDB(slipData, data);
+      } catch (e) {
+        console.error('⚠️ markBillPaidInRTDB failed (non-blocking):', e);
+      }
+
+      // ===== SEND RECEIPT NOTIFICATION (non-blocking) =====
+      try {
+        await sendReceiptNotification(slipData, data);
+      } catch (e) {
+        console.error('⚠️ sendReceiptNotification failed (non-blocking):', e);
+      }
+
+      // ===== GAMIFICATION: record payment + award points (non-blocking) =====
+      try {
+        await recordPaymentAndAwardPoints(slipData, data);
+      } catch (e) {
+        console.error('⚠️ Gamification award failed (non-blocking):', e);
+      }
+
+      // ===== LOG SUCCESS =====
+      await logVerificationAttempt(
+        { ...data, ipAddress, userAgent },
+        slipData,
+        'success'
+      );
+
+      // ===== RETURN SUCCESS =====
+      // amountDiff is guaranteed ≤1 by the validation above; amountValid kept
+      // in response for backward compat with any caller that reads it.
+      return {
+        success: true,
+        data: slipData,
+        amountValid: true,
+        amountDiff
+      };
+
+    } catch (error) {
+      // Preserve typed errors (auth/validation/rate-limit) — re-throw as-is so
+      // the SDK surfaces the correct code; only wrap genuinely-unexpected ones.
+      if (error instanceof HttpsError) throw error;
+      console.error('❌ Unexpected error in verifySlip:', error);
+      throw new HttpsError('internal', error.message || 'Internal server error');
     }
-
-    // ===== MARK RTDB BILL AS PAID (non-blocking) =====
-    try {
-      await markBillPaidInRTDB(slipData, req.body);
-    } catch (e) {
-      console.error('⚠️ markBillPaidInRTDB failed (non-blocking):', e);
-    }
-
-    // ===== SEND RECEIPT NOTIFICATION (non-blocking) =====
-    try {
-      await sendReceiptNotification(slipData, req.body);
-    } catch (e) {
-      console.error('⚠️ sendReceiptNotification failed (non-blocking):', e);
-    }
-
-    // ===== GAMIFICATION: record payment + award points (non-blocking) =====
-    try {
-      await recordPaymentAndAwardPoints(slipData, req.body);
-    } catch (e) {
-      console.error('⚠️ Gamification award failed (non-blocking):', e);
-    }
-
-    // ===== LOG SUCCESS =====
-    await logVerificationAttempt(
-      { ...req.body, ipAddress: req.ip, userAgent: req.get('user-agent') },
-      slipData,
-      'success'
-    );
-
-    // ===== RETURN SUCCESS =====
-    // amountDiff is guaranteed ≤1 by the validation above; amountValid kept
-    // in response for backward compat with any caller that reads it.
-    return res.status(200).json({
-      success: true,
-      data: slipData,
-      amountValid: true,
-      amountDiff
-    });
-
-  } catch (error) {
-    console.error('❌ Unexpected error in verifySlip:', error);
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: error.message
-    });
-  }
-});
+  });
 

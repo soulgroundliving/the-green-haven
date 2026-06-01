@@ -13,7 +13,7 @@ const CF_BASE = 'https://asia-southeast1-the-green-haven.cloudfunctions.net';
 const TARGETS = [
   { url: `${CF_BASE}/liffSignIn`,            callable: false },
   { url: `${CF_BASE}/liffBookingSignIn`,     callable: false },
-  { url: `${CF_BASE}/verifySlip`,            callable: false },
+  { url: `${CF_BASE}/verifySlip`,            callable: true  },  // onCall since 2026-06-02 — returns 4xx to GET, still warms
   { url: `${CF_BASE}/claimDailyLoginPoints`, callable: true  },
   { url: `${CF_BASE}/getLeaderboard`,        callable: true  },
 ];

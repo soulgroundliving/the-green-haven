@@ -113,27 +113,16 @@ async function verifySlip(file){
     // Normalize to canonical building id for the Cloud Function. Accepts legacy
     // aliases ('old'/'new') and any Tier-3F canonical id (e.g. 'test1').
     const buildingRaw = window.CONFIG?.getBuildingConfig?.(window.currentBuilding) || 'rooms';
-    // Get Firebase ID token so the CF can verify this is a signed-in admin.
-    // dashboard.html exposes auth as window.firebaseAuth; login.html as window.auth.
-    const authInstance = window.firebaseAuth || window.auth;
-    const idToken = await authInstance?.currentUser?.getIdToken?.();
-    if (!idToken) {
+    // onCall: the Firebase SDK auto-attaches the signed-in admin's ID token into
+    // context.auth → CF assertTenantAccess passes via the admin claim (Path 0).
+    // No manual getIdToken / Authorization header / CORS needed.
+    if (!(window.firebaseAuth || window.auth)?.currentUser) {
       throw new Error('กรุณาเข้าสู่ระบบใหม่ก่อนตรวจสลิป (Session หมดอายุ)');
     }
     // Call Firebase Cloud Function (API key secured server-side)
-    const res = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + idToken
-      },
-      body: JSON.stringify({ file: base64, expectedAmount: billTotal || 1, building: buildingRaw, room })
-    });
-    if (!res.ok && res.status !== 200) {
-      const errText = await res.text();
-      throw new Error(`Cloud Function error ${res.status}: ${errText.slice(0, 200)}`);
-    }
-    const json = await res.json();
+    const callVerify = window.firebase.functions.httpsCallable('verifySlip');
+    const callRes = await callVerify({ file: base64, expectedAmount: billTotal || 1, building: buildingRaw, room });
+    const json = callRes.data;
 
     if(json.success && json.data){
       const d = json.data;

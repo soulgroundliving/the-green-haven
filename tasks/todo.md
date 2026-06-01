@@ -7,6 +7,76 @@
 
 ---
 
+## ▶ ACTIVE PLAN (2026-06-02 PM): P2 plan-first — verifySlip→onCall (#1) · defer tenant-liff-auth (#2)
+
+**Status:** ⏳ AWAITING APPROVAL. The two remaining P2 plan-first items (todo lines ~107 + ~109). User decision taken (choice menu): verifySlip auth model = **Admin + owning tenant** (onCall + `_authSoT`).
+
+### ⚠️ Key discovery — scope is bigger than the audit one-liner
+Deployed verifySlip returns **401** to POST-without-auth → `requireAdmin` (added 2026-04-24, commit `1176e46` "security hardening") is live. The admin caller (`dashboard-bill-slip-verify.js:128`) sends `Authorization: Bearer <idToken>` and works. But **both tenant callers** (`tenant-slip-verify.js:95` rent · `tenant-cleaning.js:243` ฿500 cleaning) send **no** auth header → **tenant self-slip-verify has 401'd for ~6 weeks**. `verifyTenantSlip` IS fully wired (`tenant_app.html:3587` button → hub `:5361` → module). Option A fixes this as a side effect by gating on admin-OR-owning-tenant via `_authSoT.assertTenantAccess` (same helper 7 other tenant CFs use).
+
+---
+
+### Phase 1 — verifySlip `onRequest` → `onCall` (Option A)
+
+**Why:** (1) transport-layer auth consistency (audit goal) — align with the 7 `_authSoT` onCall CFs, drop manual `Authorization: Bearer` parse + manual CORS; (2) fixes the 6-week-broken tenant self-verify (gamification early_bird/on_time tiers are computed from the tenant's OWN slip date → self-verify was the intended design); (3) defense is **unchanged** — SlipOK cryptographic verify + amount hard-reject (|diff|>1) + atomic `.create()` dedup still gate every call. onCall only changes WHO may call (admin + that room's tenant) and HOW the token is transported.
+
+**Server — `functions/verifySlip.js`**
+- [ ] **Trigger swap:** `.https.onRequest(async (req,res)=>…)` → `.https.onCall(async (data, context)=>…)`. *Why:* callable auto-verifies the ID token into `context.auth` + auto-CORS.
+- [ ] **Delete** CORS-header block + `OPTIONS`/`GET`/method branches. *Why:* onCall owns transport; keepLiffWarm still warms via GET→4xx (see keepLiffWarm step).
+- [ ] **Auth gate:** remove `requireAdmin(req,res)`; move validation up so building+room are known, then `await assertTenantAccess({ building, roomId:String(room), context, firestore: db, HttpsError: functions.https.HttpsError })`. *Why:* admin = Path 0; owning tenant = Path 1 (claim) / 1b (tenantId) / 2a (linkedAuthUid) → survives §7-Z claim-strip + §7-HH stale-UID.
+- [ ] **Input:** `req.body` → `data` for `{file, expectedAmount, building, room, userId}`.
+- [ ] **Error mapping — THROW vs RETURN (deliberate, minimizes client churn):**
+  - **THROW** `functions.https.HttpsError`: `unauthenticated`/`permission-denied` (from `_authSoT`), `invalid-argument` (missing fields · bad base64 · payload >5MB), `resource-exhausted` (rate-limit, keep `retryAfter:60` detail), `internal` (unexpected catch).
+  - **RETURN** `{success:false, …}` (NOT throw) for business outcomes shown inline: `scb_delay` (retryable), `amount_mismatch` (+slipAmount/expectedAmount), `isDuplicate`, generic SlipOK fail. *Why:* keeps client branching on `result.success`/`result.code` like today; "slip didn't pass" is not an exception.
+  - **RETURN** `{success:true, data:slipData, amountValid:true, amountDiff}` on success.
+- [ ] **Req metadata:** `req.ip`/`req.get('user-agent')` → `context.rawRequest?.ip` / `context.rawRequest?.get?.('user-agent')` in `logVerificationAttempt` calls (preserve audit trail). *Why:* v1 onCall exposes raw req under `context.rawRequest`.
+- [ ] **Unchanged:** rate-limit (fail-closed), SlipOK call, amount hard-reject, atomic dedup, markBillPaidInRTDB, sendReceiptNotification, recordPaymentAndAwardPoints, region `asia-southeast1`, secrets `[SLIPOK_API_KEY, LINE_CHANNEL_ACCESS_TOKEN]`. *Why:* behavior-preserving — only the transport+auth shell changes.
+
+**Client — 3 callers: `fetch` → `httpsCallable`** (`window.firebase.functions.httpsCallable('verifySlip')(data)` → `{data: result}`)
+- [ ] **`shared/dashboard-bill-slip-verify.js`** (admin): drop `getIdToken()`+`fetch(...Authorization...)`; use httpsCallable; read `res.data`; map thrown HttpsError → existing error UI (`err.message`/`err.details`); keep `skipSlipVerify` fallback. *Why:* SDK auto-attaches admin token.
+- [ ] **`shared/tenant-slip-verify.js`** (rent): swap `fetch`→httpsCallable; read `res.data`; keep `scb_delay` countdown + success→`goToPaymentStep(3)`. *Why:* tenant signed-in via LIFF custom token → auto-attached → fixes 401. **Verify** whether the `window.firebase.functions.httpsCallable` wrapper forwards a `{timeout}` option; if yes pass `{timeout:12000}` (§7-R), if not rely on SDK default (httpsCallable has a built-in timeout unlike raw fetch — AbortController becomes unnecessary).
+- [ ] **`shared/tenant-cleaning.js`** (฿500): same swap; `{file, expectedAmount:500, building, room}` (CF ignores the `context:'cleaning'` field — drop or keep). *Why:* same 401 fix.
+- [ ] **CSP:** none expected — callable POSTs to `…cloudfunctions.net` (https:) already allowed by `connect-src 'self' https: wss:`. *(verify on deploy, don't assume.)*
+
+**keepLiffWarm**
+- [ ] **`functions/keepLiffWarm.js`** — `verifySlip` `callable:false` → `callable:true`. *Why:* onCall returns 4xx (not 200) to the warm GET; the `callable:true` branch already treats that as expected-warm → no warn-log noise.
+
+**Tests**
+- [ ] **Rewrite `functions/__tests__/verifySlip.test.js`** — stub `https.onCall` (capture handler); call `handler(data, context)` for: admin (`context.auth.token.admin=true`), owning tenant (`context.auth.token={room,building}` Path 1), no-auth (expect `unauthenticated`). Assert invalid-argument / resource-exhausted / amount_mismatch RETURN / duplicate RETURN / success shapes. *Why:* current test stubs `onRequest`+`requireAdmin`+`x-no-auth` — all obsolete.
+- [ ] **Check `verifySlipReceipt.test.js`** (stubs `onRequest:(fn)=>fn`) + `verifySlipLogic.test.js` — update trigger stub to `onCall` where they load the module; pure-logic tests may be untouched. *Why:* suite is now a PR gate (validate.yml).
+- [ ] **Gate:** `npm test` (functions) green before deploy.
+
+**Deploy (⚠️ user-confirmed, coordinated — money-adjacent core flow)**
+- [ ] **Sequencing risk:** onCall server + httpsCallable client are NOT compatible with the old shape — deploying one side alone breaks slip verify until the other lands. Plan: merge client PR + `firebase deploy --only functions:verifySlip` back-to-back, low-traffic time. Volume is low (≤50/room/day) — a short window is acceptable.
+- [ ] **§branch-before-deploy:** `pwd && git branch --show-current && git log -3 functions/verifySlip.js` first (wrong-branch deploy silently rolls back prod).
+- [ ] **Deploy-shape:** onRequest→onCall is https→https (NOT the §7-NN background→callable block) → expected in-place. Fallback if Firebase refuses: `firebase functions:delete verifySlip --region asia-southeast1 --force` then redeploy (brief outage). Secrets already bound → no Secret Manager setup (§7-WW N/A).
+- [ ] **Live-verify (§7-J):** admin ตรวจสลิป on Vercel (agent via Chrome MCP) + **user** confirms tenant LIFF rent-slip + cleaning-slip self-verify now succeed (were 401).
+
+**Rollback:** `git revert` client commit → redeploy Vercel **AND** `git revert` CF commit → `firebase deploy --only functions:verifySlip`. Must revert BOTH (matched pair).
+
+---
+
+### Phase 2 — defer parser-blocking JS (todo line ~107)
+
+**2a. async Sentry CDN (4 pages — low risk, clear win)**
+- [ ] Add `async` to `<script src="…sentry-cdn.com…">` on `booking.html:47`, `dashboard.html:18`, `tax-filing.html:19`, `tenant_app.html:47` (audit said 3; it's 4). *Why:* Sentry is an independent reporter, nothing calls it at parse-time → safe to unblock the parser. **CSP:** `async` doesn't change anything (external `src`, not an inline hash) → no regen.
+
+**2b. defer `tenant-liff-auth.js` (47KB, `tenant_app.html:5199` — HIGHER risk, §7-PP/§7-A/§7-HH)**
+- [ ] **AUDIT FIRST (gate):** module defines the auth spine (`_taBuilding`/`_taRoom`/`_callLiffSignIn`/`_onLiffClaimsReady`). Grep every `<script>` (inline + src) AFTER line 5199 and every deferred script BEFORE it for **parse-time** calls to its exports. *Why §7-PP:* deferred scripts run at DOMContentLoaded in DOM order; an inline script calling these at parse-time runs first → ReferenceError. Most usage is in the delegation hub / event handlers / `_onLiffClaimsReady` callbacks (later) — must be PROVEN, not assumed.
+- [ ] If clean → add `defer`, keep tenant-liff-auth positioned before any deferred dependents. If parse-time deps found → **STOP, report, don't force** (breadth-trap: a perf tweak must not risk the auth spine).
+- [ ] **Live-verify (mandatory, §7-A/§7-U/§7-HH):** full LIFF auth on real LINE — sign-in → claims arrive → bills/meter/checklist load. Agent can't drive LIFF → **user** verifies. Treat any "stuck at ตั้งค่าสิทธิ์" as a defer-order regression.
+
+**Why 2a/2b split:** 2a is independent + safe → ship freely. 2b touches the most incident-prone file in the repo → gated on an audit + user LIFF verification. Independent of each other and of Phase 1.
+
+---
+
+### Out of scope (named, not silently dropped)
+- CSS hashing; identifier-rename minify (build.js Phase B); the audit's already-closed items.
+- Removing client-side rate limiters (`_tenantRateLimit`, `checkDashboardRateLimit`) — keep as cheap pre-flight; server rate-limit is the real gate.
+- Re-architecting the tenant payment UX — only the auth/transport changes here.
+
+---
+
 ## ▶ ACTIVE PLAN (2026-06-02): Content-hash caching for `shared/*.js` (P2 item, line ~61)
 
 **Status:** ✅ SHIPPED + PROD-VERIFIED (2026-06-02, PR #223 `d393f35`). Unit 18/18 + full `build.js` temp smoke + **Vercel prod build SUCCESS** + **live curl on prod**: hashed JS 200 w/ `public, max-age=31536000, immutable`; dashboard HTML `no-cache`; 0 plain refs; accounting hashed; tenant_app/login/booking hashed JS all 200. Only optional remnant: owner in-app *visual* render (doesn't affect caching — all scripts load 200).
