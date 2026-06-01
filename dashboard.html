@@ -378,9 +378,14 @@
           settle(() => {});
           unsub();
         } else {
-          // First fire saw null (or anon) — give persistence a moment, then
-          // redirect to /login. No more silent anonymous fallback.
-          setTimeout(() => {
+          // First fire saw null (or anon). Do NOT race a fixed timeout: on a cold
+          // start Firebase's persisted-session restore can take >4s, and the old
+          // 4s timer bounced a signed-in admin to /login (then login redirected
+          // straight back — a confusing flap). Wait for authStateReady(), which
+          // resolves only once the initial auth state is truly settled, then decide
+          // off the (now-restored) currentUser. A generous timer remains as a pure
+          // fallback in case authStateReady is unavailable or never settles.
+          const decide = () => {
             if (settled) return;
             const cur = auth?.currentUser;
             if (cur && cur.email) {
@@ -393,7 +398,11 @@
               });
             }
             unsub();
-          }, 4000);
+          };
+          if (typeof auth.authStateReady === 'function') {
+            auth.authStateReady().then(decide).catch(decide);
+          }
+          setTimeout(decide, 12000); // fallback only — authStateReady normally settles first
         }
       });
     });
