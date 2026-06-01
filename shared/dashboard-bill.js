@@ -979,14 +979,16 @@ ${styles}
   // รอ QR image โหลดก่อน print
   const imgs=printWindow.document.querySelectorAll('img');
   const doPrint=()=>{
+    // Close the popup the moment the print dialog is dismissed. `afterprint` fires
+    // for BOTH Save and Cancel — the browser never reveals which the user chose, so
+    // closing on either is correct for a throwaway print popup (also fixes it
+    // lingering after Cancel/Save). The OLD fixed 1s timer fired WHILE the dialog
+    // was still open, so close() was blocked and the window then stayed open.
+    let done=false;
+    const closePopup=()=>{ if(done)return; done=true; try{ if(printWindow && !printWindow.closed) printWindow.close(); }catch(e){} printWindow=null; };
+    try{ printWindow.onafterprint=closePopup; }catch(e){}
     try{printWindow.focus();printWindow.print();}catch(e){}
-    // Force close window หลัง print dialog (รอเพื่อให้ user กด Save/Cancel)
-    setTimeout(()=>{
-      if(printWindow && !printWindow.closed){
-        try{printWindow.close();}catch(e){}
-      }
-      printWindow = null; // Clear reference completely
-    }, 1000);
+    setTimeout(closePopup, 120000); // safety net only — long enough to never fire mid-dialog
   };
 
   if(imgs.length===0){
