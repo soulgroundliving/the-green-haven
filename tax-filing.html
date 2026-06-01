@@ -993,7 +993,14 @@
           window.dispatchEvent(new Event('authReady'));
           unsub();
         } else {
-          setTimeout(() => {
+          // First fire saw null (or no email). Do NOT race a fixed timeout: on a
+          // cold start Firebase's persisted-session restore can take >4s, and the
+          // old 4s timer bounced a signed-in accountant to /login (then login
+          // redirected straight back — a confusing flap). Wait for authStateReady(),
+          // which resolves only once the initial auth state is truly settled, then
+          // decide off the (now-restored) currentUser. A generous timer remains as a
+          // pure fallback in case authStateReady is unavailable or never settles.
+          const decide = () => {
             if (settled) return;
             const cur = auth.currentUser;
             if (cur && cur.email) {
@@ -1001,12 +1008,17 @@
               window._authUid = cur.uid;
               window.dispatchEvent(new Event('authReady'));
             } else {
+              settled = true;
               console.warn('🔒 No accountant auth — redirecting to /login');
               const next = encodeURIComponent(location.pathname + location.search);
               location.replace(`/login?next=${next}`);
             }
             unsub();
-          }, 4000);
+          };
+          if (typeof auth.authStateReady === 'function') {
+            auth.authStateReady().then(decide).catch(decide);
+          }
+          setTimeout(decide, 12000); // fallback only — authStateReady normally settles first
         }
       });
     } catch (e) { console.error('Firebase init failed in tax-filing:', e); }
