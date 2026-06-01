@@ -1303,6 +1303,43 @@ Prefer line-oriented tools that preserve encoding (the Edit tool, or `node` read
 
 **Family:** §7-H (grep-verify identifiers before typing in memory) and §7-QQ/CC (refactors silently breaking things that still "look" fine). All are "the edit looked successful — parsed, linted, committed — but changed bytes/scope/encoding in a way no syntax check catches." Mechanical edits over non-ASCII need a mechanical encoding check, the same way memory claims need a grep.
 
+### UU. Copying page CSS into a print/popup window — keep each `<style>` separate + `<link>` external sheets; never join them into one `<style>`
+
+`printDoc` (dashboard-bill.js) built the print popup by joining EVERY inline `<style>` innerHTML into ONE `<style>`. A construct in the 108KB dashboard style block corrupts CSS parsing once concatenated, so rules AFTER it silently stop applying — `.d-row{display:flex}` dropped → invoice "label … value" rows collapsed together, and brand-token colours fell back to black. Separate `<style>` elements isolate parse state; one joined block does not.
+
+**Rule:** when carrying page CSS into a `window.open` + `document.write` popup (print/export):
+
+```js
+// ❌ joining inline styles → one block's parse quirk eats every later rule
+const styles = [...document.querySelectorAll('style')].map(s => s.innerHTML).join('\n'); // then <style>${styles}</style>
+// ✅ each block its own tag (isolated parse) + external sheets as their own <link>
+const styles = [...document.querySelectorAll('style')].map(s => '<style>' + s.innerHTML + '</style>').join('\n');
+const links  = [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => '<link rel="stylesheet" href="' + l.href + '">').join('\n'); // absolute href: inlining cssRules drops brand.css :root custom-props → colours go black
+// <html data-theme="light"> for print-correct light tokens; wait for load before print(); close the popup on 'afterprint' (fires for BOTH Save & Cancel — a fixed close-timer fires mid-dialog, gets blocked, window lingers)
+```
+
+**Detection:** `grep -nE "querySelectorAll\('style'\).*join|map\(s=>s\.innerHTML\)" shared/*.js *.html` — any print/export builder doing this has the bug.
+
+**Verify-first saved this:** the first hypothesis ("missing external CSS") was WRONG — an iframe with ALL external CSS was still cramped; an A/B (separate vs joined `<style>`) pinned it to join-corruption. Build a throwaway iframe of the EXACT output HTML and `getComputedStyle()` it before shipping a print/CSS fix. (2026-06-01, PR #207/#208.)
+
+### VV. Page auth gates must `await auth.authStateReady()` — never a fixed `setTimeout` redirect (it races cold-start session restore)
+
+The dashboard admin gate redirected to `/login` if no email-user surfaced within a fixed 4s. Firebase persisted-session restore (IndexedDB) can exceed 4s on a cold start — cleared cache, slow network, or just after login — so a FULLY signed-in admin (claim present) was bounced to `/login`, which redirected straight back once restore finished (a flap; every Firestore/RTDB read failed `PERMISSION_DENIED` in between). Restore-TIMING race, NOT a claim problem.
+
+**Rule:** a gate that redirects on "no user" MUST wait for `auth.authStateReady()` then decide off the restored `currentUser` — keep a long timer (≥10s) only as a fallback. No lockout risk: a signed-in user always has `currentUser.email` after `authStateReady`; a signed-out visitor still redirects.
+
+```js
+// ❌ races cold-start restore → bounces signed-in admins to /login then back
+setTimeout(() => { if (!auth.currentUser?.email) location.replace('/login'); }, 4000);
+// ✅ waits for restore to settle
+if (typeof auth.authStateReady === 'function') auth.authStateReady().then(decide);
+setTimeout(decide, 12000); // fallback only
+```
+
+**Detection:** `grep -nE "setTimeout.*(login|redirect)|authStateReady" *.html` on every page with a client auth gate.
+
+⚠️ **`tax-filing.html` STILL uses the fixed-4s accountant gate** (`🔒 No accountant auth — redirecting`, `}, 4000)` ~L1004/1009) — same latent cold-load bounce for accountants; not yet migrated. (dashboard.html fixed 2026-06-01, PR #209; verified live: clear SW+cache → cold reload no longer bounces.) Family: §7-A/U/Z/HH — auth state/claims not where rule-eval expects them at the moment it checks.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
