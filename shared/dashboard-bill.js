@@ -868,7 +868,7 @@ function buildDocHTML(d,type,dueDate,payDate){
        </div>`
     : '';
   return`
-  <div id="${docId}" class="doc-body">
+  <div id="${docId}" class="doc-body" data-room="${d.room}" data-month="${d.month}" data-year="${d.year}">
     <div class="doc-header">
       <div class="doc-logo">${logoHTML}</div>
       <div class="doc-sub">${d.building}</div>
@@ -952,7 +952,12 @@ function printDoc(docId){
   const styles=[...document.querySelectorAll('style')].map(s=>`<style>${s.innerHTML}</style>`).join('\n');
   const fonts='<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">';
   const content=el.outerHTML;
-  const html=`<!DOCTYPE html><html lang="th" data-theme="light"><head><meta charset="UTF-8">${fonts}
+  // Save-as-PDF default filename = room-MM-YY (2-digit BE year): e.g. 30-06-69,
+  // N101-08-69. Chrome uses the print document's <title> as the suggested name.
+  const _mm=String(el.dataset.month||'').padStart(2,'0');
+  const _yy=String(el.dataset.year||'').slice(-2);
+  const _docName=[el.dataset.room,_mm,_yy].filter(Boolean).join('-').replace(/[\/\\:*?"<>|]/g,'')||'document';
+  const html=`<!DOCTYPE html><html lang="th" data-theme="light"><head><meta charset="UTF-8"><title>${_docName}</title>${fonts}
 ${links}
 ${styles}
 <style>
