@@ -20,8 +20,13 @@ function _onLiffClaimsReady(fn) {
 
 // SSoT: Nest rooms are N101-N405 (N prefix OR legacy numeric 101-405).
 // Everything else (13-33, 15ก, ร้านใหญ่) is the rooms/ห้องแถว building.
-// Matches dashboard-tenant-modal.js detectBuildingFromRoomId.
+// Resolves through BuildingConfig.getBuildingForRoom (the one SoT). The inline
+// branch is a defensive mirror — this file is auth-critical and loads non-defer,
+// so it must never hard-depend on another module already being ready.
 function _taDetectBuilding(roomId) {
+    if (typeof BuildingConfig !== 'undefined' && BuildingConfig.getBuildingForRoom) {
+        return BuildingConfig.getBuildingForRoom(roomId);
+    }
     const s = String(roomId || '');
     if (/^N/i.test(s)) return 'nest';
     const n = parseInt(s, 10);

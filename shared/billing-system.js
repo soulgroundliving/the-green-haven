@@ -51,11 +51,18 @@ class BillingSystem {
    */
   static detectBuilding(roomId) {
     const roomStr = roomId.toString();
-    if (roomStr.startsWith('N') || roomStr.startsWith('n')) {
-      return ['nest', roomStr];
+    // Single source of truth: BuildingConfig.getBuildingForRoom (registry module).
+    // The inline branch is a defensive mirror for contexts where BuildingConfig
+    // isn't loaded (e.g. the isolated unit test) — keep it identical to the SoT.
+    let building;
+    if (typeof window !== 'undefined' && window.BuildingConfig && window.BuildingConfig.getBuildingForRoom) {
+      building = window.BuildingConfig.getBuildingForRoom(roomStr);
+    } else if (roomStr.startsWith('N') || roomStr.startsWith('n')) {
+      building = 'nest';
+    } else {
+      const numRoom = parseInt(roomStr);
+      building = numRoom >= 101 && numRoom <= 405 ? 'nest' : 'rooms';
     }
-    const numRoom = parseInt(roomStr);
-    const building = numRoom >= 101 && numRoom <= 405 ? 'nest' : 'rooms';
     return [building, roomStr];
   }
 
