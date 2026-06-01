@@ -88,17 +88,16 @@
         if (btn) btn.disabled = true;
         try {
             const total = window._taCurrentBill ? (window._taCurrentBill.totalAmount || window._taCurrentBill.total || 0) : 0;
-            const ctrl = new AbortController();
-            const to = setTimeout(() => ctrl.abort(), 12000);
-            let resp;
-            try {
-                resp = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ file: window._slipBase64, expectedAmount: total, building: _taBuilding, room: _taRoom }),
-                    signal: ctrl.signal
-                });
-            } finally { clearTimeout(to); }
-            const result = await resp.json();
+            // onCall: SDK auto-attaches the LIFF custom-token ID token (room/building
+            // claims) → CF assertTenantAccess authorizes this tenant (fixes the 401
+            // from the old admin-only requireAdmin gate). §7-R: bound the LIFF wire
+            // call with Promise.race (httpsCallable's built-in timeout is 70s).
+            const callVerify = window.firebase.functions.httpsCallable('verifySlip');
+            const callRes = await Promise.race([
+                callVerify({ file: window._slipBase64, expectedAmount: total, building: _taBuilding, room: _taRoom }),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 35000))
+            ]);
+            const result = callRes.data;
             if (result.success || result.verified) {
                 _setStatus(statusEl, 'success', 'ตรวจสอบสำเร็จ!');
                 if (typeof window._saveTenantPayment === 'function') window._saveTenantPayment({ slipOkVerified: true, ...result });
@@ -125,8 +124,12 @@
                 if (btn) btn.disabled = false;
             }
         } catch (e) {
-            const isTimeout = e?.name === 'AbortError';
-            _setStatus(statusEl, 'error', isTimeout ? 'เชื่อมต่อนานเกินไป กรุณาลองใหม่' : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+            const isTimeout = e?.name === 'AbortError' || e?.message === 'timeout';
+            // httpsCallable rejects with HttpsError (functions/*) for auth / rate-limit;
+            // surface its message. scb_delay / mismatch / duplicate / slip-not-valid
+            // RESOLVE with {success:false} and are handled above, not here.
+            const cfMsg = (typeof e?.code === 'string' && e.code.startsWith('functions/')) ? e.message : null;
+            _setStatus(statusEl, 'error', isTimeout ? 'เชื่อมต่อนานเกินไป กรุณาลองใหม่' : (cfMsg || 'เกิดข้อผิดพลาด กรุณาลองใหม่'));
             if (btn) btn.disabled = false;
         }
     }

@@ -236,21 +236,20 @@
         btn.disabled = true; btn.style.opacity = '0.5'; btn.textContent = 'กำลังตรวจสอบ...';
         let result;
         try {
-            const ctrl = new AbortController();
-            const to = setTimeout(() => ctrl.abort(), 12000);
-            let resp;
-            try {
-                resp = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
-                    method:'POST', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({ file: _cleaningSlipBase64, expectedAmount: 500, building: _taBuilding, room: _taRoom, context: 'cleaning' }),
-                    signal: ctrl.signal
-                });
-            } finally { clearTimeout(to); }
-            result = await resp.json();
+            // onCall: SDK auto-attaches the LIFF custom-token ID token → CF
+            // assertTenantAccess authorizes this tenant (fixes the old 401). §7-R:
+            // bound the LIFF wire call with Promise.race (SDK timeout is 70s).
+            const callVerify = window.firebase.functions.httpsCallable('verifySlip');
+            const callRes = await Promise.race([
+                callVerify({ file: _cleaningSlipBase64, expectedAmount: 500, building: _taBuilding, room: _taRoom, context: 'cleaning' }),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 35000))
+            ]);
+            result = callRes.data;
         } catch(e) {
-            const isTimeout = e?.name === 'AbortError';
-            console.warn('verifySlip (cleaning) network error:', e.message);
-            _setCpmStatus('error', isTimeout ? 'เชื่อมต่อนานเกินไป กรุณาลองใหม่' : 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่');
+            const isTimeout = e?.name === 'AbortError' || e?.message === 'timeout';
+            console.warn('verifySlip (cleaning) error:', e?.message);
+            const cfMsg = (typeof e?.code === 'string' && e.code.startsWith('functions/')) ? e.message : null;
+            _setCpmStatus('error', isTimeout ? 'เชื่อมต่อนานเกินไป กรุณาลองใหม่' : (cfMsg || 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่'));
             btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'ยืนยันชำระเงิน';
             return;
         }
