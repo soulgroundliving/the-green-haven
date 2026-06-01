@@ -769,11 +769,15 @@ function setupAnnouncementListener() {
   if (realtimeListeners.announcements) return; // already subscribed
 
   const db = window.firebase.firestore();
-  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
+  const { collection, onSnapshot, query, where } = window.firebase.firestoreFunctions;
 
   try {
     const unsub = onSnapshot(
-      collection(db, 'announcements'),
+      // Filter to banner docs server-side (was a full-collection subscription that
+      // streamed every notice/event/banner and re-fired on every announcement write,
+      // then dropped non-banners via the client .filter below). Same rendered result,
+      // far fewer docs over the wire. Single-field equality → no composite index.
+      query(collection(db, 'announcements'), where('type', '==', 'banner')),
       (snapshot) => {
         // C4 S2 (2026-05-18): all banner docs now carry type='banner' (post-backfill).
         // Normalize banner schema into legacy render shape so renderAnnouncementsList
