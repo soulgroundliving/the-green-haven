@@ -82,7 +82,7 @@ After ANY correction from the user, decide where to log it:
 | Logic | Vanilla JS modules (UMD-ish; `window.X = ...` exports) | `shared/*.js` (102 files incl. 27 `tenant-*.js` god-file extracts; verify with `ls shared/*.js \| wc -l`) |
 | Backend | **Firebase** v11 — Auth · Firestore · Realtime DB · Cloud Functions · Storage | `functions/` (Node CFs); rules in `firestore.rules`, `storage.rules`, `database.rules.json` |
 | Hosting | **Vercel** (not Firebase Hosting) | `vercel.json`, `/api/*` serverless fns (e.g. `/api/config`) |
-| Build | `esbuild` (bundle minify) | `build.js` |
+| Build | `esbuild` minify + **content-hash** `shared`/`accounting` JS → `immutable` cache (renames + rewrites `<script src>` from a manifest; build-time verify-gate; Vercel-only, source keeps plain names) | `build.js` · `tools/asset-hash.js` |
 | Service Worker | Custom; auto-versioned from `VERCEL_GIT_COMMIT_SHA` | `service-worker.js` |
 | Other | `xlsx` (meter import); LIFF SDK + LINE Messaging API | inline via CDN |
 
