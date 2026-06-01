@@ -49,10 +49,10 @@
   --cloud:   #f2f7f5;  /* page background — cool off-white */
   --mist:    #eaf1ed;  /* sunken surface */
   --stone:   #d9e8e3;  /* borders */
-  --pebble:  #798c87;  /* muted text edge — ≥4.5:1 on white for placeholder readability */
+  --pebble:  #5b6c64;  /* muted hint text — 5.1:1 on --cloud page bg (WCAG AA) */
   --shadow:  #2a3d39;  /* shadow base */
   --ink:     #1c3a36;  /* primary text — deep teal-black */
-  --muted:   #64748b;  /* secondary text */
+  --muted:   #586679;  /* secondary text — 5.4:1 on --cloud page bg (WCAG AA) */
 
   /* Accents — used sparingly */
   --sand:    #e8dfce;  /* warm beige, dividers (kept from old palette) */
@@ -66,6 +66,11 @@
   --info:      #6b8a9d;
   --warn-text: #b45309;  /* amber-700 — ≥4.5:1 on amber tint */
   --info-text: #1d4ed8;  /* blue-700  — ≥4.5:1 on blue tint */
+  /* Text-safe variants of semantic/brand colors — use these for COLORED TEXT;
+     the base tokens (--ok/--alert/--brand-primary*) stay for fills/borders. */
+  --ok-text:            #0e6f64;  /* teal-700 success text — 5.6:1 on --cloud */
+  --alert-text:         #b91c1c;  /* red-700 danger text — 6.0:1 on --cloud */
+  --brand-primary-text: #0f766e;  /* brand text — passes on light; flips for dark below */
 
   /* Legacy color aliases — map old "green" tokens to brand teal so existing
      `.u-*` utilities and `var(--green, #2d8653)` references resolve to the
@@ -206,6 +211,9 @@ button, input, select, textarea {
   --pebble:  #8aa39c;  /* edge muted — bumped 50% lightness for readable hint text */
   --warn-text: #fbbf24;  /* amber-400 — readable on dark amber tint */
   --info-text: #93c5fd;  /* blue-300  — readable on dark blue tint */
+  --ok-text:            #14b8a6;  /* teal-400 success text — 6.2:1 on dark card */
+  --alert-text:         #f87171;  /* red-400 danger text — 6.7:1 on dark page */
+  --brand-primary-text: #2dd4bf;  /* teal-400 brand text — 8.3:1 on dark card */
   --shadow:  #050b09;  /* shadow base */
   --ink:     #f5fbf8;  /* primary text — near-white, slight teal-cream tint (was #e5ede9) */
   --muted:   #c5d6cf;  /* secondary text — bright-readable (was #8da39c, ~70% lightness) */
@@ -242,6 +250,9 @@ button, input, select, textarea {
     --pebble:  #8aa39c;
     --warn-text: #fbbf24;
     --info-text: #93c5fd;
+    --ok-text:            #14b8a6;
+    --alert-text:         #f87171;
+    --brand-primary-text: #2dd4bf;
     --shadow:  #050b09;
     --ink:     #f5fbf8;
     --muted:   #c5d6cf;
