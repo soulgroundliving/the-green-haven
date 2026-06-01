@@ -1,94 +1,22 @@
-# 🏡 The Green Haven - Apartment Management System
+# The Green Haven — `docs/`
 
-Professional apartment management dashboard for **The Green Haven Residences** in Saimai, Bangkok.
+Operational runbooks and point-in-time audit snapshots. **This folder is not the project overview.**
 
-## 🎯 Features
+- **Project overview + structure** → [root README.md](../README.md)
+- **Workflow protocol, tech stack, deploy commands, recurring anti-patterns (§7)** → [CLAUDE.md](../CLAUDE.md)
 
-- **📊 Dashboard** - Tenant & room management
-- **👥 Tenant Management** - Profile, contract, payment tracking
-- **💳 Tenant Payment Portal** - App-like payment interface with PWA support
-- **🔧 Maintenance System** - Report and track repairs
-- **📅 Monthly Billing** - Automated bill generation
-- **💸 Expense Tracking** - Record and categorize expenses
-- **📈 Analytics** - Revenue and occupancy reports
-- **📄 Contract Management** - Track lease agreements
+## Stack at a glance
 
-## 🚀 Getting Started
+Vanilla HTML + Tailwind v3 + `window.X` JS modules (`shared/*.js`); **Firebase** v11 backend (Auth · Firestore · Realtime DB · Cloud Functions · Storage); hosted on **Vercel**. There is no localStorage-as-database and no `localhost` workflow — Firebase Auth rejects `http://localhost`, so verification happens on the Vercel deploy. See [CLAUDE.md §5](../CLAUDE.md) for build / deploy / test commands.
 
-### Requirements
-- Modern web browser
-- JavaScript enabled
-- LocalStorage support
+## Contents of this folder
 
-### Installation
+| File | What it is |
+|------|------------|
+| [STAGING_RUNBOOK.md](STAGING_RUNBOOK.md) | Staging Firebase project + Vercel env setup and promote flow |
+| [RESTORE_DRILL_LOG.md](RESTORE_DRILL_LOG.md) | Firestore backup/restore drill log |
+| [SECURITY_AUDIT_2026_04_28.md](SECURITY_AUDIT_2026_04_28.md) | Point-in-time security audit (snapshot — see [../SECURITY.md](../SECURITY.md) for the live policy) |
+| [PHASE-4-SECURITY.md](PHASE-4-SECURITY.md) | Phase-4 security hardening notes (historical) |
+| [HANDOFF_2026_04_27.md](HANDOFF_2026_04_27.md) | Session handoff snapshot (historical) |
 
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/the-green-haven.git
-cd the-green-haven
-```
-
-2. Serve locally
-```bash
-python -m http.server 8080
-```
-
-3. Open in browser
-```
-http://localhost:8080/dashboard.html
-```
-
-## 📱 Tenant Payment Portal
-
-Accessible at `/tenant-payment.html`
-
-Features:
-- Real-time bill display
-- PromptPay QR code generation
-- Multiple payment methods (PromptPay, e-Banking)
-- Payment history tracking
-- PWA support (installable app)
-- Offline capabilities
-
-Usage: `https://yourdomain.com/tenant-payment.html?room=15`
-
-## 🌐 Pages
-
-- `dashboard.html` - Main admin dashboard
-- `tenant-payment.html` - Tenant payment portal
-- `manifest.json` - PWA manifest
-- `sw.js` - Service Worker
-
-## 📦 PWA Support
-
-The app includes Progressive Web App features:
-- Service Worker for offline support
-- App manifest for installation
-- Installable on mobile devices
-- App-like header and navigation
-
-## 💾 Data Storage
-
-Currently uses browser localStorage for data persistence. For production, integrate with:
-- Firebase Realtime Database
-- Supabase
-- Custom API backend
-
-## 🔐 Security Notes
-
-- Data stored locally in browser
-- For production, implement proper authentication
-- Use HTTPS in production
-- Validate input on both client and server
-
-## 📝 License
-
-MIT License - © 2024 The Green Haven
-
-## 📞 Contact
-
-For inquiries: 089-123-4567
-
----
-
-Made with ❤️ for The Green Haven Residences
+Point-in-time documents are kept for traceability. For current architecture, rely on the lifecycle docs referenced from CLAUDE.md / MEMORY — not these snapshots.
