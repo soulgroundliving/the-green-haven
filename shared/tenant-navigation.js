@@ -43,8 +43,9 @@ window.showPage = function showPage(id, element) {
 
     // Update active nav-item highlight when element is passed
     if (element) {
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(nav => { nav.classList.remove('active'); nav.removeAttribute('aria-current'); });
         element.classList.add('active');
+        element.setAttribute('aria-current', 'page');  // WCAG 4.1.2 — move state off the hardcoded Home button
     }
 
     // Refresh usage data when navigating to payment/usage pages
@@ -84,8 +85,9 @@ window.showSubPage = function showSubPage(id) {
 window.updateNavActiveIndex = function updateNavActiveIndex(index) {
     const navItems = document.querySelectorAll('.nav-item');
     if (navItems.length > index) {
-        navItems.forEach(nav => nav.classList.remove('active'));
+        navItems.forEach(nav => { nav.classList.remove('active'); nav.removeAttribute('aria-current'); });
         navItems[index].classList.add('active');
+        navItems[index].setAttribute('aria-current', 'page');  // WCAG 4.1.2 — dynamic active state for SR
     }
 };
 

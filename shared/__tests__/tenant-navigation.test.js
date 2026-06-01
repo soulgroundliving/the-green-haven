@@ -30,6 +30,7 @@ const path = require('node:path');
 
 function makeEl(id, classes = []) {
   const set = new Set(classes);
+  const attrs = {};
   return {
     id,
     style: { display: '', pointerEvents: '', zIndex: '' },
@@ -43,6 +44,10 @@ function makeEl(id, classes = []) {
         return want;
       },
     },
+    getAttribute: (n) => (n in attrs ? attrs[n] : null),
+    setAttribute: (n, v) => { attrs[n] = String(v); },
+    removeAttribute: (n) => { delete attrs[n]; },
+    hasAttribute: (n) => n in attrs,
     _has: (c) => set.has(c),
   };
 }
@@ -157,9 +162,13 @@ describe('tenant-navigation.js — showPage', () => {
     navA.classList.add('active');
     sb.document = makeDoc([home, navA, navB]);
 
+    navA.setAttribute('aria-current', 'page'); // simulate prior active state
     sb.window.showPage('home', navB);
     assert.ok(!navA.classList.contains('active'));
     assert.ok(navB.classList.contains('active'));
+    // WCAG 4.1.2 — aria-current follows the active nav element
+    assert.equal(navA.getAttribute('aria-current'), null);
+    assert.equal(navB.getAttribute('aria-current'), 'page');
   });
 
   test('logs an error and does not throw when the target page is missing', () => {
@@ -200,12 +209,18 @@ describe('tenant-navigation.js — updateNavActiveIndex', () => {
   test('activates the nav-item at the given index, clearing the rest', () => {
     const items = [0, 1, 2].map((i) => makeEl('n' + i, ['nav-item']));
     items[0].classList.add('active');
+    items[0].setAttribute('aria-current', 'page'); // simulate hardcoded Home state
     sb.document = makeDoc(items);
 
     sb.window.updateNavActiveIndex(2);
     assert.ok(!items[0].classList.contains('active'));
     assert.ok(!items[1].classList.contains('active'));
     assert.ok(items[2].classList.contains('active'));
+
+    // WCAG 4.1.2 — aria-current moves to the active item, cleared from the rest
+    assert.equal(items[0].getAttribute('aria-current'), null);
+    assert.equal(items[1].getAttribute('aria-current'), null);
+    assert.equal(items[2].getAttribute('aria-current'), 'page');
   });
 
   test('is a no-op when the index is out of range', () => {
