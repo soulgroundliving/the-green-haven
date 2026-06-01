@@ -66,8 +66,13 @@ window.TenantDataEvents = TenantDataEvents;
 
 // Helper function to detect building from room ID (fallback)
 function detectBuildingFromRoomId(roomId) {
-  // Single source of truth — delegate to BillingSystem.detectBuilding
+  // Single source of truth: BuildingConfig.getBuildingForRoom (registry module).
   // (handles both "N101" prefix style AND legacy numeric 101-405 stored as nest)
+  // BillingSystem.detectBuilding is a thin tuple wrapper over the same logic;
+  // the inline branch is a last-resort mirror for pre-load safety.
+  if (typeof BuildingConfig !== 'undefined' && BuildingConfig.getBuildingForRoom) {
+    return BuildingConfig.getBuildingForRoom(roomId);
+  }
   if (typeof BillingSystem !== 'undefined' && BillingSystem.detectBuilding) {
     return BillingSystem.detectBuilding(roomId)[0];
   }

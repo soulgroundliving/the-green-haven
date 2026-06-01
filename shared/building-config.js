@@ -12,6 +12,7 @@
  *   BuildingConfig.isPetAllowedRoom('N301')  → true
  *   BuildingConfig.getDisplayName('rooms')   → 'Nature Haven Rooms'
  *   BuildingConfig.getNestRoomIds()          → ['N101', ..., 'N405']
+ *   BuildingConfig.getBuildingForRoom('N301')→ 'nest'  ('250' → 'nest', '15' → 'rooms')
  *
  * Why this exists: building IDs come in 4 flavors across the codebase —
  * 'rooms' / 'old' / 'RentRoom' all refer to the same building, and 'nest' / 'new'
@@ -27,6 +28,15 @@
     ROOMS: 'rooms',  // Nature Haven Rooms (legacy "old building")
     NEST:  'nest'    // Nature Nest (newer building)
   };
+
+  // Legacy Nest rooms were stored as bare numbers 101–405 (before the 'N' prefix
+  // convention). Current data uses 'N101'…'N405', but the numeric range stays as
+  // a resolver so a legacy bare-numeric id still maps to nest. This is the ONE
+  // place the range is defined — getBuildingForRoom is the single source of truth;
+  // BillingSystem.detectBuilding / _taDetectBuilding / detectBuildingFromRoomId
+  // all resolve through it (each keeps a thin defensive copy for pre-load safety).
+  const NEST_LEGACY_NUMERIC_MIN = 101;
+  const NEST_LEGACY_NUMERIC_MAX = 405;
 
   // Display name in tenant_app + dashboard UI. Note: 'RentRoom' is *only* used
   // as the Firestore doc id under buildings/{RentRoom} — for any path that
@@ -61,8 +71,18 @@
     return !isNestRoom(roomId);
   }
 
+  // Resolve the canonical building id for a room id. Unlike isNestRoom (a pure
+  // 'N'-prefix string check), this ALSO maps the legacy bare-numeric Nest range
+  // (101–405) to nest, matching how bills/meter data was historically keyed.
+  // Single source of truth for room→building resolution across both apps.
   function getBuildingForRoom(roomId) {
-    return isNestRoom(roomId) ? CANONICAL.NEST : CANONICAL.ROOMS;
+    if (roomId == null || roomId === '') return CANONICAL.ROOMS;
+    const s = String(roomId);
+    if (s.startsWith('N') || s.startsWith('n')) return CANONICAL.NEST;
+    const n = parseInt(s, 10);
+    return (n >= NEST_LEGACY_NUMERIC_MIN && n <= NEST_LEGACY_NUMERIC_MAX)
+      ? CANONICAL.NEST
+      : CANONICAL.ROOMS;
   }
 
   function isPetAllowedRoom(roomId) {
