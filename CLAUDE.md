@@ -141,6 +141,8 @@ After ANY correction from the user, decide where to log it:
 
 Service Worker auto-versions from `VERCEL_GIT_COMMIT_SHA` — no manual `CACHE_VERSION` bump needed.
 
+**Branch protection on `main`** (set 2026-06-01): requires the `validate` check to pass before a non-admin PR can merge; `enforce_admins: false` (admin bypass) so the owner can still `git push origin main` for emergencies (preserves the documented deploy path); force-push + branch deletion blocked. Reconfigure via `gh api -X PUT repos/{owner}/{repo}/branches/main/protection`.
+
 ## 7. Recurring Anti-Patterns — Read Before Touching These Areas
 
 Each pattern cost 2–5 sessions to debug. Check the relevant one BEFORE writing code, not after. Append new patterns here directly when a recurring issue surfaces — see §1 Self-Improvement Loop for routing.
