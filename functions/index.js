@@ -183,6 +183,11 @@ exports.recordAdminAction = require('./recordAdminAction').recordAdminAction;
 // inside the verifySlip tx. Shares the _receiptCounter gapless sequence.
 exports.assignReceiptNumber = require('./assignReceiptNumber').assignReceiptNumber;
 
+// Void an issued invoice WITHOUT deleting it (Roadmap 1.3). Flips invoices/{key} to
+// status:'void' + voidedAt/By/Reason and writes a BILL_VOIDED row to actionAudit in
+// the same tx. Admin-gated. Issuance numbers live on invoices/ (Roadmap 1.2).
+exports.voidInvoice = require('./voidInvoice').voidInvoice;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ANNOUNCEMENTS — unified notice/event/banner (C4 — replaces broadcastMessages)
 // ═══════════════════════════════════════════════════════════════════════════

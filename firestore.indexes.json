@@ -191,6 +191,14 @@
       ]
     },
     {
+      "collectionGroup": "invoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "building", "order": "ASCENDING" },
+        { "fieldPath": "period", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "marketplace_chats",
       "queryScope": "COLLECTION",
       "fields": [

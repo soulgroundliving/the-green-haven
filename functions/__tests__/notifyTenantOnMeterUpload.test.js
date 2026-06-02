@@ -35,6 +35,11 @@ let enqueueLineRetryArgs;
 let fetchResponses;     // array of { ok, status, body } — consumed in order
 let fetchCallCount;
 let fetchCallArgs;      // array of { url, opts }
+let invoicesState;      // { [key]: invoice doc } — Roadmap 1.2 mint
+let countersState;      // { [counterId]: { seq } }
+let auditWrites;        // array of { id, data } written to actionAudit
+let buildBillFlexCalls; // array of { bill, opts } — assert invoiceNo passed through
+let autoIdSeq;          // actionAudit server-autoId counter
 
 function resetStubs() {
   meterDataState = {
@@ -52,12 +57,23 @@ function resetStubs() {
   liffUsersThrow = null;
   lineTokenValue = 'tok123';
   loadRoomConfigResult = { rentPrice: 3000, electricRate: 8, waterRate: 20 };
-  computeBillResult = { totalAmount: 3500, rentAmount: 3000 };
+  // Full computeBill output shape (year already 4-digit BE) so the invoice mint
+  // path (Roadmap 1.2) exercises real be/period derivation.
+  computeBillResult = {
+    building: 'rooms', room: '15', year: 2569, month: 5,
+    rent: 3000, eCost: 400, wCost: 100, trash: 20, eUnits: 50, wUnits: 5,
+    totalCharge: 3520, dueDate: '2026-06-05',
+  };
   buildBillFlexResult = { type: 'flex', altText: 'bill' };
   enqueueLineRetryArgs = [];
   fetchResponses = [];
   fetchCallCount = 0;
   fetchCallArgs = [];
+  invoicesState = {};
+  countersState = {};
+  auditWrites = [];
+  buildBillFlexCalls = [];
+  autoIdSeq = 0;
 }
 
 resetStubs();
@@ -107,7 +123,42 @@ const firestoreStub = {
       const chainable = { where: () => chainable, get: terminal.get };
       return { where: () => chainable };
     }
+    // Roadmap 1.2 — invoice mint collections (ref-tagged so the tx stub routes them).
+    if (name === 'invoices')    return { doc: (id) => ({ _coll: 'invoices', _id: id }) };
+    if (name === 'counters')    return { doc: (id) => ({ _coll: 'counters', _id: id }) };
+    if (name === 'actionAudit') return { doc: (id) => ({ _coll: 'actionAudit', _id: id || `audit_${++autoIdSeq}` }) };
     return { doc: () => ({ get: async () => ({ exists: false, data: () => ({}) }), update: async () => {} }) };
+  },
+  // Roadmap 1.2 — issueInvoiceNo runs the mint inside firestore.runTransaction.
+  runTransaction: async (fn) => {
+    const tx = {
+      get: async (ref) => {
+        if (ref && ref._coll === 'invoices') {
+          const d = invoicesState[ref._id];
+          return { exists: !!d, data: () => d || {} };
+        }
+        if (ref && ref._coll === 'counters') {
+          const d = countersState[ref._id];
+          return { exists: !!d, data: () => d || {} };
+        }
+        return { exists: false, data: () => ({}) };
+      },
+      set: (ref, data, opts) => {
+        if (!ref) return;
+        if (ref._coll === 'invoices') {
+          invoicesState[ref._id] = (opts && opts.merge)
+            ? { ...(invoicesState[ref._id] || {}), ...data }
+            : data;
+        } else if (ref._coll === 'counters') {
+          countersState[ref._id] = (opts && opts.merge)
+            ? { ...(countersState[ref._id] || {}), ...data }
+            : data;
+        } else if (ref._coll === 'actionAudit') {
+          auditWrites.push({ id: ref._id, data });
+        }
+      },
+    };
+    return fn(tx);
   },
 };
 
@@ -174,7 +225,7 @@ Module._load = function (request, parent, ...rest) {
     return {
       loadRoomConfig: async (_building, _roomId) => loadRoomConfigResult,
       computeBill: (_data, _cfg) => computeBillResult,
-      buildBillFlex: (_bill, _opts) => buildBillFlexResult,
+      buildBillFlex: (bill, opts) => { buildBillFlexCalls.push({ bill, opts: opts || {} }); return buildBillFlexResult; },
     };
   }
 
@@ -267,6 +318,101 @@ describe('notifyTenantOnMeterUpload', () => {
       const result = await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
       assert.ok(result, 'should return a result object');
       assert.ok('count' in result, 'result must have count field');
+    });
+  });
+
+  // ── Invoice numbering (gapless INV-, Roadmap 1.2) ───────────────────────────────
+
+  describe('invoice numbering (gapless INV-, Roadmap 1.2)', () => {
+    beforeEach(() => { resetStubs(); });
+
+    it('mints INV-{building}-{BE}-00001 on first notify + persists invoices/{key}', async () => {
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      const inv = invoicesState['rooms_15_256905'];
+      assert.ok(inv, 'invoices/rooms_15_256905 must be persisted');
+      assert.equal(inv.invoiceNo, 'INV-rooms-2569-00001');
+      assert.equal(inv.status, 'issued');
+      assert.equal(inv.building, 'rooms');
+      assert.equal(inv.room, '15');
+      assert.equal(inv.period, '256905');
+      assert.equal(inv.amount, 3520);
+      assert.equal(countersState['invoice_rooms_2569'].seq, 1);
+    });
+
+    it('passes the minted invoiceNo into buildBillFlex', async () => {
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      const call = buildBillFlexCalls[buildBillFlexCalls.length - 1];
+      assert.ok(call, 'buildBillFlex must be called');
+      assert.equal(call.opts.invoiceNo, 'INV-rooms-2569-00001');
+    });
+
+    it('writes one BILL_ISSUED audit row with server-stamped actor + deterministic key', async () => {
+      await capturedHandler({
+        auth: { uid: 'admin-uid-1', token: { admin: true, email: 'a@x.io' } },
+        data: { docId: 'rooms_69_5_15' },
+      });
+      const audit = auditWrites.find(w => w.data.action === 'BILL_ISSUED');
+      assert.ok(audit, 'a BILL_ISSUED audit row must be written');
+      assert.equal(audit.data.actor, 'admin-uid-1');
+      assert.equal(audit.data.actorEmail, 'a@x.io');
+      assert.equal(audit.data.actorRole, 'admin');
+      assert.equal(audit.data.targetType, 'invoice');
+      assert.equal(audit.data.targetId, 'INV-rooms-2569-00001');
+      assert.equal(audit.id, 'invoice-rooms_15_256905'); // deterministic idempotency key
+    });
+
+    it('re-notify for the same period reuses the number + burns no counter (idempotent)', async () => {
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      meterDataState['rooms_69_5_15'].eNew = 999; // meter changed → force a re-notify
+      auditWrites.length = 0;
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15', force: true }));
+      assert.equal(invoicesState['rooms_15_256905'].invoiceNo, 'INV-rooms-2569-00001');
+      assert.equal(countersState['invoice_rooms_2569'].seq, 1, 'counter must NOT increment on re-notify');
+      assert.equal(
+        auditWrites.filter(w => w.data.action === 'BILL_ISSUED').length, 0,
+        'no second BILL_ISSUED on re-notify'
+      );
+    });
+
+    it('does NOT mint when the room has no approved tenant (no number burned)', async () => {
+      liffUsersState = [];
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      assert.equal(Object.keys(invoicesState).length, 0, 'no invoice persisted');
+      assert.equal(countersState['invoice_rooms_2569'], undefined, 'counter untouched');
+    });
+
+    it('consecutive different rooms get consecutive gapless numbers', async () => {
+      meterDataState['rooms_69_5_16'] = {
+        building: 'rooms', roomId: '16', year: 69, month: 5,
+        eOld: 0, eNew: 10, wOld: 0, wNew: 2, notifiedAt: null, lastNotifiedSignature: null,
+      };
+      tenantSnapState['rooms/16'] = { name: 'สมหญิง' };
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_16' }));
+      assert.equal(invoicesState['rooms_15_256905'].invoiceNo, 'INV-rooms-2569-00001');
+      assert.equal(invoicesState['rooms_16_256905'].invoiceNo, 'INV-rooms-2569-00002');
+      assert.equal(countersState['invoice_rooms_2569'].seq, 2);
+    });
+
+    it('does NOT reuse a VOIDED invoice number on re-notify (re-issue is deliberate, Phase 1.3)', async () => {
+      invoicesState['rooms_15_256905'] = { invoiceNo: 'INV-rooms-2569-00001', status: 'void' };
+      fetchResponses = [{ ok: true, status: 200, body: '' }];
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15', force: true }));
+      assert.equal(invoicesState['rooms_15_256905'].invoiceNo, 'INV-rooms-2569-00001', 'voided doc untouched');
+      assert.equal(invoicesState['rooms_15_256905'].status, 'void');
+      assert.equal(countersState['invoice_rooms_2569'], undefined, 'no mint — counter untouched');
+      const call = buildBillFlexCalls[buildBillFlexCalls.length - 1];
+      assert.equal(call.opts.invoiceNo, null, 'Flex falls back to the legacy ref for a voided period');
+    });
+
+    it('a mint failure is non-fatal — notification still proceeds', async () => {
+      computeBillResult = { ...computeBillResult, year: undefined }; // breaks be derivation
+      fetchResponses = [{ ok: true, status: 200, body: '' }];
+      const result = await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      assert.equal(Object.keys(invoicesState).length, 0, 'no invoice persisted on failure');
+      assert.equal(result.pushed, 1, 'tenant is still notified despite the mint failure');
+      const call = buildBillFlexCalls[buildBillFlexCalls.length - 1];
+      assert.equal(call.opts.invoiceNo, null, 'Flex falls back to the legacy ref (invoiceNo null)');
     });
   });
 

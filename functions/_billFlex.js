@@ -157,14 +157,16 @@ function normalizeBill(bill) {
  * @param {string} [opts.tenantName] - Full tenant name (shown as "คุณ ...")
  */
 function buildBillFlex(bill, opts = {}) {
-  const { tenantName = '' } = opts;
+  const { tenantName = '', invoiceNo = null } = opts;
   const b = normalizeBill(bill);
 
   const monthLabel   = `${THAI_MONTHS_SHORT[b.month] || b.month}/${b.year}`;
   const dueDateLabel = fmtThaiDate(b.dueDate);
 
   const buildingInitial = String(b.building || '').charAt(0).toUpperCase() || 'X';
-  const invoiceRef = `INV-${buildingInitial}${b.room}-${String(b.year % 100).padStart(2,'0')}${String(b.month).padStart(2,'0')}`;
+  // Prefer the persisted gapless number (Roadmap 1.2); fall back to the legacy
+  // per-render ref for callers that don't supply one (e.g. notifyBillOnCreate).
+  const invoiceRef = invoiceNo || `INV-${buildingInitial}${b.room}-${String(b.year % 100).padStart(2,'0')}${String(b.month).padStart(2,'0')}`;
 
   const nameLabel = tenantName ? `คุณ ${tenantName}` : `ห้อง ${b.room}`;
 
