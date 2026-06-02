@@ -757,6 +757,26 @@ async function approvePendingImportWithFirebase(importData, matchResults, skipCo
     }
   }
 
+  // Phase 1.1 (PR 1b): immutable server-side audit row for the meter-import
+  // approval. recordAdminAction stamps actor/role/ip/time server-side (the local
+  // localStorage AuditLogger is a clearable per-browser breadcrumb an auditor
+  // can't trust). Non-blocking, fired AFTER the save succeeded (§7-I observe-only).
+  if (totalSaved > 0) {
+    try {
+      const _recordAudit = window.firebase?.functions?.httpsCallable?.('recordAdminAction');
+      if (_recordAudit) {
+        _recordAudit({
+          action: 'METER_IMPORT_APPROVED',
+          targetType: 'meter',
+          targetId: yearMonth,
+          building: importData.building || null,
+          after: { totalSaved, totalFailed },
+          note: `meter import ${yearMonth}`,
+        }).catch((e) => console.warn('[audit] recordAdminAction failed:', e?.message || e));
+      }
+    } catch (e) { console.warn('[audit] recordAdminAction skipped:', e?.message || e); }
+  }
+
   return { success: totalSaved > 0 || totalFailed === 0, totalSaved, totalFailed };
 }
 

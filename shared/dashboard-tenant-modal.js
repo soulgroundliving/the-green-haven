@@ -503,6 +503,24 @@ async function markBillPaid(roomId, month, year, billId) {
     }
   } catch (e) { console.warn('⚠️ markBillPaid RTDB sync failed:', e.message); }
 
+  // Phase 1.1 (PR 1b): immutable server-side audit row for the manual bill-paid
+  // approval (admin marks a bill paid by hand — a financial mutation an auditor
+  // must be able to trace). recordAdminAction stamps actor/role/ip/time
+  // server-side; non-blocking, fired AFTER the action (§7-I observe-only).
+  try {
+    const _recordAudit = window.firebase?.functions?.httpsCallable?.('recordAdminAction');
+    if (_recordAudit) {
+      _recordAudit({
+        action: 'BILL_PAID_MANUAL',
+        targetType: 'bill',
+        targetId: billId,
+        roomId: roomId,
+        after: { month, year },
+        note: note || null,
+      }).catch((e) => console.warn('[audit] recordAdminAction failed:', e?.message || e));
+    }
+  } catch (e) { console.warn('[audit] recordAdminAction skipped:', e?.message || e); }
+
   showToast(`✅ บันทึกการชำระห้อง ${roomId} เดือน ${month}/${year} แล้ว`, 'success');
   document.getElementById('billingPayModal')?.remove();
 }
