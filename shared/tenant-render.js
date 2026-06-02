@@ -442,7 +442,9 @@
         const mFull = THAI_MONTHS_FULL[bill.month] || bill.month || '?';
         const yr = bill.year ? (window.YearUtils.toBE(bill.year) || '?') : '?';
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-        set('rcpt-bill-no', bill.billId || bill.id || '—');
+        // Gapless RCP- receipt number (Roadmap 1.2a) when present (slip via verifySlip,
+        // cash via assignReceiptNumber); falls back to the bill id for un-numbered legacy receipts.
+        set('rcpt-bill-no', bill.receiptNo || bill.billId || bill.id || '—');
         set('rcpt-room',    `ห้อง ${_taRoom || '—'}`);
         set('rcpt-period',  `${mFull} ${yr}`);
         const paidAt = bill.paidAt

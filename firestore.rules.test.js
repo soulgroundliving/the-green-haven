@@ -1180,6 +1180,38 @@ describe('counters — gapless document-number sequences, admin-read-only, CF-wr
   });
 });
 
+describe('manualReceipts — gapless cash receipt of record, admin-read-only, CF-write-only (Roadmap 1.2a-2)', () => {
+  const LIFF_TENANT = (uid, room = '15', building = 'rooms') =>
+    testEnv.authenticatedContext(uid, {
+      room, building, firebase: { sign_in_provider: 'custom' }
+    });
+
+  const sample = {
+    receiptNo: 'RCP-rooms-2569-00007', building: 'rooms', roomId: '15',
+    billId: 'TGH-256905-15', be: 2569, by: 'admin-uid', method: 'manual_admin',
+  };
+
+  it('admin can read a manualReceipts record (reconciliation)', async () => {
+    await seedDoc('manualReceipts/rooms_15_TGH-256905-15', sample);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'manualReceipts/rooms_15_TGH-256905-15')));
+  });
+
+  it('tenant CANNOT read a manualReceipts record (admin-only)', async () => {
+    await seedDoc('manualReceipts/rooms_15_TGH-256905-15', sample);
+    await assertFails(getDoc(doc(LIFF_TENANT('line:abc').firestore(), 'manualReceipts/rooms_15_TGH-256905-15')));
+  });
+
+  it('unauth user CANNOT read a manualReceipts record', async () => {
+    await seedDoc('manualReceipts/rooms_15_TGH-256905-15', sample);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'manualReceipts/rooms_15_TGH-256905-15')));
+  });
+
+  it('client CANNOT create a manualReceipts record (CF / Admin-SDK only)', async () => {
+    await assertFails(setDoc(doc(EMAIL_ADMIN().firestore(), 'manualReceipts/forge'), sample));
+    await assertFails(setDoc(doc(ANON().firestore(), 'manualReceipts/forge'), sample));
+  });
+});
+
 describe('bookings — CF-only writes, prospect reads own only', () => {
   const sampleBooking = (prospectUid) => ({
     prospectUid,

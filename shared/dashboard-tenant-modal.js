@@ -479,16 +479,35 @@ async function markBillPaid(roomId, month, year, billId) {
   const note = document.getElementById('billingPayNote')?.value || '';
   BillingSystem.updateBillStatus(billId, 'paid', year);
 
+  const fbBuilding = (window.CONFIG?.getBuildingConfig?.(typeof currentBuilding !== 'undefined' ? currentBuilding : 'rooms')) || 'rooms';
+
+  // Gapless receipt number (Roadmap 1.2a-2): mint server-side BEFORE the RTDB
+  // writes so the bill + payment record carry it. Idempotent per bill — a retry
+  // returns the same number (no gap). Non-blocking: a failure must not block the
+  // paid-status update (receiptNo just won't show until the next mark-paid).
+  let receiptNo = null;
+  try {
+    const _assign = window.firebase?.functions?.httpsCallable?.('assignReceiptNumber');
+    if (_assign) {
+      const _y = Number(year);
+      const be = _y >= 2400 ? _y : (_y >= 1900 ? _y + 543 : undefined);
+      const r = await _assign({ building: fbBuilding, roomId, billId, be });
+      receiptNo = r?.data?.receiptNo || null;
+    }
+  } catch (e) { console.warn('[receipt] assignReceiptNumber failed:', e?.message || e); }
+
   // Mirror status flip into RTDB so tenant_app's onValue subscriber sees it instantly
   // (without this, lookbook stays "ยังไม่จ่าย" even after admin manually approves)
   try {
     if (window.firebaseDatabase && window.firebaseRef && window.firebaseSet) {
-      const fbBuilding = (window.CONFIG?.getBuildingConfig?.(typeof currentBuilding !== 'undefined' ? currentBuilding : 'rooms')) || 'rooms';
       const paidAt = new Date().toISOString();
       const statusRef = window.firebaseRef(window.firebaseDatabase, `bills/${fbBuilding}/${roomId}/${billId}/status`);
       const paidAtRef = window.firebaseRef(window.firebaseDatabase, `bills/${fbBuilding}/${roomId}/${billId}/paidAt`);
       await window.firebaseSet(statusRef, 'paid');
       await window.firebaseSet(paidAtRef, paidAt);
+      if (receiptNo) {
+        await window.firebaseSet(window.firebaseRef(window.firebaseDatabase, `bills/${fbBuilding}/${roomId}/${billId}/receiptNo`), receiptNo);
+      }
       // Also push payment record so tenant payment history reflects manual approval
       if (window.firebasePush) {
         const paymentsRef = window.firebaseRef(window.firebaseDatabase, `payments/${fbBuilding}/${roomId}`);
@@ -496,6 +515,7 @@ async function markBillPaid(roomId, month, year, billId) {
         await window.firebaseSet(newRef, {
           billId, month, year, paidAt, createdAt: paidAt,
           method: 'manual_admin', note, building: fbBuilding, room: roomId,
+          receiptNo: receiptNo || null,
           verifiedBy: 'admin_manual'
         });
       }
