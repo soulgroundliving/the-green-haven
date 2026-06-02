@@ -36,13 +36,13 @@ class TenantConfigManager {
   // Add tenant to specific building
   static addTenant(building, tenantId, tenantData) {
     if (!building || !tenantId || !tenantData.name) {
-      console.warn('โ ๏ธ Building, tenant ID, and name are required');
+      console.warn('⚠️ Building, tenant ID, and name are required');
       return false;
     }
 
     const tenants = this.getAllTenants(building);
     if (tenants[tenantId]) {
-      console.warn(`โ ๏ธ Tenant ${tenantId} already exists in ${building}`);
+      console.warn(`⚠️ Tenant ${tenantId} already exists in ${building}`);
       return false;
     }
 
@@ -73,7 +73,7 @@ class TenantConfigManager {
   static updateTenant(building, tenantId, updates) {
     const tenants = this.getAllTenants(building);
     if (!tenants[tenantId]) {
-      console.warn(`โ ๏ธ Tenant ${tenantId} not found in ${building}`);
+      console.warn(`⚠️ Tenant ${tenantId} not found in ${building}`);
       return false;
     }
 
@@ -86,7 +86,7 @@ class TenantConfigManager {
   static deleteTenant(building, tenantId) {
     const tenants = this.getAllTenants(building);
     if (!tenants[tenantId]) {
-      console.warn(`โ ๏ธ Tenant ${tenantId} not found in ${building}`);
+      console.warn(`⚠️ Tenant ${tenantId} not found in ${building}`);
       return false;
     }
 
@@ -98,7 +98,7 @@ class TenantConfigManager {
   // Get tenants in building via leases (for reference purposes)
   static getTenantsByBuilding(building) {
     if (typeof LeaseAgreementManager === 'undefined') {
-      console.warn('โ ๏ธ LeaseAgreementManager not loaded yet');
+      console.warn('⚠️ LeaseAgreementManager not loaded yet');
       return [];
     }
 
@@ -154,13 +154,13 @@ class TenantConfigManager {
     //    instead of {tenantId}. Store tenantId as a field inside the doc.
     try {
       if (!window.firebase) {
-        console.warn('โ ๏ธ Firebase not loaded');
+        console.warn('⚠️ Firebase not loaded');
         return success;
       }
 
       const roomId = TenantConfigManager._resolveRoomId(tenantId, tenantData);
       if (!roomId) {
-        console.warn(`โ ๏ธ Cannot resolve roomId from tenantId=${tenantId}, skipping Firestore sync`);
+        console.warn(`⚠️ Cannot resolve roomId from tenantId=${tenantId}, skipping Firestore sync`);
         return success;
       }
 
@@ -177,7 +177,7 @@ class TenantConfigManager {
         updatedAt: new Date().toISOString()
       }, { merge: true });
     } catch (error) {
-      console.warn(`โ ๏ธ Firebase sync failed for tenant ${tenantId}:`, error.message);
+      console.warn(`⚠️ Firebase sync failed for tenant ${tenantId}:`, error.message);
     }
 
     return success;
@@ -210,7 +210,7 @@ class TenantConfigManager {
         return tenants;
       }
     } catch (error) {
-      console.warn(`โ ๏ธ Firebase load failed for tenants:`, error.message);
+      console.warn(`⚠️ Firebase load failed for tenants:`, error.message);
     }
 
     // Fallback to localStorage
@@ -225,14 +225,14 @@ class TenantConfigManager {
     //    record from localStorage to resolve roomId (older callers don't pass it).
     try {
       if (!window.firebase) {
-        console.warn('โ ๏ธ Firebase not loaded');
+        console.warn('⚠️ Firebase not loaded');
         return success;
       }
 
       const current = this.getTenant(building, tenantId) || {};
       const roomId = TenantConfigManager._resolveRoomId(tenantId, { ...current, ...updates });
       if (!roomId) {
-        console.warn(`โ ๏ธ Cannot resolve roomId from tenantId=${tenantId}, skipping Firestore sync`);
+        console.warn(`⚠️ Cannot resolve roomId from tenantId=${tenantId}, skipping Firestore sync`);
         return success;
       }
 
@@ -250,7 +250,7 @@ class TenantConfigManager {
         updatedAt: new Date().toISOString()
       }, { merge: true });
     } catch (error) {
-      console.warn(`โ ๏ธ Firebase update failed for tenant ${tenantId}:`, error.message);
+      console.warn(`⚠️ Firebase update failed for tenant ${tenantId}:`, error.message);
     }
 
     return success;
@@ -265,7 +265,7 @@ class TenantConfigManager {
     //    + lease history archive references survive. Admin can re-assign tenant later.
     try {
       if (!window.firebase) {
-        console.warn('โ ๏ธ Firebase not loaded');
+        console.warn('⚠️ Firebase not loaded');
         return success;
       }
 
@@ -301,7 +301,7 @@ class TenantConfigManager {
         updatedAt: new Date().toISOString()
       }, { merge: true });
     } catch (error) {
-      console.warn(`โ ๏ธ Firebase delete failed for tenant ${tenantId}:`, error.message);
+      console.warn(`⚠️ Firebase delete failed for tenant ${tenantId}:`, error.message);
     }
 
     return success;
@@ -321,13 +321,13 @@ class TenantManager {
     try {
       // Get active lease for the room
       if (typeof LeaseAgreementManager === 'undefined') {
-        console.warn('โ ๏ธ LeaseAgreementManager not loaded');
+        console.warn('⚠️ LeaseAgreementManager not loaded');
         return null;
       }
 
       const lease = LeaseAgreementManager.getActiveLease(building, roomId);
       if (!lease || !lease.tenantId) {
-        console.warn(`โ ๏ธ No active lease found for ${building}/${roomId}`);
+        console.warn(`⚠️ No active lease found for ${building}/${roomId}`);
         return null;
       }
 
@@ -547,7 +547,7 @@ class TenantManager {
         title: 'แจ้งปิดน้ำ',
         date: '2026-06-15',
         time: '10:00 - 14:00',
-        icon: '๐’ง',
+        icon: '💧',
         content: 'มีการดำเนินการซ่อมท่อน้ำในอาคารจึงต้องปิดน้ำ',
         priority: 'high',
         createdDate: '2026-06-10'
@@ -557,7 +557,7 @@ class TenantManager {
         title: 'ทำความสะอาดใหญ่',
         date: '2026-06-20',
         time: 'all day',
-        icon: '๐งน',
+        icon: '🧹',
         content: 'การทำความสะอาดสถานที่ทั่วไปในอาคาร',
         priority: 'normal',
         createdDate: '2026-06-12'
@@ -567,7 +567,7 @@ class TenantManager {
         title: 'ซ่อมลิฟต์',
         date: '2026-06-22',
         time: '08:00 - 12:00',
-        icon: '๐”ง',
+        icon: '🔧',
         content: 'การตรวจสอบและบำรุงรักษาระบบลิฟต์',
         priority: 'normal',
         createdDate: '2026-06-14'
@@ -630,7 +630,7 @@ class TenantManager {
   static async syncTenantDataToFirebase(uid, tenantData) {
     try {
       if (!window.firebase) {
-        console.warn('โ ๏ธ Firebase not loaded');
+        console.warn('⚠️ Firebase not loaded');
         return false;
       }
 
@@ -647,7 +647,7 @@ class TenantManager {
 
       return true;
     } catch (error) {
-      console.warn('โ ๏ธ Firebase sync failed:', error);
+      console.warn('⚠️ Firebase sync failed:', error);
       return false;
     }
   }
@@ -658,7 +658,7 @@ class TenantManager {
   static async loadTenantDataFromFirebase(uid) {
     try {
       if (!window.firebase) {
-        console.warn('โ ๏ธ Firebase not loaded');
+        console.warn('⚠️ Firebase not loaded');
         return null;
       }
 
@@ -676,7 +676,7 @@ class TenantManager {
 
       return null;
     } catch (error) {
-      console.warn('โ ๏ธ Firebase load failed:', error);
+      console.warn('⚠️ Firebase load failed:', error);
       return null;
     }
   }
@@ -693,7 +693,7 @@ class TenantManager {
       const meterData = allMeters[meterKey];
 
       if (!meterData) {
-        console.warn(`โ ๏ธ No meter data found for ${meterKey}`);
+        console.warn(`⚠️ No meter data found for ${meterKey}`);
         return null;
       }
 
@@ -703,7 +703,7 @@ class TenantManager {
         : null;
 
       if (!lease) {
-        console.warn(`โ ๏ธ No active lease for ${building}/${roomId}`);
+        console.warn(`⚠️ No active lease for ${building}/${roomId}`);
         return null;
       }
 
