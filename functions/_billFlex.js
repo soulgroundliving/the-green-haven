@@ -230,14 +230,17 @@ function buildBillFlex(bill, opts = {}) {
  * @param {Date}   [opts.paidAt]     - Payment timestamp
  */
 function buildReceiptFlex(bill, opts = {}) {
-  const { tenantName = '', paidAt } = opts;
+  const { tenantName = '', paidAt, receiptNo = null } = opts;
   const b = normalizeBill(bill);
 
   const monthLabel = `${THAI_MONTHS_SHORT[b.month] || b.month}/${b.year}`;
   const paidDateLabel = fmtThaiDateFull(paidAt || new Date());
 
   const buildingInitial = String(b.building || '').charAt(0).toUpperCase() || 'X';
-  const receiptRef = `RCP-${buildingInitial}${b.room}-${String(b.year % 100).padStart(2,'0')}${String(b.month).padStart(2,'0')}`;
+  // Gapless receipt number (Roadmap 1.2a) when the caller supplies it; fall back
+  // to the legacy per-render ref for paths not yet wired (manual mark-paid = 1.2a-2).
+  const receiptRef = receiptNo
+    || `RCP-${buildingInitial}${b.room}-${String(b.year % 100).padStart(2,'0')}${String(b.month).padStart(2,'0')}`;
 
   const nameLabel = tenantName ? `คุณ ${tenantName}` : `ห้อง ${b.room}`;
 
@@ -255,7 +258,7 @@ function buildReceiptFlex(bill, opts = {}) {
       type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
       contents: [
         row('ผู้เช่า', nameLabel),
-        row('เลขที่บิล', receiptRef),
+        row('เลขที่ใบเสร็จ', receiptRef),
         row('วันที่ชำระ', paidDateLabel),
         { type: 'separator', margin: 'md' },
         row('ค่าเช่า', fmtBaht(b.rent), { labelColor: '#444444' }),

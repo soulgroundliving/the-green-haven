@@ -769,6 +769,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // counters/{docType}_{building}_{BE} — gapless running document-number
+    // sequences (Roadmap 1.2a: receipt_{building}_{BE}). Mutated ONLY inside a
+    // server transaction (verifySlip / assignReceiptNumber CF) so the sequence
+    // stays gapless and tamper-proof. Admin-read for reconciliation; NEVER
+    // client-writable (a client increment would corrupt the gapless invariant).
+    match /counters/{counterId} {
+      allow read:  if isAdmin();
+      allow write: if false;
+    }
+
     // ===== DEPOSITS (admin manages; accountant reads for tax reporting) =====
     // Flat collection: deposits/{building}_{roomId} (e.g. deposits/rooms_15)
     // Each doc stores building + roomId fields for client-side filtering.

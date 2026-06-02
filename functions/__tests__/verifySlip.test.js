@@ -23,8 +23,10 @@ const Module = require('module');
 
 let slipOkResponse = null;   // null = use defaultSlipOkOk; set per-test to override
 let runTransactionResult = true;  // true = allowed, false = rate-limited, Error = throw
-let verifiedSlipsCreateThrow = null;  // null = success, Error = throw (now thrown by batch.commit — saveVerifiedSlip batches verifiedSlips.create + the PAYMENT_VERIFIED audit row)
-let lastBatchOps = null;     // captures the ops of the last committed batch (for audit-row assertions)
+let verifiedSlipExists = false;  // tx.get(verifiedSlips) dedup result: true = duplicate slip
+let counterDocSeq = null;        // tx.get(counters) seq value: null = counter doc absent → first receipt = 00001
+let saveSlipTxThrow = null;      // Error = simulate a non-dup receipt-tx commit failure (non-blocking path)
+let lastTxWrites = null;         // captures the last receipt-tx writes [{coll,id,data}] (receipt/audit assertions)
 let logAddCalled = false;
 let authSoTThrow = null;     // null = authorized; Error = throw (permission-denied etc.)
 let getValidBuildingsThrow = false;  // true = getValidBuildings throws (unexpected error path)
@@ -36,8 +38,10 @@ let recordPaymentShouldThrow = false;
 function resetStubs() {
   slipOkResponse = null;
   runTransactionResult = true;
-  verifiedSlipsCreateThrow = null;
-  lastBatchOps = null;
+  verifiedSlipExists = false;
+  counterDocSeq = null;
+  saveSlipTxThrow = null;
+  lastTxWrites = null;
   logAddCalled = false;
   authSoTThrow = null;
   getValidBuildingsThrow = false;
@@ -79,14 +83,10 @@ function makeSlipOkError(statusCode, bodyText) {
 const dbInstance = {
   collection: (name) => ({
     doc: (id) => ({
+      _coll: name, _id: id,   // ref identity for the ref-aware transaction mock
       get: async () => ({ exists: false, data: () => ({}) }),
       set: async () => {},
       update: async () => {},
-      create: async (_data) => {
-        if (name === 'verifiedSlips' && verifiedSlipsCreateThrow) {
-          throw verifiedSlipsCreateThrow;
-        }
-      },
       collection: (_sub) => ({
         doc: (_did) => ({
           get: async () => ({ exists: false, data: () => ({}) }),
@@ -106,31 +106,31 @@ const dbInstance = {
       }),
     }),
   }),
+  // runTransaction handles BOTH the rate-limit tx (verifySlip.js ~72) and
+  // saveVerifiedSlip's dedup + gapless-receipt + audit tx. runTransactionResult
+  // short-circuits the rate-limit path (Error → infra throw, false → rate-limited).
+  // For the receipt tx, tx.get is ref-aware: verifiedSlips → dedup (verifiedSlipExists),
+  // counters → the gapless sequence (counterDocSeq). Writes captured in lastTxWrites.
+  // saveSlipTxThrow simulates a non-dup commit failure on the receipt tx only.
   runTransaction: async (fn) => {
     if (runTransactionResult instanceof Error) throw runTransactionResult;
     if (runTransactionResult === false) return false;
+    const writes = [];
     const tx = {
-      get: async (_ref) => ({ exists: false, data: () => ({}) }),
-      set: () => {},
-      update: () => {},
-    };
-    return fn(tx);
-  },
-  // saveVerifiedSlip batches verifiedSlips.create + the PAYMENT_VERIFIED audit
-  // row (appendActionAudit calls writer.set). A duplicate slip makes batch.commit()
-  // throw ALREADY_EXISTS just like the old doc.create() did — verifiedSlipsCreateThrow
-  // drives that here so the duplicate-detection tests are preserved.
-  batch: () => {
-    const ops = [];
-    return {
-      create: (ref, data) => { ops.push({ op: 'create', ref, data }); },
-      set: (ref, data) => { ops.push({ op: 'set', ref, data }); },
-      update: (ref, data) => { ops.push({ op: 'update', ref, data }); },
-      commit: async () => {
-        lastBatchOps = ops;
-        if (verifiedSlipsCreateThrow) throw verifiedSlipsCreateThrow;
+      get: async (ref) => {
+        const coll = ref && ref._coll;
+        if (coll === 'verifiedSlips') return { exists: verifiedSlipExists, data: () => ({}) };
+        if (coll === 'counters') return { exists: counterDocSeq != null, data: () => ({ seq: counterDocSeq }) };
+        return { exists: false, data: () => ({}) };  // rateLimits (first request), etc.
       },
+      set: (ref, data) => { writes.push({ coll: ref && ref._coll, id: ref && ref._id, data }); },
+      update: (ref, data) => { writes.push({ coll: ref && ref._coll, id: ref && ref._id, op: 'update', data }); },
     };
+    const result = await fn(tx);
+    lastTxWrites = writes;
+    // Receipt tx writes verifiedSlips — simulate a non-dup commit failure there.
+    if (saveSlipTxThrow && writes.some((w) => w.coll === 'verifiedSlips')) throw saveSlipTxThrow;
+    return result;
   },
 };
 
@@ -470,49 +470,47 @@ describe('verifySlip — callable handler', () => {
   // ── Duplicate detection ───────────────────────────────────────────────────
 
   describe('duplicate detection', () => {
-    it('verifiedSlips.create throws { code: 6 } (gRPC ALREADY_EXISTS) → { success:false, isDuplicate:true }', async () => {
-      const err = new Error('Document already exists');
-      err.code = 6;
-      verifiedSlipsCreateThrow = err;
+    it('slip already verified (tx.get finds existing) → { success:false, isDuplicate:true }', async () => {
+      verifiedSlipExists = true;
       const result = await handler(validData, makeCtx());
       assert.equal(result.success, false);
       assert.equal(result.isDuplicate, true);
     });
 
-    it('verifiedSlips.create throws { code: "already-exists" } → { success:false, isDuplicate:true }', async () => {
-      const err = new Error('Document already exists');
-      err.code = 'already-exists';
-      verifiedSlipsCreateThrow = err;
+    it('duplicate burns NO receipt number (counter untouched → no gap)', async () => {
+      verifiedSlipExists = true;
       const result = await handler(validData, makeCtx());
-      assert.equal(result.success, false);
       assert.equal(result.isDuplicate, true);
+      // The receipt tx throws on the dedup read, before any write — no counter increment.
+      assert.ok(!(lastTxWrites || []).some((w) => w.coll === 'counters'),
+        'a duplicate slip must not consume a receipt number');
     });
 
-    it('verifiedSlips.create throws other error (e.g. network) → non-blocking, resolves success', async () => {
+    it('non-dup receipt-tx error (e.g. network) → non-blocking, resolves success', async () => {
       const err = new Error('Network error');
       err.code = 'unavailable';
-      verifiedSlipsCreateThrow = err;
+      saveSlipTxThrow = err;
       const result = await handler(validData, makeCtx());
-      // Other create errors are non-blocking — slip is proven valid
+      // Non-ALREADY_EXISTS errors are non-blocking — slip is proven valid by SlipOK.
       assert.equal(result.success, true);
     });
   });
 
   // ── PAYMENT_VERIFIED audit row (Phase 1.1 PR 1b) ──────────────────────────
-  // saveVerifiedSlip writes an immutable actionAudit row in the SAME batch as the
-  // verifiedSlips dedup create() — every building, tamper-proof, server-stamped.
+  // saveVerifiedSlip writes an immutable actionAudit row in the SAME transaction
+  // as the verifiedSlips dedup + receipt number — every building, tamper-proof.
   describe('PAYMENT_VERIFIED audit row', () => {
     function findAuditOp() {
-      return (lastBatchOps || []).find(
-        (o) => o.op === 'set' && o.data && o.data.action === 'PAYMENT_VERIFIED'
+      return (lastTxWrites || []).find(
+        (w) => w.coll === 'actionAudit' && w.data && w.data.action === 'PAYMENT_VERIFIED'
       );
     }
 
-    it('success → writes a PAYMENT_VERIFIED row in the dedup batch', async () => {
+    it('success → writes a PAYMENT_VERIFIED row in the same transaction', async () => {
       const result = await handler(validData, makeCtx({ admin: true }));
       assert.equal(result.success, true);
       const audit = findAuditOp();
-      assert.ok(audit, 'expected a PAYMENT_VERIFIED row set on the batch');
+      assert.ok(audit, 'expected a PAYMENT_VERIFIED row set in the transaction');
       assert.equal(audit.data.targetType, 'payment');
       assert.equal(audit.data.targetId, DEFAULT_SLIP_DATA.transactionId);
       assert.equal(audit.data.building, 'rooms');
@@ -551,6 +549,47 @@ describe('verifySlip — callable handler', () => {
       const audit = findAuditOp();
       assert.equal(audit.data.actor, 'tenant-uid-9');
       assert.equal(audit.data.actorRole, 'tenant');
+    });
+  });
+
+  // ── Gapless receipt number (RCP-, Roadmap 1.2a) ───────────────────────────
+  // DEFAULT_SLIP_DATA.date = '2026-05-01' → BKK Buddhist-Era year 2569.
+  describe('gapless receipt number', () => {
+    const slipWrite = () => (lastTxWrites || []).find((w) => w.coll === 'verifiedSlips');
+    const counterWrite = () => (lastTxWrites || []).find((w) => w.coll === 'counters');
+
+    it('success → assigns RCP-{building}-{BE}-00001 on an empty counter', async () => {
+      const result = await handler(validData, makeCtx());
+      assert.equal(result.success, true);
+      const slip = slipWrite();
+      assert.ok(slip, 'verifiedSlips doc must be written');
+      assert.equal(slip.data.receiptNo, 'RCP-rooms-2569-00001');
+      const ctr = counterWrite();
+      assert.ok(ctr, 'counter must be set');
+      assert.equal(ctr.id, 'receipt_rooms_2569');
+      assert.equal(ctr.data.seq, 1);
+    });
+
+    it('increments from the existing counter (consecutive, no gap)', async () => {
+      counterDocSeq = 41;
+      const result = await handler(validData, makeCtx());
+      assert.equal(result.success, true);
+      assert.equal(slipWrite().data.receiptNo, 'RCP-rooms-2569-00042');
+      assert.equal(counterWrite().data.seq, 42);
+    });
+
+    it('nest building gets its own per-building series', async () => {
+      const result = await handler({ ...validData, building: 'nest' }, makeCtx());
+      assert.equal(result.success, true);
+      assert.equal(slipWrite().data.receiptNo, 'RCP-nest-2569-00001');
+      assert.equal(counterWrite().id, 'receipt_nest_2569');
+    });
+
+    it('receiptNo is mirrored into the PAYMENT_VERIFIED audit row', async () => {
+      const result = await handler(validData, makeCtx());
+      assert.equal(result.success, true);
+      const audit = (lastTxWrites || []).find((w) => w.coll === 'actionAudit');
+      assert.equal(audit.data.after.receiptNo, 'RCP-rooms-2569-00001');
     });
   });
 
