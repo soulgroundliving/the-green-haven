@@ -30,6 +30,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { assertTenantAccess } = require('./_authSoT');
+const { appendPointsLedger } = require('./_pointsLedger');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -171,6 +172,14 @@ exports.claimContractQuizPoints = functions.region('asia-southeast1').https.onCa
         tx.update(tenantRef, {
           'gamification.points': pointsAfter,
           'gamification.contractQuizPts': (Number(g.contractQuizPts) || 0) + reward,
+        });
+        appendPointsLedger(tx, firestore, {
+          tenantId: tenantData.tenantId || `${canonicalBuilding}_${roomId}`,
+          building: canonicalBuilding,
+          roomId: String(roomId),
+          source: 'contract_quiz', discriminator: ym,
+          points: reward, balanceAfter: pointsAfter,
+          by: context.auth?.uid, refId: ym,
         });
       }
       return {

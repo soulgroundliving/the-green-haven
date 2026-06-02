@@ -13,6 +13,7 @@ const admin = require('firebase-admin');
 const FormData = require('form-data');
 const { getValidBuildings } = require('./buildingRegistry');
 const { assertTenantAccess } = require('./_authSoT');
+const { appendPointsLedger } = require('./_pointsLedger');
 
 // Initialize Firebase Admin SDK (if not already done)
 if (!admin.apps.length) {
@@ -426,6 +427,21 @@ async function recordPaymentAndAwardPoints(slipData, params) {
       'gamification.lastPaymentStatus': status,
       'gamification.lastPaymentAt': new Date()
     });
+
+    // Append the points event to the ledger in the SAME tx (skip 0-point
+    // 'too_late' payments — the ledger records point movements, not every slip).
+    if (points > 0) {
+      appendPointsLedger(tx, db, {
+        tenantId: tenantData.tenantId || `nest_${roomId}`,
+        building: 'nest',
+        roomId,
+        source: 'payment', discriminator: monthKey,
+        points,
+        balanceAfter: (g.points || 0) + points,
+        by: params.userId || 'system',
+        refId: slipData.transactionId,
+      });
+    }
   });
 
   return { roomId, points, status, daysDiff, monthKey };

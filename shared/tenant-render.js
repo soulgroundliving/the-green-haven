@@ -260,9 +260,13 @@
         if (skLabel && _taRoom) skLabel.textContent = `ห้อง ${_taRoom}`;
         const ptEl = document.getElementById('user-total-points');
         if (ptEl) {
-            const pts = parseInt(localStorage.getItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`))
-                 || parseInt(localStorage.getItem('tenant_eco_points'))
-                 || userPoints || 0;
+            // Server-authoritative: window.userPoints (Firestore gamification.points
+            // via _subscribeEcoPoints), room-scoped localStorage only as the
+            // pre-snapshot paint. A real 0 is valid — never fall through to the
+            // generic key (could show another room's stale value) or synthesize.
+            const pts = (typeof window.userPoints === 'number')
+                ? window.userPoints
+                : (parseInt(localStorage.getItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`), 10) || 0);
             ptEl.textContent = Number(pts).toLocaleString();
         }
     }

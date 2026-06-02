@@ -73,6 +73,7 @@ function resetStubs(overrides = {}) {
     batchCommitCount: 0,
     peopleUpdate: null,        // fields passed to peopleRef.update()
     tenantUpdate: null,        // fields passed to tenantRef.update()
+    ledgerWrites: [],          // { key, data } passed to pointsLedger via appendPointsLedger
   };
 }
 resetStubs();
@@ -102,7 +103,10 @@ function makeFirestoreInstance() {
   // batch()
   const makeBatch = () => ({
     update: (ref, fields) => { captured.batchUpdates.push({ ref, fields }); },
-    set:    (ref, data)   => { captured.batchSets.push({ ref, data }); },
+    set:    (ref, data)   => {
+      if (ref && ref._kind === 'ledger') { captured.ledgerWrites.push({ key: ref._ledgerKey, data }); return; }
+      captured.batchSets.push({ ref, data });
+    },
     commit: async ()      => { captured.batchCommitCount++; },
   });
 
@@ -154,9 +158,16 @@ function makeFirestoreInstance() {
     get: async () => ({ exists }),
   });
 
-  // Tenant doc stub for nestSnap (used by _runAwardComplaintFreeMonth)
-  const makeNestTenantDoc = (id, markerExists) => ({
+  // Tenant doc stub for nestSnap (used by _runAwardComplaintFreeMonth).
+  // Real QueryDocumentSnapshots expose .data() — the ledger wiring reads
+  // tenantDoc.data().tenantId + .gamification.points, so the stub must too.
+  const makeNestTenantDoc = (id, markerExists, opts = {}) => ({
     id,
+    // opts.vacant → empty room (no tenantId, status:'vacant') so the occupancy
+    // gate in _runAwardComplaintFreeMonth skips it.
+    data: () => (opts.vacant
+      ? { gamification: { points: 0 }, status: 'vacant' }
+      : { gamification: { points: 0 }, tenantId: `tnt_${id}`, status: 'occupied' }),
     ref: {
       _id: id,
       collection: () => ({
@@ -196,7 +207,7 @@ function makeFirestoreInstance() {
             // awardComplaintFreeMonth path
             return {
               size: stubState.nestTenantDocs.length,
-              docs: stubState.nestTenantDocs.map(t => makeNestTenantDoc(t.id, t.markerExists)),
+              docs: stubState.nestTenantDocs.map(t => makeNestTenantDoc(t.id, t.markerExists, { vacant: t.vacant })),
             };
           },
           orderBy: function () { _orderedQuery = true; return this; },
@@ -266,6 +277,10 @@ function makeFirestoreInstance() {
             forEach: (fn) => stubState.complaintsDocs.forEach(d => fn({ data: () => d.data })),
           }),
         };
+      }
+
+      if (name === 'pointsLedger') {
+        return { doc: (id) => ({ _kind: 'ledger', _ledgerKey: id }) };
       }
 
       if (name === 'tenants') {
@@ -702,6 +717,18 @@ describe('complaintAndGamification', () => {
       assert.strictEqual(captured.batchCommitCount, 0);
     });
 
+    it('skips vacant room with no tenantId (occupancy gate)', async () => {
+      stubState.nestTenantDocs = [
+        { id: 'N101', markerExists: false },                 // occupied → awarded
+        { id: 'N102', markerExists: false, vacant: true },   // empty → skipped
+        { id: 'N103', markerExists: false, vacant: true },   // empty → skipped
+      ];
+      const result = await awardScheduledHandler();
+      assert.strictEqual(result.awarded, 1, 'only the occupied room is awarded');
+      assert.strictEqual(result.skippedVacant, 2, 'both empty rooms skipped by occupancy gate');
+      assert.strictEqual(captured.batchCommitCount, 1, 'no batch write for vacant rooms');
+    });
+
     it('awards points and sets marker for eligible tenant in apply mode', async () => {
       stubState.nestTenantDocs = [
         { id: '501', markerExists: false },
@@ -717,6 +744,12 @@ describe('complaintAndGamification', () => {
         'gamification.points must use FieldValue.increment'
       );
       assert.strictEqual(updateFields['gamification.points'].n, 40);
+      // pointsLedger row appended in the SAME batch
+      assert.strictEqual(captured.ledgerWrites.length, 1, 'one ledger row per awarded tenant');
+      assert.strictEqual(captured.ledgerWrites[0].data.source, 'complaint_free_month');
+      assert.strictEqual(captured.ledgerWrites[0].data.points, 40);
+      assert.strictEqual(captured.ledgerWrites[0].data.tenantId, 'tnt_501');
+      assert.strictEqual(captured.ledgerWrites[0].data.balanceAfter, 40);
     });
   });
 

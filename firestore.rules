@@ -742,6 +742,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ===== POINTS LEDGER (Core Readiness Phase 0) =====
+    // pointsLedger/{idempotencyKey} — append-only event log of every gamification
+    // point movement (earn/redeem). Written server-side ONLY by the points CFs
+    // (claimDailyLoginPoints / claimWellnessQuizPoints / claimContractQuizPoints /
+    // complaintAndGamification / verifySlip / redeemReward) in the SAME tx/batch as
+    // the gamification.points mutation, so the running total and the event history
+    // can never drift. Admin-read for engagement analytics + the future Trust
+    // System; tenant self-view is a later feature (add a claim-traced read clause
+    // then, not now). NEVER client-writable.
+    match /pointsLedger/{entryId} {
+      allow read:  if isAdmin();
+      allow write: if false;
+    }
+
     // ===== DEPOSITS (admin manages; accountant reads for tax reporting) =====
     // Flat collection: deposits/{building}_{roomId} (e.g. deposits/rooms_15)
     // Each doc stores building + roomId fields for client-side filtering.

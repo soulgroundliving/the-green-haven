@@ -19,6 +19,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { checkRateLimit } = require('./_rateLimit');
 const { assertTenantAccess } = require('./_authSoT');
+const { appendPointsLedger } = require('./_pointsLedger');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -102,6 +103,11 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
           'gamification.points': newPoints,
           'gamification.totalRedeemed': admin.firestore.FieldValue.increment(cost),
           'gamification.lastRedeemedAt': admin.firestore.FieldValue.serverTimestamp()
+        });
+        appendPointsLedger(tx, firestore, {
+          tenantId, source: 'redeem', discriminator: redemptionRef.id,
+          points: -cost, balanceAfter: newPoints,
+          by: context.auth?.uid, refId: redemptionRef.id,
         });
         return { success: true, rewardId: playerRewardId, rewardName: reward.name, cost, pointsBefore: currentPoints, pointsAfter: newPoints, redemptionId: redemptionRef.id };
       });
@@ -211,6 +217,14 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
         'gamification.points': newPoints,
         'gamification.totalRedeemed': admin.firestore.FieldValue.increment(cost),
         'gamification.lastRedeemedAt': admin.firestore.FieldValue.serverTimestamp()
+      });
+      appendPointsLedger(tx, firestore, {
+        tenantId: tenantData.tenantId || `${canonicalBuilding}_${roomId}`,
+        building: canonicalBuilding,
+        roomId: String(roomId),
+        source: 'redeem', discriminator: redemptionRef.id,
+        points: -cost, balanceAfter: newPoints,
+        by: context.auth?.uid, refId: redemptionRef.id,
       });
 
       return {

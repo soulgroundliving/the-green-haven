@@ -20,6 +20,7 @@ let markerDocs;          // keyed by full path
 let lastTenantUpdate;
 let lastPeopleUpdate;
 let writtenMarkers;
+let writtenLedger;       // pointsLedger rows appended via appendPointsLedger
 
 function resetStubs() {
   tenantDocs = {};
@@ -29,6 +30,7 @@ function resetStubs() {
   lastTenantUpdate = null;
   lastPeopleUpdate = null;
   writtenMarkers = [];
+  writtenLedger = [];
 }
 resetStubs();
 
@@ -100,6 +102,9 @@ Module._load = function (id, parent, ...rest) {
         if (name === 'wellness_articles') {
           return { doc: (articleId) => articleDocRef(articleId) };
         }
+        if (name === 'pointsLedger') {
+          return { doc: (id) => ({ _kind: 'ledger', _ledgerKey: id }) };
+        }
         throw new Error('unexpected collection: ' + name);
       },
       runTransaction: async (fn) => {
@@ -117,6 +122,7 @@ Module._load = function (id, parent, ...rest) {
             throw new Error('unexpected ref kind: ' + ref._kind);
           },
           set: async (ref, patch) => {
+            if (ref._kind === 'ledger') { writtenLedger.push({ key: ref._ledgerKey, patch }); return; }
             if (ref._kind !== 'marker') throw new Error('tx.set should only target marker refs');
             markerDocs[ref._key] = patch;
             writtenMarkers.push({ key: ref._key, patch });
@@ -278,6 +284,11 @@ describe('claimWellnessQuizPoints — grading + idempotency (tenant path)', () =
     assert.equal(writtenMarkers.length, 1);
     assert.equal(writtenMarkers[0].patch.passed, true);
     assert.equal(lastTenantUpdate.patch['gamification.points'], 60);
+    // pointsLedger row written in the same tx
+    assert.equal(writtenLedger.length, 1);
+    assert.equal(writtenLedger[0].patch.source, 'wellness_quiz');
+    assert.equal(writtenLedger[0].patch.points, 10);
+    assert.equal(writtenLedger[0].patch.balanceAfter, 60);
   });
 
   it('pass 2/3 → marker passed:true, +10 pts (still passes at threshold)', async () => {
@@ -305,6 +316,7 @@ describe('claimWellnessQuizPoints — grading + idempotency (tenant path)', () =
     assert.equal(r.reward, 0);
     assert.equal(writtenMarkers[0].patch.passed, false);
     assert.equal(lastTenantUpdate, null, 'no points update should occur on fail');
+    assert.equal(writtenLedger.length, 0, 'no ledger row on a failed quiz (reward 0)');
   });
 
   it('pass 1/1 (100% threshold) → marker passed:true, +10 pts', async () => {
@@ -366,6 +378,11 @@ describe('claimWellnessQuizPoints — player path', () => {
     assert.equal(writtenMarkers[0].key,
       'people/t-player/wellnessQuizPassed/sleep-bedroom_' + writtenMarkers[0].patch.monthKey);
     assert.equal(lastPeopleUpdate.patch['gamification.points'], 210);
+    // player ledger row: tenantId only, no building/roomId
+    assert.equal(writtenLedger.length, 1);
+    assert.equal(writtenLedger[0].patch.tenantId, 't-player');
+    assert.equal(writtenLedger[0].patch.building, null);
+    assert.equal(writtenLedger[0].patch.points, 10);
   });
 
   it('player tenantId mismatch → permission-denied', async () => {

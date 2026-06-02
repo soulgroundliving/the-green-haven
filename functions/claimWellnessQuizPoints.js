@@ -33,6 +33,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { assertTenantAccess } = require('./_authSoT');
+const { appendPointsLedger } = require('./_pointsLedger');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -130,6 +131,11 @@ exports.claimWellnessQuizPoints = functions.region('asia-southeast1').https.onCa
             'gamification.points': pointsAfter,
             'gamification.wellnessPts': (Number(g.wellnessPts) || 0) + reward,
           });
+          appendPointsLedger(tx, firestore, {
+            tenantId, source: 'wellness_quiz', discriminator: markerId,
+            points: reward, balanceAfter: pointsAfter,
+            by: context.auth?.uid, refId: markerId,
+          });
         }
         return { pointsBefore: currentPoints, pointsAfter, reward };
       });
@@ -197,6 +203,14 @@ exports.claimWellnessQuizPoints = functions.region('asia-southeast1').https.onCa
         tx.update(tenantRef, {
           'gamification.points': pointsAfter,
           'gamification.wellnessPts': (Number(g.wellnessPts) || 0) + reward,
+        });
+        appendPointsLedger(tx, firestore, {
+          tenantId: (tenantSnap.data() || {}).tenantId || `${canonicalBuilding}_${roomId}`,
+          building: canonicalBuilding,
+          roomId: String(roomId),
+          source: 'wellness_quiz', discriminator: markerId,
+          points: reward, balanceAfter: pointsAfter,
+          by: context.auth?.uid, refId: markerId,
         });
       }
       return { pointsBefore: currentPoints, pointsAfter, reward };
