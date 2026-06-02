@@ -4,6 +4,29 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-03) — Roadmap Phase 2: Revenue categories (`otherIncome` reconcile) · ✅ SHIPPED to branch (stacked on #240) · PR pending
+
+**Scope:** roadmap Phase 2 "Revenue categories". **Re-scoped after data-reality check** (user-approved): pet fee + marketplace fee have NO charge field (grep 0) → can't be categories. The real gap = `aggregateMonthlyRevenue` sums only rent/elec/water/trash but `totalRevenue` = bill total (incl. `lateFee`/`other`/`common`) → the category breakdown doesn't reconcile to the total. Fix = add `otherIncome = max(0, total − rent − elec − water − trash)`.
+
+### Shipped
+- **CF** `aggregateMonthlyRevenue.js`: `otherIncome` in month + annual + byBuilding buckets (reconciling remainder) + JSDoc. +2 reconciliation tests (**30/30**).
+- **Readers** `tax-filing.html`: report table gains an "อื่นๆ" column (header + per-room computed + total row); CSV export gains "รายได้อื่นๆ". **§7-L** compute-if-missing fallback (`data.otherIncome ?? max(0, total−sum4)`) so pre-existing taxSummary docs reconcile without re-aggregation.
+- CSP regen (§7-II — tax-filing.html inline changed). `lifecycle_tax_filing.md` schema + verifier updated.
+
+### Deferred (no data — named, not dropped)
+pet fee / marketplace fee as distinct categories — need upstream fee-capture (no `charges.petFee`/commission field exists). `other`/`common`/`lateFee` all roll into `otherIncome` for now.
+
+### Gate
+node --check ✓ · CF tests 30/30 ✓ · mojibake 0 ✓ · CSP regen ✓ · stacked on #240 → clean separate diff (+58/−17).
+
+### Open (owner)
+merge (after #240) = Vercel deploy → optionally re-run `aggregateMonthlyRevenue` HTTP (admin) to persist `otherIncome` into existing taxSummary docs (client fallback covers the read meanwhile); live-verify report table + CSV show อื่นๆ reconciling to รวม.
+
+### Review
+Shipped to branch `feat/phase2-revenue-categories`. Discovery: the roadmap's 3 named categories were ~⅓ buildable (pet/marketplace fee = no data); delivered the achievable reconciliation (`otherIncome`) + named the deferred. Next Phase 2: reconcile report · refund flow · per-tenant arrears/aging.
+
+---
+
 ## ▶▶▶ ACTIVE PLAN (2026-06-03) — Roadmap Phase 2: Remove dead 15%-corporate tax path · 🚧 EXECUTING (branch `feat/phase2-remove-dead-corporate-tax`)
 
 **Scope:** roadmap Phase 2 "Remove dead 15%-corporate path". Pivoted here from "Thai-font PDF" — the Sarabun jsPDF patch's ONLY live consumers are the corporate text-PDF exports targeted here, so this PR retires BOTH roadmap items. Goal: kill auditor-confusing corporate forms (ป.พ.6 quarterly + ภ.ป.ภ.50 annual + 15% flat calc) that contradict the live personal **ภ.ง.ด.90 progressive** model.
