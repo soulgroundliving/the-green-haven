@@ -19,7 +19,7 @@ class TenantFirebaseSync {
   static initialize(user, building, room) {
     try {
       if (!window.firebaseDatabase) {
-        console.warn('โ ๏ธ Firebase Database not initialized. Waiting for Firebase module...');
+        console.warn('⚠️ Firebase Database not initialized. Waiting for Firebase module...');
         return false;
       }
 
@@ -38,16 +38,16 @@ class TenantFirebaseSync {
 
       return true;
     } catch (error) {
-      console.error('โ Firebase initialization error:', error);
+      console.error('❌ Firebase initialization error:', error);
       return false;
     }
   }
 
   /**
    * Load tenant lease information from Firestore meta_data collection
-   * Priority: Firestore FIRST โ’ localStorage FALLBACK
+   * Priority: Firestore FIRST → localStorage FALLBACK
    */
-  // Canonical building id IS the Firestore doc id since B4 migration (rooms โ’ buildings/rooms).
+  // Canonical building id IS the Firestore doc id since B4 migration (rooms → buildings/rooms).
   // Room IDs: ใช้ตามที่ admin ตั้งใน Firestore ตรงๆ (เช่น '15ก', 'ร้านใหญ่' ภาษาไทย)
   // หาก Firestore docId ไม่ตรง → loadLease() คืน null + console แจ้ง path ที่ค้น
   static _fsBuilding(b) { return b; }
@@ -82,7 +82,7 @@ class TenantFirebaseSync {
                 if (leaseSnap.exists()) fullLease = leaseSnap.data() || {};
               } catch (e) {
                 // Permission errors aren't fatal — fall back to mirror.
-                console.debug(`  โ ๏ธ leases lookup failed for ${leaseId}:`, e.message);
+                console.debug(`  ⚠️ leases lookup failed for ${leaseId}:`, e.message);
               }
             }
             const leaseData = {
@@ -128,7 +128,7 @@ class TenantFirebaseSync {
         } catch (e) {
           // permission_denied expected pre-LIFF-link (linkedAuthUid not set yet)
           if (!/permission/i.test(e?.message || '')) {
-            console.debug(`  โ tenants/list lookup failed:`, e.message);
+            console.debug(`  ❌ tenants/list lookup failed:`, e.message);
           }
         }
 
@@ -137,7 +137,7 @@ class TenantFirebaseSync {
         // data anymore. tenants/{b}/list/{roomId} is the only canonical source.
 
       } else {
-        console.warn('โ ๏ธ Firestore not available, using localStorage fallback');
+        console.warn('⚠️ Firestore not available, using localStorage fallback');
       }
 
       // Final fallback: localStorage
@@ -150,7 +150,7 @@ class TenantFirebaseSync {
 
       return null;
     } catch (error) {
-      console.error('โ Error loading lease:', error);
+      console.error('❌ Error loading lease:', error);
       return null;
     }
   }
@@ -180,7 +180,7 @@ class TenantFirebaseSync {
 
       return null;
     } catch (error) {
-      console.error('โ Error loading tenant:', error);
+      console.error('❌ Error loading tenant:', error);
       return null;
     }
   }
@@ -215,7 +215,7 @@ class TenantFirebaseSync {
 
       return null;
     } catch (error) {
-      console.error('โ Error loading room:', error);
+      console.error('❌ Error loading room:', error);
       return null;
     }
   }
@@ -227,7 +227,7 @@ class TenantFirebaseSync {
   static async loadMeterDataFromFirebase() {
     try {
       if (!window.firebase?.firestore) {
-        console.warn('โ ๏ธ Firebase Firestore not initialized');
+        console.warn('⚠️ Firebase Firestore not initialized');
         return {};
       }
 
@@ -284,18 +284,18 @@ class TenantFirebaseSync {
 
           }
         } catch (e) {
-          console.debug(`   โน๏ธ No meter data for year ${year}: ${e.message}`);
+          console.debug(`   ℹ️ No meter data for year ${year}: ${e.message}`);
         }
       }
 
       if (Object.keys(allMeterData).length > 0) {
         return allMeterData;
       } else {
-        console.debug('โ ๏ธ TenantFirebaseSync: No meter data found in Firebase');
+        console.debug('⚠️ TenantFirebaseSync: No meter data found in Firebase');
         return {};
       }
     } catch (error) {
-      console.error('โ Error loading meter data from Firebase:', error);
+      console.error('❌ Error loading meter data from Firebase:', error);
       return {};
     }
   }
@@ -339,7 +339,7 @@ class TenantFirebaseSync {
         } catch (e) {
           // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
           if (!/permission/i.test(e?.message || '')) {
-            console.warn(`โ ๏ธ Firebase bill loading failed: ${e.message}`);
+            console.warn(`⚠️ Firebase bill loading failed: ${e.message}`);
           }
         }
       }
@@ -353,7 +353,7 @@ class TenantFirebaseSync {
     } catch (error) {
       // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
       if (!/permission/i.test(error?.message || '')) {
-        console.error('โ Error loading bills:', error);
+        console.error('❌ Error loading bills:', error);
       }
       return [];
     }
@@ -367,7 +367,7 @@ class TenantFirebaseSync {
    */
   static subscribeBills(callback, onPermissionDenied) {
     if (!this.database || !window.firebaseRef || !window.firebaseOnValue) {
-      console.warn('โ ๏ธ Firebase not available for bill subscription');
+      console.warn('⚠️ Firebase not available for bill subscription');
       return () => {};
     }
     try {
@@ -384,13 +384,13 @@ class TenantFirebaseSync {
         if (/permission/i.test(err?.message || '')) {
           if (typeof onPermissionDenied === 'function') onPermissionDenied();
         } else {
-          console.warn('โ ๏ธ subscribeBills error:', err.message);
+          console.warn('⚠️ subscribeBills error:', err.message);
         }
       });
       return typeof unsub === 'function' ? unsub : () => {};
     } catch (e) {
       if (!/permission/i.test(e?.message || '')) {
-        console.warn('โ ๏ธ subscribeBills failed:', e.message);
+        console.warn('⚠️ subscribeBills failed:', e.message);
       }
       return () => {};
     }
@@ -420,7 +420,7 @@ class TenantFirebaseSync {
     } catch (error) {
       // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
       if (!/permission/i.test(error?.message || '')) {
-        console.error('โ Error loading payment history:', error);
+        console.error('❌ Error loading payment history:', error);
       }
       return [];
     }
@@ -450,7 +450,7 @@ class TenantFirebaseSync {
     } catch (error) {
       // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
       if (!/permission/i.test(error?.message || '')) {
-        console.error('โ Error loading maintenance tickets:', error);
+        console.error('❌ Error loading maintenance tickets:', error);
       }
       return [];
     }
@@ -477,7 +477,7 @@ class TenantFirebaseSync {
       }
       return null;
     } catch (error) {
-      console.error('โ Error loading contract:', error);
+      console.error('❌ Error loading contract:', error);
       return null;
     }
   }
@@ -556,7 +556,7 @@ class TenantFirebaseSync {
 
       return allData;
     } catch (error) {
-      console.error('โ Error loading all data:', error);
+      console.error('❌ Error loading all data:', error);
       return {
         lease: null,
         tenant: null,
@@ -576,7 +576,7 @@ class TenantFirebaseSync {
   static async saveMaintenanceTicket(ticketData) {
     try {
       if (!this.database || !window.firebaseRef || !window.firebaseSet) {
-        console.warn('โ ๏ธ Firebase not available, saving to localStorage only');
+        console.warn('⚠️ Firebase not available, saving to localStorage only');
         return null;
       }
 
@@ -592,7 +592,7 @@ class TenantFirebaseSync {
 
       return ticketId;
     } catch (error) {
-      console.error('โ Error saving maintenance ticket:', error);
+      console.error('❌ Error saving maintenance ticket:', error);
       return null;
     }
   }
@@ -603,7 +603,7 @@ class TenantFirebaseSync {
   static async deleteMaintenanceTicket(building, room, ticketId) {
     try {
       if (!this.database || !window.firebaseRef || !window.firebaseRemove) {
-        console.warn('โ ๏ธ Firebase not available, cannot delete');
+        console.warn('⚠️ Firebase not available, cannot delete');
         return false;
       }
 
@@ -614,7 +614,7 @@ class TenantFirebaseSync {
 
       return true;
     } catch (error) {
-      console.error('โ Error deleting maintenance ticket:', error);
+      console.error('❌ Error deleting maintenance ticket:', error);
       return false;
     }
   }
@@ -625,7 +625,7 @@ class TenantFirebaseSync {
    */
   static async debugFirebaseStructure() {
     if (!this.database || !window.firebaseRef || !window.firebaseGet) {
-      console.error('โ Firebase not available');
+      console.error('❌ Firebase not available');
       return;
     }
 
@@ -678,7 +678,7 @@ class TenantFirebaseSync {
 
       return unsubscribe;
     } catch (error) {
-      console.error('โ Error setting up real-time listener:', error);
+      console.error('❌ Error setting up real-time listener:', error);
       return null;
     }
   }
