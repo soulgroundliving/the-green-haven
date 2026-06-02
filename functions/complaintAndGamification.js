@@ -6,6 +6,7 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 // Shared gamification rules (auto-synced from shared/gamification-rules.js on deploy)
 const { BADGE_CATALOG, badgeId, normaliseBadges, getLevelProgress } = require('./gamification-rules');
+const { appendPointsLedger } = require('./_pointsLedger');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -128,6 +129,15 @@ async function _runAwardComplaintFreeMonth({ dryRun = false } = {}) {
       'metadata.updatedAt': new Date().toISOString()
     });
     batch.set(markerRef, { awardedAt: new Date().toISOString(), points: 40 });
+    appendPointsLedger(batch, firestore, {
+      tenantId: tenantDoc.data().tenantId || `nest_${roomId}`,
+      building: 'nest',
+      roomId,
+      source: 'complaint_free_month', discriminator: monthKey,
+      points: 40,
+      balanceAfter: (tenantDoc.data().gamification?.points || 0) + 40,
+      by: 'system', refId: monthKey,
+    });
     await batch.commit();
     awarded++;
   }

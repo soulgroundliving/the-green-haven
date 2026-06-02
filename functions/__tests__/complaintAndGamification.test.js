@@ -73,6 +73,7 @@ function resetStubs(overrides = {}) {
     batchCommitCount: 0,
     peopleUpdate: null,        // fields passed to peopleRef.update()
     tenantUpdate: null,        // fields passed to tenantRef.update()
+    ledgerWrites: [],          // { key, data } passed to pointsLedger via appendPointsLedger
   };
 }
 resetStubs();
@@ -102,7 +103,10 @@ function makeFirestoreInstance() {
   // batch()
   const makeBatch = () => ({
     update: (ref, fields) => { captured.batchUpdates.push({ ref, fields }); },
-    set:    (ref, data)   => { captured.batchSets.push({ ref, data }); },
+    set:    (ref, data)   => {
+      if (ref && ref._kind === 'ledger') { captured.ledgerWrites.push({ key: ref._ledgerKey, data }); return; }
+      captured.batchSets.push({ ref, data });
+    },
     commit: async ()      => { captured.batchCommitCount++; },
   });
 
@@ -154,9 +158,12 @@ function makeFirestoreInstance() {
     get: async () => ({ exists }),
   });
 
-  // Tenant doc stub for nestSnap (used by _runAwardComplaintFreeMonth)
+  // Tenant doc stub for nestSnap (used by _runAwardComplaintFreeMonth).
+  // Real QueryDocumentSnapshots expose .data() — the ledger wiring reads
+  // tenantDoc.data().tenantId + .gamification.points, so the stub must too.
   const makeNestTenantDoc = (id, markerExists) => ({
     id,
+    data: () => ({ gamification: { points: 0 }, tenantId: `tnt_${id}` }),
     ref: {
       _id: id,
       collection: () => ({
@@ -266,6 +273,10 @@ function makeFirestoreInstance() {
             forEach: (fn) => stubState.complaintsDocs.forEach(d => fn({ data: () => d.data })),
           }),
         };
+      }
+
+      if (name === 'pointsLedger') {
+        return { doc: (id) => ({ _kind: 'ledger', _ledgerKey: id }) };
       }
 
       if (name === 'tenants') {
@@ -717,6 +728,12 @@ describe('complaintAndGamification', () => {
         'gamification.points must use FieldValue.increment'
       );
       assert.strictEqual(updateFields['gamification.points'].n, 40);
+      // pointsLedger row appended in the SAME batch
+      assert.strictEqual(captured.ledgerWrites.length, 1, 'one ledger row per awarded tenant');
+      assert.strictEqual(captured.ledgerWrites[0].data.source, 'complaint_free_month');
+      assert.strictEqual(captured.ledgerWrites[0].data.points, 40);
+      assert.strictEqual(captured.ledgerWrites[0].data.tenantId, 'tnt_501');
+      assert.strictEqual(captured.ledgerWrites[0].data.balanceAfter, 40);
     });
   });
 

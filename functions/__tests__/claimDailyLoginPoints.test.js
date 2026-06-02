@@ -11,10 +11,12 @@ const assert = require('node:assert/strict');
 
 let tenantDocs;          // keyed by `${building}/${roomId}`
 let lastTenantUpdate;
+let writtenLedger;       // pointsLedger rows appended via appendPointsLedger
 
 function resetStubs() {
   tenantDocs = {};
   lastTenantUpdate = null;
+  writtenLedger = [];
 }
 resetStubs();
 
@@ -46,6 +48,9 @@ Module._load = function (id, parent, ...rest) {
         if (name === 'people') {
           return { doc: () => ({ get: async () => ({ exists: false, data: () => null }) }) };
         }
+        if (name === 'pointsLedger') {
+          return { doc: (id) => ({ _kind: 'ledger', _ledgerKey: id }) };
+        }
         throw new Error('unexpected collection: ' + name);
       },
       runTransaction: async (fn) => {
@@ -55,6 +60,7 @@ Module._load = function (id, parent, ...rest) {
             data: () => tenantDocs[ref._key],
           }),
           update: async (ref, patch) => { lastTenantUpdate = { key: ref._key, patch }; },
+          set: async (ref, patch) => { writtenLedger.push({ key: ref._ledgerKey, patch }); },
         };
         return fn(tx);
       },
@@ -104,6 +110,12 @@ describe('claimDailyLoginPoints — auth gate', () => {
     assert.equal(r.success, true);
     assert.equal(r.reward, 1);
     assert.equal(r.streak, 1);
+    // pointsLedger row written in the same tx
+    assert.equal(writtenLedger.length, 1, 'one ledger row written');
+    assert.equal(writtenLedger[0].patch.source, 'daily_login');
+    assert.equal(writtenLedger[0].patch.points, 1);
+    assert.equal(writtenLedger[0].patch.tenantId, 'rooms_15');
+    assert.equal(writtenLedger[0].patch.balanceAfter, 1);
   });
 
   it('Path 2a uid-sot: claims drifted but linkedAuthUid matches → claims succeed', async () => {

@@ -16,6 +16,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { assertTenantAccess } = require('./_authSoT');
+const { appendPointsLedger } = require('./_pointsLedger');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -64,6 +65,11 @@ exports.claimDailyLoginPoints = functions.region('asia-southeast1').https.onCall
           'gamification.lastDailyClaim': today,
           'gamification.dailyStreak': streak,
           'gamification.lastDailyClaimAt': admin.firestore.FieldValue.serverTimestamp(),
+        });
+        appendPointsLedger(tx, firestore, {
+          tenantId, source: 'daily_login', discriminator: today,
+          points: reward, balanceAfter: pointsAfter,
+          by: context.auth?.uid, refId: today,
         });
         return { pointsBefore: currentPoints, pointsAfter, reward, bonus, streak };
       });
@@ -126,6 +132,14 @@ exports.claimDailyLoginPoints = functions.region('asia-southeast1').https.onCall
         'gamification.lastDailyClaim': today,
         'gamification.dailyStreak': streak,
         'gamification.lastDailyClaimAt': admin.firestore.FieldValue.serverTimestamp()
+      });
+      appendPointsLedger(tx, firestore, {
+        tenantId: d.tenantId || `${canonicalBuilding}_${roomId}`,
+        building: canonicalBuilding,
+        roomId: String(roomId),
+        source: 'daily_login', discriminator: today,
+        points: reward, balanceAfter: pointsAfter,
+        by: context.auth?.uid, refId: today,
       });
 
       return { pointsBefore: currentPoints, pointsAfter, reward, bonus, streak };

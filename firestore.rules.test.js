@@ -1025,6 +1025,73 @@ describe('occupancyLog — append-only audit history (Plan B\' S1)', () => {
   });
 });
 
+describe('pointsLedger — append-only points event log, admin-read-only (Core Readiness Phase 0)', () => {
+  // LIFF tenant with explicit tenantId claim — proves even an authenticated
+  // tenant has NO read access in Phase 0 (self-view is a deferred feature).
+  const LIFF_WITH_TENANT_ID = (uid, tenantId, room = '15', building = 'rooms') =>
+    testEnv.authenticatedContext(uid, {
+      tenantId, room, building,
+      firebase: { sign_in_provider: 'custom' }
+    });
+
+  const sampleEntry = {
+    tenantId: 'TENANT_X', source: 'daily_login', points: 1,
+    balanceAfter: 1, building: 'rooms', roomId: '15', by: 'line:abc',
+  };
+
+  it('admin can read a pointsLedger entry', async () => {
+    await seedDoc('pointsLedger/daily_login__TENANT_X__2026-06-02', sampleEntry);
+    await assertSucceeds(getDoc(
+      doc(EMAIL_ADMIN().firestore(), 'pointsLedger/daily_login__TENANT_X__2026-06-02')
+    ));
+  });
+
+  it('admin collection query over pointsLedger succeeds (analytics / Trust System)', async () => {
+    await seedDoc('pointsLedger/daily_login__TENANT_X__2026-06-02', sampleEntry);
+    await assertSucceeds(getDocs(
+      query(collection(EMAIL_ADMIN().firestore(), 'pointsLedger'))
+    ));
+  });
+
+  it('tenant CANNOT read pointsLedger — even their own (admin-only in Phase 0)', async () => {
+    await seedDoc('pointsLedger/daily_login__TENANT_OWN__2026-06-02',
+      { ...sampleEntry, tenantId: 'TENANT_OWN' });
+    const ctx = LIFF_WITH_TENANT_ID('line:abc', 'TENANT_OWN');
+    await assertFails(getDoc(doc(ctx.firestore(), 'pointsLedger/daily_login__TENANT_OWN__2026-06-02')));
+  });
+
+  it('unauth user CANNOT read any pointsLedger entry', async () => {
+    await seedDoc('pointsLedger/daily_login__TENANT_X__2026-06-02', sampleEntry);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'pointsLedger/daily_login__TENANT_X__2026-06-02')));
+  });
+
+  it('client CANNOT create a pointsLedger entry (CF-only via Admin SDK)', async () => {
+    // write:false — even admin via the client SDK is blocked; only the Admin SDK
+    // (which bypasses rules) writes, inside the points CFs.
+    await assertFails(setDoc(
+      doc(EMAIL_ADMIN().firestore(), 'pointsLedger/forge'), sampleEntry
+    ));
+    await assertFails(setDoc(
+      doc(ANON().firestore(), 'pointsLedger/forge'), sampleEntry
+    ));
+  });
+
+  it('admin CANNOT update an existing pointsLedger entry (append-only invariant)', async () => {
+    await seedDoc('pointsLedger/daily_login__TENANT_X__2026-06-02', sampleEntry);
+    await assertFails(updateDoc(
+      doc(EMAIL_ADMIN().firestore(), 'pointsLedger/daily_login__TENANT_X__2026-06-02'),
+      { points: 999 }
+    ));
+  });
+
+  it('admin CANNOT delete a pointsLedger entry (audit-grade — history is permanent)', async () => {
+    await seedDoc('pointsLedger/daily_login__TENANT_X__2026-06-02', sampleEntry);
+    await assertFails(deleteDoc(
+      doc(EMAIL_ADMIN().firestore(), 'pointsLedger/daily_login__TENANT_X__2026-06-02')
+    ));
+  });
+});
+
 describe('bookings — CF-only writes, prospect reads own only', () => {
   const sampleBooking = (prospectUid) => ({
     prospectUid,

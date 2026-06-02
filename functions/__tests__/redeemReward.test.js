@@ -11,6 +11,7 @@ let peopleDocs;
 let rewardDocs;
 let redemptionWrites;
 let tenantUpdates;
+let ledgerWrites;        // pointsLedger rows appended via appendPointsLedger
 let rateLimitCalled;
 
 function resetStubs() {
@@ -19,6 +20,7 @@ function resetStubs() {
   rewardDocs = {};
   redemptionWrites = [];
   tenantUpdates = [];
+  ledgerWrites = [];
   rateLimitCalled = false;
 }
 resetStubs();
@@ -70,6 +72,9 @@ Module._load = function (id, parent, ...rest) {
             }),
           };
         }
+        if (name === 'pointsLedger') {
+          return { doc: (id) => ({ _kind: 'ledger', _ledgerKey: id }) };
+        }
         throw new Error('unexpected collection: ' + name);
       },
       runTransaction: async (fn) => {
@@ -86,7 +91,10 @@ Module._load = function (id, parent, ...rest) {
             }
             throw new Error('unexpected tx.get ref: ' + JSON.stringify(refOrQuery));
           },
-          set: async (ref, payload) => { redemptionWrites.push({ id: ref.id, payload }); },
+          set: async (ref, payload) => {
+            if (ref && ref._kind === 'ledger') { ledgerWrites.push({ key: ref._ledgerKey, payload }); return; }
+            redemptionWrites.push({ id: ref.id, payload });
+          },
           update: async (ref, patch) => { tenantUpdates.push({ key: ref._key, patch }); },
         };
         return fn(tx);
@@ -151,6 +159,11 @@ describe('redeemReward — tenant branch auth gate', () => {
     assert.equal(r.success, true);
     assert.equal(r.pointsAfter, 90);
     assert.equal(redemptionWrites.length, 1);
+    // pointsLedger row written in the same tx (signed negative for a redeem)
+    assert.equal(ledgerWrites.length, 1);
+    assert.equal(ledgerWrites[0].payload.source, 'redeem');
+    assert.equal(ledgerWrites[0].payload.points, -10);
+    assert.equal(ledgerWrites[0].payload.balanceAfter, 90);
   });
 
   it('Path 2a uid-sot: claims drifted, linkedAuthUid matches → redeem succeeds', async () => {

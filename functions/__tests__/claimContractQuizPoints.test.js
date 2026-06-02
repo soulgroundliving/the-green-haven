@@ -17,12 +17,14 @@ let tenantDocs;
 let markerDocs;
 let lastTenantUpdate;
 let writtenMarkers;
+let writtenLedger;       // pointsLedger rows appended via appendPointsLedger
 
 function resetStubs() {
   tenantDocs = {};
   markerDocs = {};
   lastTenantUpdate = null;
   writtenMarkers = [];
+  writtenLedger = [];
 }
 resetStubs();
 
@@ -65,6 +67,9 @@ Module._load = function (id, parent, ...rest) {
         if (name === 'people') {
           return { doc: () => ({ get: async () => ({ exists: false, data: () => null }) }) };
         }
+        if (name === 'pointsLedger') {
+          return { doc: (id) => ({ _kind: 'ledger', _ledgerKey: id }) };
+        }
         throw new Error('unexpected collection: ' + name);
       },
       runTransaction: async (fn) => {
@@ -79,6 +84,7 @@ Module._load = function (id, parent, ...rest) {
             throw new Error('unexpected ref kind: ' + ref._kind);
           },
           set: async (ref, patch) => {
+            if (ref._kind === 'ledger') { writtenLedger.push({ key: ref._ledgerKey, patch }); return; }
             if (ref._kind !== 'marker') throw new Error('tx.set should only target marker refs');
             markerDocs[ref._key] = patch;
             writtenMarkers.push({ key: ref._key, patch });
@@ -203,6 +209,11 @@ describe('claimContractQuizPoints — grading (tenant path)', () => {
     assert.equal(r.pointsAfter, 120);
     assert.equal(writtenMarkers[0].patch.passed, true);
     assert.equal(lastTenantUpdate.patch['gamification.points'], 120);
+    // pointsLedger row written in the same tx
+    assert.equal(writtenLedger.length, 1);
+    assert.equal(writtenLedger[0].patch.source, 'contract_quiz');
+    assert.equal(writtenLedger[0].patch.points, 20);
+    assert.equal(writtenLedger[0].patch.balanceAfter, 120);
   });
 
   it('pass 2/3 (one wrong) → +20 pts', async () => {
@@ -240,6 +251,7 @@ describe('claimContractQuizPoints — grading (tenant path)', () => {
     assert.equal(r.reward, 0);
     assert.equal(writtenMarkers[0].patch.passed, false);
     assert.equal(lastTenantUpdate, null);
+    assert.equal(writtenLedger.length, 0, 'no ledger row on a failed quiz (reward 0)');
   });
 
   it('fail 0/3 → marker passed:false', async () => {
