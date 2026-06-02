@@ -57,8 +57,14 @@
 - **Manual-path invoice persistence** (`saveBillToFirebase`/`batchSendInvoices`) — the primary path covers 95%; fold the manual path in as fast-follow if needed.
 - **Retire the 3 ad-hoc schemes** (`dashboard-bill.js:440/:1224` TGH-, orphan `invoice-receipt-manager.js`) once the persisted `invoiceNo` is the single source.
 
-### Review (append after execution)
-_(shipped / deferred / follow-ups)_
+### Review (2026-06-02 — SHIPPED + DEPLOYED)
+- **Shipped + deployed to prod:** PR [#235](https://github.com/soulgroundliving/the-green-haven/pull/235) (`d5c15c6`, squash of `0f1e3a5` 1.2 + `6fbd524` 1.3). Prod deploy all green (Deploy CF 3m38s · Deploy Rules 1m23s · Firebase Rules · E2E). User chose: build 1.3 first, deploy 1.2+1.3 together, staging-green before merge.
+- **1.2:** `_invoiceCounter` → `INV-{b}-{BE}-{NNNNN}` minted in `notifyTenantOnMeterUpload.issueInvoiceNo` + persisted `invoices/{b}_{r}_{period}` doc-of-record + `BILL_ISSUED` audit + Flex shows the number. **1.3:** `voidInvoice` CF (status:void + `BILL_VOIDED`, never deletes, idempotent) + void invariant + admin void UI (`dashboard-invoice-void.js`).
+- **Decisions taken:** issuance anchor = auto-mint in notify CF · per-building counter · forward-only (all RECOMMENDED, user-approved).
+- **Gates:** functions 1882/0 · rules 264/0 · test:shared 319/0 · verify:memory 505/0 · README counts. Prod probe: `voidInvoice`→UNAUTHENTICATED, notify→PERMISSION_DENIED.
+- **Deferred (named):** deliberate re-issue (new INV- + `reissueOf`) · in-app invoiceNo display · manual-path persistence · retire the 3 ad-hoc schemes.
+- **Open (owner live-verify, §7-I/§7-J):** real meter import → `INV-…00001`; re-import → same; admin void → `BILL_VOIDED` row + status:void; voided period not resurrected on re-notify.
+- **Architecture doc:** `memory/lifecycle_invoice_numbering.md` (grep-backed) + handoff `memory/next_session_handoff_2026_06_02_phase_1_2_1_3_invoice.md`.
 
 ---
 
