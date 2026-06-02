@@ -178,6 +178,11 @@ exports.claimContractQuizPoints  = require('./claimContractQuizPoints').claimCon
 // mutations call this after the write; in-tx CF actions log via _actionAudit directly.
 exports.recordAdminAction = require('./recordAdminAction').recordAdminAction;
 
+// Gapless RECEIPT number for MANUAL (cash) payments (Roadmap 1.2a, PR 1.2a-2).
+// The client calls this after marking a bill paid by hand; slips mint their number
+// inside the verifySlip tx. Shares the _receiptCounter gapless sequence.
+exports.assignReceiptNumber = require('./assignReceiptNumber').assignReceiptNumber;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ANNOUNCEMENTS — unified notice/event/banner (C4 — replaces broadcastMessages)
 // ═══════════════════════════════════════════════════════════════════════════
