@@ -4,6 +4,31 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-03) — Roadmap Phase 2: Reconcile report (slip↔bill) · ✅ SHIPPED to branch (stacked on #241) · PR pending
+
+**Scope:** roadmap Phase 2 "Reconcile report" — admin slip↔bill matched/unmatched view (bank-statement reconciliation basis). Home = **dashboard.html (admin)** per user choice — `verifiedSlips`/`manualReceipts` are admin-read-only, so no rules change (§7-rule-tighten).
+
+### Verified data model (Explore)
+Slips lack `billId`; but paid bills carry `paidRef` (=slip txId) + `manualReceipts` carry explicit `billId` → matching = `paidRef`→slip OR `manualReceipts[billId]` OR heuristic building+room+month+amount. Reuse `BillStore.listAllForYear`; read `verifiedSlips`+`manualReceipts` via `getDocs` (known schema, admin).
+
+### Shipped
+- `shared/dashboard-reconcile.js`: pure `computeReconciliation({bills,slips,manualReceipts})` → `{matched, unmatchedSlips, unmatchedPaidBills, mismatches, summary}` + `initReconcilePage` (year selector, §7-N error→UI, bounded reads with no-silent-cap log). +11 unit tests (vm sandbox).
+- `dashboard.html`: nav + `#page-reconcile` + `<script src>`. `dashboard-main.js`: `_showPageImpl` wire. **HTML + external script only → NO CSP drift** (confirmed: csp-hashes.json unchanged).
+
+### Gate
+node --check ✓ · reconcile 11/11 ✓ · test:shared 330/330 ✓ · CSP no drift ✓.
+
+### Deferred
+explicit `billId` on `verifiedSlips` (audit-grade) — touches money-flow verifySlip CF; `paidRef` + heuristic enough for v1.
+
+### Open (owner)
+merge (after #240+#241) = Vercel deploy → live-verify on prod admin: open กระทบยอดสลิป → pick year → confirm matched / unmatched-slips / unmatched-paid-bills / mismatch buckets render (§7-J admin-gated — agent can't drive).
+
+### Review
+Shipped to branch `feat/phase2-reconcile-report`. Next Phase 2: refund flow · per-tenant arrears/aging.
+
+---
+
 ## ▶▶▶ ACTIVE PLAN (2026-06-03) — Roadmap Phase 2: Revenue categories (`otherIncome` reconcile) · ✅ SHIPPED to branch (stacked on #240) · PR pending
 
 **Scope:** roadmap Phase 2 "Revenue categories". **Re-scoped after data-reality check** (user-approved): pet fee + marketplace fee have NO charge field (grep 0) → can't be categories. The real gap = `aggregateMonthlyRevenue` sums only rent/elec/water/trash but `totalRevenue` = bill total (incl. `lateFee`/`other`/`common`) → the category breakdown doesn't reconcile to the total. Fix = add `otherIncome = max(0, total − rent − elec − water − trash)`.

@@ -2942,6 +2942,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button class="sidebar-item" data-action="showPage" data-page="audit">
         <span class="sidebar-item-icon" aria-hidden="true">🛡️</span>บันทึกการกระทำ
       </button>
+      <button class="sidebar-item" data-action="showPage" data-page="reconcile">
+        <span class="sidebar-item-icon" aria-hidden="true">🧾</span>กระทบยอดสลิป
+      </button>
       <button class="sidebar-item" data-action="openChangePasswordModal">
         <span class="sidebar-item-icon" aria-hidden="true">🔐</span>เปลี่ยนรหัสผ่าน
       </button>
@@ -5326,6 +5329,17 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div id="audit-table-mount"></div>
 </div>
 
+<!-- ===== PAYMENT RECONCILIATION (Roadmap Phase 2) — slip↔bill matched / unmatched ===== -->
+<div class="page" id="page-reconcile">
+  <div class="section-title" role="heading" aria-level="2">🧾 กระทบยอดสลิป↔บิล (Reconciliation)</div>
+  <p style="color:var(--text-muted);margin:.25rem 0 1rem;font-size:.9rem;">ตรวจหาสลิปที่ไม่มีบิลรองรับ · บิลที่ชำระแล้วแต่ไม่มีหลักฐาน · ยอดสลิปไม่ตรงกับบิล — พื้นฐานการกระทบยอดกับ statement ธนาคาร</p>
+  <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:1rem;">
+    <label for="reconcile-year" style="font-size:.9rem;">ปีภาษี (พ.ศ.):</label>
+    <select id="reconcile-year" style="padding:.4rem .6rem;border:1px solid var(--border,#e0e6ed);border-radius:6px;"></select>
+  </div>
+  <div id="reconcile-mount"></div>
+</div>
+
 <!-- ===== GAMIFICATION MANAGEMENT ===== -->
 <div class="page" id="page-gamification">
   <div class="section-title" role="heading" aria-level="2">🏆 Gamification & Rewards Management</div>
@@ -5632,6 +5646,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-config.js" defer></script>
 <script src="./shared/dashboard-admin-ops.js" defer></script>
 <script src="./shared/dashboard-audit-panel.js" defer></script>
+<script src="./shared/dashboard-reconcile.js" defer></script>
 <script src="./shared/dashboard-extra.js" defer></script>
 <script src="./shared/dashboard-owner-insights.js" defer></script>
 <script src="./shared/dashboard-insights.js" defer></script>
