@@ -4630,6 +4630,10 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
                 <div class="dash-hint-77">ขั้นตอนที่ 1 — แจ้งยอดก่อนชำระ</div>
               </div>
             </div>
+            <!-- Roadmap 1.3: void the persisted (LINE-issued INV-) invoice for this room/period -->
+            <div style="margin-top:.5rem;text-align:right;">
+              <button type="button" data-action="voidInvoice" style="background:none;border:1px solid var(--border,#e0e6ed);border-radius:6px;padding:.3rem .7rem;font-size:.77rem;color:var(--text-muted,#6b7a8d);cursor:pointer;">🚫 ยกเลิกใบแจ้งหนี้ที่ออกแล้ว</button>
+            </div>
           </div>
 
           <div class="card">
@@ -5484,6 +5488,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-main.js" defer></script>
 <script src="./shared/dashboard-room-config.js" defer></script>
 <script src="./shared/dashboard-bill.js" defer></script>
+<script src="./shared/dashboard-invoice-void.js" defer></script>
 <script src="./shared/dashboard-bill-slip-verify.js" defer></script>
 <script src="./shared/dashboard-bill-payment-status.js" defer></script>
 <script src="./shared/dashboard-bill-room-grid.js" defer></script>

@@ -93,6 +93,11 @@ async function issueInvoiceNo({ building, roomId, bill, auditActor }) {
     // READ 1 (dedup) — before any write, per all-reads-before-writes.
     const existing = await tx.get(invoiceRef);
     if (existing.exists && existing.data().invoiceNo) {
+      // A VOIDED invoice must NOT be silently reused — re-issuing a corrected
+      // invoice (new number, reissueOf) is a deliberate admin action, not an
+      // auto-renotify side effect (Phase 1.3). Skip minting; the Flex falls back
+      // to the legacy ref until the admin re-issues.
+      if (existing.data().status === 'void') return null;
       return existing.data().invoiceNo; // idempotent re-notify — no counter burn
     }
 

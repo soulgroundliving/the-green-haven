@@ -394,6 +394,17 @@ describe('notifyTenantOnMeterUpload', () => {
       assert.equal(countersState['invoice_rooms_2569'].seq, 2);
     });
 
+    it('does NOT reuse a VOIDED invoice number on re-notify (re-issue is deliberate, Phase 1.3)', async () => {
+      invoicesState['rooms_15_256905'] = { invoiceNo: 'INV-rooms-2569-00001', status: 'void' };
+      fetchResponses = [{ ok: true, status: 200, body: '' }];
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15', force: true }));
+      assert.equal(invoicesState['rooms_15_256905'].invoiceNo, 'INV-rooms-2569-00001', 'voided doc untouched');
+      assert.equal(invoicesState['rooms_15_256905'].status, 'void');
+      assert.equal(countersState['invoice_rooms_2569'], undefined, 'no mint — counter untouched');
+      const call = buildBillFlexCalls[buildBillFlexCalls.length - 1];
+      assert.equal(call.opts.invoiceNo, null, 'Flex falls back to the legacy ref for a voided period');
+    });
+
     it('a mint failure is non-fatal — notification still proceeds', async () => {
       computeBillResult = { ...computeBillResult, year: undefined }; // breaks be derivation
       fetchResponses = [{ ok: true, status: 200, body: '' }];
