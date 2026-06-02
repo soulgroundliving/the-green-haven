@@ -32,10 +32,14 @@
 - [x] **Wire 1 client action as proof:** tenant edit (`dashboard-tenant-modal.js:695`, beside `AuditLogger.log`) → `recordAdminAction` with `TENANT_UPDATED`. Non-blocking, **field-NAMES only (no PII values)**, fired AFTER the save (§7-I).
 - [x] **Tests + gates:** functions unit **1831/0** (+22), rules **249/0** (+7).
 - [ ] **Read-UI swap → MOVED to PR 1a.2** (Dashboard audit panel) per §7-M discovery above. Standalone `audit-log-viewer.html` left as-is.
-- [ ] **Commit → push → PR → merge** (standing auth) → **deploy (USER CONFIRM)**: `firebase deploy --only functions:recordAdminAction,firestore:rules,firestore:indexes --project the-green-haven`, branch-check first. §7-NN: callable, no new trigger → no SE3 block. **Live-verify:** admin edits a tenant → REST-read `actionAudit` shows the row (no viewer yet).
+- [x] **Commit → push → PR (#229) → squash-merge `0d23ea8` → DEPLOYED prod** (user-confirmed). CF deploy ✓ (`recordAdminAction(asia-southeast1)` created); rules+index deploy failed once on a transient `Failed to make request` to the indexes API → fresh `workflow_dispatch` re-run `✔ Deploy complete!` (rule + index live). §7-NN held (callable, no trigger).
+- [ ] **Live-verify (OPEN):** admin edits a tenant in the dashboard → REST-read `actionAudit` shows one row with server-stamped `actor`/`ip`/`at`. Needs a real admin edit (no auto-click, §7-I). Self-confirms on first real edit; or user triggers one + re-probe.
 
-**PR 1a.2 — Dashboard audit panel** (read UI, after 1a deployed):
-- [ ] Add an "Audit / บันทึกการกระทำ" panel/page in `dashboard.html` (has Firebase Auth + firestore + admin claim already) → query `actionAudit` `order by at desc` (+ optional `where actor==X` using the composite index). Reuse dashboard table/pagination patterns. **CSP:** dashboard.html is a CSP-tracked file — if the panel adds an inline `<script>`, regen hashes (§7-II/OO).
+**PR 1a.2 — Dashboard audit panel** (read UI) · ✅ BUILT (branch `feat/phase1-1-audit-panel`):
+- [x] `shared/dashboard-audit-panel.js` (new, 148 lines) — `window.initAuditPage()`; subscribes `actionAudit` `orderBy('at','desc') limit 200` via `window.firebase.firestoreFunctions`; idempotent; **§7-N error callback** renders an error state (no silent stuck spinner); client-side search (no composite-index dependency for v1); Firestore `Timestamp.toDate()` for `at`; escapes all fields.
+- [x] `dashboard.html` — nav button (`data-page="audit"`, SYSTEM group) + `#page-audit` container (`.page`/`.active` system, not §7-SS u-init-hide) + search bar + `<script src>` tag. **CSP: no drift** (HTML + external src only — no inline-script content changed; `csp:hash` diff empty).
+- [x] `shared/dashboard-main.js` — `_showPageImpl`: `if(page==='audit')initAuditPage();`.
+- [ ] Ship: commit → push → PR → merge (Vercel static deploy) → **live-verify on prod** (admin login → open panel → empty state renders no-error; then a tenant edit → row appears = closes PR 1a live-verify too).
 
 **PR 1b — expand coverage** (after 1a verified live):
 - [ ] In-tx (tamper-proof): `verifySlip.js` `recordPaymentAndAwardPoints` tx (:403) → `appendActionAudit` row (`PAYMENT_VERIFIED`, target=payment/`transactionId`) in the SAME tx. Extend `verifySlip.test.js` to assert the row (mind the §7 Phase-0 test-mock gotcha: tx mock needs `.set` + `collection('actionAudit')` branch).

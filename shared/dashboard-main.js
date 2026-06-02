@@ -51,6 +51,7 @@ window._showPageImpl = function(page,btn){
   if(page==='tenant-master')initTenantMasterPage();
   if(page==='lease-agreements')initLeaseAgreementsPage();
   if(page==='gamification')initGamificationPage();
+  if(page==='audit'){ if(typeof initAuditPage==='function')initAuditPage(); }
   if(page==='content-management'){
     if(typeof initAnnouncementsPage==='function')initAnnouncementsPage();
     if(typeof initCommunityEventsPage==='function')initCommunityEventsPage();

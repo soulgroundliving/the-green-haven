@@ -2939,6 +2939,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button class="sidebar-item" data-action="goToAuditLog">
         <span class="sidebar-item-icon" aria-hidden="true">📋</span>Audit Logs
       </button>
+      <button class="sidebar-item" data-action="showPage" data-page="audit">
+        <span class="sidebar-item-icon" aria-hidden="true">🛡️</span>บันทึกการกระทำ
+      </button>
       <button class="sidebar-item" data-action="openChangePasswordModal">
         <span class="sidebar-item-icon" aria-hidden="true">🔐</span>เปลี่ยนรหัสผ่าน
       </button>
@@ -5308,6 +5311,17 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
 </div>
 
+<!-- ===== AUDIT TRAIL (Core Readiness Phase 1.1) — reads the immutable actionAudit collection ===== -->
+<div class="page" id="page-audit">
+  <div class="section-title" role="heading" aria-level="2">🛡️ บันทึกการกระทำ (Audit Trail)</div>
+  <p style="color:var(--text-muted);margin:.25rem 0 1rem;font-size:.9rem;">บันทึก server-side ที่แก้ไขไม่ได้ (append-only) ของการกระทำโดยผู้ดูแล เช่น แก้ไขผู้เช่า · ยืนยันสลิป · อนุมัติมิเตอร์ — actor / IP / เวลา ประทับฝั่งเซิร์ฟเวอร์</p>
+  <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+    <input id="audit-search" type="search" placeholder="ค้นหา: ผู้กระทำ / การกระทำ / ห้อง / IP" style="flex:1;min-width:240px;padding:.5rem .75rem;border:1px solid var(--border,#e0e6ed);border-radius:8px;" />
+    <span id="audit-count" style="color:var(--text-muted,#6b7a8d);font-size:.85rem;white-space:nowrap;"></span>
+  </div>
+  <div id="audit-table-mount"></div>
+</div>
+
 <!-- ===== GAMIFICATION MANAGEMENT ===== -->
 <div class="page" id="page-gamification">
   <div class="section-title" role="heading" aria-level="2">🏆 Gamification & Rewards Management</div>
@@ -5612,6 +5626,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-bills.js" defer></script>
 <script src="./shared/dashboard-config.js" defer></script>
 <script src="./shared/dashboard-admin-ops.js" defer></script>
+<script src="./shared/dashboard-audit-panel.js" defer></script>
 <script src="./shared/dashboard-extra.js" defer></script>
 <script src="./shared/dashboard-owner-insights.js" defer></script>
 <script src="./shared/dashboard-insights.js" defer></script>
