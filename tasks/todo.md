@@ -1,5 +1,58 @@
 # 9-Dimension Re-Audit Remediation Plan (run 2)
 
+> **▶ NEW forward-looking program (2026-06-02):** [core-readiness-roadmap.md](core-readiness-roadmap.md) — Core readiness for "เปิดตรวจจริง" (accountant/tax/investor) + the blueprint's 3 future features (Behavioral Intelligence · Trust System · Autonomous Ops). ✅ approved 2026-06-02; **Phase 0 (pointsLedger append-only event log) shipped** (PR #227 `96ca28a`, deployed). This file below = the (mostly-done) 9-dim audit remediation.
+
+---
+
+## ▶▶ ACTIVE PLAN (2026-06-02) — Phase 1.1: Server-side immutable audit trail · ✅ PR 1a BUILT (write-path) — gates green, awaiting deploy
+
+**Roadmap:** `core-readiness-roadmap.md` Phase 1.1 (⭐ highest leverage — closes Accounting blocker #3 + the Legal "audit-viewer theater" gap in one move). **Approach chosen by user:** *Hybrid ค่อยเป็นค่อยไป* — callable logger for client-side admin mutations, in-tx logging where the action is already a CF; **bill issue/void deferred** to land atomically with Phase 1.2/1.3.
+
+> **§7-M discovery (2026-06-02):** `audit-log-viewer.html` loads **zero Firebase** and uses the legacy localStorage/SecurityUtils session (NOT Firebase Auth) — so reading the admin-gated `actionAudit` there is a Firebase-Auth retrofit, NOT the line-502 swap originally planned. **User decision: read-UI → Dashboard audit panel (PR 1a.2)** — dashboard.html already has Firebase Auth + firestore + admin claim. PR 1a ships the **write-path only** (the irreversible-value half); the standalone viewer is left as-is.
+
+**Why now:** the accountant's #1 ask. Today the "audit log" is `shared/audit.js` → browser **localStorage** (`audit_logs`, mutable, has `clearLogs()`, max 1000) + `access-control.js:411` → localStorage `access_logs`; `audit-log-viewer.html:502` reads **localStorage `access_logs`** (per-browser, clearable — evidence theater). The only real server trail (`auth_events`→BigQuery via `archiveAuthEvents.js`) logs **failed logins + PDPA erasures only** — never bill/meter/tenant/payment admin actions. Precedents to mirror exist in-repo: `_occupancyLog.js` (immutable append helper), `_pointsLedger.js` (just shipped), `dataDeletionLog`.
+
+### Evidence (grep-verified this session — file:line)
+- Current logger localStorage-only: `shared/audit.js:14` (`audit_logs`), `shared/access-control.js:396-424` (`logAccessAttempt`→`access_logs`).
+- Viewer reads localStorage: `audit-log-viewer.html:502` `localStorage.getItem('access_logs')`. ← swap target.
+- Server precedents: `functions/_occupancyLog.js:114` `appendLog(writer, firestore, payload)`; `functions/archiveAuthEvents.js` (auth_events→BigQuery, IAM write-only); `functions/requestDataDeletion.js` (`dataDeletionLog`).
+- Callable house pattern: `firebase-functions/v1`, `.region('asia-southeast1').https.onCall((data, context)=>…)`; admin gate `if (!context.auth?.token?.admin) throw HttpsError('permission-denied')` (`adminApprovedLink.js:49`).
+- Rules model: `pointsLedger`/`dataDeletionLog`/`consents` blocks → `allow read: if isAdmin(); allow write: if false;` (`firestore.rules` ~:754/:739/:727).
+- `actionAudit` + `recordAdminAction` confirmed **absent** (clean slate).
+- Wire points: `verifySlip.js:356`/`:403` `recordPaymentAndAwardPoints` tx (in-tx, tamper-proof) · `dashboard-tenant-modal.js:530-701` tenant edit (client, already calls `AuditLogger.log`) · `dashboard-meter-import.js` approve→`meter-unified.js:99` setDoc (client) · `dashboard-tenant-modal.js:477` bill-mark-paid manual (client RTDB).
+
+### Ship as 2 PRs (gate-first, one vertical slice each)
+
+**PR 1a — write-path foundation** (branch `feat/phase1-1-action-audit`) · ✅ BUILT, gates green:
+- [x] `functions/_actionAudit.js` — append helper mirroring `_pointsLedger.js`: `appendActionAudit(writer, firestore, payload)`, `VALID_ACTIONS` enum, validation. autoId for client events (admin actions aren't idempotent — two edits = two events); **optional deterministic `idempotencyKey`** for the in-tx CF case (PR 1b verifySlip). 13 unit tests.
+- [x] `functions/recordAdminAction.js` — onCall (v1, SE1), admin-gated. **Stamps `actor`/`actorEmail`/`actorRole`/`at`/`ip` server-side** from verified context (never client-trusted — proven by a forgery test). Caps before/after snapshots. 9 unit tests.
+- [x] `functions/index.js` — registered `exports.recordAdminAction` (after the gamification CFs).
+- [x] `firestore.rules` — `match /actionAudit/{entryId} { read: if isAdmin(); write: if false; }` (after pointsLedger). 7 rules tests (admin read/query OK; tenant/unauth/client-write/update/delete denied).
+- [x] `firestore.indexes.json` — composite `actionAudit` (`actor` ASC, `at` DESC).
+- [x] **Wire 1 client action as proof:** tenant edit (`dashboard-tenant-modal.js:695`, beside `AuditLogger.log`) → `recordAdminAction` with `TENANT_UPDATED`. Non-blocking, **field-NAMES only (no PII values)**, fired AFTER the save (§7-I).
+- [x] **Tests + gates:** functions unit **1831/0** (+22), rules **249/0** (+7).
+- [ ] **Read-UI swap → MOVED to PR 1a.2** (Dashboard audit panel) per §7-M discovery above. Standalone `audit-log-viewer.html` left as-is.
+- [ ] **Commit → push → PR → merge** (standing auth) → **deploy (USER CONFIRM)**: `firebase deploy --only functions:recordAdminAction,firestore:rules,firestore:indexes --project the-green-haven`, branch-check first. §7-NN: callable, no new trigger → no SE3 block. **Live-verify:** admin edits a tenant → REST-read `actionAudit` shows the row (no viewer yet).
+
+**PR 1a.2 — Dashboard audit panel** (read UI, after 1a deployed):
+- [ ] Add an "Audit / บันทึกการกระทำ" panel/page in `dashboard.html` (has Firebase Auth + firestore + admin claim already) → query `actionAudit` `order by at desc` (+ optional `where actor==X` using the composite index). Reuse dashboard table/pagination patterns. **CSP:** dashboard.html is a CSP-tracked file — if the panel adds an inline `<script>`, regen hashes (§7-II/OO).
+
+**PR 1b — expand coverage** (after 1a verified live):
+- [ ] In-tx (tamper-proof): `verifySlip.js` `recordPaymentAndAwardPoints` tx (:403) → `appendActionAudit` row (`PAYMENT_VERIFIED`, target=payment/`transactionId`) in the SAME tx. Extend `verifySlip.test.js` to assert the row (mind the §7 Phase-0 test-mock gotcha: tx mock needs `.set` + `collection('actionAudit')` branch).
+- [ ] Via callable (client): meter-import approve (`dashboard-meter-import.js` after setDoc → `METER_IMPORT_APPROVED`) · bill-mark-paid manual (`dashboard-tenant-modal.js:477` → `BILL_PAID_MANUAL`).
+- [ ] Tests for each new wiring + live-verify each action surfaces a row.
+
+### Deferred (named, not dropped)
+- **bill issue / void atomic logging** → Phase 1.2 (gapless doc number) + 1.3 (void-with-trail) — shared bill-issuance refactor; that's where financial mutations move into CFs (option B).
+- **Unify existing dedicated server logs** (occupancyLog / dataDeletionLog / deletePetMedia / hideMarketplaceChat) into `actionAudit` — fast-follow; they already log, lower priority.
+- maintenance create/update, batch rent adjustment (`dashboard-property.js`), tax export → fast-follow.
+- **tenant self-view** of own `actionAudit` rows → later (add a claim-traced read clause then, not now — admin-read-only for v1).
+
+### Cross-cutting guardrails (this PR)
+- §7-NN callable not trigger (SE3). · §7-I observe-only, never auto-`.click()` an approve. · §7-J index READY by state. · §7-T grep writer+reader done (above). · Dashboard admin actions use email/admin auth — NOT `_onLiffClaimsReady` (that's LIFF-tenant only). · §7 Phase-0 test-mock gotcha when touching an existing CF's tx.
+
+---
+
 **Created:** 2026-05-31 · **Audit score:** 3.04 / 4.0 (B) — adversarial re-audit, 9 parallel agents
 **Supersedes:** the earlier 2026-05-31 plan (score 3.12, all 36 tasks completed — commits `87bb4a3` / `7e5ef7b` / `2cb408e`; preserved in git history).
 

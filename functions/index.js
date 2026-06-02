@@ -174,6 +174,10 @@ exports.claimDailyLoginPoints = require('./claimDailyLoginPoints').claimDailyLog
 exports.claimWellnessQuizPoints  = require('./claimWellnessQuizPoints').claimWellnessQuizPoints;
 exports.claimContractQuizPoints  = require('./claimContractQuizPoints').claimContractQuizPoints;
 
+// Immutable admin-action audit trail (Core Readiness Phase 1.1). Client-side admin
+// mutations call this after the write; in-tx CF actions log via _actionAudit directly.
+exports.recordAdminAction = require('./recordAdminAction').recordAdminAction;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ANNOUNCEMENTS — unified notice/event/banner (C4 — replaces broadcastMessages)
 // ═══════════════════════════════════════════════════════════════════════════

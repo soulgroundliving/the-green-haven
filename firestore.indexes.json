@@ -183,6 +183,14 @@
       ]
     },
     {
+      "collectionGroup": "actionAudit",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "actor", "order": "ASCENDING" },
+        { "fieldPath": "at", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "marketplace_chats",
       "queryScope": "COLLECTION",
       "fields": [

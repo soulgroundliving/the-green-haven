@@ -701,6 +701,27 @@ function saveTenantInfo() {
     });
   }
 
+  // Phase 1.1: also write an IMMUTABLE server-side audit row. The AuditLogger
+  // call above is a per-browser localStorage breadcrumb (clearable, invisible to
+  // an auditor); recordAdminAction stamps actor/role/ip/time server-side. Field
+  // NAMES only (no PII values) — the auditor needs "who changed what fields when".
+  // Non-blocking: the tenant save already succeeded, so a logging failure must
+  // never disrupt the admin (§7-I — observe-only, fired AFTER the user's save).
+  try {
+    const _recordAudit = window.firebase?.functions?.httpsCallable?.('recordAdminAction');
+    if (_recordAudit) {
+      _recordAudit({
+        action: 'TENANT_UPDATED',
+        targetType: 'tenant',
+        targetId: tenantId,
+        building: building,
+        roomId: roomId,
+        after: { changedFields: Object.keys(inputs).filter(k => inputs[k]) },
+        note: fullName,
+      }).catch((e) => console.warn('[audit] recordAdminAction failed:', e?.message || e));
+    }
+  } catch (e) { console.warn('[audit] recordAdminAction skipped:', e?.message || e); }
+
   // Emit event for real-time sync
   if (window.TenantDataEvents) {
     TenantDataEvents.emit('TENANT_UPDATED', {

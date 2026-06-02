@@ -1092,6 +1092,58 @@ describe('pointsLedger — append-only points event log, admin-read-only (Core R
   });
 });
 
+describe('actionAudit — immutable admin-action trail, admin-read-only (Core Readiness Phase 1.1)', () => {
+  // Authenticated LIFF tenant — proves even a signed-in tenant has NO read access
+  // (tenant self-view is not a v1 feature; admin-only).
+  const LIFF_TENANT = (uid, room = '15', building = 'rooms') =>
+    testEnv.authenticatedContext(uid, {
+      room, building, firebase: { sign_in_provider: 'custom' }
+    });
+
+  const sampleEntry = {
+    actor: 'admin-uid-1', actorEmail: 'admin@x.com', actorRole: 'admin',
+    action: 'TENANT_UPDATED', targetType: 'tenant', targetId: '15',
+    building: 'rooms', roomId: '15', ip: '1.2.3.4', source: 'recordAdminAction',
+  };
+
+  it('admin can read an actionAudit entry', async () => {
+    await seedDoc('actionAudit/abc123', sampleEntry);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'actionAudit/abc123')));
+  });
+
+  it('admin collection query over actionAudit succeeds (the dashboard audit panel)', async () => {
+    await seedDoc('actionAudit/abc123', sampleEntry);
+    await assertSucceeds(getDocs(query(collection(EMAIL_ADMIN().firestore(), 'actionAudit'))));
+  });
+
+  it('tenant CANNOT read actionAudit (admin-only)', async () => {
+    await seedDoc('actionAudit/abc123', sampleEntry);
+    await assertFails(getDoc(doc(LIFF_TENANT('line:abc').firestore(), 'actionAudit/abc123')));
+  });
+
+  it('unauth user CANNOT read any actionAudit entry', async () => {
+    await seedDoc('actionAudit/abc123', sampleEntry);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'actionAudit/abc123')));
+  });
+
+  it('client CANNOT create an actionAudit entry (CF / Admin-SDK only)', async () => {
+    await assertFails(setDoc(doc(EMAIL_ADMIN().firestore(), 'actionAudit/forge'), sampleEntry));
+    await assertFails(setDoc(doc(ANON().firestore(), 'actionAudit/forge'), sampleEntry));
+  });
+
+  it('admin CANNOT update an existing actionAudit entry (append-only invariant)', async () => {
+    await seedDoc('actionAudit/abc123', sampleEntry);
+    await assertFails(updateDoc(
+      doc(EMAIL_ADMIN().firestore(), 'actionAudit/abc123'), { action: 'BILL_PAID_MANUAL' }
+    ));
+  });
+
+  it('admin CANNOT delete an actionAudit entry (audit-grade — trail is permanent)', async () => {
+    await seedDoc('actionAudit/abc123', sampleEntry);
+    await assertFails(deleteDoc(doc(EMAIL_ADMIN().firestore(), 'actionAudit/abc123')));
+  });
+});
+
 describe('bookings — CF-only writes, prospect reads own only', () => {
   const sampleBooking = (prospectUid) => ({
     prospectUid,
