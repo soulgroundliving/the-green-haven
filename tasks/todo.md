@@ -4,6 +4,108 @@
 
 ---
 
+## ▶▶ ACTIVE PLAN (2026-06-02) — Roadmap Phase 1.2 (gapless INVOICE number `INV-`) + 1.3 (void bill with trail) · ⏳ AWAITING APPROVAL (Plan-First)
+
+**Scope:** the next two tax blockers from `core-readiness-roadmap.md` (recommended order step 3). They are **coupled** ("shared bill-issuance refactor"): both need a *persisted invoice document-of-record*, which **does not exist today** on the primary path. Phase 1.2 mints a gapless sequential `INV-{building}-{BE}-{NNNNN}` at issuance + persists the record; Phase 1.3 voids that record (state, not delete) with an audit row. Forward-only. Receipt (`RCP-`) is already done (1.2a) — this is the *invoice* (ใบแจ้งหนี้) side.
+
+### Verified architecture (3 Explore agents + 4 direct reads, grep-checked this session — reconciled against memory)
+- **`generateBillsOnMeterUpdate` writes a bill in its body BUT is FROZEN — never fires in prod** (Eventarc does not support SE3-Jakarta Firestore; confirmed by the CF's own sibling comment `notifyTenantOnMeterUpload.js:12-15` + `generate_bills_cf_frozen.md` + §7-NN). So in production the **primary path persists NO bill record.**
+- **Primary issuance flow (the 95% path):** admin approves meter import → `approvePendingImportWithFirebase` (`dashboard-meter-import.js:707`) writes `meter_data` (Firestore) + calls **`notifyTenantOnMeterUpload`** (callable, SE1, admin-gated, **per-room** `docId`, already idempotent via `meter_data.notifiedAt`) → that CF computes the bill on-the-fly from `meter_data`+`rooms_config` and sends a LINE Flex **"ใบแจ้งหนี้"**. **Persists nothing but `notifiedAt`.**
+- **Current invoice "numbers" — all 3 ad-hoc, none gapless/persisted:** `_billFlex.js:167` `INV-{initial}{room}-{YYMM}` (LINE Flex, computed every send, collisions) · `dashboard-bill.js:440` + `:1224` `TGH-{yr}{mo}-{room}-{MMSS}` (minute+second of click, print only, persisted as `billId` ONLY at mark-paid) · `invoice-receipt-manager.js:21/65` (**§7-K orphan — 0 callers**).
+- **`batchSendInvoices` (`dashboard-bill.js:1233`) is cosmetic** — loops unpaid rooms calling `logBillGenerated` (localStorage audit) only; **sends no LINE, persists no bill.** Not a real issuance moment.
+- **Only persisted financial docs today:** Firestore `verifiedSlips/{txId}` + `manualReceipts/{key}` (both carry `RCP-` from 1.2a) + RTDB `bills/{b}/{r}/{billId}` (written ONLY at mark-paid = payment time, `dashboard-bill-payment-status.js:193` full-replace). **No hard-delete of bills exists** (grep: 0 `.remove()` on `bills/`); overwrite-in-place only.
+- **Reusable 1.2a infra:** `_receiptCounter.js` `assignReceiptNo(tx,db,{building,be})` → `counters/receipt_{building}_{BE}` `{seq,...}` atomic `runTransaction`, format `RCP-{building}-{BE}-{NNNNN}` (5-pad). **`'receipt'`/`'RCP-'`/`'receipt_'` are hardcoded** → write a sibling `_invoiceCounter.js` (agent rec: don't generalize the money-flow counter). `assignReceiptNumber.js` = admin callable + deterministic idempotent `manualReceipts/{b}_{r}_{billId}` (re-call = same number). Rules pattern `counters|manualReceipts|actionAudit`: `read: if isAdmin(); write: if false;` (`firestore.rules:759/772/782`).
+- **Audit infra (Phase 1.1, shipped):** `_actionAudit.js:53` `VALID_ACTIONS = {TENANT_UPDATED, PAYMENT_VERIFIED, BILL_PAID_MANUAL, METER_IMPORT_APPROVED}` — **no `BILL_ISSUED`/`BILL_VOIDED` yet.** `appendActionAudit(writer, fs, payload)` writes in-tx (verifySlip pattern); `recordAdminAction` callable server-stamps actor/role/ip/at. `BILL_DELETED` exists only in legacy localStorage `audit.js:271` (0 callers, §7-K).
+
+### Design — introduce a persisted invoice document-of-record (`invoices/`, Firestore)
+- **Home:** Firestore `invoices/{building}_{room}_{YYYYMM}` (deterministic key → re-notify is idempotent, never burns a 2nd number). Body: `{ invoiceNo, building, room, period (YYYYMM), be, status: 'issued'|'paid'|'void', amount, charges (snapshot from meter_data at issuance), issuedAt, issuedBy, reissueOf?, voidedAt?, voidedBy?, voidReason? }`. *Why Firestore not RTDB:* matches counters/receipts/audit; admin-queryable for reconciliation; same `write:false` rule family.
+- **Counter:** sibling `_invoiceCounter.js` → `counters/invoice_{building}_{BE}` atomic increment → `INV-{building}-{BE}-{NNNNN}`. *Why per-building + sibling:* mirrors 1.2a exactly; avoids re-touching the receipt counter that verifySlip depends on (minimal blast radius).
+- **Gapless invariant:** number minted in the SAME `runTransaction` as the `invoices/` doc create + the `BILL_ISSUED` audit row → a re-notify / failed write never gaps the sequence (deterministic key = get-or-return).
+
+### PR A — Phase 1.2: invoice counter + persisted issuance record (branch `feat/phase1-2-invoice-number`)
+- [ ] **`functions/_invoiceCounter.js`** — sibling of `_receiptCounter.js`: `assignInvoiceNo(tx, db, {building, be})` + `formatInvoiceNo()`; `counters/invoice_{building}_{BE}`, `docType:'invoice'`, `INV-{building}-{BE}-{NNNNN}`. *Why sibling not generalize:* the hardcoded bits are ~3 strings; generalizing forces a re-touch of the verifySlip-critical receipt counter for no real DRY win (agent-recommended).
+- [ ] **Mint + persist at the real issuance moment** — inside **`notifyTenantOnMeterUpload.js`**, before building the Flex: a `runTransaction` that `tx.get(invoices/{key})` → if exists reuse its `invoiceNo` (idempotent) else `assignInvoiceNo` + `tx.set` the `invoices/` doc (status `'issued'`, charges snapshot) + `appendActionAudit(tx, …, 'BILL_ISSUED')`. *Why here:* this is the ONLY server-side, per-room, admin-gated, already-idempotent point where the tenant actually *receives* the invoice — the tax-correct "issued" event. (mirrors verifySlip's in-tx RCP- minting.)
+- [ ] **`_actionAudit.js`** — add `BILL_ISSUED` to `VALID_ACTIONS` + a unit test. *Why:* the issuance event must be in the immutable trail (auditor's document-of-record).
+- [ ] **Display** — `_billFlex.js buildBillFlex` (`:167`): replace the computed `invoiceRef` with the passed persisted `invoiceNo`. *Why:* kill the collision-prone ephemeral scheme; show the gapless number on the tenant's LINE invoice.
+- [ ] **Rules** — `firestore.rules`: `match /invoices/{id} { allow read: if isAdmin(); allow write: if false; }` + `npm run test:rules`. *Why:* CF/Admin-SDK only; a client write would corrupt the gapless invariant (mirror counters/receipts).
+- [ ] **Index** — `firestore.indexes.json`: `invoices` composite (`building` ASC, `period`/`invoiceNo` — pick for the reconciliation query) so §7-J holds (verify READY by state, seed ≥1 doc).
+- [ ] **Tests** — `_invoiceCounter` gapless increment; concurrent issue → consecutive, no dup/gap; re-notify same room+period burns no number; `invoiceNo` on the `invoices/` doc + Flex; `BILL_ISSUED` audit row. Mind the §7 tx-mock gotcha when re-touching `notifyTenantOnMeterUpload` tests (existing `meterValuesEqual`/early-exit + notify mocks must stay green). Keep functions test count green.
+- [ ] **Deploy** (notification CF — not the verifySlip money CF, but core-adjacent; §branch-before-deploy + `firebase use` prod check per the 1.2a process note) + **live-verify** (real meter import → tenant LINE shows `INV-rooms-2569-00001`; re-import same room → same number; `invoices/` doc persisted).
+
+### PR B — Phase 1.3: void invoice with trail (branch `feat/phase1-3-void-invoice`) — depends on PR A's `invoices/`
+- [ ] **`_actionAudit.js`** — add `BILL_VOIDED` to `VALID_ACTIONS` + test.
+- [ ] **`functions/voidInvoice.js`** — admin callable (SE1, §7-NN): `runTransaction` flips `invoices/{key}.status='void'` + `voidedAt/voidedBy/voidReason` + `appendActionAudit('BILL_VOIDED')`, all atomic. **Never deletes / overwrites** the original (auditor must trace it). `index.js` register. *Why callable:* SE3 blocks Firestore triggers (§7-NN); admin-gated + server-stamped like recordAdminAction.
+- [ ] **Re-issue = new doc** — a voided invoice's room+period can get a fresh `invoices/` doc (autoId, new `INV-` number, `reissueOf` → original). *Why:* stop the overwrite-in-place; corrections are traceable.
+- [ ] **Admin UI** — a "ยกเลิกใบแจ้งหนี้" action on the bill/payment admin view where a persisted `invoices/` doc exists: **preview the doc → wait for explicit user click** (§7-I, never auto-`.click()`), then call `voidInvoice`. Reason required.
+- [ ] **Tests** + **live-verify** (admin voids a test invoice → status flips, `BILL_VOIDED` row written, original preserved, re-issue gets a new number).
+
+### Decisions to confirm (at approval)
+1. **Issuance anchor — KEY DECISION.** Mint the invoice number automatically inside `notifyTenantOnMeterUpload` (every tenant who *receives* an invoice gets a gapless number — tax-correct "issued = sent", server-side, idempotent) **[RECOMMENDED]** — vs. an explicit admin "ออกเลขใบแจ้งหนี้" button (manual control, but the primary flow is auto-notify so most invoices would stay unnumbered unless the admin also clicks). The recommendation re-touches the notify CF (gated by tests + staged deploy).
+2. **Counter scope** — per-building `counters/invoice_{building}_{BE}`, resets each BE year (matches 1.2a `RCP-`) **[RECOMMENDED]** vs one global series.
+3. **Migration** — forward-only (numbers start now; past synthesized bills stay unnumbered) **[RECOMMENDED, matches 1.2a]** vs backfill historical `meter_data`/`verifiedSlips` by date order.
+
+### Guardrails
+§7-NN callable not trigger (SE3) · §7-I no auto-`.click()` on void · §7-J index READY by state (seed 1 doc) · §7-T grep writer+reader of `invoices.invoiceNo` before wiring readers · §7-Z N/A (no new claims) · money-adjacent CF deploy user-confirmed + `firebase use` prod check (1.2a lesson) · §7 tx-mock gotcha when re-touching `notifyTenantOnMeterUpload` tests · gate-first: PR A then PR B, each behind `validate.yml`.
+
+### Deferred (named, not dropped)
+- **In-app invoiceNo display** in tenant_app bill view + dashboard grid (readers of the synthesized bill) — follow-up after the LINE Flex shows it (§7-T: wire readers once the writer is stable).
+- **Manual-path invoice persistence** (`saveBillToFirebase`/`batchSendInvoices`) — the primary path covers 95%; fold the manual path in as fast-follow if needed.
+- **Retire the 3 ad-hoc schemes** (`dashboard-bill.js:440/:1224` TGH-, orphan `invoice-receipt-manager.js`) once the persisted `invoiceNo` is the single source.
+
+### Review (append after execution)
+_(shipped / deferred / follow-ups)_
+
+---
+
+## ▶ ACTIVE PLAN (2026-06-02 PM) — Roadmap 1.2a: Gapless RECEIPT number (`RCP-`) · ✅ PR 1.2a-1 (slip #233) + 1.2a-2 (cash #234) SHIPPED + DEPLOYED · ⏳ PR 1.2a-2b (saveBillToFirebase Path-2 + jsPDF) deferred
+
+**Scope (user-chosen 2026-06-02):** Receipt-first. Gapless `RCP-{building}-{BE}-{NNNNN}` (per-building, resets each BE year) assigned atomically at payment confirmation, persisted, displayed. Forward-only migration. **Invoice numbers = separate 1.2b (deferred)** — the primary bill path (meter import) writes no persisted record, so invoice numbering needs its own design.
+
+**✅ PR 1.2a-1 SHIPPED + DEPLOYED 2026-06-02** ([#233](https://github.com/soulgroundliving/the-green-haven/pull/233) `c306ec6`): counter helper + verifySlip `batch→runTransaction` (dedup + gapless number + audit atomic, no-burn-on-dup) + `counters` rule + Flex display. Gates: functions 1848/0 · rules 254/0 (CI emulator) · verify:memory 482/0 · staging + **prod CF + rules deploy success**. Open: owner live-verify (real slip → `RCP-rooms-2569-00001`, consecutive, no dup number). → [[lifecycle_verifyslip]] §5.
+
+### Verified architecture (3 Explore agents + `billing_monthly_flow.md`, grep-checked)
+- `generateBillsOnMeterUpdate` **DEAD** (Eventarc SE3 gap, frozen tombstone) — CANNOT anchor a number there.
+- `meter_data` = SoT; **bills are derived views**; Path 1 (meter import, primary) writes **NO** bill record. Only persisted payment records: Path 2 manual `saveBillToFirebase`→RTDB (`dashboard-bill.js:1121`) + **payment → `verifiedSlips/{transactionId}`** (verifySlip CF, just refactored PR 1b).
+- Tax aggregation (`aggregateMonthlyRevenue`) ignores doc numbers (sums by amount/month) → renumber is tax-safe. ✅
+- Receipt-issuance moments: **(1) verifySlip** (slip, all buildings, server CF) · **(2) manual mark-paid** (cash, client `markBillPaid`/`saveBillToFirebase`).
+
+### Design
+- **Counter:** Firestore `counters/receipt_{building}_{BE}` `{ seq, updatedAt }`, atomic `runTransaction` increment. Format `RCP-{building}-{BE}-{NNNNN}` (5-digit pad).
+- **Gapless invariant:** the number is assigned in the **SAME transaction** as the payment-record write, so a duplicate/failed payment never burns a number (no gap).
+
+### PR 1.2a-1 — counter infra + verifySlip slip-receipt (primary path)
+- [ ] **Counter helper** `functions/_receiptCounter.js` — `assignReceiptNo(tx, db, {building, be})`: `tx.get(counterRef)` → `seq+1` → `tx.set` → return `RCP-…`. *Why:* gapless requires a serialized atomic increment inside the caller's tx.
+- [ ] **verifySlip** — convert `saveVerifiedSlip` **batch → `runTransaction`**: `tx.get(slipRef)` dedup (exists → duplicate, **counter untouched → no gap**) + `assignReceiptNo` + `tx.set(slipRef, {…, receiptNo})` + `appendActionAudit(tx,…)` + counter set, all atomic. *Why:* dedup + number + audit must commit together; a dup must not consume a number. ⚠️ **re-touches the PR 1b money-flow CF** — staged + user-confirmed deploy.
+- [ ] **Persist** `receiptNo` on `verifiedSlips/{transactionId}` + mirror into RTDB bill via `markBillPaidInRTDB` (`bills/{b}/{r}/{billId}/receiptNo`). *Why:* one immutable source; readers display, never recompute.
+- [ ] **Rule** `firestore.rules` — `counters/*` read:admin, write:false (CF/Admin-SDK only). + `npm run test:rules`.
+- [ ] **Display** — `functions/_billFlex.js buildReceiptFlex` (:240): use the passed persisted `receiptNo` instead of the computed `RCP-${initial}${room}-${YYMM}`. *Why:* kill the ephemeral collision-prone scheme; show the gapless number on the LINE receipt.
+- [ ] **Tests** — counter gapless increment; two concurrent verifies → consecutive numbers, no dup/gap; duplicate slip burns no number; `receiptNo` on slip + Flex. Mind the §7 tx-mock gotcha (the new tx needs `get`/`set` + `counters`/`actionAudit` branches). Keep functions 1835 green.
+- [ ] **Deploy** (money-flow, user-confirmed; §branch-before-deploy + `firebase use` prod) + **live-verify** (real slip → `RCP-` on receipt + persisted; duplicate → no new number).
+
+### PR 1.2a-2 — manual cash mark-paid receipt number (closes the gap) · ✅ SHIPPED + DEPLOYED ([#234](https://github.com/soulgroundliving/the-green-haven/pull/234) `71b2fdc`)
+- [x] **Callable** `assignReceiptNumber` (admin-gated, SE1) — mints from `_receiptCounter` in a tx + deterministic `manualReceipts/{b}_{r}_{billId}` record (gapless **+ idempotent**: retry = same number, no double-mint). 7 unit tests. Registered in index.js.
+- [x] **Wire** `markBillPaid` (`dashboard-tenant-modal.js`) → call it, persist `receiptNo` on the RTDB bill + payments record (non-blocking). `saveBillToFirebase`/`markRoomPaid` (now `dashboard-bill-payment-status.js:107`) → **deferred 1.2a-2b** (handles slip + cash; needs `!slipVerified` gate to avoid double-numbering a slip-verified bill).
+- [x] **Display** — `tenant-render.js` `rcpt-bill-no` → `bill.receiptNo` (benefits slip + cash). PDF `invoice-pdf-generator.js` → **deferred 1.2a-2b**.
+- [x] **Rules** `manualReceipts/{id}` read:admin write:false + 4 tests. Gates: functions 1855/0 · rules 258/0 · prod CF+rules+Vercel deploy ✓.
+- [ ] **Owner live-verify:** cash mark-paid → tenant receipt shows next `RCP-` in the shared series; re-mark same bill → SAME number (idempotent).
+
+### PR 1.2a-2b — deferred follow-up (named)
+- [ ] `saveBillToFirebase` Path-2 "ออกใบเสร็จ" (`dashboard-bill-payment-status.js:107`) → assignReceiptNumber gated on `!window.slipVerified` (slip already numbered via verifySlip) + don't overwrite an existing `receiptNo`.
+- [ ] jsPDF receipt export display of `receiptNo`.
+
+### Decisions to confirm (at approval)
+1. **Format** `RCP-{building}-{BE}-{NNNNN}` — per-building counter (matches roadmap `counters/{docType}_{building}_{BE}`, avoids cross-building contention)? Or one global per-BE series?
+2. **Year reset** — `NNNNN` restarts each BE year (standard Thai เลขที่ practice)? Or never resets?
+3. **Migration** — forward-only (gapless starts now; historical paid receipts keep their old display number) **[recommended]** vs backfill existing `verifiedSlips` by `verifiedAt` order (one-shot, deterministic).
+
+### Guardrails
+§7-NN callable not trigger (SE3) · §7-I no auto-`.click()` · §7-J rule READY by state · money-flow deploy user-confirmed · gate-first: PR 1.2a-1 then 1.2a-2, each behind `validate.yml` · §7 tx-mock gotcha when re-touching verifySlip tests.
+
+### Review (append after execution)
+_(shipped / deferred / follow-ups)_
+
+---
+
 ## ▶▶ ACTIVE PLAN (2026-06-02) — Phase 1.1: Server-side immutable audit trail · ✅ PR 1a BUILT (write-path) — gates green, awaiting deploy
 
 **Roadmap:** `core-readiness-roadmap.md` Phase 1.1 (⭐ highest leverage — closes Accounting blocker #3 + the Legal "audit-viewer theater" gap in one move). **Approach chosen by user:** *Hybrid ค่อยเป็นค่อยไป* — callable logger for client-side admin mutations, in-tx logging where the action is already a CF; **bill issue/void deferred** to land atomically with Phase 1.2/1.3.
@@ -41,10 +143,11 @@
 - [x] `shared/dashboard-main.js` — `_showPageImpl`: `if(page==='audit')initAuditPage();`.
 - [ ] Ship: commit → push → PR → merge (Vercel static deploy) → **live-verify on prod** (admin login → open panel → empty state renders no-error; then a tenant edit → row appears = closes PR 1a live-verify too).
 
-**PR 1b — expand coverage** (after 1a verified live):
-- [ ] In-tx (tamper-proof): `verifySlip.js` `recordPaymentAndAwardPoints` tx (:403) → `appendActionAudit` row (`PAYMENT_VERIFIED`, target=payment/`transactionId`) in the SAME tx. Extend `verifySlip.test.js` to assert the row (mind the §7 Phase-0 test-mock gotcha: tx mock needs `.set` + `collection('actionAudit')` branch).
-- [ ] Via callable (client): meter-import approve (`dashboard-meter-import.js` after setDoc → `METER_IMPORT_APPROVED`) · bill-mark-paid manual (`dashboard-tenant-modal.js:477` → `BILL_PAID_MANUAL`).
-- [ ] Tests for each new wiring + live-verify each action surfaces a row.
+**PR 1b — expand coverage** ✅ SHIPPED + DEPLOYED 2026-06-02 (client [#231](https://github.com/soulgroundliving/the-green-haven/pull/231) `28b80a7` · CF [#232](https://github.com/soulgroundliving/the-green-haven/pull/232) `bfb992e`):
+- [x] In-tx (tamper-proof): `verifySlip.js` → `PAYMENT_VERIFIED`. **Anchored in `saveVerifiedSlip` (NOT `recordPaymentAndAwardPoints` :403 — that returns early for non-`nest`, would miss every rooms payment).** Bare `.create()` → `db.batch()` + `batch.create()` + `appendActionAudit()` + `batch.commit()` (atomic, idempotencyKey=transactionId). actor/role/ip server-stamped from onCall context (forgery test). Test mock: added `db.batch()` (commit throws `verifiedSlipsCreateThrow` → 3 dup tests preserved) + 4 audit-row tests. functions 1831→1835.
+- [x] Via callable (client): meter-import approve (`dashboard-meter-import.js` `approvePendingImportWithFirebase`, both approve paths' convergence, gated `totalSaved>0` → `METER_IMPORT_APPROVED`) · bill-mark-paid manual (`dashboard-tenant-modal.js` `markBillPaid` → `BILL_PAID_MANUAL`). Both non-blocking, fired AFTER action (§7-I).
+- [x] Tests + gates green (functions 1835/0 · test:shared 319/319 · pre-commit hooks · staging deploy · prod CF deploy 3m36s success). **Lifecycle docs updated: [[lifecycle_audit_trail]] + [[lifecycle_verifyslip]]; verify:memory 482/0.**
+- [ ] **Live-verify (owner, §7-J/§7-I):** real admin tenant-edit / meter-approve / bill-paid / slip-verify (admin + tenant LIFF) → `actionAudit` shows the rows; duplicate slip writes no 2nd `PAYMENT_VERIFIED`. Agent can't drive LIFF / won't auto-click approve.
 
 ### Deferred (named, not dropped)
 - **bill issue / void atomic logging** → Phase 1.2 (gapless doc number) + 1.3 (void-with-trail) — shared bill-issuance refactor; that's where financial mutations move into CFs (option B).
@@ -54,6 +157,13 @@
 
 ### Cross-cutting guardrails (this PR)
 - §7-NN callable not trigger (SE3). · §7-I observe-only, never auto-`.click()` an approve. · §7-J index READY by state. · §7-T grep writer+reader done (above). · Dashboard admin actions use email/admin auth — NOT `_onLiffClaimsReady` (that's LIFF-tenant only). · §7 Phase-0 test-mock gotcha when touching an existing CF's tx.
+
+### Review (Phase 1.1 — shipped 2026-06-02 session 2)
+- **Shipped + deployed + verified:** PR 1a write-path ([#229](https://github.com/soulgroundliving/the-green-haven/pull/229) `0d23ea8`) + PR 1a.2 dashboard read panel ([#230](https://github.com/soulgroundliving/the-green-haven/pull/230) `25052e2`). Read path **live-verified** via Chrome MCP (admin → panel query OK, empty-state, no console error). Static deploy verified (content-hashed module served 200). Gates: functions 1831/0 · rules 249/0 · shared 319/0 · verify:memory GREEN. Lifecycle doc: `~/.claude/.../memory/lifecycle_audit_trail.md`.
+- **PR 1b ✅ SHIPPED + DEPLOYED 2026-06-02 (#231 client + #232 CF):** verifySlip `PAYMENT_VERIFIED` in-batch (anchored in `saveVerifiedSlip`, all-buildings — improved over the spec's nest-only `:403`) · meter-approve `METER_IMPORT_APPROVED` · bill-paid `BILL_PAID_MANUAL`. functions 1835/0. Owner live-verify open.
+- **Deferred to roadmap 1.2/1.3:** bill issue/void atomic logging (the bill-issuance refactor — financial mutations move INTO CFs).
+- **Follow-ups:** full end-to-end live-verify (real admin tenant-edit → row in panel) closes PR 1a's write-path verify; Phase 0 `pointsLedger` live-write verify still open.
+- **Gotchas logged in handoff:** deploy-rules transient index-API failure (re-run fresh) · content-hash 404 masks static verify · Chrome MCP privacy-filter on rendered rows.
 
 ---
 

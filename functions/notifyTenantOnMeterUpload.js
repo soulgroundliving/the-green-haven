@@ -54,6 +54,8 @@ const firestore = admin.firestore();
 
 const { loadRoomConfig, computeBill, buildBillFlex } = require('./_billFlex');
 const { lookupApprovedRoomUsers, pushAndRetry } = require('./_notifyHelper');
+const { assignInvoiceNo } = require('./_invoiceCounter');
+const { appendActionAudit } = require('./_actionAudit');
 
 const LINE_TOKEN = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
 
@@ -65,7 +67,79 @@ function meterValuesEqual(a, b) {
          Number(a.wNew) === Number(b.wNew);
 }
 
-async function notifyOne({ docId, force = false }) {
+/**
+ * Get-or-mint the gapless invoice number for this (building, room, period) and
+ * persist the immutable invoices/{key} document-of-record + a BILL_ISSUED audit
+ * row, all in ONE transaction (Roadmap 1.2).
+ *
+ * Deterministic key invoices/{building}_{room}_{period} makes a re-notify (meter
+ * correction / force) idempotent: the same period returns the SAME number and
+ * burns no counter, so the INV- sequence stays gapless. A genuine correction is
+ * handled by void + re-issue (Phase 1.3), not by overwriting this snapshot.
+ *
+ * `bill.year` is already a 4-digit BE (computeBill normalizes 2-digit → BE), so
+ * it doubles as the counter's BE year and avoids the §7-E year-format trap.
+ *
+ * @returns {Promise<string>} the INV- number (existing or freshly minted).
+ */
+async function issueInvoiceNo({ building, roomId, bill, auditActor }) {
+  const be = Number(bill.year); // computeBill already normalized to 4-digit BE
+  const period = `${be}${String(bill.month).padStart(2, '0')}`;
+  const safeRoom = String(roomId).replace(/[\/.#$\[\]]/g, '_');
+  const key = `${building}_${safeRoom}_${period}`;
+  const invoiceRef = firestore.collection('invoices').doc(key);
+
+  return firestore.runTransaction(async (tx) => {
+    // READ 1 (dedup) — before any write, per all-reads-before-writes.
+    const existing = await tx.get(invoiceRef);
+    if (existing.exists && existing.data().invoiceNo) {
+      return existing.data().invoiceNo; // idempotent re-notify — no counter burn
+    }
+
+    // READ 2 + first WRITE — mint from the gapless per-building/BE counter.
+    const { invoiceNo } = await assignInvoiceNo(tx, firestore, { building, be });
+
+    tx.set(invoiceRef, {
+      invoiceNo,
+      building,
+      room: String(roomId),
+      period,
+      be,
+      month: Number(bill.month),
+      status: 'issued',
+      amount: Number(bill.totalCharge) || 0,
+      charges: {
+        rent:     Number(bill.rent)   || 0,
+        electric: Number(bill.eCost)  || 0,
+        water:    Number(bill.wCost)  || 0,
+        trash:    Number(bill.trash)  || 0,
+        eUnits:   Number(bill.eUnits) || 0,
+        wUnits:   Number(bill.wUnits) || 0,
+      },
+      issuedAt: admin.firestore.FieldValue.serverTimestamp(),
+      issuedBy: (auditActor && auditActor.actor) || 'system',
+    });
+
+    appendActionAudit(tx, firestore, {
+      actor:      (auditActor && auditActor.actor) || 'system',
+      actorEmail: (auditActor && auditActor.actorEmail) || null,
+      actorRole:  (auditActor && auditActor.actorRole) || null,
+      action:     'BILL_ISSUED',
+      targetType: 'invoice',
+      targetId:   invoiceNo,
+      building,
+      roomId:     String(roomId),
+      after:      { period, amount: Number(bill.totalCharge) || 0 },
+      ip:         (auditActor && auditActor.ip) || null,
+      source:     'cf:notifyTenantOnMeterUpload',
+      idempotencyKey: `invoice-${key}`, // one BILL_ISSUED row per invoice, ever
+    });
+
+    return invoiceNo;
+  });
+}
+
+async function notifyOne({ docId, force = false, auditActor = null }) {
   const docRef = firestore.collection('meter_data').doc(docId);
   const snap = await docRef.get();
   if (!snap.exists) {
@@ -116,7 +190,19 @@ async function notifyOne({ docId, force = false }) {
     return { docId, skipped: 'no_approved_tenant' };
   }
 
-  const flexMsg = buildBillFlex(bill, { tenantName });
+  // Mint the gapless invoice number + persist the document-of-record at the real
+  // issuance moment — AFTER the no-approved-tenant guard so a recipient-less room
+  // never burns a number. Non-fatal: the counter tx is atomic (a failure creates
+  // no gap), and a tenant must still be notified — the Flex falls back to the
+  // legacy ref and the next re-notify mints the number.
+  let invoiceNo = null;
+  try {
+    invoiceNo = await issueInvoiceNo({ building, roomId, bill, auditActor });
+  } catch (e) {
+    console.error('[notifyTenantOnMeterUpload] issueInvoiceNo failed for', docId, ':', e?.message || e);
+  }
+
+  const flexMsg = buildBillFlex(bill, { tenantName, invoiceNo });
   const { pushed, failed: failedCount } = await pushAndRetry({
     docs: userDocs,
     message: flexMsg,
@@ -147,6 +233,15 @@ exports.notifyTenantOnMeterUpload = onCall(
       throw new HttpsError('permission-denied', 'Admin claim required');
     }
 
+    // Server-stamped actor for the BILL_ISSUED audit row (never client-supplied).
+    const _tok = request.auth.token || {};
+    const auditActor = {
+      actor: request.auth.uid,
+      actorEmail: _tok.email || null,
+      actorRole: _tok.admin === true ? 'admin' : (_tok.role || null),
+      ip: request.rawRequest?.ip || null,
+    };
+
     const { docIds, docId, building, year, month, roomId, force } = request.data || {};
 
     let ids = [];
@@ -163,7 +258,7 @@ exports.notifyTenantOnMeterUpload = onCall(
     const results = [];
     for (const id of ids) {
       try {
-        results.push(await notifyOne({ docId: id, force: !!force }));
+        results.push(await notifyOne({ docId: id, force: !!force, auditActor }));
       } catch (e) {
         results.push({ docId: id, error: e.message });
       }

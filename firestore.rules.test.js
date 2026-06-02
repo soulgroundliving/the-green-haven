@@ -1212,6 +1212,50 @@ describe('manualReceipts — gapless cash receipt of record, admin-read-only, CF
   });
 });
 
+describe('invoices — issued invoice document-of-record, admin-read-only, CF-write-only (Roadmap 1.2)', () => {
+  const LIFF_TENANT = (uid, room = '15', building = 'rooms') =>
+    testEnv.authenticatedContext(uid, {
+      room, building, firebase: { sign_in_provider: 'custom' }
+    });
+
+  const sample = {
+    invoiceNo: 'INV-rooms-2569-00001', building: 'rooms', room: '15',
+    period: '256905', be: 2569, month: 5, status: 'issued', amount: 3520,
+  };
+
+  it('admin can read an invoice (reconciliation)', async () => {
+    await seedDoc('invoices/rooms_15_256905', sample);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'invoices/rooms_15_256905')));
+  });
+
+  it('admin collection query over invoices succeeds (reconciliation / void list)', async () => {
+    await seedDoc('invoices/rooms_15_256905', sample);
+    await assertSucceeds(getDocs(query(collection(EMAIL_ADMIN().firestore(), 'invoices'))));
+  });
+
+  it('tenant CANNOT read an invoice (admin-only in v1)', async () => {
+    await seedDoc('invoices/rooms_15_256905', sample);
+    await assertFails(getDoc(doc(LIFF_TENANT('line:abc').firestore(), 'invoices/rooms_15_256905')));
+  });
+
+  it('unauth user CANNOT read an invoice', async () => {
+    await seedDoc('invoices/rooms_15_256905', sample);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'invoices/rooms_15_256905')));
+  });
+
+  it('client CANNOT create an invoice (CF / Admin-SDK only — gapless invariant)', async () => {
+    await assertFails(setDoc(doc(EMAIL_ADMIN().firestore(), 'invoices/forge'), sample));
+    await assertFails(setDoc(doc(ANON().firestore(), 'invoices/forge'), sample));
+  });
+
+  it('client CANNOT update an invoice (void flows through the voidInvoice CF, not the client)', async () => {
+    await seedDoc('invoices/rooms_15_256905', sample);
+    await assertFails(updateDoc(
+      doc(EMAIL_ADMIN().firestore(), 'invoices/rooms_15_256905'), { status: 'void' }
+    ));
+  });
+});
+
 describe('bookings — CF-only writes, prospect reads own only', () => {
   const sampleBooking = (prospectUid) => ({
     prospectUid,
