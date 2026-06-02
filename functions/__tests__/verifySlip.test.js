@@ -23,7 +23,8 @@ const Module = require('module');
 
 let slipOkResponse = null;   // null = use defaultSlipOkOk; set per-test to override
 let runTransactionResult = true;  // true = allowed, false = rate-limited, Error = throw
-let verifiedSlipsCreateThrow = null;  // null = success, Error = throw
+let verifiedSlipsCreateThrow = null;  // null = success, Error = throw (now thrown by batch.commit — saveVerifiedSlip batches verifiedSlips.create + the PAYMENT_VERIFIED audit row)
+let lastBatchOps = null;     // captures the ops of the last committed batch (for audit-row assertions)
 let logAddCalled = false;
 let authSoTThrow = null;     // null = authorized; Error = throw (permission-denied etc.)
 let getValidBuildingsThrow = false;  // true = getValidBuildings throws (unexpected error path)
@@ -36,6 +37,7 @@ function resetStubs() {
   slipOkResponse = null;
   runTransactionResult = true;
   verifiedSlipsCreateThrow = null;
+  lastBatchOps = null;
   logAddCalled = false;
   authSoTThrow = null;
   getValidBuildingsThrow = false;
@@ -113,6 +115,22 @@ const dbInstance = {
       update: () => {},
     };
     return fn(tx);
+  },
+  // saveVerifiedSlip batches verifiedSlips.create + the PAYMENT_VERIFIED audit
+  // row (appendActionAudit calls writer.set). A duplicate slip makes batch.commit()
+  // throw ALREADY_EXISTS just like the old doc.create() did — verifiedSlipsCreateThrow
+  // drives that here so the duplicate-detection tests are preserved.
+  batch: () => {
+    const ops = [];
+    return {
+      create: (ref, data) => { ops.push({ op: 'create', ref, data }); },
+      set: (ref, data) => { ops.push({ op: 'set', ref, data }); },
+      update: (ref, data) => { ops.push({ op: 'update', ref, data }); },
+      commit: async () => {
+        lastBatchOps = ops;
+        if (verifiedSlipsCreateThrow) throw verifiedSlipsCreateThrow;
+      },
+    };
   },
 };
 
@@ -477,6 +495,62 @@ describe('verifySlip — callable handler', () => {
       const result = await handler(validData, makeCtx());
       // Other create errors are non-blocking — slip is proven valid
       assert.equal(result.success, true);
+    });
+  });
+
+  // ── PAYMENT_VERIFIED audit row (Phase 1.1 PR 1b) ──────────────────────────
+  // saveVerifiedSlip writes an immutable actionAudit row in the SAME batch as the
+  // verifiedSlips dedup create() — every building, tamper-proof, server-stamped.
+  describe('PAYMENT_VERIFIED audit row', () => {
+    function findAuditOp() {
+      return (lastBatchOps || []).find(
+        (o) => o.op === 'set' && o.data && o.data.action === 'PAYMENT_VERIFIED'
+      );
+    }
+
+    it('success → writes a PAYMENT_VERIFIED row in the dedup batch', async () => {
+      const result = await handler(validData, makeCtx({ admin: true }));
+      assert.equal(result.success, true);
+      const audit = findAuditOp();
+      assert.ok(audit, 'expected a PAYMENT_VERIFIED row set on the batch');
+      assert.equal(audit.data.targetType, 'payment');
+      assert.equal(audit.data.targetId, DEFAULT_SLIP_DATA.transactionId);
+      assert.equal(audit.data.building, 'rooms');
+      assert.equal(audit.data.roomId, '15');
+      assert.equal(audit.data.source, 'cf:verifySlip');
+    });
+
+    it('logs a rooms-building payment (not just the nest gamification path)', async () => {
+      // recordPaymentAndAwardPoints returns early for non-nest; the audit must
+      // still fire because it lives in saveVerifiedSlip (runs for every building).
+      const result = await handler({ ...validData, building: 'rooms' }, makeCtx());
+      assert.equal(result.success, true);
+      assert.ok(findAuditOp(), 'rooms-building payment must still be audited');
+    });
+
+    it('actor / role / ip are stamped from the verified context, NOT client data', async () => {
+      // A client that forges data.userId must NOT become the audit actor.
+      const result = await handler(
+        { ...validData, userId: 'CLIENT-FORGED' },
+        makeCtx({ admin: true, uid: 'admin-uid-7' })
+      );
+      assert.equal(result.success, true);
+      const audit = findAuditOp();
+      assert.equal(audit.data.actor, 'admin-uid-7');   // context.auth.uid, not data.userId
+      assert.notEqual(audit.data.actor, 'CLIENT-FORGED');
+      assert.equal(audit.data.actorRole, 'admin');
+      assert.equal(audit.data.ip, '1.2.3.4');          // context.rawRequest.ip, server-side
+    });
+
+    it('owning tenant → actorRole "tenant"', async () => {
+      const result = await handler(
+        validData,
+        makeCtx({ admin: false, room: '15', building: 'rooms', uid: 'tenant-uid-9' })
+      );
+      assert.equal(result.success, true);
+      const audit = findAuditOp();
+      assert.equal(audit.data.actor, 'tenant-uid-9');
+      assert.equal(audit.data.actorRole, 'tenant');
     });
   });
 
