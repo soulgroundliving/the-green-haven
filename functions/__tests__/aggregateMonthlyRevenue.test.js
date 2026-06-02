@@ -289,6 +289,32 @@ describe('aggregateMonthlyRevenue', () => {
       assert.equal(m5.totalRevenue, 1000);
     });
 
+    it('otherIncome captures the reconciling remainder (late fee / other charges)', async () => {
+      buildingsList = ['rooms'];
+      const currentBE = new Date().getFullYear() + 543;
+      // totalCharge 1100, named charges (rent+elec+water+trash) sum to 1000 -> other = 100
+      seedBill(makeBill(currentBE, 8, { status: 'paid', totalCharge: 1100 }));
+      await scheduledHandler({});
+      const call = fsSetCalls.find(c => c.path === `taxSummary/${currentBE}`);
+      const m8 = call.data.months[8];
+      assert.equal(m8.otherIncome, 100, 'remainder = total - rent - elec - water - trash');
+      // Category breakdown must reconcile to the total
+      assert.equal(
+        m8.rentIncome + m8.electricIncome + m8.waterIncome + m8.trashIncome + m8.otherIncome,
+        m8.totalRevenue, 'categories must sum to totalRevenue');
+      assert.equal(call.data.annual.otherIncome, 100, 'annual rolls up otherIncome');
+      assert.equal(m8.byBuilding.rooms.other, 100, 'per-building carries other');
+    });
+
+    it('otherIncome is 0 when the bill total equals the named charges', async () => {
+      buildingsList = ['rooms'];
+      const currentBE = new Date().getFullYear() + 543;
+      seedBill(makeBill(currentBE, 9, { status: 'paid', totalCharge: 1000 }));
+      await scheduledHandler({});
+      const call = fsSetCalls.find(c => c.path === `taxSummary/${currentBE}`);
+      assert.equal(call.data.months[9].otherIncome, 0);
+    });
+
     it('single pending (unpaid) bill → pendingCount=1, pendingRevenue correct', async () => {
       buildingsList = ['rooms'];
       const currentBE = new Date().getFullYear() + 543;

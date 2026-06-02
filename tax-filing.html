@@ -1241,21 +1241,24 @@
   function buildMonthlySummaryCsv(yearBE) {
     const data = window._taxSummary;
     if (!data) throw new Error('ยังไม่มีข้อมูล taxSummary — รัน aggregate CF ก่อน');
-    const headers = ['เดือน','รายได้ค่าเช่า','รายได้ค่าไฟ','รายได้ค่าน้ำ','รายได้ค่าขยะ','รายได้รวม','ชำระแล้ว','ค้างชำระ','จำนวนบิล'];
+    // §7-L: docs predating otherIncome → compute the reconciling remainder so categories sum to total.
+    const _other = (d) => (d && d.otherIncome != null) ? d.otherIncome
+      : Math.max(0, ((d&&d.totalRevenue)||0) - ((d&&d.rentIncome)||0) - ((d&&d.electricIncome)||0) - ((d&&d.waterIncome)||0) - ((d&&d.trashIncome)||0));
+    const headers = ['เดือน','รายได้ค่าเช่า','รายได้ค่าไฟ','รายได้ค่าน้ำ','รายได้ค่าขยะ','รายได้อื่นๆ','รายได้รวม','ชำระแล้ว','ค้างชำระ','จำนวนบิล'];
     const THAI_MONTHS = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
     const rows = [];
     for (let m = 1; m <= 12; m++) {
       const d = (data.months||{})[m] || {};
-      rows.push([THAI_MONTHS[m], d.rentIncome||0, d.electricIncome||0, d.waterIncome||0, d.trashIncome||0,
+      rows.push([THAI_MONTHS[m], d.rentIncome||0, d.electricIncome||0, d.waterIncome||0, d.trashIncome||0, _other(d),
         d.totalRevenue||0, d.paidRevenue||0, d.pendingRevenue||0, (d.paidCount||0)+(d.pendingCount||0)]);
     }
     const a = data.annual || {};
-    rows.push(['— รวมทั้งปี —', a.rentIncome||0, a.electricIncome||0, a.waterIncome||0, a.trashIncome||0, a.totalRevenue||0, a.paidRevenue||0, a.pendingRevenue||0, (a.paidCount||0)+(a.pendingCount||0)]);
-    rows.push(['', '', '', '', '', '', '', '', '']);
-    rows.push(['ประเมินภาษี ภ.ง.ด.90 (ม.40(5)(ก))', '', '', '', '', '', '', '', '']);
-    rows.push(['รายได้รวม', a.totalRevenue||0, '', '', '', '', '', '', '']);
-    rows.push(['หักค่าใช้จ่ายเหมา 30%', a.taxEstimate?.standardDeduction||0, '', '', '', '', '', '', '']);
-    rows.push(['รายได้สุทธิก่อนลดหย่อน', a.taxEstimate?.netRevenue||0, '', '', '', '', '', '', '']);
+    rows.push(['— รวมทั้งปี —', a.rentIncome||0, a.electricIncome||0, a.waterIncome||0, a.trashIncome||0, _other(a), a.totalRevenue||0, a.paidRevenue||0, a.pendingRevenue||0, (a.paidCount||0)+(a.pendingCount||0)]);
+    rows.push(['', '', '', '', '', '', '', '', '', '']);
+    rows.push(['ประเมินภาษี ภ.ง.ด.90 (ม.40(5)(ก))', '', '', '', '', '', '', '', '', '']);
+    rows.push(['รายได้รวม', a.totalRevenue||0, '', '', '', '', '', '', '', '']);
+    rows.push(['หักค่าใช้จ่ายเหมา 30%', a.taxEstimate?.standardDeduction||0, '', '', '', '', '', '', '', '']);
+    rows.push(['รายได้สุทธิก่อนลดหย่อน', a.taxEstimate?.netRevenue||0, '', '', '', '', '', '', '', '']);
     return { headers, rows, filename: `revenue_summary_BE${yearBE}.csv`, title: `สรุปรายเดือน + ภ.ง.ด.90 ปี ${yearBE}`, source: 'Firestore taxSummary/' + yearBE };
   }
 
@@ -1531,6 +1534,10 @@
       return na - nb;
     });
     const total = data.totalRevenue || 0;
+    // §7-L: taxSummary docs written before otherIncome existed → compute the reconciling
+    // remainder client-side so the category breakdown balances without re-aggregation.
+    const otherIncome = (data.otherIncome != null) ? data.otherIncome
+      : Math.max(0, total - (data.rentIncome||0) - (data.electricIncome||0) - (data.waterIncome||0) - (data.trashIncome||0));
     const taxInfo = window.calculateMonthlyIncomeTax?.(month, yearBE - 543) || {};
     const today = new Date().toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' });
     return `
@@ -1552,6 +1559,7 @@
             <th class="rpt-th-r">ค่าไฟ</th>
             <th class="rpt-th-r">ค่าน้ำ</th>
             <th class="rpt-th-r">ค่าขยะ</th>
+            <th class="rpt-th-r">อื่นๆ</th>
             <th class="rpt-th-r">รวม</th>
           </tr>
         </thead>
@@ -1564,6 +1572,7 @@
               <td class="rpt-td-r">${_fmt(r.electricity)}</td>
               <td class="rpt-td-r">${_fmt(r.water)}</td>
               <td class="rpt-td-r">${_fmt(r.trash)}</td>
+              <td class="rpt-td-r">${_fmt(Math.max(0, (r.total||0) - (r.rent||0) - (r.electricity||0) - (r.water||0) - (r.trash||0)))}</td>
               <td class="rpt-td-rb">${_fmt(r.total)}</td>
             </tr>`;
           }).join('')}
@@ -1573,6 +1582,7 @@
             <td class="rpt-td-total-r">${_fmt(data.electricIncome)}</td>
             <td class="rpt-td-total-r">${_fmt(data.waterIncome)}</td>
             <td class="rpt-td-total-r">${_fmt(data.trashIncome)}</td>
+            <td class="rpt-td-total-r">${_fmt(otherIncome)}</td>
             <td class="rpt-td-total-r">${_fmt(total)}</td>
           </tr>
         </tbody>
