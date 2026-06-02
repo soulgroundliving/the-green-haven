@@ -640,12 +640,7 @@
       <button class="sidebar-item" data-action="show-tax-page" data-page="monthly">
         <span class="sidebar-item-icon" aria-hidden="true">📅</span>รายงานเดือน
       </button>
-      <button class="sidebar-item" data-action="show-tax-page" data-page="quarterly">
-        <span class="sidebar-item-icon" aria-hidden="true">📋</span>ประเมินไตรมาส
-      </button>
-      <button class="sidebar-item" data-action="show-tax-page" data-page="annual">
-        <span class="sidebar-item-icon" aria-hidden="true">📄</span>ประเมินประจำปี
-      </button>
+
       <button class="sidebar-item" data-action="show-tax-page" data-page="withholding">
         <span class="sidebar-item-icon" aria-hidden="true">✅</span>ตรวจสอบหัก ณ ที่จ่าย
       </button>
@@ -786,12 +781,7 @@
         <button class="btn btn-primary" data-action="show-tax-page" data-page="monthly">
           <span>📅</span>สร้างรายงานเดือน
         </button>
-        <button class="btn btn-primary" data-action="show-tax-page" data-page="quarterly">
-          <span>📋</span>สร้างประเมินไตรมาส
-        </button>
-        <button class="btn btn-primary" data-action="show-tax-page" data-page="annual">
-          <span>📄</span>สร้างประเมินประจำปี
-        </button>
+
         <button class="btn btn-primary" data-action="show-tax-page" data-page="checklist">
           <span>☑️</span>ดูเช็คลิสต์
         </button>
@@ -854,75 +844,6 @@
       <div class="card-title">📋 รายงานเดือน</div>
       <p class="empty-placeholder">
         เลือกเดือนและกดสร้างรายงาน
-      </p>
-    </div>
-  </div>
-
-  <!-- PAGE 3: QUARTERLY TAX RETURN -->
-  <div class="page" id="quarterly-page">
-    <h2 class="mb-20">📋 ประเมินภาษีรายไตรมาส (ป.พ.6)</h2>
-
-    <div class="card">
-      <div class="card-title">🗓️ เลือกไตรมาส</div>
-      <div class="grid-4col">
-        <button class="btn btn-secondary" data-action="quarterly-return" data-quarter="1">
-          <span>📊</span>Q1 (ม.ค.-มี.ค.)
-        </button>
-        <button class="btn btn-secondary" data-action="quarterly-return" data-quarter="2">
-          <span>📊</span>Q2 (เม.ย.-มิ.ย.)
-        </button>
-        <button class="btn btn-secondary" data-action="quarterly-return" data-quarter="3">
-          <span>📊</span>Q3 (ก.ค.-กย.)
-        </button>
-        <button class="btn btn-secondary" data-action="quarterly-return" data-quarter="4">
-          <span>📊</span>Q4 (ต.ค.-ธ.ค.)
-        </button>
-      </div>
-    </div>
-
-    <div id="quarterly-report-content" class="card">
-      <div class="card-title">📄 รายงานไตรมาส</div>
-      <p class="empty-placeholder">
-        เลือกไตรมาสเพื่อสร้างรายงาน
-      </p>
-    </div>
-
-    <div class="card card-center-row">
-      <button class="btn btn-secondary" data-action="export-quarterly-pdf">
-        <span>📥</span>ส่งออก PDF
-      </button>
-    </div>
-  </div>
-
-  <!-- PAGE 4: ANNUAL TAX RETURN -->
-  <div class="page" id="annual-page">
-    <h2 class="mb-20">📄 ประเมินภาษีประจำปี (ภ.ป.ภ. 50)</h2>
-
-    <div class="card">
-      <div class="card-title">🗓️ เลือกปีงบประมาณ</div>
-      <div class="grid-annual-sel">
-        <div class="form-group">
-          <label>ปี</label>
-          <select id="annual-year"></select>
-        </div>
-        <div class="flex-gap-10">
-          <button class="btn btn-primary" data-action="display-annual">
-            <span>✨</span>สร้างรายงาน
-          </button>
-          <button class="btn btn-secondary" data-action="export-annual-pdf">
-            <span>📥</span>Export PDF
-          </button>
-          <button class="btn btn-secondary" data-action="export-annual-excel">
-            <span>📊</span>Export Excel
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="annual-report-content" class="card">
-      <div class="card-title">📋 รายงานประจำปี</div>
-      <p class="empty-placeholder">
-        เลือกปีและกดสร้างรายงาน
       </p>
     </div>
   </div>
@@ -1167,85 +1088,6 @@
         rate: 'progressive (ภ.ง.ด.90)'
       };
     };
-    window.calculateQuarterlyIncomeTax = function(quarter, year, rate) {
-      const rev = window.calculateQuarterlyRevenue(quarter, year);
-      const net = Math.max(0, rev * 0.70);
-      const annualEq = net * 4;
-      return {
-        grossRevenue: rev,
-        deductibleExpenses: Math.round(rev * 0.30),
-        taxableIncome: Math.round(net),
-        incomeTax: Math.round(estimateThaiPersonalTax(annualEq) / 4),
-        rate: 'progressive (ภ.ง.ด.90)'
-      };
-    };
-    // ===== Thai font support for jsPDF (Sarabun) =====
-    // jsPDF default fonts (Helvetica/Arial) don't include Thai glyphs → mojibake.
-    // Load Sarabun TTF from jsdelivr (Google Fonts mirror) once, register in jsPDF VFS,
-    // then monkey-patch the jsPDF constructor so every new doc gets Sarabun + an
-    // overridden setFont() that maps 'Arial'/'Helvetica' → 'Sarabun' transparently.
-    function _bufToB64(buf) {
-      const bytes = new Uint8Array(buf);
-      let bin = '';
-      const chunk = 0x8000;
-      for (let i = 0; i < bytes.length; i += chunk) {
-        bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-      }
-      return btoa(bin);
-    }
-    async function _loadSarabunFont() {
-      if (window._sarabunB64) return;
-      try {
-        const resp = await fetch('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun/Sarabun-Regular.ttf');
-        if (!resp.ok) throw new Error('fetch failed: ' + resp.status);
-        const buf = await resp.arrayBuffer();
-        window._sarabunB64 = _bufToB64(buf);
-        console.log('✅ Sarabun font loaded for PDF (', Math.round(buf.byteLength/1024), 'KB)');
-      } catch (e) { console.warn('⚠️ Sarabun font load failed:', e.message); }
-    }
-    function _patchJsPDFForThai() {
-      if (!window.jspdf?.jsPDF) return;
-      const origPDF = window.jspdf.jsPDF;
-      if (origPDF._thaiPatched) return;
-      function ThaiPDF(...args) {
-        const doc = new origPDF(...args);
-        if (window._sarabunB64) {
-          try {
-            doc.addFileToVFS('Sarabun-Regular.ttf', window._sarabunB64);
-            doc.addFont('Sarabun-Regular.ttf', 'Sarabun', 'normal');
-            const origSetFont = doc.setFont.bind(doc);
-            doc.setFont = function(font, style) {
-              // Map common ASCII-only fonts → Sarabun so existing tax-export.js code works as-is
-              if (font === 'Arial' || font === 'Helvetica' || font === 'helvetica' || font === 'arial') font = 'Sarabun';
-              return origSetFont(font, style);
-            };
-            doc.setFont('Sarabun', 'normal');
-            // Wrap autoTable so table head/body/foot all use Sarabun (default = Helvetica which lacks Thai glyphs)
-            if (typeof doc.autoTable === 'function') {
-              const origAT = doc.autoTable.bind(doc);
-              doc.autoTable = function(opts) {
-                opts = opts || {};
-                opts.styles      = Object.assign({ font: 'Sarabun', fontStyle: 'normal' }, opts.styles || {});
-                opts.headStyles  = Object.assign({ font: 'Sarabun', fontStyle: 'normal' }, opts.headStyles || {});
-                opts.bodyStyles  = Object.assign({ font: 'Sarabun', fontStyle: 'normal' }, opts.bodyStyles || {});
-                opts.footStyles  = Object.assign({ font: 'Sarabun', fontStyle: 'normal' }, opts.footStyles || {});
-                opts.styles.font = 'Sarabun';
-                return origAT(opts);
-              };
-            }
-          } catch (e) { console.warn('jsPDF font setup failed:', e.message); }
-        }
-        return doc;
-      }
-      // Preserve static methods from original jsPDF
-      Object.setPrototypeOf(ThaiPDF, origPDF);
-      ThaiPDF.prototype = origPDF.prototype;
-      ThaiPDF._thaiPatched = true;
-      window.jspdf.jsPDF = ThaiPDF;
-    }
-    // Kick off font load + patch (font fetch ~250KB, async, doesn't block UI)
-    _loadSarabunFont().then(_patchJsPDFForThai);
-
     // Replace blocking alert() in showError/showSuccess with non-blocking toast
     // (alert() freezes the whole tab — bad UX, also blocks programmatic test)
     function _taxToast(msg, type) {
@@ -1281,7 +1123,6 @@
     // Wait a tick so DOM is ready
     const initSelectors = () => {
       fillYearSelect('monthly-year', currentBE);
-      fillYearSelect('annual-year', currentBE);
       fillYearSelect('withholding-year', currentBE);
       const mSel = document.getElementById('monthly-month');
       if (mSel) mSel.value = String(currentMonth);
@@ -1910,16 +1751,6 @@
         downloadCurrentReportAsPDF();
       } else if (action === 'export-monthly-excel') {
         if (typeof exportMonthlyReportExcel === 'function') exportMonthlyReportExcel();
-      } else if (action === 'quarterly-return') {
-        if (typeof displayQuarterlyReturn === 'function') displayQuarterlyReturn(Number(el.dataset.quarter));
-      } else if (action === 'export-quarterly-pdf') {
-        if (typeof exportQuarterlyReturnPDF === 'function') exportQuarterlyReturnPDF();
-      } else if (action === 'display-annual') {
-        if (typeof displayAnnualReport === 'function') displayAnnualReport();
-      } else if (action === 'export-annual-pdf') {
-        if (typeof exportAnnualReportPDF === 'function') exportAnnualReportPDF();
-      } else if (action === 'export-annual-excel') {
-        if (typeof exportAnnualReportExcel === 'function') exportAnnualReportExcel();
       } else if (action === 'withholding-check') {
         if (typeof displayWithholdingReconciliation === 'function') displayWithholdingReconciliation();
       } else if (action === 'update-checklist-status') {
