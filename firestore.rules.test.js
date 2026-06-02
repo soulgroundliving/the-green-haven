@@ -1025,6 +1025,63 @@ describe('occupancyLog — append-only audit history (Plan B\' S1)', () => {
   });
 });
 
+describe('consents — PDPA consent ledger, tenant reads own / admin reads all, CF-write-only (Roadmap 1.4)', () => {
+  // LIFF tenant with uid + optional tenantId claim. The consents rule grants a
+  // tenant read access to a row whose authUid == their uid OR whose tenantId ==
+  // their tenantId claim — the dual path survives §7-Z claim strip / §7-P UID drift.
+  const LIFF_WITH_TENANT_ID = (uid, tenantId, room = '15', building = 'rooms') =>
+    testEnv.authenticatedContext(uid, {
+      tenantId, room, building, firebase: { sign_in_provider: 'custom' }
+    });
+
+  const ownRow = {
+    tenantId: 'T_OWN', authUid: 'line:Uown', room: '15', building: 'rooms',
+    purpose: 'account_v1', noticeVersion: 'v1',
+  };
+
+  it('admin can read any consent row (PDPA audit)', async () => {
+    await seedDoc('consents/T_OWN_account_v1', ownRow);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'consents/T_OWN_account_v1')));
+  });
+
+  it('tenant can read their OWN consent row via authUid match', async () => {
+    await seedDoc('consents/T_OWN_account_v1', ownRow);
+    // uid == resource.data.authUid grants read; no tenantId claim needed here
+    const ctx = LIFF_WITH_TENANT_ID('line:Uown', '');
+    await assertSucceeds(getDoc(doc(ctx.firestore(), 'consents/T_OWN_account_v1')));
+  });
+
+  it('tenant can read their OWN consent row via tenantId claim (survives UID drift)', async () => {
+    await seedDoc('consents/T_OWN_account_v1', ownRow);
+    // UID rotated (≠ authUid) but tenantId claim still matches resource.data.tenantId
+    const ctx = LIFF_WITH_TENANT_ID('line:UdriftedNewUid', 'T_OWN');
+    await assertSucceeds(getDoc(doc(ctx.firestore(), 'consents/T_OWN_account_v1')));
+  });
+
+  it('tenant CANNOT read another tenant\'s consent row', async () => {
+    await seedDoc('consents/T_OWN_account_v1', ownRow);
+    const ctx = LIFF_WITH_TENANT_ID('line:Uother', 'T_OTHER');
+    await assertFails(getDoc(doc(ctx.firestore(), 'consents/T_OWN_account_v1')));
+  });
+
+  it('unauth user CANNOT read any consent row', async () => {
+    await seedDoc('consents/T_OWN_account_v1', ownRow);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'consents/T_OWN_account_v1')));
+  });
+
+  it('client CANNOT write a consent row (CF / Admin-SDK only — write:false)', async () => {
+    await assertFails(setDoc(doc(EMAIL_ADMIN().firestore(), 'consents/forge_account_v1'), ownRow));
+    await assertFails(setDoc(doc(ANON().firestore(), 'consents/forge_account_v1'), ownRow));
+  });
+
+  it('tenant CANNOT update or delete their own consent row (immutable, CF-only)', async () => {
+    await seedDoc('consents/T_OWN_account_v1', ownRow);
+    const ctx = LIFF_WITH_TENANT_ID('line:Uown', 'T_OWN');
+    await assertFails(updateDoc(doc(ctx.firestore(), 'consents/T_OWN_account_v1'), { purpose: 'hacked' }));
+    await assertFails(deleteDoc(doc(ctx.firestore(), 'consents/T_OWN_account_v1')));
+  });
+});
+
 describe('pointsLedger — append-only points event log, admin-read-only (Core Readiness Phase 0)', () => {
   // LIFF tenant with explicit tenantId claim — proves even an authenticated
   // tenant has NO read access in Phase 0 (self-view is a deferred feature).
