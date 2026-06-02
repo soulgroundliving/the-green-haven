@@ -1080,7 +1080,11 @@ function updateGamificationWidget() {
     const months = t.createdDate
       ? Math.min(120, Math.floor((Date.now() - new Date(t.createdDate).getTime()) / (1000*60*60*24*30)))
       : 0;
-    const pts = months * 10;
+    // Real gamification points from the live tenant doc (tenant_master_data is
+    // hydrated full-doc via onSnapshot in dashboard-tenant-page.js, so
+    // gamification.points is current). NEVER synthesize from lease age — that
+    // showed phantom rankings (a 4-month lease faked 40 pts). A real 0 is valid.
+    const pts = Number(t.gamification?.points) || 0;
     const rank = pts >= 1000 ? '🥇' : pts >= 500 ? '🥈' : '🥉';
     return { name: t.name || t.id, pts, rank, months };
   }).filter(t => t.name && t.name !== t.id).sort((a,b) => b.pts - a.pts).slice(0,3);

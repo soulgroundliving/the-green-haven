@@ -218,16 +218,15 @@
     }
 
     // ── loadGamificationData ────────────────────────────────────────────────
-    // Priority: server-synced userPoints (from Firestore subscription) → room-specific localStorage → generic key → lease months
+    // Points are server-authoritative: Firestore gamification.points, delivered by
+    // _subscribeEcoPoints and mirrored room-scoped in localStorage for the
+    // pre-snapshot paint. A real balance of 0 is valid and MUST be shown as 0 —
+    // never synthesize points from lease age. (The old `months * 10` fallback made
+    // a freshly-reset room with a ~4-month lease display a phantom 40 Pts.)
     function loadGamificationData() {
-        let pts = window.userPoints
-               || parseInt(localStorage.getItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`))
-               || parseInt(localStorage.getItem('tenant_eco_points'))
-               || 0;
-        if (!pts && _taLease && _taLease.startDate) {
-            const months = Math.min(120, Math.floor((Date.now() - new Date(_taLease.startDate).getTime()) / (1000 * 60 * 60 * 24 * 30)));
-            pts = months * 10;
-        }
+        let pts = (typeof window.userPoints === 'number')
+            ? window.userPoints
+            : (parseInt(localStorage.getItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`), 10) || 0);
         window.userPoints = pts;
         _subscribeEcoPoints(); // idempotent — only subscribes once
         _loadLeaderboard();    // Nest-only, idempotent

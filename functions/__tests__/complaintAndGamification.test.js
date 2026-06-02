@@ -161,9 +161,13 @@ function makeFirestoreInstance() {
   // Tenant doc stub for nestSnap (used by _runAwardComplaintFreeMonth).
   // Real QueryDocumentSnapshots expose .data() — the ledger wiring reads
   // tenantDoc.data().tenantId + .gamification.points, so the stub must too.
-  const makeNestTenantDoc = (id, markerExists) => ({
+  const makeNestTenantDoc = (id, markerExists, opts = {}) => ({
     id,
-    data: () => ({ gamification: { points: 0 }, tenantId: `tnt_${id}` }),
+    // opts.vacant → empty room (no tenantId, status:'vacant') so the occupancy
+    // gate in _runAwardComplaintFreeMonth skips it.
+    data: () => (opts.vacant
+      ? { gamification: { points: 0 }, status: 'vacant' }
+      : { gamification: { points: 0 }, tenantId: `tnt_${id}`, status: 'occupied' }),
     ref: {
       _id: id,
       collection: () => ({
@@ -203,7 +207,7 @@ function makeFirestoreInstance() {
             // awardComplaintFreeMonth path
             return {
               size: stubState.nestTenantDocs.length,
-              docs: stubState.nestTenantDocs.map(t => makeNestTenantDoc(t.id, t.markerExists)),
+              docs: stubState.nestTenantDocs.map(t => makeNestTenantDoc(t.id, t.markerExists, { vacant: t.vacant })),
             };
           },
           orderBy: function () { _orderedQuery = true; return this; },
@@ -711,6 +715,18 @@ describe('complaintAndGamification', () => {
       assert.strictEqual(result.skippedAlreadyAwarded, 1);
       assert.strictEqual(result.awarded, 0);
       assert.strictEqual(captured.batchCommitCount, 0);
+    });
+
+    it('skips vacant room with no tenantId (occupancy gate)', async () => {
+      stubState.nestTenantDocs = [
+        { id: 'N101', markerExists: false },                 // occupied → awarded
+        { id: 'N102', markerExists: false, vacant: true },   // empty → skipped
+        { id: 'N103', markerExists: false, vacant: true },   // empty → skipped
+      ];
+      const result = await awardScheduledHandler();
+      assert.strictEqual(result.awarded, 1, 'only the occupied room is awarded');
+      assert.strictEqual(result.skippedVacant, 2, 'both empty rooms skipped by occupancy gate');
+      assert.strictEqual(captured.batchCommitCount, 1, 'no batch write for vacant rooms');
     });
 
     it('awards points and sets marker for eligible tenant in apply mode', async () => {

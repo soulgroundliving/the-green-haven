@@ -107,11 +107,20 @@ async function _runAwardComplaintFreeMonth({ dryRun = false } = {}) {
   });
 
   const nestSnap = await firestore.collection('tenants').doc('nest').collection('list').get();
-  let awarded = 0, skippedAlreadyAwarded = 0, skippedHadComplaint = 0;
+  let awarded = 0, skippedAlreadyAwarded = 0, skippedHadComplaint = 0, skippedVacant = 0;
   const wouldAward = [];  // names of tenants who'd get points (dry-run only)
 
   for (const tenantDoc of nestSnap.docs) {
     const roomId = tenantDoc.id;
+
+    // Occupancy gate — the complaint-free bonus is a tenant reward; only an
+    // ACTIVE tenant earns it. An empty room has no tenantId (and may be flagged
+    // status:'vacant'). Without this guard the CF ran increment(40) on EVERY
+    // nest room each month, so vacant rooms accrued phantom points — a
+    // freshly-reset building "bounced back" to 40 on the 1st (CLAUDE.md §7).
+    const td = tenantDoc.data() || {};
+    if (!td.tenantId || td.status === 'vacant') { skippedVacant++; continue; }
+
     if (complainedRooms.has(String(roomId))) { skippedHadComplaint++; continue; }
 
     const markerRef = tenantDoc.ref.collection('complaintFreeMonthAwarded').doc(monthKey);
@@ -143,7 +152,7 @@ async function _runAwardComplaintFreeMonth({ dryRun = false } = {}) {
   }
 
   return {
-    monthKey, awarded, skippedAlreadyAwarded, skippedHadComplaint,
+    monthKey, awarded, skippedAlreadyAwarded, skippedHadComplaint, skippedVacant,
     total: nestSnap.size,
     complaintsLastMonth: complaintsSnap.size,
     complainedRooms: Array.from(complainedRooms),
@@ -196,6 +205,11 @@ exports.awardComplaintFreeMonthManual = functions
  * Point economy is Nest-only per memory/point_economy_rules.md, so we only
  * iterate tenants/nest/list. Idempotent: writes a marker doc per (room, month)
  * so a function retry from Cloud Scheduler doesn't double-award.
+ *
+ * OCCUPANCY GATE (2026-06-02): awards only rooms with an active tenant
+ * (tenantId present, not status:'vacant'). The prior version awarded +40 to
+ * every vacant nest room each month, so a reset test building re-accrued
+ * phantom points on the 1st (CLAUDE.md §7 — gamification is for real tenants).
  */
 exports.awardComplaintFreeMonth = functions.region('asia-southeast1').pubsub
   .schedule('1 0 1 * *')
