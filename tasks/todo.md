@@ -4,7 +4,7 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-02) — Roadmap Phase 1.4: ToS + Privacy consent + DSR wiring · ⏳ AWAITING APPROVAL (Plan-First)
+## ▶▶▶ ACTIVE PLAN (2026-06-02) — Roadmap Phase 1.4: ToS + Privacy consent + DSR wiring · ✅ ALL SLICES SHIPPED + DEPLOYED (A #236 · B #237 · C1 #238 · C2 #239) — see Review below
 
 **Scope:** the PDPA + investor-facing gap from `core-readiness-roadmap.md` §1.4. **3 slices, gate-first (3 PRs, each behind `validate.yml`)** — user-chosen 2026-06-02. **ToS = scaffold + placeholder** (I build the page structure + standard headings + clearly-marked placeholders; the owner/lawyer fills the legal text — I do NOT fabricate legal wording).
 
@@ -30,9 +30,9 @@
 - [ ] Live-verify (owner, §7-A — agent can't drive LIFF): tenant opens Settings → ดาวน์โหลด → JSON file of own data only. (LIFF webview `<a download>` — confirm it triggers; fallback if blocked.)
 
 ### Slice C — consent acceptance gate (PR C)
-- [ ] **Booking gate (prospect, blocking)** — `booking.html` Step 2 modal: a required "ยอมรับ [นโยบายความเป็นส่วนตัว] + [ข้อตกลงการใช้งาน]" checkbox (links to privacy/terms) gating the lock button. Record consent **in `createBookingLock`** (the CF where prospect identity exists — NOT recordChecklistConsent, which needs tenant claims): persist `consentAcceptedAt`/`consentVersion` on the `bookings/{id}` doc. *Why here:* prospect is anonymous pre-lock; the booking doc is the consent record-of-proof. ⚠️ **CSP: the Step-2 submit handler is inline script in booking.html → editing it drifts the hash → `npm run csp:hash && node tools/update-vercel-csp.js` in the same commit (§7-II).**
-- [ ] **Tenant first-run gate (info)** — a one-time consent acknowledgment in `tenant_app.html` (hook the existing `GhTour`/first-run, localStorage-gated) → `recordChecklistConsent({purpose:'account_v1', noticeVersion})` (add `'account_v1'` to `VALID_PURPOSES`). §7-A claims-gated. *Why:* demonstrable ongoing-use consent for existing tenants (PDPA §19).
-- [ ] **`recordChecklistConsent.js`** — add `'account_v1'` to `VALID_PURPOSES` (+ unit test). **`firestore.rules.test.js`** — ADD a `consents` describe block (admin read-all · tenant authUid/tenantId-claim read own · cross-tenant read denied · client write denied) — none exist today.
+- [x] **Booking gate (prospect, blocking)** [C2 #239] — `booking.html` Step 2 modal: a required "ยอมรับ [นโยบายความเป็นส่วนตัว] + [ข้อตกลงการใช้งาน]" checkbox (links to privacy/terms) gating the lock button. Record consent **in `createBookingLock`** (the CF where prospect identity exists — NOT recordChecklistConsent, which needs tenant claims): persist `consentAcceptedAt`/`consentVersion` on the `bookings/{id}` doc. *Why here:* prospect is anonymous pre-lock; the booking doc is the consent record-of-proof. ⚠️ **CSP: the Step-2 submit handler is inline script in booking.html → editing it drifts the hash → `npm run csp:hash && node tools/update-vercel-csp.js` in the same commit (§7-II).**
+- [x] **Tenant first-run gate (info)** [C1 #238] — a one-time consent acknowledgment in `tenant_app.html` (hook the existing `GhTour`/first-run, localStorage-gated) → `recordChecklistConsent({purpose:'account_v1', noticeVersion})` (add `'account_v1'` to `VALID_PURPOSES`). §7-A claims-gated. *Why:* demonstrable ongoing-use consent for existing tenants (PDPA §19).
+- [x] **`recordChecklistConsent.js`** [C1 #238] — added `'account_v1'` to `VALID_PURPOSES` (+ unit test). **`firestore.rules.test.js`** — ADDED a `consents` describe block (admin read-all · tenant authUid/tenantId-claim read own · cross-tenant denied · client write/update/delete denied) — 271/0 total (README 249→256).
 - [ ] Live-verify (owner): booking submit writes `consentAcceptedAt`; tenant first-run writes `consents/{tenantId}_account_v1`.
 
 ### Decisions to confirm (at approval)
@@ -43,8 +43,17 @@
 ### Guardrails
 §7-I (no auto-`.click()`) · §7-A/§7-U (tenant gates via `_onLiffClaimsReady` + claim guard; live-verify on real LINE) · §7-K (wire exportMyData = close the orphan) · §7-T (consent writer+reader) · §7-II (**Slice C booking.html inline-handler → CSP regen**; Slice A/B markup+external only → no drift) · §7-Z N/A · gate-first A→B→C, each behind `validate.yml` · ToS legal text is owner-supplied (scaffold only).
 
-### Review (append after execution)
-_(shipped / deferred / follow-ups)_
+### Review (2026-06-02 — ALL SLICES SHIPPED + DEPLOYED)
+- **A** (PR [#236](https://github.com/soulgroundliving/the-green-haven/pull/236) `7ba1905`): `privacy.html` KYC-photo data-inventory + `terms.html` scaffold (placeholders — owner fills legal) + `login.html` `.page-legal-footer` → privacy/terms. Content-only, no CSP drift.
+- **B** (PR [#237](https://github.com/soulgroundliving/the-green-haven/pull/237) `a8556fb`): `shared/tenant-data-export.js` `window.exportMyDataPrompt()` (httpsCallable → Blob → `<a download>`) + Settings menu item — closes the §7-K `exportMyData` orphan. Self-wired, no CSP drift.
+- **C1** (PR [#238](https://github.com/soulgroundliving/the-green-haven/pull/238) `13eca99`): tenant first-run `account_v1` consent — `recordChecklistConsent` VALID_PURPOSES + `shared/tenant-consent.js` (`window.maybePromptAccountConsent`, GhModal + localStorage + fire-and-forget; **self-wired via `window._onLiffClaimsReady` → no CSP drift**, `<script src>` only) + `consents` rules describe block. CF deployed; prod probe → UNAUTHENTICATED.
+- **C2** (PR [#239](https://github.com/soulgroundliving/the-green-haven/pull/239) `dd74681`): booking-prospect gate — `booking.html` Step 2 required `#modalConsent` checkbox (privacy+terms links) gating the lock + `createBookingLock` enforces `consentAccepted===true` for prospects (admin exempt) + persists `consentAcceptedAt`/`consentVersion` on `bookings/{id}`; +4 CF tests; CSP regen (booking inline `<script>`/`<style>` changed). Money-flow CF deployed; prod probe → UNAUTHENTICATED.
+- **Decisions taken (as approved):** purpose `account_v1` · booking consent on the `bookings/{id}` doc (prospect has no tenant claim) · ToS = standalone `terms.html`.
+- **Gates:** functions 1886/0 · rules 271/0 (README 249→256) · shared 319/0 · verify:memory 0 fail · CSP in sync (pre-commit §G). Both CF prod deploys success (deploy-functions.yml).
+- **Sequencing-safe deploy:** C1 then C2 (disjoint files; C1 had no CSP change → no cross-drift). Each merged on green CI; Vercel ships the client before the CF lands so no broken window.
+- **Open (owner live-verify, §7-A/§7-I — agent can't drive LIFF / the booking money flow):** ① tenant first-run → GhModal → ยอมรับ → `consents/{tenantId}_account_v1` row written. ② booking Step 2 → checkbox required → lock → `bookings/{id}.consentAcceptedAt` set. ③ fill `terms.html` legal text + mirror KYC disclosure into `system/policies.privacy` (dashboard Policies tab) for the in-app copy.
+- **Architecture docs:** lifecycle_pdpa_checklist (account_v1 + booking consent + exportMyData self-serve restore) + lifecycle_booking_flow (consent fields) + handoff next_session_handoff_2026_06_02_phase_1_4_pdpa.
+- **Next (roadmap):** Phase 2 — accountant FAQ (refund / arrears-aging / revenue-categories / reconcile / Thai-font-PDF).
 
 ---
 
