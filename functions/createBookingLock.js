@@ -56,12 +56,25 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
     durationMonths,
     prospectName,
     prospectPhone,
+    consentAccepted,   // PDPA §19 — prospect accepted the privacy notice + ToS
+    consentVersion,    // notice version shown at acceptance (audit trail)
   } = data || {};
 
   if (!building || !roomId || !startDate || !durationMonths || !prospectName || !prospectPhone) {
     throw new functions.https.HttpsError('invalid-argument',
       'Missing required fields: building, roomId, startDate, durationMonths, prospectName, prospectPhone');
   }
+
+  // PDPA §19 — a booking prospect must accept the privacy notice + ToS BEFORE we
+  // process their personal data (name / phone / LINE id). The booking doc itself
+  // becomes the consent record-of-proof (consentAcceptedAt persisted below). The
+  // booking.html Step-2 checkbox gates the client, this is the server-side fence.
+  // Admins booking on behalf of a walk-in are exempt (paper contract = separate basis).
+  if (isProspect && consentAccepted !== true) {
+    throw new functions.https.HttpsError('invalid-argument',
+      'ต้องยอมรับนโยบายความเป็นส่วนตัวและข้อตกลงการใช้งานก่อนทำการจอง');
+  }
+  const consentVersionClean = String(consentVersion || 'v1').slice(0, 16);
   const validBuildings = await getValidBuildings();
   if (!validBuildings.has(String(building).toLowerCase())) {
     throw new functions.https.HttpsError('invalid-argument', `Unknown building: ${building}`);
@@ -235,6 +248,10 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
         lockedUntil: admin.firestore.Timestamp.fromMillis(lockedUntilMs),
         promptPayPayload: qrPayload,
         qrAmount: depositAmount,
+        // PDPA §19 consent record-of-proof. Prospects always carry this (gated
+        // above); admin on-behalf bookings record it only when the client sends it.
+        consentAcceptedAt: consentAccepted === true ? admin.firestore.FieldValue.serverTimestamp() : null,
+        consentVersion: consentAccepted === true ? consentVersionClean : null,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });

@@ -269,6 +269,8 @@ const validData = {
   durationMonths: 6,
   prospectName: 'สมชาย ทดสอบ',
   prospectPhone: '0812345678',
+  consentAccepted: true,   // PDPA §19 — prospects must accept before booking (Roadmap 1.4 Slice C)
+  consentVersion: 'v1',
 };
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -546,5 +548,43 @@ describe('createBookingLock', () => {
 
     assert.equal(result.earlyBirdEligible, false);
     assert.equal(result.earlyBirdPoints, 0);
+  });
+
+  // ── PDPA consent gate (Roadmap 1.4 Slice C) ──────────────────────────────────
+
+  // Prospect omits consent → invalid-argument (server-side fence behind the checkbox)
+  it('throws invalid-argument when a prospect omits consentAccepted', async () => {
+    const { consentAccepted: _c, consentVersion: _cv, ...noConsent } = validData;
+    await assert.rejects(
+      () => capturedCallHandler(noConsent, prospectCtx),
+      (e) => e.code === 'invalid-argument' && /ยอมรับ|consent/i.test(e.message),
+    );
+  });
+
+  // Prospect explicitly declines → invalid-argument
+  it('throws invalid-argument when a prospect sends consentAccepted=false', async () => {
+    await assert.rejects(
+      () => capturedCallHandler({ ...validData, consentAccepted: false }, prospectCtx),
+      (e) => e.code === 'invalid-argument',
+    );
+  });
+
+  // Success: the booking doc records the consent proof (PDPA §19 record-of-proof)
+  it('success: booking doc records consentAcceptedAt + consentVersion', async () => {
+    await capturedCallHandler({ ...validData, consentVersion: 'v1' }, prospectCtx);
+    assert.equal(captured.txSetCalls.length, 1);
+    const { data } = captured.txSetCalls[0];
+    assert.deepEqual(data.consentAcceptedAt, { _type: 'serverTimestamp' });
+    assert.equal(data.consentVersion, 'v1');
+  });
+
+  // Admin on-behalf booking is exempt from the consent gate (paper-contract basis)
+  it('admin booking succeeds without consentAccepted (on-behalf exemption)', async () => {
+    const { consentAccepted: _c, consentVersion: _cv, ...noConsent } = validData;
+    const result = await capturedCallHandler(noConsent, adminCtx);
+    assert.equal(result.bookingId, stubState.newBookingId);
+    // No consent supplied → recorded as null, not a serverTimestamp sentinel
+    assert.equal(captured.txSetCalls[0].data.consentAcceptedAt, null);
+    assert.equal(captured.txSetCalls[0].data.consentVersion, null);
   });
 });

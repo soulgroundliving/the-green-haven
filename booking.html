@@ -664,6 +664,38 @@
     }
     .modal-general-err.show { display: block; }
 
+    /* ── Consent checkbox (PDPA §19 acceptance gate) ─────────── */
+    .modal-consent-row {
+      margin: var(--space-3) 0 var(--space-2);
+    }
+    .modal-consent-label {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      line-height: var(--leading-relaxed);
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .modal-consent-label input[type="checkbox"] {
+      margin-top: 2px;
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--brand-primary, #5a7a5a);
+    }
+    .modal-consent-label a {
+      color: var(--ink);
+      text-decoration: underline;
+    }
+    .modal-consent-row .err {
+      display: block;
+      font-size: var(--text-xs);
+      color: var(--alert);
+      margin-top: var(--space-1);
+      min-height: 1em;
+    }
+
     /* ── 5-min countdown warning ─────────────────────────────── */
     .five-min-warning {
       display: none;
@@ -910,6 +942,18 @@
 
       <div id="modalEarlyBird" class="hide early-bird-badge">
         🎁 จองล่วงหน้า ≥ 30 วัน — รับ 500 แต้ม Early Bird (มอบหลังทำสัญญา)
+      </div>
+
+      <div class="modal-consent-row">
+        <label class="modal-consent-label">
+          <input type="checkbox" id="modalConsent">
+          <span>ฉันได้อ่านและยอมรับ
+            <a href="/privacy.html" target="_blank" rel="noopener">นโยบายความเป็นส่วนตัว</a>
+            และ
+            <a href="/terms.html" target="_blank" rel="noopener">ข้อตกลงการใช้งาน</a>
+          </span>
+        </label>
+        <span id="modalConsentErr" class="err" role="alert"></span>
       </div>
 
       <div class="modal-cta">
@@ -1795,6 +1839,8 @@
     }
     document.getElementById('modalNameErr').textContent = '';
     document.getElementById('modalPhoneErr').textContent = '';
+    const _consentErr = document.getElementById('modalConsentErr');
+    if (_consentErr) _consentErr.textContent = '';
     const genErr = document.getElementById('modalGeneralErr');
     if (genErr) { genErr.textContent = ''; genErr.classList.remove('show'); }
   }
@@ -1808,14 +1854,23 @@
     const nameErr = document.getElementById('modalNameErr');
     const phoneErr = document.getElementById('modalPhoneErr');
     const generalErr = document.getElementById('modalGeneralErr');
+    const consentEl = document.getElementById('modalConsent');
+    const consentErr = document.getElementById('modalConsentErr');
     nameErr.textContent = '';
     phoneErr.textContent = '';
+    if (consentErr) consentErr.textContent = '';
     if (generalErr) { generalErr.textContent = ''; generalErr.classList.remove('show'); }
 
     if (!firstName) { nameErr.textContent = 'กรุณากรอกชื่อ'; return; }
     if (!lastName)  { nameErr.textContent = 'กรุณากรอกนามสกุล'; return; }
     if (phone.length !== 10 || !phone.startsWith('0')) {
       phoneErr.textContent = 'เบอร์โทรต้อง 10 หลัก ขึ้นต้นด้วย 0';
+      return;
+    }
+    // PDPA §19 — must accept the privacy notice + ToS before we process personal
+    // data. The createBookingLock CF re-checks this server-side (defense-in-depth).
+    if (!consentEl || !consentEl.checked) {
+      if (consentErr) consentErr.textContent = 'กรุณายอมรับนโยบายความเป็นส่วนตัวและข้อตกลงการใช้งานก่อนทำการจอง';
       return;
     }
     if (!VALID_DURATIONS.includes(duration)) { return; }
@@ -1839,6 +1894,8 @@
         durationMonths: duration,
         prospectName: name,
         prospectPhone: phone,
+        consentAccepted: true,   // gated by #modalConsent above (PDPA §19)
+        consentVersion: 'v1',
       });
       const data = res.data || {};
       if (!data.bookingId) {
