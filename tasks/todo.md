@@ -27,8 +27,15 @@
 ### Guardrails
 §7-II CSP regen · §7-K verify 0 callers · §7-EE keep monthly/annual calc seeds · minimal-blast-radius · owner live-verify (auth-gated tax page, §7-I): monthly report + dashboard KPI still render via override; quarterly/annual pages + sidebar gone; monthly PDF export still works.
 
-### Review (append after)
-_(shipped / deferred / follow-ups)_
+### Review (2026-06-03 — SHIPPED to branch · PR #240 · ⏳ awaiting merge=deploy)
+- **PR [#240](https://github.com/soulgroundliving/the-green-haven/pull/240)** (`444634d`, −1201/+35) — removes the dead 15%-corporate path AND retires the now-vestigial Sarabun jsPDF patch → **closes the "Thai-font PDF" roadmap item too** (both in one PR).
+- **Removed:** tax-export.js (3 jsPDF exports + orphaned `exportMonthlyReportPDF` + `_addPDFLetterhead`) · tax-filing.js (`calculateQuarterlyIncomeTax` + generate/display Quarterly+Annual + `getQuarterlyBreakdown` + manifest entries) · tax-filing.html (quarterly/annual pages, sidebar, shortcuts, dispatch, quarterly override + Sarabun patch + jsdelivr fetch, orphaned `fillYearSelect('annual-year')`).
+- **Kept (live):** monthly report (html2canvas PDF — Thai via CSS `font-family:Sarabun` web font + Excel), dashboard KPI, monthly/annual calc seeds + progressive overrides (§7-EE), `getFullYearExpenseBreakdown`.
+- **Gates:** node --check ✓ · 0 dangling callers (grep) ✓ · test:shared 319/319 ✓ · verify:memory green ✓ · CSP regen §7-II ✓ · pre-commit all green.
+- **Discovery:** the roadmap's "Thai renders as boxes" premise was already false — a Sarabun jsPDF patch existed + worked (jsdelivr 200 + CSP `connect-src https:` ok); its ONLY consumers were the corporate forms removed here. Monthly PDF was always html2canvas (Thai-safe).
+- **Architecture doc:** `lifecycle_tax_filing.md` updated (3 pages, monthly-only exports, no jsPDF patch; verifiers fixed — old line-166 OR-grep was a §7-J trivially-passing trap masking 3 dead terms via surviving `AuditLogger.log`).
+- **⏳ Open:** merge = Vercel deploy (live tax page → user-confirm) → owner live-verify (auth-gated, §7-I — agent can't drive): dashboard + monthly report render via override; sidebar = Dashboard/รายงานเดือน/หัก ณ ที่จ่าย/เช็คลิสต์ only; monthly PDF Thai intact.
+- **Phase 2 remaining:** refund flow · per-tenant arrears/aging · revenue categories · reconcile report · ~~Thai-font PDF~~ (resolved here).
 
 ---
 
