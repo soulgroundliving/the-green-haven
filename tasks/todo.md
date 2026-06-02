@@ -4,7 +4,50 @@
 
 ---
 
-## ▶▶ ACTIVE PLAN (2026-06-02) — Roadmap Phase 1.2 (gapless INVOICE number `INV-`) + 1.3 (void bill with trail) · ⏳ AWAITING APPROVAL (Plan-First)
+## ▶▶▶ ACTIVE PLAN (2026-06-02) — Roadmap Phase 1.4: ToS + Privacy consent + DSR wiring · ⏳ AWAITING APPROVAL (Plan-First)
+
+**Scope:** the PDPA + investor-facing gap from `core-readiness-roadmap.md` §1.4. **3 slices, gate-first (3 PRs, each behind `validate.yml`)** — user-chosen 2026-06-02. **ToS = scaffold + placeholder** (I build the page structure + standard headings + clearly-marked placeholders; the owner/lawyer fills the legal text — I do NOT fabricate legal wording).
+
+### Verified state (3 Explore agents, grep-checked this session — incl. stale-roadmap corrections)
+- **Consent infra exists + reusable:** `recordChecklistConsent.js` (v1 onCall SE1, `_authSoT` tenant-gated) writes `consents/{tenantId}_{purpose}` `{tenantId,authUid,room,building,purpose,noticeVersion,consentedAt,userAgent}`; `VALID_PURPOSES = Set(['checklist_v1'])` (`:25`), registered `index.js:218`. Rule `consents/` (`firestore.rules:721-732`) = admin-read OR tenant authUid/tenantId match · write:false → **a new purpose needs NO rule change.** ⚠️ **No `consents` describe block in `firestore.rules.test.js`** → must ADD rules tests.
+- **`privacy.html` = a REAL PDPA policy** (5 sections, effective 1 พ.ค. 2568) but **linked from NOWHERE** (login/index/booking/tenant_app = 0 refs, grep-confirmed). ⚠️ `dashboard.html` has an admin editor `policy-admin-privacy` → **verify whether privacy.html renders STATIC HTML or loads admin-edited text before editing the data-inventory** (else the fix belongs in the editable source).
+- **No legal ToS exists** — tenant_app `cleaning-terms-page` (`:3198`) is a cleaning-service manual, not ToS.
+- **`exportMyData` (DSR §30) = confirmed §7-K orphan** (0 callers). v1 onCall SE1, `_authSoT` tenant-scoped, returns a full JSON (person/tenant/lease/liffUser/checklists/consents/complaints/maintenance/bills; storage paths listed, not inlined). `index.js:221`.
+- ⚠️ **ROADMAP STALE — national ID:** the ID *number* is NOT collected anywhere. What IS collected (undisclosed in privacy.html): **ID-card PHOTOS** (`idCardFront`/`idCardBack`, required), `houseReg`, `employmentLetter` → Storage `bookings/{id}/kyc/` (`submitBookingKyc.js`), + `prospectLineId`. The data-inventory fix discloses THOSE.
+- **Consent-gate auth nuance:** booking prospects are anonymous (no room claim) until `createBookingLock` → they CANNOT call `recordChecklistConsent` (`_authSoT` needs tenant claims). So booking consent must be recorded **in `createBookingLock`** (prospect context); tenant first-run consent uses `recordChecklistConsent` (new purpose, tenant has claims).
+
+### Slice A — link privacy + ToS scaffold + data-inventory fix (PR A, content-only, lowest risk)
+- [ ] **`terms.html`** (new, NOT in the CSP-tracked 8) — ToS scaffold mirroring `privacy.html` structure (muji-minimal): standard headings (acceptance · service desc · tenant obligations · payment · liability · termination · governing law · contact) with **`[รอข้อความจริง — …]` placeholders**. *Why scaffold:* legal text is the owner's/lawyer's; I wire the plumbing, not the wording.
+- [ ] **`privacy.html` data-inventory fix** — add the collected-but-undisclosed items (ID-card photos front/back, house registration, employment letter, LINE User ID) to the "ข้อมูลที่เราเก็บ" section (`:203-235`). *Why:* PDPA data-inventory must match what's actually collected (`submitBookingKyc.js`). **First verify static vs admin-editable** (the `policy-admin-privacy` editor).
+- [ ] **Link privacy.html + terms.html** from `login.html` / `index.html` / `booking.html` (footer) + tenant_app `page-privacy`/settings. *Why:* PDPA §19 needs the notice reachable; investor-facing. **CSP: `<a href>` is markup, no inline-block change → no hash drift** (§7-II) — confirm with the pre-commit §G check.
+- [ ] Live-verify links resolve on Vercel (3 entry pages + tenant_app).
+
+### Slice B — DSR `exportMyData` wiring (PR B, closes the §7-K orphan)
+- [ ] **`shared/tenant-data-export.js`** (new external module, mirrors `dashboard-invoice-void.js`) → `window.exportMyDataPrompt()`: `httpsCallable('exportMyData')({})` → download the returned JSON as `my-data-{date}.json`. §7-A gated (claims ready), §7-N error→toast. *Why external module:* keeps the handler out of inline script → no CSP drift on tenant_app.html.
+- [ ] **`tenant_app.html` settings** (`id="settings"` `:4020`) — a "PDPA สิทธิ์ของเจ้าของข้อมูล" card + button `data-action`/handler → `window.exportMyDataPrompt`. Update the §30 FAQ text (`:4754` "ขอให้ admin ส่งข้อมูล") to point at the button. *Why:* §30 right-to-access self-service; closes the orphan.
+- [ ] **`<script src>`** for the new module (defer; define-at-parse, call-at-click → order-agnostic, §7-PP). **CSP: external script + markup only → no drift** (confirm).
+- [ ] Live-verify (owner, §7-A — agent can't drive LIFF): tenant opens settings → ดาวน์โหลด → JSON file of own data only.
+
+### Slice C — consent acceptance gate (PR C)
+- [ ] **Booking gate (prospect, blocking)** — `booking.html` Step 2 modal: a required "ยอมรับ [นโยบายความเป็นส่วนตัว] + [ข้อตกลงการใช้งาน]" checkbox (links to privacy/terms) gating the lock button. Record consent **in `createBookingLock`** (the CF where prospect identity exists — NOT recordChecklistConsent, which needs tenant claims): persist `consentAcceptedAt`/`consentVersion` on the `bookings/{id}` doc. *Why here:* prospect is anonymous pre-lock; the booking doc is the consent record-of-proof. ⚠️ **CSP: the Step-2 submit handler is inline script in booking.html → editing it drifts the hash → `npm run csp:hash && node tools/update-vercel-csp.js` in the same commit (§7-II).**
+- [ ] **Tenant first-run gate (info)** — a one-time consent acknowledgment in `tenant_app.html` (hook the existing `GhTour`/first-run, localStorage-gated) → `recordChecklistConsent({purpose:'account_v1', noticeVersion})` (add `'account_v1'` to `VALID_PURPOSES`). §7-A claims-gated. *Why:* demonstrable ongoing-use consent for existing tenants (PDPA §19).
+- [ ] **`recordChecklistConsent.js`** — add `'account_v1'` to `VALID_PURPOSES` (+ unit test). **`firestore.rules.test.js`** — ADD a `consents` describe block (admin read-all · tenant authUid/tenantId-claim read own · cross-tenant read denied · client write denied) — none exist today.
+- [ ] Live-verify (owner): booking submit writes `consentAcceptedAt`; tenant first-run writes `consents/{tenantId}_account_v1`.
+
+### Decisions to confirm (at approval)
+1. **Tenant first-run consent purpose name** — `account_v1` **[proposed]** vs `tos_privacy_v1` / `terms_v1`.
+2. **Booking consent storage** — on the `bookings/{id}` doc via `createBookingLock` **[recommended — prospect has no tenant claim]** vs a separate `consents/` row (needs an anon-callable variant).
+3. **ToS reachability** — standalone `terms.html` **[recommended, mirrors privacy.html]** vs a `page-terms` section inside tenant_app.
+
+### Guardrails
+§7-I (no auto-`.click()`) · §7-A/§7-U (tenant gates via `_onLiffClaimsReady` + claim guard; live-verify on real LINE) · §7-K (wire exportMyData = close the orphan) · §7-T (consent writer+reader) · §7-II (**Slice C booking.html inline-handler → CSP regen**; Slice A/B markup+external only → no drift) · §7-Z N/A · gate-first A→B→C, each behind `validate.yml` · ToS legal text is owner-supplied (scaffold only).
+
+### Review (append after execution)
+_(shipped / deferred / follow-ups)_
+
+---
+
+## ▶▶ ACTIVE PLAN (2026-06-02) — Roadmap Phase 1.2 (gapless INVOICE number `INV-`) + 1.3 (void bill with trail) · ✅ SHIPPED + DEPLOYED (PR #235 `d5c15c6`) — see Review below
 
 **Scope:** the next two tax blockers from `core-readiness-roadmap.md` (recommended order step 3). They are **coupled** ("shared bill-issuance refactor"): both need a *persisted invoice document-of-record*, which **does not exist today** on the primary path. Phase 1.2 mints a gapless sequential `INV-{building}-{BE}-{NNNNN}` at issuance + persists the record; Phase 1.3 voids that record (state, not delete) with an audit row. Forward-only. Receipt (`RCP-`) is already done (1.2a) — this is the *invoice* (ใบแจ้งหนี้) side.
 
