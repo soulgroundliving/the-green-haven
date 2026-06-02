@@ -4,6 +4,41 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-03) — Roadmap Phase 2: Remove dead 15%-corporate tax path · 🚧 EXECUTING (branch `feat/phase2-remove-dead-corporate-tax`)
+
+**Scope:** roadmap Phase 2 "Remove dead 15%-corporate path". Pivoted here from "Thai-font PDF" — the Sarabun jsPDF patch's ONLY live consumers are the corporate text-PDF exports targeted here, so this PR retires BOTH roadmap items. Goal: kill auditor-confusing corporate forms (ป.พ.6 quarterly + ภ.ป.ภ.50 annual + 15% flat calc) that contradict the live personal **ภ.ง.ด.90 progressive** model.
+
+### Verified this session (grep + read, file:line — §7-EE checked)
+- **Override = wholesale replacement** (`tax-filing.html:1145/1159/1170`): `window.calculateXIncomeTax = progressive ภ.ง.ด.90`, never calls original, `rate` param ignored → 15% bodies (`tax-filing.js:416/450/504`) DEAD at runtime.
+- **§7-EE:** bareword calc callers (`generateMonthlyTaxReport:550`, `loadTaxDashboard:909`) resolve to `window.X` = override → progressive. Live path confirmed not-15%.
+- **Sarabun patch vestigial:** only live jsPDF on page = `downloadCurrentReportAsPDF:1762` (html2canvas → addImage, no `.text`/`.autoTable`). Deleting corporate text exports leaves no Thai-text jsPDF consumer → patch + jsdelivr fetch removable (closes Thai-font item).
+- `calculateQuarterlyIncomeTax` callers = only `generateQuarterlyReturn:616` + `getQuarterlyBreakdown:874` (both deleted) → orphan → delete.
+- **KEEP (shared/live):** `calculateMonthlyIncomeTax`+`calculateAnnualIncomeTax` (seed + override — live via §7-EE; dashboard KPI `:909`) · `getFullYearExpenseBreakdown` (dashboard chart `:1006`) · `formatCurrency`/`_getOwnerForPDF`/`showError`/`showSuccess` (monthly Excel + overridden) · all monthly funcs + `downloadCurrentReportAsPDF` + `exportMonthlyReportExcel` + `estimateThaiPersonalTax`.
+
+### DELETE (Option 1 — forms-only, minimal-blast-radius)
+- **tax-export.js:** `exportQuarterlyReturnPDF` · `exportAnnualReportPDF` · `exportAnnualReportExcel` · orphaned `exportMonthlyReportPDF` (§7-K) · `_addPDFLetterhead` (only dead callers).
+- **tax-filing.js:** `calculateQuarterlyIncomeTax` · `generateQuarterlyReturn` · `displayQuarterlyReturn` · `generateAnnualReport` · `displayAnnualReport` · `getQuarterlyBreakdown` + **export-manifest entries `:1850/:1853/:1854`** (⚠️ object literal refs deleted names → remove same edit or ReferenceError).
+- **tax-filing.html:** quarterly-page · annual-page · sidebar quarterly+annual · dashboard shortcuts · dispatch handlers (5 branches) · quarterly override + Sarabun font patch + jsdelivr fetch (`:1170-1247` contiguous).
+- **KEEP** monthly/annual income-tax overrides (`:1145-1169`) — live.
+
+### Gate (pre-deploy)
+`node --check` both JS · re-grep **0 dangling callers** of every deleted name · re-grep **no other `.text(`/`.autoTable(`/`new jsPDF`** in tax-filing.html before removing patch · `test:shared` + functions + `verify:memory` green · **§7-II CSP regen** (tax-filing.html inline `<script>` changed → `npm run csp:hash && node tools/update-vercel-csp.js` same commit; pre-commit §G confirms).
+
+### Guardrails
+§7-II CSP regen · §7-K verify 0 callers · §7-EE keep monthly/annual calc seeds · minimal-blast-radius · owner live-verify (auth-gated tax page, §7-I): monthly report + dashboard KPI still render via override; quarterly/annual pages + sidebar gone; monthly PDF export still works.
+
+### Review (2026-06-03 — SHIPPED to branch · PR #240 · ⏳ awaiting merge=deploy)
+- **PR [#240](https://github.com/soulgroundliving/the-green-haven/pull/240)** (`444634d`, −1201/+35) — removes the dead 15%-corporate path AND retires the now-vestigial Sarabun jsPDF patch → **closes the "Thai-font PDF" roadmap item too** (both in one PR).
+- **Removed:** tax-export.js (3 jsPDF exports + orphaned `exportMonthlyReportPDF` + `_addPDFLetterhead`) · tax-filing.js (`calculateQuarterlyIncomeTax` + generate/display Quarterly+Annual + `getQuarterlyBreakdown` + manifest entries) · tax-filing.html (quarterly/annual pages, sidebar, shortcuts, dispatch, quarterly override + Sarabun patch + jsdelivr fetch, orphaned `fillYearSelect('annual-year')`).
+- **Kept (live):** monthly report (html2canvas PDF — Thai via CSS `font-family:Sarabun` web font + Excel), dashboard KPI, monthly/annual calc seeds + progressive overrides (§7-EE), `getFullYearExpenseBreakdown`.
+- **Gates:** node --check ✓ · 0 dangling callers (grep) ✓ · test:shared 319/319 ✓ · verify:memory green ✓ · CSP regen §7-II ✓ · pre-commit all green.
+- **Discovery:** the roadmap's "Thai renders as boxes" premise was already false — a Sarabun jsPDF patch existed + worked (jsdelivr 200 + CSP `connect-src https:` ok); its ONLY consumers were the corporate forms removed here. Monthly PDF was always html2canvas (Thai-safe).
+- **Architecture doc:** `lifecycle_tax_filing.md` updated (3 pages, monthly-only exports, no jsPDF patch; verifiers fixed — old line-166 OR-grep was a §7-J trivially-passing trap masking 3 dead terms via surviving `AuditLogger.log`).
+- **⏳ Open:** merge = Vercel deploy (live tax page → user-confirm) → owner live-verify (auth-gated, §7-I — agent can't drive): dashboard + monthly report render via override; sidebar = Dashboard/รายงานเดือน/หัก ณ ที่จ่าย/เช็คลิสต์ only; monthly PDF Thai intact.
+- **Phase 2 remaining:** refund flow · per-tenant arrears/aging · revenue categories · reconcile report · ~~Thai-font PDF~~ (resolved here).
+
+---
+
 ## ▶▶▶ ACTIVE PLAN (2026-06-02) — Roadmap Phase 1.4: ToS + Privacy consent + DSR wiring · ✅ ALL SLICES SHIPPED + DEPLOYED (A #236 · B #237 · C1 #238 · C2 #239) — see Review below
 
 **Scope:** the PDPA + investor-facing gap from `core-readiness-roadmap.md` §1.4. **3 slices, gate-first (3 PRs, each behind `validate.yml`)** — user-chosen 2026-06-02. **ToS = scaffold + placeholder** (I build the page structure + standard headings + clearly-marked placeholders; the owner/lawyer fills the legal text — I do NOT fabricate legal wording).
