@@ -148,12 +148,20 @@ describe('buildReceiptFlex', () => {
     assert.equal(msg.contents.header.backgroundColor, '#2d8653');
   });
 
-  it('receipt ref format is RCP-R{room}-{YY}{MM}', () => {
+  it('receipt ref falls back to the legacy per-render RCP- ref when no receiptNo given', () => {
     const msg = buildReceiptFlex(bill, {});
     const body = msg.contents.body.contents;
-    const refRow = body.find(c => c.type === 'box' && c.contents?.some(t => t.text === 'เลขที่บิล'));
-    const refValue = refRow?.contents.find(t => t.text !== 'เลขที่บิล')?.text;
+    const refRow = body.find(c => c.type === 'box' && c.contents?.some(t => t.text === 'เลขที่ใบเสร็จ'));
+    const refValue = refRow?.contents.find(t => t.text !== 'เลขที่ใบเสร็จ')?.text;
     assert.ok(refValue?.startsWith('RCP-R501-'), `ref: ${refValue}`);
+  });
+
+  it('receipt ref uses the gapless receiptNo when provided (Roadmap 1.2a)', () => {
+    const msg = buildReceiptFlex(bill, { receiptNo: 'RCP-rooms-2569-00042' });
+    const body = msg.contents.body.contents;
+    const refRow = body.find(c => c.type === 'box' && c.contents?.some(t => t.text === 'เลขที่ใบเสร็จ'));
+    const refValue = refRow?.contents.find(t => t.text !== 'เลขที่ใบเสร็จ')?.text;
+    assert.equal(refValue, 'RCP-rooms-2569-00042');
   });
 
   it('footer button points to bill page (not payment)', () => {

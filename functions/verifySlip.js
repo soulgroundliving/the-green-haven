@@ -15,6 +15,7 @@ const { getValidBuildings } = require('./buildingRegistry');
 const { assertTenantAccess } = require('./_authSoT');
 const { appendPointsLedger } = require('./_pointsLedger');
 const { appendActionAudit } = require('./_actionAudit');
+const { assignReceiptNo } = require('./_receiptCounter');
 
 // Initialize Firebase Admin SDK (if not already done)
 if (!admin.apps.length) {
@@ -243,58 +244,77 @@ async function logVerificationAttempt(params, result, status) {
  * @param {object} slipData - Verified slip data
  * @param {object} params - Original request parameters
  */
-async function saveVerifiedSlip(slipData, params, auditActor) {
-  // Use transactionId as doc ID + batch.create() so concurrent submissions of
-  // the same slip can't both succeed — Firestore enforces doc-ID uniqueness
-  // atomically. The PAYMENT_VERIFIED audit row is written in the SAME batch so
-  // the immutable record and the dedup commit atomically together (tamper-proof,
-  // Phase 1.1 PR 1b): a duplicate fails the whole batch (no double audit), a new
-  // payment commits both. ALREADY_EXISTS (gRPC code 6) is propagated to the
-  // caller so the user gets a duplicate response; any other error is swallowed
-  // (storage failure shouldn't break verification — slip is already proven valid).
-  const batch = db.batch();
+async function saveVerifiedSlip(slipData, params, auditActor, receiptCtx) {
+  // Atomic dedup + gapless receipt number + audit, all in ONE transaction so a
+  // duplicate slip never consumes a receipt number (the whole tx rolls back → no
+  // gap in the sequence — Roadmap 1.2a). Dedup is by tx.get(slipRef): if the doc
+  // already exists the slip was verified before → throw ALREADY_EXISTS (gRPC 6)
+  // for the caller's duplicate handler. The PAYMENT_VERIFIED audit row commits in
+  // the same tx (tamper-proof, Phase 1.1 PR 1b) — all buildings, not just the nest
+  // gamification path. The receipt number RCP-{building}-{BE}-{NNNNN} is persisted
+  // on the slip and RETURNED for the receipt Flex + RTDB mirror. Any error bubbles
+  // to the caller, which keeps verification non-blocking (slip proven valid).
   const slipRef = db.collection('verifiedSlips').doc(slipData.transactionId);
-  batch.create(slipRef, {
-    transactionId: slipData.transactionId,
-    building: params.building,
-    room: params.room,
-    userId: params.userId,
-    amount: slipData.amount,
-    expectedAmount: params.expectedAmount,
-    sender: slipData.sender?.displayName || slipData.sender?.name,
-    receiver: slipData.receiver?.displayName || slipData.receiver?.name,
-    date: slipData.date,
-    bankCode: slipData.sendingBankCode,
-    timestamp: new Date(),
-    verifiedAt: new Date(),
-    verified: true
-  });
+  const building = params.building || 'rooms';
+  const be = (receiptCtx && receiptCtx.be) || (new Date().getUTCFullYear() + 543);
 
-  // Immutable audit row for EVERY verified payment — all buildings, not just the
-  // nest gamification path (recordPaymentAndAwardPoints returns early for rooms).
-  // actor/role/ip are resolved server-side by the caller from the verified onCall
-  // context (never client-supplied). idempotencyKey = transactionId → exactly one
-  // audit row per slip, ever (a batch retry rewrites the same doc, not a dupe).
-  appendActionAudit(batch, db, {
-    actor:      (auditActor && auditActor.actor) || params.userId || 'system',
-    actorEmail: (auditActor && auditActor.actorEmail) || null,
-    actorRole:  (auditActor && auditActor.actorRole) || null,
-    action:     'PAYMENT_VERIFIED',
-    targetType: 'payment',
-    targetId:   slipData.transactionId,
-    building:   params.building || null,
-    roomId:     params.room != null ? String(params.room) : null,
-    after: {
+  const receiptNo = await db.runTransaction(async (tx) => {
+    // READ 1 — dedup. (Firestore requires all reads before all writes.)
+    const slipSnap = await tx.get(slipRef);
+    if (slipSnap.exists) {
+      const dupErr = new Error('Duplicate slip — this transaction has already been verified.');
+      dupErr.code = 6; // gRPC ALREADY_EXISTS — recognised by the caller's catch below
+      throw dupErr;
+    }
+
+    // READ 2 + first WRITE — assignReceiptNo reads the counter then sets it
+    // (no tx.get may follow this call). Number only minted for a unique slip.
+    const { receiptNo: rcpt } = await assignReceiptNo(tx, db, { building, be });
+
+    tx.set(slipRef, {
+      transactionId: slipData.transactionId,
+      building: params.building,
+      room: params.room,
+      userId: params.userId,
       amount: slipData.amount,
       expectedAmount: params.expectedAmount,
-      bankCode: slipData.sendingBankCode || null,
-    },
-    ip:             (auditActor && auditActor.ip) || null,
-    source:         'cf:verifySlip',
-    idempotencyKey: slipData.transactionId,
+      sender: slipData.sender?.displayName || slipData.sender?.name,
+      receiver: slipData.receiver?.displayName || slipData.receiver?.name,
+      date: slipData.date,
+      bankCode: slipData.sendingBankCode,
+      receiptNo: rcpt,
+      timestamp: new Date(),
+      verifiedAt: new Date(),
+      verified: true
+    });
+
+    // actor/role/ip resolved server-side by the caller from the verified onCall
+    // context (never client-supplied). idempotencyKey = transactionId → one audit
+    // row per slip, ever.
+    appendActionAudit(tx, db, {
+      actor:      (auditActor && auditActor.actor) || params.userId || 'system',
+      actorEmail: (auditActor && auditActor.actorEmail) || null,
+      actorRole:  (auditActor && auditActor.actorRole) || null,
+      action:     'PAYMENT_VERIFIED',
+      targetType: 'payment',
+      targetId:   slipData.transactionId,
+      building:   params.building || null,
+      roomId:     params.room != null ? String(params.room) : null,
+      after: {
+        amount: slipData.amount,
+        expectedAmount: params.expectedAmount,
+        bankCode: slipData.sendingBankCode || null,
+        receiptNo: rcpt,
+      },
+      ip:             (auditActor && auditActor.ip) || null,
+      source:         'cf:verifySlip',
+      idempotencyKey: slipData.transactionId,
+    });
+
+    return rcpt;
   });
 
-  await batch.commit();
+  return receiptNo;
 }
 
 /**
@@ -302,7 +322,7 @@ async function saveVerifiedSlip(slipData, params, auditActor) {
  * Looks up bills/{building}/{room}/* and flips the bill matching slip's billing month.
  * Non-blocking.
  */
-async function markBillPaidInRTDB(slipData, params) {
+async function markBillPaidInRTDB(slipData, params, receiptNo) {
   try {
     const rtdb = admin.database();
     const buildingRaw = params.building === 'nest' ? 'nest' : 'rooms';
@@ -329,6 +349,7 @@ async function markBillPaidInRTDB(slipData, params) {
         updates[`${billId}/paidAt`] = Date.now();
         updates[`${billId}/paidVia`] = 'tenant_app_slipok';
         updates[`${billId}/paidRef`] = slipData.transactionId || '';
+        if (receiptNo) updates[`${billId}/receiptNo`] = receiptNo;  // gapless RCP- (Roadmap 1.2a)
         matched++;
       }
     });
@@ -365,6 +386,7 @@ async function markBillPaidInRTDB(slipData, params) {
         slipOkVerified: true,
         transRef: slipData.transactionId || null,
         transactionId: slipData.transactionId || null,  // alias for forward-compat readers
+        receiptNo: receiptNo || null,                    // gapless RCP- (Roadmap 1.2a)
         building: buildingRaw,
         room: room,
         sender: (slipData.sender && (slipData.sender.displayName || slipData.sender.name)) || '',
@@ -484,7 +506,7 @@ async function recordPaymentAndAwardPoints(slipData, params) {
  * Push a LINE "ใบเสร็จรับเงิน" Flex to all approved tenants for the room.
  * Non-blocking — caller must wrap in try/catch.
  */
-async function sendReceiptNotification(slipData, params) {
+async function sendReceiptNotification(slipData, params, receiptNo) {
   const token = LINE_CHANNEL_ACCESS_TOKEN.value();
   if (!token) return;
 
@@ -524,7 +546,7 @@ async function sendReceiptNotification(slipData, params) {
     totalCharge: slipData.amount
   };
 
-  const receiptMsg = buildReceiptFlex(billForReceipt, { tenantName, paidAt });
+  const receiptMsg = buildReceiptFlex(billForReceipt, { tenantName, paidAt, receiptNo });
 
   await Promise.allSettled(usersSnap.docs.map(udoc =>
     fetch('https://api.line.me/v2/bot/message/push', {
@@ -684,24 +706,30 @@ exports.verifySlip = functions
         };
       }
 
-      // ===== VALIDATE TRANSACTION ID + SAVE (atomic duplicate detection) =====
-      // doc ID = transactionId + .create() — two concurrent submissions can't
-      // both succeed; replaces the old where()+add() pattern that had a race
-      // window between check and write.
+      // ===== VALIDATE TRANSACTION ID + SAVE (atomic dedup + receipt number) =====
+      // saveVerifiedSlip runs a transaction: doc ID = transactionId, tx.get dedup
+      // (exists → throw ALREADY_EXISTS), then mints the gapless receipt number +
+      // writes the slip + audit row atomically. Replaces the old where()+add()
+      // race window; a duplicate consumes no receipt number.
       if (!isSafeTransactionId(slipData.transactionId)) {
         console.warn(`⚠️ Unsafe transactionId from SlipOK: ${slipData.transactionId}`);
         return { success: false, error: 'Invalid slip transaction id', message: 'Invalid slip transaction id' };
       }
 
+      let receiptNo = null;
       try {
         // actor/role/ip stamped from the VERIFIED onCall context (never client
-        // data) for the in-batch PAYMENT_VERIFIED audit row.
-        await saveVerifiedSlip(slipData, data, {
+        // data) for the in-tx PAYMENT_VERIFIED audit row. be = BKK Buddhist-Era
+        // year of the payment → the gapless RCP-{building}-{BE}-{NNNNN} counter
+        // (Roadmap 1.2a). saveVerifiedSlip returns the assigned receipt number.
+        const _slipMs = new Date(slipData.transTimestamp || slipData.date || Date.now()).getTime();
+        const _be = new Date((isNaN(_slipMs) ? Date.now() : _slipMs) + 7 * 3600 * 1000).getUTCFullYear() + 543;
+        receiptNo = await saveVerifiedSlip(slipData, data, {
           actor:      context.auth?.uid || data.userId || 'system',
           actorEmail: context.auth?.token?.email || null,
           actorRole:  context.auth?.token?.admin === true ? 'admin' : 'tenant',
           ip:         ipAddress,
-        });
+        }, { be: _be });
       } catch (e) {
         // gRPC code 6 = ALREADY_EXISTS → atomic duplicate detection (string form varies by SDK version)
         if (e && (e.code === 6 || e.code === 'already-exists' || e.code === 'ALREADY_EXISTS' ||
@@ -725,14 +753,14 @@ exports.verifySlip = functions
 
       // ===== MARK RTDB BILL AS PAID (non-blocking) =====
       try {
-        await markBillPaidInRTDB(slipData, data);
+        await markBillPaidInRTDB(slipData, data, receiptNo);
       } catch (e) {
         console.error('⚠️ markBillPaidInRTDB failed (non-blocking):', e);
       }
 
       // ===== SEND RECEIPT NOTIFICATION (non-blocking) =====
       try {
-        await sendReceiptNotification(slipData, data);
+        await sendReceiptNotification(slipData, data, receiptNo);
       } catch (e) {
         console.error('⚠️ sendReceiptNotification failed (non-blocking):', e);
       }

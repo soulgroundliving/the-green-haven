@@ -1144,6 +1144,42 @@ describe('actionAudit — immutable admin-action trail, admin-read-only (Core Re
   });
 });
 
+describe('counters — gapless document-number sequences, admin-read-only, CF-write-only (Roadmap 1.2a)', () => {
+  const LIFF_TENANT = (uid, room = '15', building = 'rooms') =>
+    testEnv.authenticatedContext(uid, {
+      room, building, firebase: { sign_in_provider: 'custom' }
+    });
+
+  const sampleCounter = { seq: 42, docType: 'receipt', building: 'rooms', be: 2569 };
+
+  it('admin can read a counter (reconciliation)', async () => {
+    await seedDoc('counters/receipt_rooms_2569', sampleCounter);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'counters/receipt_rooms_2569')));
+  });
+
+  it('tenant CANNOT read a counter (admin-only)', async () => {
+    await seedDoc('counters/receipt_rooms_2569', sampleCounter);
+    await assertFails(getDoc(doc(LIFF_TENANT('line:abc').firestore(), 'counters/receipt_rooms_2569')));
+  });
+
+  it('unauth user CANNOT read a counter', async () => {
+    await seedDoc('counters/receipt_rooms_2569', sampleCounter);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'counters/receipt_rooms_2569')));
+  });
+
+  it('client CANNOT create a counter (a client increment would corrupt the gapless invariant)', async () => {
+    await assertFails(setDoc(doc(EMAIL_ADMIN().firestore(), 'counters/forge'), sampleCounter));
+    await assertFails(setDoc(doc(ANON().firestore(), 'counters/forge'), sampleCounter));
+  });
+
+  it('client CANNOT update a counter (only the server transaction increments seq)', async () => {
+    await seedDoc('counters/receipt_rooms_2569', sampleCounter);
+    await assertFails(updateDoc(
+      doc(EMAIL_ADMIN().firestore(), 'counters/receipt_rooms_2569'), { seq: 1 }
+    ));
+  });
+});
+
 describe('bookings — CF-only writes, prospect reads own only', () => {
   const sampleBooking = (prospectUid) => ({
     prospectUid,
