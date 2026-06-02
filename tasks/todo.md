@@ -22,11 +22,12 @@
 - [ ] **Link privacy.html + terms.html** from `login.html` / `index.html` / `booking.html` (footer) + tenant_app `page-privacy`/settings. *Why:* PDPA §19 needs the notice reachable; investor-facing. **CSP: `<a href>` is markup, no inline-block change → no hash drift** (§7-II) — confirm with the pre-commit §G check.
 - [ ] Live-verify links resolve on Vercel (3 entry pages + tenant_app).
 
-### Slice B — DSR `exportMyData` wiring (PR B, closes the §7-K orphan)
-- [ ] **`shared/tenant-data-export.js`** (new external module, mirrors `dashboard-invoice-void.js`) → `window.exportMyDataPrompt()`: `httpsCallable('exportMyData')({})` → download the returned JSON as `my-data-{date}.json`. §7-A gated (claims ready), §7-N error→toast. *Why external module:* keeps the handler out of inline script → no CSP drift on tenant_app.html.
-- [ ] **`tenant_app.html` settings** (`id="settings"` `:4020`) — a "PDPA สิทธิ์ของเจ้าของข้อมูล" card + button `data-action`/handler → `window.exportMyDataPrompt`. Update the §30 FAQ text (`:4754` "ขอให้ admin ส่งข้อมูล") to point at the button. *Why:* §30 right-to-access self-service; closes the orphan.
-- [ ] **`<script src>`** for the new module (defer; define-at-parse, call-at-click → order-agnostic, §7-PP). **CSP: external script + markup only → no drift** (confirm).
-- [ ] Live-verify (owner, §7-A — agent can't drive LIFF): tenant opens settings → ดาวน์โหลด → JSON file of own data only.
+### Slice B — DSR `exportMyData` wiring (PR B, closes the §7-K orphan) · ✅ BUILT
+- [x] **`shared/tenant-data-export.js`** → `window.exportMyDataPrompt()`: `httpsCallable('exportMyData')({})` → Blob (NOT `data:` — §7-Y) → `<a download>` `nature-haven-my-data-{date}.json`. §7-N error→`window.toast`. **Self-wires** the menu item by id (click + Enter/Space a11y) — does NOT touch the inline delegation hub (5420), so no CSP drift.
+- [x] **`tenant_app.html` settings** (`.menu-list` `:4067`) — a "ดาวน์โหลดข้อมูลของฉัน (JSON · PDPA §30)" menu-item (`id="btn-export-my-data"`, role=button/tabindex) beside the Privacy Policy item. **No `data-action`** (self-wired, not hub) → avoids editing the inline hub.
+- [x] **`<script src>`** `./shared/tenant-data-export.js` (defer, after tenant-cleaning). §7-K orphan closed (grep: caller now at `tenant-data-export.js:26`). **CSP: markup + external src only → no drift** (pre-commit §G to confirm).
+- [ ] **Deferred / owner:** §30 wording self-service mention belongs in `system/policies.privacy` (admin-edited in-app copy, dashboard Policies tab) — not the static embedded FAQ (it's overwritten by the SSoT). Standalone privacy.html §30 left as-is.
+- [ ] Live-verify (owner, §7-A — agent can't drive LIFF): tenant opens Settings → ดาวน์โหลด → JSON file of own data only. (LIFF webview `<a download>` — confirm it triggers; fallback if blocked.)
 
 ### Slice C — consent acceptance gate (PR C)
 - [ ] **Booking gate (prospect, blocking)** — `booking.html` Step 2 modal: a required "ยอมรับ [นโยบายความเป็นส่วนตัว] + [ข้อตกลงการใช้งาน]" checkbox (links to privacy/terms) gating the lock button. Record consent **in `createBookingLock`** (the CF where prospect identity exists — NOT recordChecklistConsent, which needs tenant claims): persist `consentAcceptedAt`/`consentVersion` on the `bookings/{id}` doc. *Why here:* prospect is anonymous pre-lock; the booking doc is the consent record-of-proof. ⚠️ **CSP: the Step-2 submit handler is inline script in booking.html → editing it drifts the hash → `npm run csp:hash && node tools/update-vercel-csp.js` in the same commit (§7-II).**
