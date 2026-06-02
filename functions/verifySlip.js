@@ -14,6 +14,7 @@ const FormData = require('form-data');
 const { getValidBuildings } = require('./buildingRegistry');
 const { assertTenantAccess } = require('./_authSoT');
 const { appendPointsLedger } = require('./_pointsLedger');
+const { appendActionAudit } = require('./_actionAudit');
 
 // Initialize Firebase Admin SDK (if not already done)
 if (!admin.apps.length) {
@@ -242,13 +243,18 @@ async function logVerificationAttempt(params, result, status) {
  * @param {object} slipData - Verified slip data
  * @param {object} params - Original request parameters
  */
-async function saveVerifiedSlip(slipData, params) {
-  // Use transactionId as doc ID + .create() so concurrent submissions of the
-  // same slip can't both succeed — Firestore enforces doc-ID uniqueness
-  // atomically. ALREADY_EXISTS (gRPC code 6) is propagated to the caller so
-  // the user gets a duplicate response. Any other error is swallowed (storage
-  // failure shouldn't break verification — slip is already proven valid).
-  await db.collection('verifiedSlips').doc(slipData.transactionId).create({
+async function saveVerifiedSlip(slipData, params, auditActor) {
+  // Use transactionId as doc ID + batch.create() so concurrent submissions of
+  // the same slip can't both succeed — Firestore enforces doc-ID uniqueness
+  // atomically. The PAYMENT_VERIFIED audit row is written in the SAME batch so
+  // the immutable record and the dedup commit atomically together (tamper-proof,
+  // Phase 1.1 PR 1b): a duplicate fails the whole batch (no double audit), a new
+  // payment commits both. ALREADY_EXISTS (gRPC code 6) is propagated to the
+  // caller so the user gets a duplicate response; any other error is swallowed
+  // (storage failure shouldn't break verification — slip is already proven valid).
+  const batch = db.batch();
+  const slipRef = db.collection('verifiedSlips').doc(slipData.transactionId);
+  batch.create(slipRef, {
     transactionId: slipData.transactionId,
     building: params.building,
     room: params.room,
@@ -263,6 +269,32 @@ async function saveVerifiedSlip(slipData, params) {
     verifiedAt: new Date(),
     verified: true
   });
+
+  // Immutable audit row for EVERY verified payment — all buildings, not just the
+  // nest gamification path (recordPaymentAndAwardPoints returns early for rooms).
+  // actor/role/ip are resolved server-side by the caller from the verified onCall
+  // context (never client-supplied). idempotencyKey = transactionId → exactly one
+  // audit row per slip, ever (a batch retry rewrites the same doc, not a dupe).
+  appendActionAudit(batch, db, {
+    actor:      (auditActor && auditActor.actor) || params.userId || 'system',
+    actorEmail: (auditActor && auditActor.actorEmail) || null,
+    actorRole:  (auditActor && auditActor.actorRole) || null,
+    action:     'PAYMENT_VERIFIED',
+    targetType: 'payment',
+    targetId:   slipData.transactionId,
+    building:   params.building || null,
+    roomId:     params.room != null ? String(params.room) : null,
+    after: {
+      amount: slipData.amount,
+      expectedAmount: params.expectedAmount,
+      bankCode: slipData.sendingBankCode || null,
+    },
+    ip:             (auditActor && auditActor.ip) || null,
+    source:         'cf:verifySlip',
+    idempotencyKey: slipData.transactionId,
+  });
+
+  await batch.commit();
 }
 
 /**
@@ -662,7 +694,14 @@ exports.verifySlip = functions
       }
 
       try {
-        await saveVerifiedSlip(slipData, data);
+        // actor/role/ip stamped from the VERIFIED onCall context (never client
+        // data) for the in-batch PAYMENT_VERIFIED audit row.
+        await saveVerifiedSlip(slipData, data, {
+          actor:      context.auth?.uid || data.userId || 'system',
+          actorEmail: context.auth?.token?.email || null,
+          actorRole:  context.auth?.token?.admin === true ? 'admin' : 'tenant',
+          ip:         ipAddress,
+        });
       } catch (e) {
         // gRPC code 6 = ALREADY_EXISTS → atomic duplicate detection (string form varies by SDK version)
         if (e && (e.code === 6 || e.code === 'already-exists' || e.code === 'ALREADY_EXISTS' ||
