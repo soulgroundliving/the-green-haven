@@ -165,4 +165,14 @@ describe('recordChecklistConsent', () => {
       (e) => e.code === 'invalid-argument',
     );
   });
+
+  it('account_v1 purpose → records whole-app PDPA consent (Roadmap 1.4 Slice C)', async () => {
+    const r = await handler({ purpose: 'account_v1' }, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
+    assert.equal(r.recorded, true);
+    assert.equal(consentWrites.length, 1);
+    assert.equal(consentWrites[0].id, 't-15_account_v1');
+    assert.equal(consentWrites[0].payload.purpose, 'account_v1');
+    assert.equal(consentWrites[0].payload.room, '15');
+    assert.equal(consentWrites[0].payload.building, 'rooms');
+  });
 });
