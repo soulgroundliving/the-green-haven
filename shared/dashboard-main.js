@@ -53,6 +53,7 @@ window._showPageImpl = function(page,btn){
   if(page==='gamification')initGamificationPage();
   if(page==='audit'){ if(typeof initAuditPage==='function')initAuditPage(); }
   if(page==='reconcile'){ if(typeof initReconcilePage==='function')initReconcilePage(); }
+  if(page==='aging'){ if(typeof initAgingPage==='function')initAgingPage(); }
   if(page==='content-management'){
     if(typeof initAnnouncementsPage==='function')initAnnouncementsPage();
     if(typeof initCommunityEventsPage==='function')initCommunityEventsPage();

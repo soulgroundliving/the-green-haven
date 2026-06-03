@@ -907,6 +907,24 @@ class BillStore {
     return [...this.listForYear('rooms', year), ...this.listForYear('nest', year)];
   }
 
+  /** Get ALL bills across every building + every year. Outstanding/arrears is
+   *  inherently "as of now", not per-period — and subscribe() already loads the
+   *  whole bills/{building} tree into _cache, so cross-year carry-forward is free
+   *  (no per-year load). Used by the arrears/aging report (dashboard-aging.js). */
+  static listAll() {
+    this.subscribe();
+    const out = [];
+    Object.keys(this._cache || {}).forEach(building => {
+      const rooms = this._cache[building] || {};
+      Object.keys(rooms).forEach(room => {
+        Object.values(rooms[room] || {}).forEach(b => {
+          if (b && typeof b === 'object') out.push(b);
+        });
+      });
+    });
+    return out;
+  }
+
   static get isReady() { return this._ready; }
 
   // ===== SYNTHETIC BILLS — SSoT for tenant-side gap-filling =====
