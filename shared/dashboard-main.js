@@ -858,6 +858,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'toggleUnpaidFilter') { typeof window.toggleUnpaidFilter === 'function' && window.toggleUnpaidFilter(); return; }
     if (a === 'batchSendInvoices') { typeof window.batchSendInvoices === 'function' && window.batchSendInvoices(); return; }
     if (a === 'voidInvoice') { typeof window.voidInvoicePrompt === 'function' && window.voidInvoicePrompt(); return; }
+    if (a === 'refundBill') { if (typeof window.refundBillPrompt === 'function') window.refundBillPrompt(el.dataset.id || el.dataset.room, el.dataset.year, el.dataset.month); return; }
     if (a === 'saveServiceProvider') { typeof saveServiceProvider === 'function' && saveServiceProvider(); return; }
     if (a === 'showAddMaintenanceModal') { typeof showAddMaintenanceModal === 'function' && showAddMaintenanceModal(); return; }
     if (a === 'showReturnDepositModal') { typeof showReturnDepositModal === 'function' && showReturnDepositModal(el.dataset.building, el.dataset.room); return; }

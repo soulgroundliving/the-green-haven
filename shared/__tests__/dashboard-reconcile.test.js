@@ -95,6 +95,24 @@ describe('computeReconciliation — exported + matching', () => {
     assert.equal(r.summary.unmatchedPaidBills, 0);
   });
 
+  test('refunded bill pairs its original slip via paidRef → slip not orphaned, in refunded bucket', () => {
+    const r = compute({ bills: [bill({ status: 'refunded', paidRef: 'TX1' })], slips: [slip({ transactionId: 'TX1' })], manualReceipts: [] });
+    assert.equal(r.summary.refunded, 1);
+    assert.equal(r.refundedBills[0].bill.id, 'B1');
+    assert.equal(r.refundedBills[0].slip.transactionId, 'TX1');
+    assert.equal(r.summary.unmatchedSlips, 0, "the refunded bill's slip must NOT be flagged as an orphan");
+    assert.equal(r.summary.matched, 0, 'a refunded bill is not "matched"');
+    assert.equal(r.summary.paidBills, 0, 'a refunded bill is not a paid bill');
+    assert.equal(r.summary.refundedAmount, 1000);
+  });
+
+  test('refunded bill with no linked slip → refunded bucket, not an unmatched-paid bill', () => {
+    const r = compute({ bills: [bill({ status: 'refunded', paidRef: null })], slips: [], manualReceipts: [] });
+    assert.equal(r.summary.refunded, 1);
+    assert.equal(r.refundedBills[0].slip, null);
+    assert.equal(r.summary.unmatchedPaidBills, 0, 'a refunded bill is not an unmatched paid bill');
+  });
+
   test('a slip is not double-counted across two bills', () => {
     const r = compute({
       bills: [bill({ id: 'B1', month: 3, paidRef: null }), bill({ id: 'B2', month: 3, paidRef: null })],

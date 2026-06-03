@@ -188,6 +188,12 @@ exports.assignReceiptNumber = require('./assignReceiptNumber').assignReceiptNumb
 // the same tx. Admin-gated. Issuance numbers live on invoices/ (Roadmap 1.2).
 exports.voidInvoice = require('./voidInvoice').voidInvoice;
 
+// Refund a PAID bill WITHOUT deleting it (Roadmap Phase 2). Flips the RTDB
+// bills/{b}/{r}/{billId} to status:'refunded' + refundedAt/By/Reason and writes a
+// BILL_REFUNDED row to actionAudit. Audit-FIRST then RTDB flip (a reduced revenue
+// must never be untraceable); idempotent via a deterministic audit key. Admin-gated.
+exports.refundBill = require('./refundBill').refundBill;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ANNOUNCEMENTS — unified notice/event/banner (C4 — replaces broadcastMessages)
 // ═══════════════════════════════════════════════════════════════════════════

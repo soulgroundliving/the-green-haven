@@ -86,6 +86,12 @@ async function aggregateYear(yearBE) {
         // Skip orphan/ghost stubs (no charges + no totalCharge)
         const total = Number(b.totalCharge || b.totalAmount || b.total) || 0;
         if (total <= 0 && !b.charges) continue;
+        // Refunded bills (Roadmap Phase 2 — money returned, charge cancelled) are
+        // excluded from ALL revenue: paid, pending, AND category totals. Without this
+        // guard a refunded bill would fall into the `else` branch below and wrongly
+        // inflate pendingRevenue. The BILL_REFUNDED actionAudit row is the refund
+        // record; taxSummary just reflects the reduced collected revenue.
+        if (b.status === 'refunded') continue;
 
         const m = months[month];
         const rent  = Number(b.charges?.rent) || 0;
