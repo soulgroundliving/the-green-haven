@@ -1027,6 +1027,7 @@ function showPayDetail(roomId, year, month){
     ? (loadPS()[`${year2}_${month2}`]?.[roomId] ?? null)
     : null;
 
+  const isRefunded = bill ? bill.status === 'refunded' : false;
   const isPaid = bill ? bill.status === 'paid' : !!(payEntry || legacyEntry);
   const p = payEntry || legacyEntry;
   const monthName=MONTHS_FULL[month2]||month2;
@@ -1035,7 +1036,18 @@ function showPayDetail(roomId, year, month){
   const body=document.getElementById('payModalBody');
   const footer=document.getElementById('payModalFooter');
 
-  if(isPaid){
+  if(isRefunded){
+    const refDate = bill.refundedAt
+      ? new Date(bill.refundedAt).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'})
+      : '—';
+    body.innerHTML=`
+      <div style="background:#f3e8ff;border:1px solid #d8b4fe;border-radius:8px;padding:.7rem .85rem;font-size:.84rem;line-height:1.7;color:#6b21a8;">
+        ↩️ คืนเงินแล้ว · ${refDate}${bill.refundReason?`<br>เหตุผล: ${bill.refundReason}`:''}<br>
+        ยอดที่คืน ฿${(bill.totalCharge||0).toLocaleString()}
+      </div>
+      <div style="font-size:.78rem;color:var(--text-muted);margin-top:.5rem;">บิลนี้ถูกกลับรายการ — ตัดออกจากรายได้แล้ว (ดูประวัติใน Audit log)</div>`;
+    footer.innerHTML=`<button class="pm-btn gray" data-action="closePayModal">ปิด</button>`;
+  } else if(isPaid){
     const paidDateStr = bill?.paidAt || p?.date;
     const paidDate = paidDateStr
       ? new Date(paidDateStr).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'})
@@ -1065,6 +1077,7 @@ function showPayDetail(roomId, year, month){
     footer.innerHTML=`
       <button class="pm-btn green" data-action="savePayEdit">💾 บันทึกมิเตอร์</button>
       <button class="pm-btn red" data-action="resetRoomPayment">🔄 รีเซ็ตกลับ "ยังไม่จ่าย"</button>
+      <button class="pm-btn" style="background:#7c3aed;color:#fff;" data-action="refundBill" data-id="${roomId}" data-year="${year2}" data-month="${month2}">↩️ คืนเงิน</button>
       <button class="pm-btn gray" data-action="closePayModal">ปิด</button>`;
   } else {
     body.innerHTML=`

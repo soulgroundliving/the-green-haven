@@ -315,6 +315,22 @@ describe('aggregateMonthlyRevenue', () => {
       assert.equal(call.data.months[9].otherIncome, 0);
     });
 
+    it('refunded bill is excluded from all revenue (paid, pending, and totals)', async () => {
+      buildingsList = ['rooms'];
+      const currentBE = new Date().getFullYear() + 543;
+      seedBill(makeBill(currentBE, 5, { status: 'paid', totalCharge: 1000 }), 'rooms', '15', 'b1');
+      // A refunded bill must NOT count anywhere — not paid, and crucially not pending.
+      seedBill(makeBill(currentBE, 5, { status: 'refunded', totalCharge: 3520 }), 'rooms', '16', 'b2');
+      await scheduledHandler({});
+      const call = fsSetCalls.find(c => c.path === `taxSummary/${currentBE}`);
+      const m5 = call.data.months[5];
+      assert.equal(m5.paidCount, 1, 'only the paid bill is counted');
+      assert.equal(m5.paidRevenue, 1000);
+      assert.equal(m5.pendingCount, 0, 'refunded bill must NOT fall into pending');
+      assert.equal(m5.pendingRevenue, 0, 'refunded amount must not inflate pendingRevenue');
+      assert.equal(m5.totalRevenue, 1000, 'refunded amount excluded from totalRevenue');
+    });
+
     it('single pending (unpaid) bill → pendingCount=1, pendingRevenue correct', async () => {
       buildingsList = ['rooms'];
       const currentBE = new Date().getFullYear() + 543;

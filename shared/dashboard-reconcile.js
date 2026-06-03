@@ -54,10 +54,24 @@
     const matched = [];          // { bill, slip|null, via, receiptNo }
     const unmatchedPaidBills = []; // paid bill with no slip + no manual receipt
     const mismatches = [];       // matched bill where |slip.amount - bill.total| > tolerance
+    const refundedBills = [];    // refunded bill (money returned) + its original slip, if any
     const linkedSlipIds = new Set();
 
     for (const bill of bills) {
-      if (norm(bill.status) !== 'paid') continue; // reconcile only settled bills
+      const st = norm(bill.status);
+      // Refunded bills (Roadmap Phase 2 — money returned) are reversed. Pair the
+      // original slip via paidRef so it is NOT flagged as an orphan "received money with
+      // no bill", and bucket it separately so the reversal is visible to the accountant.
+      if (st === 'refunded') {
+        let rslip = null;
+        if (bill.paidRef && slipById.has(String(bill.paidRef))) {
+          rslip = slipById.get(String(bill.paidRef));
+          linkedSlipIds.add(String(rslip.transactionId));
+        }
+        refundedBills.push({ bill, slip: rslip, receiptNo: bill.receiptNo || (rslip && rslip.receiptNo) || null });
+        continue;
+      }
+      if (st !== 'paid') continue; // reconcile only settled bills
       let slip = null, via = null, receiptNo = bill.receiptNo || null;
 
       // 1) explicit bill → slip link
@@ -102,10 +116,12 @@
       unmatchedSlips: unmatchedSlips.length,
       unmatchedPaidBills: unmatchedPaidBills.length,
       mismatches: mismatches.length,
+      refunded: refundedBills.length,
       matchedAmount: Math.round(sum(matched, r => r.slip ? r.slip.amount : r.bill.total) * 100) / 100,
       unmatchedSlipAmount: Math.round(sum(unmatchedSlips, s => s.amount) * 100) / 100,
+      refundedAmount: Math.round(sum(refundedBills, r => r.bill.total) * 100) / 100,
     };
-    return { matched, unmatchedSlips, unmatchedPaidBills, mismatches, summary };
+    return { matched, unmatchedSlips, unmatchedPaidBills, mismatches, refundedBills, summary };
   }
   window.computeReconciliation = computeReconciliation;
 
@@ -161,6 +177,10 @@
       <td style="padding:.4rem .6rem;text-align:right;">${baht(r.bill.total)}</td>
       <td style="padding:.4rem .6rem;text-align:right;">${baht(r.slip ? r.slip.amount : 0)}</td>
       <td style="padding:.4rem .6rem;text-align:right;color:var(--red,#c62828);">${baht(r.amountDiff)}</td></tr>`;
+    const refundedRow = (r) => `<tr><td style="padding:.4rem .6rem;">${billRoom(r.bill)}</td>
+      <td style="padding:.4rem .6rem;text-align:right;">${baht(r.bill.total)}</td>
+      <td style="padding:.4rem .6rem;">${esc(r.receiptNo || '—')}</td>
+      <td style="padding:.4rem .6rem;">${r.slip ? '✓ สลิปเดิม' : '—'}</td></tr>`;
 
     const section = (title, color, head, rowsHtml, empty) => `
       <h3 style="margin:1.4rem 0 .5rem;font-size:1rem;border-left:4px solid ${color};padding-left:.6rem;">${esc(title)}</h3>
@@ -177,6 +197,7 @@
         ${card('สลิปไม่มีบิล', s.unmatchedSlips, '#f59e0b')}
         ${card('บิลจ่ายแล้วไม่มีสลิป', s.unmatchedPaidBills, '#f59e0b')}
         ${card('ยอดไม่ตรง', s.mismatches, 'var(--red,#c62828)')}
+        ${card('คืนเงินแล้ว', s.refunded, '#7c3aed')}
       </div>
       <div style="font-size:.8rem;color:var(--text-muted,#6b7a8d);margin-bottom:.5rem;">
         ปี ${beYear} · จับคู่ ${baht(s.matchedAmount)} · สลิปค้างจับคู่ ${baht(s.unmatchedSlipAmount)}</div>
@@ -188,7 +209,10 @@
         result.unmatchedPaidBills.map(billPaidRow).join(''), 'ไม่มี — บิลที่ชำระทุกใบมีหลักฐาน')}
       ${section('🔴 ยอดสลิปไม่ตรงกับบิล (เกิน ฿1)', 'var(--red,#c62828)',
         '<th style="padding:.4rem .6rem;">บิล</th><th style="padding:.4rem .6rem;text-align:right;">ยอดบิล</th><th style="padding:.4rem .6rem;text-align:right;">ยอดสลิป</th><th style="padding:.4rem .6rem;text-align:right;">ส่วนต่าง</th>',
-        result.mismatches.map(mismatchRow).join(''), 'ไม่มี — ยอดตรงทุกใบ')}`;
+        result.mismatches.map(mismatchRow).join(''), 'ไม่มี — ยอดตรงทุกใบ')}
+      ${section('🟣 บิลที่คืนเงินแล้ว (กลับรายการ — ตัดออกจากรายได้)', '#7c3aed',
+        '<th style="padding:.4rem .6rem;">บิล</th><th style="padding:.4rem .6rem;text-align:right;">ยอดคืน</th><th style="padding:.4rem .6rem;">เลขใบเสร็จ</th><th style="padding:.4rem .6rem;">สลิปเดิม</th>',
+        result.refundedBills.map(refundedRow).join(''), 'ไม่มี — ไม่มีบิลที่คืนเงิน')}`;
   }
 
   async function loadManualReceipts(db, fs) {

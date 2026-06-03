@@ -4,6 +4,59 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-03 PM) — Roadmap Phase 2: Refund flow (reverse a PAID bill + trail) · 🚧 APPROVED + EXECUTING (branch `feat/phase2-refund-flow`)
+
+**Scope:** roadmap Phase 2 "Refund flow — paid-bill reversal with trail + 1.1 audit row." Blueprint (PDF p.1) lists **คืนเงิน (refund)** as a SEPARATE internal-control from **ยกเลิกบิล (void**, shipped 1.3): refund = money already COLLECTED is returned. Forward-only. Mirrors the `voidInvoice` CF + audit pattern exactly. **Branch off fresh `main` (NOT stacked — §stacked-PR lesson 2026-06-03 [[feedback_stacked_pr_squash_merge]]).**
+
+### Verified state (3 Explore agents, file:line — grep-advisory, re-confirm at build)
+- **No bill-refund code exists** — only `shared/dashboard-deposits-admin.js` (deposit return) + tax-balance. grep `refund` functions/ = 0 bill-reversal. (Agent A.)
+- **Paid-bill SoT (reversal target):** RTDB `bills/{building}/{room}/{billId}` — `status:'paid'`, `paidAt`, `paidVia`, `paidRef`(→ slip `transactionId`), `receiptNo` (`verifySlip.js:~347`). Payment doc-of-record = Firestore `verifiedSlips/{transactionId}` (real slip OR synthetic `manual_{b}_{r}_{y}_{m}` for cash, `dashboard-bill-payment-status.js:~70`). Mirror RTDB `payments/{b}/{r}/{pushId}`; manual cash also `manualReceipts/{b}_{r}_{billId}`.
+- **Reversal key:** `(building, room, yearBE, month)` deterministic + `bill.paidRef`. §7-E: billId encodes BE/CE inconsistently → key off (building,room,period)+paidRef, NOT the billId string.
+- **Void template** (`voidInvoice.js`): onCall v1 SE1, admin-gate `token.admin===true`, `runTransaction`: read → idempotent early-return if terminal → `tx.update(status + *At/*By/*Reason)` → `appendActionAudit(tx,db,{action:'BILL_VOIDED',before,after,actor/ip server-stamped})` — never deletes. Registered `index.js`. (Agent B.)
+- **Audit infra** (`_actionAudit.js`): `VALID_ACTIONS` Set (BILL_VOIDED present, **no BILL_REFUNDED**); `appendActionAudit(writer,fs,payload)` stamps actor/role/ip/at server-side; optional `idempotencyKey`. UI template `dashboard-invoice-void.js` (`window.voidInvoicePrompt`: read persisted doc → preview → `ghPrompt` reason → `httpsCallable` → §7-I no auto-click; `data-action` + `dashboard-main.js` hub + `<script src>`, no CSP drift).
+- **Revenue** (`aggregateMonthlyRevenue.js`): LIVE RTDB read each run, `isPaid = status==='paid'`; paid→`paidRevenue`, **else→`pendingRevenue`**. So `'refunded'` auto-leaves paidRevenue **BUT the else branch would inflate `pendingRevenue`** → needs a guard. `taxSummary/{BE}` = CACHE; refresh scheduled 02:07 1st-of-month OR admin HTTP POST `{year}`; §7-L client fallback meanwhile. (Agent C.)
+- **Reconcile** (`dashboard-reconcile.js`): `computeReconciliation` processes only `status==='paid'`; a refunded bill's slip would orphan into `unmatchedSlips` → flip the slip record so reconcile skips it.
+- **Points** (`verifySlip.js:~410`, Nest-only): payment awards 150/100/40/15/0 + `appendPointsLedger`. **No reverse path** (`_pointsLedger.js` VALID_SOURCES has none) → claw-back = decision D2.
+
+### Design — `refundBill` CF mirrors `voidInvoice`, propagates to the readers
+- **CF `functions/refundBill.js`** (onCall v1 SE1, admin-gated) — input `{building, room, year, month, reason}`; read the bill to derive billId/paidRef. Atomic-as-possible:
+  1. RTDB `bills/{b}/{r}/{billId}` → `status:'refunded'` + `refundedAt/refundedBy/refundReason` (never delete; keep `paidRef`/`receiptNo` for trail).
+  2. Firestore `verifiedSlips/{paidRef}` → `status:'reversed'` + `reversedAt/By/Reason` (reconcile skips it; proof preserved).
+  3. `appendActionAudit({action:'BILL_REFUNDED', targetType:'bill', before:{status:'paid',amount}, after:{status:'refunded',reason}, actor/ip server-stamped})`.
+  - Idempotent: already-refunded → early-return. *(RTDB + Firestore aren't one tx — sequence Firestore tx (slip+audit) then RTDB update; confirm ordering at build, both admin-SDK so no client race.)*
+- **`_actionAudit.js`** — add `'BILL_REFUNDED'` to `VALID_ACTIONS` (+ test).
+- **`aggregateMonthlyRevenue.js`** — guard: exclude `status==='refunded'` from paid AND pending (and gross categories if cash-basis — **confirm exact summation by reading the file at build**, §verify-via-grep). Optional `refundedRevenue` bucket = defer.
+- **`dashboard-reconcile.js`** — skip `status==='reversed'` slips + refunded bills (optional `refundedBills[]` bucket).
+- **Admin UI `shared/dashboard-bill-refund.js`** — `window.refundBillPrompt()` mirrors void UI: read the paid bill (key normalized like server — §7-E/T), preview (amount/receiptNo/period), `ghPrompt` reason, `httpsCallable('refundBill')`, §7-I no auto-`.click()`. Wire `data-action="refundBill"` in the บิล payment modal footer (`dashboard-bill.js:~1068`) + `dashboard-main.js` hub + `<script src>` (no inline → no CSP drift §7-II).
+- **Rules:** refund writes via CF/Admin SDK (bypasses rules); verifiedSlips already client-`write:false`. RTDB bill-write tightening = OUT (would need tracing every admin mark-paid client — §feedback_rule_tighten_trace_clients). Register `exports.refundBill` in `index.js`.
+- **Tests:** CF unit (paid→refunded + slip reversed + BILL_REFUNDED row · idempotent re-refund=no-op · refund non-paid bill=rejected · atomic) + reconcile unit (reversed slip not orphaned) + aggregation unit (refunded excluded from paid&pending). Gate green pre-deploy.
+- **Deploy:** money-flow → **user-confirmed** + `firebase use` prod + branch-before-deploy (§Critical rules). Owner live-verify (admin refunds a real paid test bill → status flips, audit row, revenue drops after re-aggregate).
+
+### Decisions (✅ RESOLVED at approval 2026-06-03 — all = REC): D1 `status:'refunded'` · D2 points claw-back DEFERRED (before Phase 3.2) · D3 reuse verifiedSlips+audit (no new collection) · D4 full reversal only · D5 no auto re-aggregate.
+1. **Refund semantics** — `status:'refunded'` = money returned, charge cancelled, excluded from revenue **[✅ CHOSEN — matches blueprint คืนเงิน, separate from void]** vs flip to `'pending'` = tenant still owes (chargeback/bounced).
+2. **Points claw-back** — **(a) in-scope** (negative `pointsLedger` + decrement counters; keeps Trust-System data honest; ~+80 LOC Nest-only) vs **(b) deferred-named** (v1 = money + audit only) **[REC for a tight gate-first v1]**. Agent C flags (a) "critical" — your call.
+3. **Refund record** — reuse `verifiedSlips` flip + `actionAudit` row, no new collection **[REC, mirrors void]** vs dedicated `refunds/{key}` register.
+4. **Scope** — full reversal only **[REC v1]**; partial-amount deferred.
+5. **Tax re-aggregate** — CF does NOT auto-trigger; admin re-runs / next 02:07 + §7-L fallback **[REC, minimal blast radius]** vs CF fire-and-forget re-aggregate.
+
+### Guardrails
+§7-NN (callable, never Firestore trigger — SE3) · §7-I (preview + explicit click, never auto-`.click()`) · §7-E (key off building/room/period + paidRef) · §7-T (grep writer+reader of new fields; slip `status` readers) · §7-J (no new index unless a query needs it; READY by state) · §7-Z N/A · §7-II (UI `<script src>` only → pre-commit §G confirms no CSP drift) · money-flow deploy user-confirmed + `firebase use` prod + branch check · one branch off fresh main, behind `validate.yml`.
+
+### Deferred (named, not dropped)
+- Points claw-back (if D2=b) · partial refunds · dedicated `refunds/` register (if D3=reuse) · RTDB bill-write rule tightening · tenant-facing refund status in tenant_app bill view · auto re-aggregation trigger · refund credit-note PNG.
+
+### Review (2026-06-03/04 — BUILT on branch `feat/phase2-refund-flow`, gates green · ⏳ awaiting commit + deploy approval)
+- **Backend:** `functions/refundBill.js` (onCall v1 SE1, admin-gated) — finds the paid bill by (building,room,year,month) like `markBillPaidInRTDB`; **audit-FIRST** (Firestore batch, deterministic `idempotencyKey=refund_{b}_{r}_{BE}{MM}`) then flips RTDB `bills/{b}/{r}/{billId}` → `status:'refunded'` + refundedAt/By/Reason (never deletes; keeps paidRef/receiptNo). Idempotent (already-refunded early-return). `BILL_REFUNDED` added to `_actionAudit.js` VALID_ACTIONS; registered in `index.js`. +14 unit tests.
+- **Propagation:** `aggregateMonthlyRevenue.js` skips `status==='refunded'` (excluded from paid AND pending AND totals — the guard stops the else-branch inflating pendingRevenue) +1 test. `dashboard-reconcile.js` pairs a refunded bill's slip via `paidRef` (no orphan) + `refundedBills[]` bucket + summary `refunded`/`refundedAmount` + render section/card +2 tests.
+- **Admin UI:** `shared/dashboard-bill-refund.js` `window.refundBillPrompt(roomId,year,month)` (BillStore preview → `ghPrompt` reason → `httpsCallable('refundBill')`, §7-I no auto-click). Refund button in the payment-modal paid-footer (`dashboard-bill.js`, `data-action="refundBill"` + data-id/year/month) + a refunded display state. Hub wire in `dashboard-main.js`. `<script src>` in `dashboard.html`.
+- **Decisions (all REC, user-approved):** D1 `status:'refunded'` (excluded from revenue) · D2 points claw-back DEFERRED · D3 reuse verifiedSlips+audit (no new collection; slip NOT mutated — refund is a new fact, not a history rewrite) · D4 full-only · D5 no auto re-aggregate (next 02:07 / admin HTTP + §7-L fallback).
+- **Gates:** node --check all · functions **1904/0** (+15) · test:shared **332/0** (+2) · verify:memory ALL GREEN (README CF-test-files 93→94) · mojibake clean (§7-TT) · CSP no drift (external `<script src>` only, §7-II) · audit:size ok.
+- **§ guardrails held:** §7-NN callable not trigger · §7-I preview+explicit click · §7-E key off period+paidRef · §7-T refundReason/refundedAt written only by the CF, readers = bill modal + reconcile · §7-Z N/A.
+- **Deferred (named):** points claw-back (before Phase 3.2) · partial refunds · manual-cash synthetic-slip orphan in reconcile (slip-paid path clean) · refund credit-note PNG · tenant-facing refund display.
+- **⏳ Open (owner, money-flow §7-I/§7-J):** commit+push → deploy `refundBill` CF (user-confirmed, `firebase use` prod) → live-verify: admin refunds a real PAID test bill → modal shows คืนเงินแล้ว · `BILL_REFUNDED` row in audit panel · re-aggregate → that period's paidRevenue drops · reconcile shows it in the คืนเงิน bucket (slip not orphaned).
+
+---
+
 ## ▶▶▶ ACTIVE PLAN (2026-06-03) — Roadmap Phase 2: Reconcile report (slip↔bill) · ✅ SHIPPED to branch (stacked on #241) · PR pending
 
 **Scope:** roadmap Phase 2 "Reconcile report" — admin slip↔bill matched/unmatched view (bank-statement reconciliation basis). Home = **dashboard.html (admin)** per user choice — `verifiedSlips`/`manualReceipts` are admin-read-only, so no rules change (§7-rule-tighten).
