@@ -2945,6 +2945,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button class="sidebar-item" data-action="showPage" data-page="reconcile">
         <span class="sidebar-item-icon" aria-hidden="true">🧾</span>กระทบยอดสลิป
       </button>
+      <button class="sidebar-item" data-action="showPage" data-page="aging">
+        <span class="sidebar-item-icon" aria-hidden="true">📋</span>ลูกหนี้ค้างชำระ
+      </button>
       <button class="sidebar-item" data-action="openChangePasswordModal">
         <span class="sidebar-item-icon" aria-hidden="true">🔐</span>เปลี่ยนรหัสผ่าน
       </button>
@@ -5340,6 +5343,17 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div id="reconcile-mount"></div>
 </div>
 
+<!-- ===== ARREARS / AGING (Roadmap Phase 2) — per-tenant outstanding by age ===== -->
+<div class="page" id="page-aging">
+  <div class="section-title" role="heading" aria-level="2">📋 ลูกหนี้ค้างชำระ (Aging)</div>
+  <p style="color:var(--text-muted);margin:.25rem 0 1rem;font-size:.9rem;">ยอดค้างชำระแยกตามผู้เช่า + อายุหนี้ (ยังไม่ถึงกำหนด · 1–30 · 31–60 · 61–90 · เกิน 90 วัน) นับจากวันครบกำหนดของแต่ละบิล — รวมยอดยกมาข้ามปี ณ วันนี้</p>
+  <div style="display:flex;gap:.8rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap;">
+    <span id="aging-asof" style="font-size:.85rem;color:var(--text-muted);"></span>
+    <button id="aging-csv-btn" style="margin-left:auto;padding:.4rem .9rem;background:var(--brand-primary,#2d8653);color:#fff;border:none;border-radius:6px;font-size:.85rem;cursor:pointer;font-family:var(--font-brand);">⬇️ ดาวน์โหลด CSV</button>
+  </div>
+  <div id="aging-mount"></div>
+</div>
+
 <!-- ===== GAMIFICATION MANAGEMENT ===== -->
 <div class="page" id="page-gamification">
   <div class="section-title" role="heading" aria-level="2">🏆 Gamification & Rewards Management</div>
@@ -5648,6 +5662,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-admin-ops.js" defer></script>
 <script src="./shared/dashboard-audit-panel.js" defer></script>
 <script src="./shared/dashboard-reconcile.js" defer></script>
+<script src="./shared/dashboard-aging.js" defer></script>
 <script src="./shared/dashboard-extra.js" defer></script>
 <script src="./shared/dashboard-owner-insights.js" defer></script>
 <script src="./shared/dashboard-insights.js" defer></script>
