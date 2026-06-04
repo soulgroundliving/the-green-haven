@@ -35,16 +35,16 @@ const DEFAULT_ROOMS_CONFIG = {
     name: 'Nest Building',
     building: 'nest',
     rooms: [
-      { id: 'N101', name: 'Nest N101', floor: 1, type: 'studio', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
-      { id: 'N102', name: 'Nest N102', floor: 1, type: 'studio', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
-      { id: 'N103', name: 'Nest N103', floor: 1, type: 'studio', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
-      { id: 'N104', name: 'Nest N104', floor: 1, type: 'studio', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
-      { id: 'N105', name: 'Nest N105', floor: 1, type: 'studio', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
-      { id: 'N201', name: 'Nest N201', floor: 2, type: 'studio', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
-      { id: 'N202', name: 'Nest N202', floor: 2, type: 'studio', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
-      { id: 'N203', name: 'Nest N203', floor: 2, type: 'studio', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
-      { id: 'N204', name: 'Nest N204', floor: 2, type: 'studio', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
-      { id: 'N205', name: 'Nest N205', floor: 2, type: 'studio', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
+      { id: 'N101', name: 'Nest N101', floor: 1, type: 'pet-allowed', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
+      { id: 'N102', name: 'Nest N102', floor: 1, type: 'pet-allowed', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
+      { id: 'N103', name: 'Nest N103', floor: 1, type: 'pet-allowed', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
+      { id: 'N104', name: 'Nest N104', floor: 1, type: 'pet-allowed', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
+      { id: 'N105', name: 'Nest N105', floor: 1, type: 'pet-allowed', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
+      { id: 'N201', name: 'Nest N201', floor: 2, type: 'pet-allowed', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
+      { id: 'N202', name: 'Nest N202', floor: 2, type: 'pet-allowed', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
+      { id: 'N203', name: 'Nest N203', floor: 2, type: 'pet-allowed', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
+      { id: 'N204', name: 'Nest N204', floor: 2, type: 'pet-allowed', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
+      { id: 'N205', name: 'Nest N205', floor: 2, type: 'pet-allowed', rentPrice: 5800, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
       { id: 'N301', name: 'Nest N301', floor: 3, type: 'pet-allowed', rentPrice: 6200, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
       { id: 'N302', name: 'Nest N302', floor: 3, type: 'pet-allowed', rentPrice: 6200, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
       { id: 'N303', name: 'Nest N303', floor: 3, type: 'pet-allowed', rentPrice: 6200, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
@@ -126,6 +126,20 @@ class RoomConfigManager {
         if (!r.type && dr.type) { r.type = dr.type; merged = true; }
       });
       if (merged) localStorage.setItem(`rooms_config_${building}`, JSON.stringify(config));
+    }
+
+    // Migration: Nest pets opened building-wide (2026-06) — flip any cached
+    // 'studio' room to 'pet-allowed' so every Nest room shows pet features
+    // uniformly (admin pet approval, booking labels). One-time, auto-save.
+    if (building === 'nest' && config.rooms) {
+      let petMigrated = false;
+      config.rooms.forEach(r => {
+        if (r.type === 'studio') { r.type = 'pet-allowed'; petMigrated = true; }
+      });
+      if (petMigrated) {
+        localStorage.setItem(`rooms_config_${building}`, JSON.stringify(config));
+        console.info('Nest: migrated studio rooms to pet-allowed (pets now building-wide)');
+      }
     }
 
     return config;

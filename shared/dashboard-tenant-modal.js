@@ -187,8 +187,9 @@ function openTenantModal(building, roomId) {
   if (emNameEl) emNameEl.value = (tenant.emergencyContact && tenant.emergencyContact.name) || '';
   const emPhoneEl = document.getElementById('modalEmergencyPhone');
   if (emPhoneEl) emPhoneEl.value = (tenant.emergencyContact && tenant.emergencyContact.phone) || '';
-  // Pets section — show only for pet-allowed rooms (N301-N405), read-only from approval system
-  const isPetAllowed = room?.type === 'pet-allowed';
+  // Pets section — shown for ALL Nest rooms (pets allowed building-wide as of 2026-06).
+  // Gate on building, not room.type, so it's robust against any stale cached type.
+  const isPetAllowed = (building === 'nest') || room?.type === 'pet-allowed';
   const petsSection = document.getElementById('modalPetsSection');
   if (petsSection) {
     petsSection.classList.toggle('u-hidden', !(isPetAllowed));
