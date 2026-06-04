@@ -152,6 +152,10 @@ class RoomConfigManager {
           electricRate: Number(r.electricRate) || 8,
           waterRate: Number(r.waterRate) || 20,
           trashRate: Number(r.trashRate) || 20,
+          // Derived monthly pet fee (฿400 × approved pets) — maintained by
+          // syncRoomPetFee() at pet approve/reject/remove. Carried here so an
+          // unrelated room-config save doesn't clobber it (§7-T field-drift).
+          petFee: Number(r.petFee) || 0,
           deleted: !!r.deleted,
           updatedAt: new Date().toISOString()
         };
@@ -206,6 +210,9 @@ class RoomConfigManager {
               electricRate: Number(r.electricRate) || 8,
               waterRate: Number(r.waterRate) || 20,
               trashRate: Number(r.trashRate) || (building === 'nest' ? 40 : 20),
+              // Preserve the derived pet fee so getRoom() (and the client bill
+              // compute that reads it) sees it — else it's dropped from cache.
+              petFee: Number(r.petFee) || 0,
               deleted: !!r.deleted
             }));
           // Preserve any extra fields (floor/type) from local copy
