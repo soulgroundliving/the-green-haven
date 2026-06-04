@@ -1,6 +1,7 @@
 // ===== DEPOSIT MANAGEMENT =====
 // Firestore path: deposits/{building}/{roomId}
-// One doc per room: { amount, status, receivedAt, returnedAt, returnedAmount, deductions[], refundBank, notes, updatedAt }
+// One doc per room: { amount, paidSoFar, status, receivedAt, returnedAt, returnedAmount, deductions[], refundBank, notes, updatedAt }
+// paidSoFar (Slice B): deposit paid so far for installments; absent = fully paid (§7-L). due = amount - paidSoFar.
 
 let _depositsCache = []; // flat array: { building, roomId, ...fields }
 let _depositsUnsub = null;
@@ -47,6 +48,7 @@ async function _seedDepositsFromTenants() {
           return fs.setDoc(fs.doc(db, 'deposits', `${building}_${d.id}`), {
             building, roomId: d.id,
             amount: Number(t.deposit) || 0,
+            paidSoFar: Number(t.deposit) || 0, // seed = fully paid; admin lowers it via ผ่อนมัดจำ for installment tenants
             status: 'holding',
             receivedAt: t.moveInDate || t.createdAt || null,
             deductions: [],
@@ -72,11 +74,13 @@ function renderDepositsPage() {
   const holding  = _depositsCache.filter(r => r.status !== 'returned').length;
   const returned = _depositsCache.filter(r => r.status === 'returned').length;
   const total    = _depositsCache.filter(r => r.status !== 'returned').reduce((s, r) => s + (Number(r.amount) || 0), 0);
-  const el = id => { const e = document.getElementById(id); if (e) e.textContent = String(arguments[1] ?? ''); };
+  const outstandingDue = _depositsCache.filter(r => r.status !== 'returned')
+    .reduce((s, r) => s + (window.DepositCalc ? window.DepositCalc.depositDue(r) : 0), 0);
   const setEl = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
   setEl('dep-kpi-holding',  String(holding));
   setEl('dep-kpi-returned', String(returned));
   setEl('dep-kpi-total', '฿' + total.toLocaleString());
+  setEl('dep-kpi-due', outstandingDue > 0 ? 'ค้างรับ ฿' + outstandingDue.toLocaleString() : '');
 
   const list = document.getElementById('depList');
   if (!list) return;
@@ -91,20 +95,24 @@ function renderDepositsPage() {
 
   list.innerHTML = rows.map(r => {
     const deductTotal = (r.deductions || []).reduce((s, d) => s + (Number(d.amount) || 0), 0);
-    const netRefund = (Number(r.amount) || 0) - deductTotal;
     const isReturned = r.status === 'returned';
+    const depDue  = window.DepositCalc ? window.DepositCalc.depositDue(r) : 0;
+    const depPaid = window.DepositCalc ? window.DepositCalc.depositPaid(r) : (Number(r.amount) || 0);
+    const netRefund = depPaid - deductTotal; // refund the held amount (paidSoFar), not the full target
     return `<div style="padding:14px 0;border-bottom:1px solid #f1f5f9;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
         <div>
           <div style="font-weight:700;color:#334435;font-size:var(--fs-md);">ห้อง ${r.roomId} <span style="font-size:11px;color:#9ca3af;font-weight:400;">${r.building}</span></div>
-          <div style="font-size:var(--fs-sm);color:${DashColors.TEXT_SECONDARY};margin-top:3px;">รับเมื่อ: ${r.receivedAt || '—'} · ${statusBadge(r.status)}</div>
+          <div style="font-size:var(--fs-sm);color:${DashColors.TEXT_SECONDARY};margin-top:3px;">รับเมื่อ: ${r.receivedAt || '—'} · ${statusBadge(r.status)}${!isReturned && depDue > 0 ? ` <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">ค้างมัดจำ ${fmt(depDue)}</span>` : ''}</div>
           ${(r.deductions||[]).length ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};margin-top:4px;">หัก: ${(r.deductions||[]).map(d=>`${d.reason} (${fmt(d.amount)})`).join(', ')}</div>` : ''}
           ${r.notes ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">หมายเหตุ: ${r.notes}</div>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-size:1.15rem;font-weight:800;color:#334435;">${fmt(r.amount)}</div>
+          ${!isReturned && depDue > 0 ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};">ชำระแล้ว ${fmt(depPaid)} · ค้าง <strong style="color:#dc2626;">${fmt(depDue)}</strong></div>` : ''}
           ${deductTotal ? `<div style="font-size:11px;color:#dc2626;">หักแล้ว ${fmt(deductTotal)}</div><div style="font-size:var(--fs-sm);font-weight:700;color:#059669;">คืนสุทธิ ${fmt(netRefund)}</div>` : ''}
           <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap;">
+            ${!isReturned ? `<button data-action="showDepositInstallmentModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#fef3c7;color:#92400e;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">ผ่อนมัดจำ</button>` : ''}
             ${!isReturned ? `<button data-action="showReturnDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">บันทึกคืนมัดจำ</button>` : ''}
             <button data-action="exportDepositReceipt" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📄 ใบรับเงิน</button>
           </div>
@@ -127,8 +135,8 @@ function showReturnDepositModal(building, roomId) {
     <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
       <h3 style="margin:0 0 16px;font-size:1.1rem;color:#334435;">💰 บันทึกคืนมัดจำ — ห้อง ${roomId}</h3>
       <div style="margin-bottom:12px;">
-        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">มัดจำทั้งหมด</label>
-        <div style="font-size:1.3rem;font-weight:800;color:#334435;">฿${(Number(dep.amount)||0).toLocaleString()}</div>
+        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">มัดจำที่ถือไว้</label>
+        <div style="font-size:1.3rem;font-weight:800;color:#334435;">฿${(window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep.amount)||0)).toLocaleString()}</div>
       </div>
       <div style="margin-bottom:12px;">
         <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">วันที่คืนมัดจำ</label>
@@ -171,6 +179,58 @@ function _renderDepDeductions() {
 }
 window._renderDepDeductions = _renderDepDeductions;
 
+// ── Installments (Slice B): record how much of the deposit the tenant has paid ──
+function showDepositInstallmentModal(building, roomId) {
+  const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
+  if (!dep) return;
+  const amount = Number(dep.amount) || 0;
+  const paid = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : amount;
+  const due  = window.DepositCalc ? window.DepositCalc.depositDue(dep)  : 0;
+  const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
+  document.getElementById('depositInstallmentModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'depositInstallmentModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+      <h3 style="margin:0 0 6px;font-size:1.1rem;color:#334435;">📝 ผ่อนมัดจำ — ห้อง ${roomId}</h3>
+      <p style="margin:0 0 16px;font-size:11px;color:#9ca3af;">บันทึกยอดมัดจำที่ผู้เช่าชำระแล้วทั้งหมด — ส่วนที่เหลือถือเป็นยอดค้าง</p>
+      <div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);margin-bottom:6px;"><span style="color:#6b7280;">มัดจำทั้งหมด</span><strong>${fmt(amount)}</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);margin-bottom:14px;"><span style="color:#6b7280;">ค้างปัจจุบัน</span><strong style="color:${due>0?'#dc2626':'#059669'};">${fmt(due)}</strong></div>
+      <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">ชำระแล้วทั้งหมด (บาท)</label>
+      <input id="dep-inst-paid" type="number" min="0" max="${amount}" value="${paid}" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;font-size:1rem;">
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button data-action="closeDepositInstallmentModal" style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">ยกเลิก</button>
+        <button data-action="saveDepositInstallment" data-id="${building}" data-arg="${roomId}" style="flex:2;padding:10px;background:#334435;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">✅ บันทึก</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+window.showDepositInstallmentModal = showDepositInstallmentModal;
+
+async function _saveDepositInstallment(building, roomId) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
+  const amount = Number(dep?.amount) || 0;
+  let paidSoFar = Number(document.getElementById('dep-inst-paid')?.value);
+  if (!Number.isFinite(paidSoFar) || paidSoFar < 0) paidSoFar = 0;
+  if (paidSoFar > amount) paidSoFar = amount; // can't pay more than the deposit owed
+  try {
+    await fs.setDoc(fs.doc(db, 'deposits', `${building}_${roomId}`),
+      { paidSoFar, updatedAt: new Date().toISOString() }, { merge: true });
+    // Mirror to tenant SSoT so the tenant profile can surface installment progress.
+    await fs.setDoc(fs.doc(db, `tenants/${building}/list/${roomId}`),
+      { depositPaidSoFar: paidSoFar }, { merge: true });
+    document.getElementById('depositInstallmentModal')?.remove();
+    if (typeof showToast === 'function') showToast('✅ บันทึกยอดผ่อนมัดจำแล้ว');
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  }
+}
+window._saveDepositInstallment = _saveDepositInstallment;
+
 async function _saveDepositReturn(building, roomId) {
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
   const fs = window.firebase.firestoreFunctions;
@@ -180,7 +240,8 @@ async function _saveDepositReturn(building, roomId) {
   const notes    = document.getElementById('dep-ret-notes')?.value || '';
   const dep      = _depositsCache.find(r => r.building === building && r.roomId === roomId);
   const deductTotal = deductions.reduce((s, d) => s + (Number(d.amount)||0), 0);
-  const returnedAmount = (Number(dep?.amount)||0) - deductTotal;
+  const held = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep?.amount)||0);
+  const returnedAmount = held - deductTotal; // installment-aware: refund only what the tenant actually paid
   try {
     await fs.setDoc(fs.doc(db, 'deposits', `${building}_${roomId}`), {
       building, roomId,
@@ -212,7 +273,8 @@ async function exportDepositReceipt(building, roomId) {
   const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
   if (!dep) return;
   const deductTotal = (dep.deductions||[]).reduce((s,d) => s+(Number(d.amount)||0), 0);
-  const netRefund = (Number(dep.amount)||0) - deductTotal;
+  const held = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep.amount)||0);
+  const netRefund = held - deductTotal;
   const fmt = n => '฿' + (Number(n)||0).toLocaleString();
   const owner = window.OwnerConfigManager?.get() || {};
 

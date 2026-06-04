@@ -246,10 +246,15 @@
             const badge = document.getElementById('profile-deposit-badge');
             if (badge) {
                 const isReturned = (l.depositStatus === 'returned') || (t && t.depositStatus === 'returned');
+                // Installment (Slice B): paidSoFar mirrored to the tenant doc; absent = fully paid (§7-L).
+                const paidSoFar = (t && t.depositPaidSoFar != null) ? Number(t.depositPaidSoFar) : Number(deposit);
+                const depDue = Math.max(0, Number(deposit) - (Number.isFinite(paidSoFar) ? paidSoFar : Number(deposit)));
                 badge.classList.remove('ta-sect-hidden');
                 badge.innerHTML = isReturned
                     ? '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">✅ คืนแล้ว</span>'
-                    : '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">💰 ถือมัดจำ</span>';
+                    : (depDue > 0
+                        ? `<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">ค้างมัดจำ ฿${depDue.toLocaleString()}</span>`
+                        : '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">💰 ถือมัดจำ</span>');
             }
         }
         const roomEl = document.getElementById('profile-room-display');
