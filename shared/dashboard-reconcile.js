@@ -55,7 +55,11 @@
     const unmatchedPaidBills = []; // paid bill with no slip + no manual receipt
     const mismatches = [];       // matched bill where |slip.amount - bill.total| > tolerance
     const refundedBills = [];    // refunded bill (money returned) + its original slip, if any
+    const depositSettledBills = []; // paid by absorbing the bill into the move-out deposit (no slip)
     const linkedSlipIds = new Set();
+    // A bill flipped to paid by the deposit move-out settlement (spec §1.3): paidVia is the
+    // canonical signal; paidRef `deposit_{b}_{r}` is the defensive fallback if it's missing.
+    const isDepositSettled = (b) => norm(b.paidVia) === 'deposit_settlement' || String(b.paidRef || '').toLowerCase().startsWith('deposit_');
 
     for (const bill of bills) {
       const st = norm(bill.status);
@@ -72,6 +76,11 @@
         continue;
       }
       if (st !== 'paid') continue; // reconcile only settled bills
+      // Paid by absorbing into the move-out deposit — the deposit covered the bill, so no
+      // payment slip exists. Bucket separately (paper trail = the DEPOSIT_RETURNED settlement,
+      // not a slip) so it is neither flagged "unmatched paid" nor falsely matched to an
+      // unrelated slip by the room+month heuristic below.
+      if (isDepositSettled(bill)) { depositSettledBills.push({ bill, receiptNo: bill.receiptNo || null }); continue; }
       let slip = null, via = null, receiptNo = bill.receiptNo || null;
 
       // 1) explicit bill → slip link
@@ -110,18 +119,20 @@
 
     const sum = (arr, f) => arr.reduce((t, x) => t + (Number(f(x)) || 0), 0);
     const summary = {
-      paidBills: matched.length + unmatchedPaidBills.length,
+      paidBills: matched.length + unmatchedPaidBills.length + depositSettledBills.length,
       slips: slips.length,
       matched: matched.length,
       unmatchedSlips: unmatchedSlips.length,
       unmatchedPaidBills: unmatchedPaidBills.length,
       mismatches: mismatches.length,
       refunded: refundedBills.length,
+      depositSettled: depositSettledBills.length,
       matchedAmount: Math.round(sum(matched, r => r.slip ? r.slip.amount : r.bill.total) * 100) / 100,
       unmatchedSlipAmount: Math.round(sum(unmatchedSlips, s => s.amount) * 100) / 100,
       refundedAmount: Math.round(sum(refundedBills, r => r.bill.total) * 100) / 100,
+      depositSettledAmount: Math.round(sum(depositSettledBills, x => x.bill.total) * 100) / 100,
     };
-    return { matched, unmatchedSlips, unmatchedPaidBills, mismatches, refundedBills, summary };
+    return { matched, unmatchedSlips, unmatchedPaidBills, mismatches, refundedBills, depositSettledBills, summary };
   }
   window.computeReconciliation = computeReconciliation;
 
@@ -139,6 +150,7 @@
       month: Number(b.month) || 0, beYear: toBE(b.year),
       total: Number(b.totalCharge != null ? b.totalCharge : (b.totalAmount != null ? b.totalAmount : b.total)) || 0,
       status: b.status || '', paidRef: b.paidRef || b.transactionId || null, receiptNo: b.receiptNo || null,
+      paidVia: b.paidVia || null,
     };
   }
 
@@ -198,6 +210,7 @@
         ${card('บิลจ่ายแล้วไม่มีสลิป', s.unmatchedPaidBills, '#f59e0b')}
         ${card('ยอดไม่ตรง', s.mismatches, 'var(--red,#c62828)')}
         ${card('คืนเงินแล้ว', s.refunded, '#7c3aed')}
+        ${card('ชำระจากมัดจำ', s.depositSettled, '#0891b2')}
       </div>
       <div style="font-size:.8rem;color:var(--text-muted,#6b7a8d);margin-bottom:.5rem;">
         ปี ${beYear} · จับคู่ ${baht(s.matchedAmount)} · สลิปค้างจับคู่ ${baht(s.unmatchedSlipAmount)}</div>
@@ -212,7 +225,10 @@
         result.mismatches.map(mismatchRow).join(''), 'ไม่มี — ยอดตรงทุกใบ')}
       ${section('🟣 บิลที่คืนเงินแล้ว (กลับรายการ — ตัดออกจากรายได้)', '#7c3aed',
         '<th style="padding:.4rem .6rem;">บิล</th><th style="padding:.4rem .6rem;text-align:right;">ยอดคืน</th><th style="padding:.4rem .6rem;">เลขใบเสร็จ</th><th style="padding:.4rem .6rem;">สลิปเดิม</th>',
-        result.refundedBills.map(refundedRow).join(''), 'ไม่มี — ไม่มีบิลที่คืนเงิน')}`;
+        result.refundedBills.map(refundedRow).join(''), 'ไม่มี — ไม่มีบิลที่คืนเงิน')}
+      ${section('🔵 บิลที่ชำระจากเงินมัดจำ (หักจากมัดจำตอนคืนห้อง — หลักฐานคือใบคืนมัดจำ)', '#0891b2',
+        '<th style="padding:.4rem .6rem;">บิล</th><th style="padding:.4rem .6rem;text-align:right;">ยอด</th><th style="padding:.4rem .6rem;">เลขใบเสร็จ</th>',
+        result.depositSettledBills.map(billPaidRow).join(''), 'ไม่มี — ไม่มีบิลที่หักจากมัดจำ')}`;
   }
 
   async function loadManualReceipts(db, fs) {
