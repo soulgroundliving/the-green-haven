@@ -31,7 +31,9 @@
 const functions = require('firebase-functions/v1');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
-const FormData = require('form-data');
+// NOTE: do NOT require('form-data') — the Node 22 undici global fetch can't
+// serialize that package's instance (it stringifies to "[object FormData]").
+// callSlipOKAPI uses the global FormData + Blob instead (§7-YY).
 
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
@@ -99,20 +101,25 @@ async function checkRateLimit(uid, timeWindow) {
 }
 
 async function callSlipOKAPI(fileBuffer) {
-  const form = new FormData();
   // Detect MIME from magic bytes — same heuristic as verifySlip.js / verifyBookingSlip.js
   let mimeType = 'image/jpeg';
   let ext = 'jpg';
   if (fileBuffer[0] === 0x89 && fileBuffer[1] === 0x50) { mimeType = 'image/png'; ext = 'png'; }
   else if (fileBuffer[0] === 0x47 && fileBuffer[1] === 0x49) { mimeType = 'image/gif'; ext = 'gif'; }
   else if (fileBuffer[0] === 0x52 && fileBuffer[1] === 0x49) { mimeType = 'image/webp'; ext = 'webp'; }
-  form.append('files', fileBuffer, { filename: `slip.${ext}`, contentType: mimeType });
+  // §7-YY: the Node 22 undici global fetch does NOT serialize the `form-data`
+  // npm package — it stringifies the instance to "[object FormData]" (sent as
+  // text/plain, ~17 bytes), so SlipOK rejects it 400 "missing data/files/url".
+  // The SPEC-compliant global FormData + Blob makes undici emit a real
+  // multipart/form-data body + boundary. Do NOT set Content-Type — undici
+  // derives the boundary; a manual one would mismatch the body.
+  const form = new FormData();
+  form.append('files', new Blob([fileBuffer], { type: mimeType }), `slip.${ext}`);
 
   const response = await fetch(SLIPOK_API_URL.value(), {
     method: 'POST',
     headers: { 'x-authorization': SLIPOK_API_KEY.value() },
     body: form,
-    timeout: 30_000,
   });
   const text = await response.text();
   if (!response.ok) {
