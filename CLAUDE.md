@@ -1388,6 +1388,34 @@ curl -sI https://the-green-haven.vercel.app/dashboard.html | grep -i content-sec
 
 **Verify-live caveat:** a static harness that hardcodes `data:` URLs can't catch a `blob:` regression, and a `vercel.json` grep can't see the Vercel-UI override. Only the deployed header (curl) or a real authenticated load surfaces this class. Family: §7-Y (`fetch('data:')` blocked by `connect-src`), §7-II/RR (CSP kills assets silently; only visible on the deployed page), [[feedback_vercel_ui_overrides_json]].
 
+### YY. Node 22 undici `fetch` can't serialize the `form-data` npm package — multipart uploads must use **global `FormData` + `Blob`**
+
+The CF runtime is **Node 22** (`functions/package.json` `engines.node: 22`), so `fetch` is undici's global — there is no `node-fetch`. undici's `fetch` does **NOT** understand the `form-data` npm package: passing a `new (require('form-data'))()` instance as `body` makes undici call `String(form)` → **`"[object FormData]"`** (17 bytes), sent as `Content-Type: text/plain`. The receiving API sees no file part. node-fetch *was* form-data-aware; undici is not — so the same code that worked under node-fetch (or an older deployed runtime) silently breaks once it runs on Node 22.
+
+Incident 2026-06-04: `verifyRefundSlip` (deposit refund-slip SlipOK check, #254) returned `SlipOK API returned 400: {"code":1000,"message":"…field data, files หรือ url!"}` — SlipOK got `text/plain` "[object FormData]" instead of the image. `verifySlip`/`verifyBookingSlip` use the **identical** `form-data`-package pattern and only still work because their *deployed* instances predate the Node-22 redeploy — a latent time bomb: they break the next time they're redeployed. Fixed by switching `verifyRefundSlip.callSlipOKAPI` to the spec-compliant global FormData + Blob.
+
+**Empirically proven on this runtime** (echo server, Node ≥22/undici v6):
+| construction | Content-Type sent | body bytes |
+|---|---|---|
+| `require('form-data')` instance, no headers | `text/plain` | **17** (`[object FormData]`) ❌ |
+| `require('form-data')` + `form.getHeaders()` | `multipart/...; boundary` | still **17** ❌ (header right, body still stringified) |
+| **global `FormData` + `Blob`** | `multipart/...; boundary` (undici-set) | **real file bytes** ✅ |
+
+**Rule:** to POST a file from a CF, build the body with the **global** `FormData` + `Blob`, and do **NOT** set `Content-Type` (undici derives the boundary):
+```js
+const form = new FormData();                                   // global — NOT require('form-data')
+form.append('files', new Blob([fileBuffer], { type: mime }), `slip.${ext}`);
+await fetch(url, { method: 'POST', headers: { 'x-authorization': key }, body: form }); // no Content-Type
+```
+`form.getHeaders()` does NOT rescue the package instance (the body is still stringified). The `timeout` fetch option is a node-fetch-ism and a no-op on undici — use `signal: AbortSignal.timeout(ms)` if you need one.
+
+**Detection:**
+```bash
+grep -rn "require('form-data')\|require(\"form-data\")" functions/   # each is a latent Node-22 multipart break
+grep -rln "new FormData()" functions/ | xargs grep -L "Blob"        # FormData without Blob = suspect
+```
+Lock it with a unit test that captures the fetch `body` and asserts `body instanceof FormData` + `body.get('files') instanceof Blob` (see `verifyRefundSlip.test.js` test 29). **Still-affected (verify before any redeploy):** `verifySlip.js`, `verifyBookingSlip.js`. Family: §7-WW/AA/NN (deploy-time/runtime invariants the source doesn't reveal), §7-Y (data:/blob: vs CSP — sibling "the transport isn't what the code implies").
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md

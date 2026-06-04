@@ -19,6 +19,7 @@ const Module = require('module');
 let slipOkApiResponse;
 let rateLimitState;            // keyed by doc id; null value = doc doesn't exist
 let slipOkFetchCalled;
+let capturedFetchOpts;         // the { method, headers, body } passed to fetch
 let collectionsAccessed;       // Set of collection names touched on firestore
 
 function resetStubs() {
@@ -39,6 +40,7 @@ function resetStubs() {
   };
   rateLimitState = {};         // empty = all docs don't exist → fresh window → allowed
   slipOkFetchCalled = false;
+  capturedFetchOpts = null;
   collectionsAccessed = new Set();
 }
 resetStubs();
@@ -88,12 +90,11 @@ const adminStub = {
   }),
 };
 
-const fetchStub = async () => {
+const fetchStub = async (_url, opts) => {
   slipOkFetchCalled = true;
+  capturedFetchOpts = opts || null;
   return slipOkApiResponse;
 };
-
-const FormDataStub = class { append() {} };
 
 const HttpsError = class extends Error {
   constructor(code, msg) { super(msg); this.code = code; }
@@ -120,7 +121,9 @@ Module._load = function (req, parent, isMain) {
   if (req === 'firebase-admin') return adminStub;
   if (req === 'firebase-functions/v1') return functionsStub;
   if (req === 'firebase-functions/params') return paramStub;
-  if (req === 'form-data') return FormDataStub;
+  // NOTE: intentionally NO 'form-data' interception — callSlipOKAPI uses the
+  // global FormData + Blob (§7-YY). If a future edit re-adds require('form-data'),
+  // test 29 below fails (body would not be a real multipart FormData).
   return _origLoad.call(this, req, parent, isMain);
 };
 
@@ -360,5 +363,21 @@ describe('verifyRefundSlip — happy path + no writes', () => {
     const touched = [...collectionsAccessed];
     assert.deepEqual(touched, ['rateLimits'],
       `verifyRefundSlip must not write verifiedSlips/bills/etc — touched: ${touched.join(', ')}`);
+  });
+
+  // §7-YY regression: the SlipOK request body MUST be a spec-compliant global
+  // FormData carrying the slip as a Blob. The `form-data` npm package gets
+  // stringified to "[object FormData]" by Node 22 undici fetch → SlipOK 400
+  // "missing data/files/url". This locks the global-FormData + Blob construction.
+  it('29. SlipOK body is a real multipart FormData with a Blob files entry (§7-YY)', async () => {
+    await handler(baseData, adminCtx);
+    const body = capturedFetchOpts && capturedFetchOpts.body;
+    assert.ok(body instanceof FormData, 'fetch body must be a global FormData (not the form-data pkg / a string)');
+    const filePart = body.get('files');
+    assert.ok(filePart instanceof Blob, 'the "files" entry must be a Blob (real bytes, not "[object FormData]")');
+    assert.ok(filePart.size > 100, 'the Blob must carry the actual slip bytes');
+    // Content-Type must NOT be hand-set — undici derives the multipart boundary.
+    const headerKeys = Object.keys((capturedFetchOpts && capturedFetchOpts.headers) || {}).map(k => k.toLowerCase());
+    assert.ok(!headerKeys.includes('content-type'), 'do not set Content-Type manually (boundary must come from undici)');
   });
 });
