@@ -142,4 +142,40 @@ describe('computeReconciliation — exported + matching', () => {
     assert.equal(r.summary.slips, 0);
     assert.equal(r.summary.paidBills, 0);
   });
+
+  // ── Deposit-settled bills (spec §1.3 — bill absorbed by the move-out deposit) ──
+  test('paid bill with paidVia=deposit_settlement → depositSettled bucket, NOT unmatchedPaidBills', () => {
+    const r = compute({ bills: [bill({ paidRef: 'deposit_rooms_15', paidVia: 'deposit_settlement' })], slips: [], manualReceipts: [] });
+    assert.equal(r.summary.depositSettled, 1);
+    assert.equal(r.depositSettledBills[0].bill.id, 'B1');
+    assert.equal(r.summary.unmatchedPaidBills, 0, 'a deposit-settled bill is not "unmatched paid"');
+    assert.equal(r.summary.matched, 0, 'a deposit-settled bill has no slip → not "matched"');
+    assert.equal(r.summary.paidBills, 1, 'still counts as a paid bill');
+    assert.equal(r.summary.depositSettledAmount, 1000);
+  });
+
+  test('fallback: paidRef "deposit_*" with no paidVia → still depositSettled', () => {
+    const r = compute({ bills: [bill({ paidRef: 'deposit_nest_N101', paidVia: null })], slips: [], manualReceipts: [] });
+    assert.equal(r.summary.depositSettled, 1);
+    assert.equal(r.summary.unmatchedPaidBills, 0);
+  });
+
+  test('deposit-settled bill does NOT steal an unrelated slip via the room+month heuristic', () => {
+    // An orphan slip for the same room+month must stay unmatched — the deposit-settled bill
+    // is classified first and skips slip matching entirely.
+    const r = compute({
+      bills: [bill({ paidRef: 'deposit_rooms_15', paidVia: 'deposit_settlement', month: 3, total: 1000 })],
+      slips: [slip({ transactionId: 'TXorphan', month: 3, amount: 1000 })], manualReceipts: [],
+    });
+    assert.equal(r.summary.depositSettled, 1);
+    assert.equal(r.summary.matched, 0, 'must not falsely match the orphan slip');
+    assert.equal(r.summary.unmatchedSlips, 1, 'the orphan slip stays unmatched');
+    assert.equal(r.unmatchedSlips[0].transactionId, 'TXorphan');
+  });
+
+  test('a real slip-paid bill is unaffected by the deposit-settled classification', () => {
+    const r = compute({ bills: [bill({ paidRef: 'TX1' })], slips: [slip({ transactionId: 'TX1' })], manualReceipts: [] });
+    assert.equal(r.summary.matched, 1);
+    assert.equal(r.summary.depositSettled, 0);
+  });
 });
