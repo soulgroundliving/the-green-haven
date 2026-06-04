@@ -5,6 +5,8 @@
 // deductions (Slice C): [{ desc, amount, photo }] — move-out damage settlement. §7-L back-compat:
 //   legacy rows are { reason, amount } (no photo); DepositCalc.deductionDesc() reads either. photo +
 //   refundSlip are Storage paths under deposits/{building}/{roomId}/ (admin-only, storage.rules).
+// refundPromptPay (Slice C follow-up): tenant PromptPay the refund was sent to (validated; QR generated
+//   for the admin to scan & pay). refundBank stays as an optional free-text fallback for bank transfers.
 // Audit: _saveDepositReturn fires recordAdminAction({action:'DEPOSIT_RETURNED'}) — immutable settlement trail.
 
 let _depositsCache = []; // flat array: { building, roomId, ...fields }
@@ -13,6 +15,20 @@ let _depositsUnsub = null;
 // DepositCalc is loaded before this module (dashboard.html), but guard defensively.
 const _dedDesc  = d    => window.DepositCalc ? window.DepositCalc.deductionDesc(d)     : ((d && (d.desc || d.reason)) || '');
 const _dedTotal = list => window.DepositCalc ? window.DepositCalc.deductionsTotal(list) : (Array.isArray(list) ? list : []).reduce((s, d) => s + (Number(d && d.amount) || 0), 0);
+
+// Format a deposit date for display. The seed copies tenants/{r}.createdAt — a Firestore
+// Timestamp object — into receivedAt, which stringifies to "Timestamp(seconds=…)" if rendered
+// raw. Handle Timestamp | ISO datetime | plain date string.
+function _fmtDepDate(v) {
+  if (!v) return '—';
+  if (typeof v === 'object') {
+    const d = typeof v.toDate === 'function' ? v.toDate()
+            : (typeof v.seconds === 'number' ? new Date(v.seconds * 1000) : null);
+    return d && !isNaN(d.getTime()) ? d.toISOString().slice(0, 10) : '—';
+  }
+  const s = String(v);
+  return s.length > 10 ? s.slice(0, 10) : s; // trim ISO datetime → date; pass a plain date through
+}
 
 // Upload an admin-captured File (damage photo / refund slip) to Storage and return
 // its path. File inputs yield File objects → uploadBytes directly (no §7-Y dataURL
@@ -125,7 +141,7 @@ function renderDepositsPage() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
         <div>
           <div style="font-weight:700;color:#334435;font-size:var(--fs-md);">ห้อง ${r.roomId} <span style="font-size:11px;color:#9ca3af;font-weight:400;">${r.building}</span></div>
-          <div style="font-size:var(--fs-sm);color:${DashColors.TEXT_SECONDARY};margin-top:3px;">รับเมื่อ: ${r.receivedAt || '—'} · ${statusBadge(r.status)}${!isReturned && depDue > 0 ? ` <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">ค้างมัดจำ ${fmt(depDue)}</span>` : ''}</div>
+          <div style="font-size:var(--fs-sm);color:${DashColors.TEXT_SECONDARY};margin-top:3px;">รับเมื่อ: ${_fmtDepDate(r.receivedAt)} · ${statusBadge(r.status)}${!isReturned && depDue > 0 ? ` <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">ค้างมัดจำ ${fmt(depDue)}</span>` : ''}</div>
           ${(r.deductions||[]).length ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};margin-top:4px;">หัก: ${(r.deductions||[]).map(d=>`${_dedDesc(d)}${d.photo?' 📎':''} (${fmt(d.amount)})`).join(', ')}</div>` : ''}
           ${r.notes ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">หมายเหตุ: ${r.notes}</div>` : ''}
         </div>
@@ -182,8 +198,16 @@ function showReturnDepositModal(building, roomId) {
         <input id="dep-ret-slip" type="file" accept="image/*,application/pdf" style="width:100%;font-size:11px;font-family:inherit;color:#6b7280;">
       </div>
       <div style="margin-bottom:12px;">
-        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">บัญชีที่โอนคืน</label>
-        <input id="dep-ret-bank" type="text" placeholder="ธนาคาร / เลขบัญชี (ไม่บังคับ)" value="${dep.refundBank||''}" style="width:100%;padding:8px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
+        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">พร้อมเพย์ผู้เช่า (ปลายทางคืนเงิน)</label>
+        <div style="display:flex;gap:8px;">
+          <input id="dep-ret-promptpay" type="text" inputmode="numeric" placeholder="เบอร์ 10 หลัก หรือ เลขบัตร ปชช. 13 หลัก" value="${dep.refundPromptPay||''}" style="flex:1;padding:8px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
+          <button data-action="genRefundQR" style="padding:8px 14px;background:#e0f2fe;color:#075985;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">⬛ QR</button>
+        </div>
+        <div id="dep-ret-qr" style="margin-top:10px;text-align:center;"></div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">บัญชีธนาคาร <span style="font-weight:400;color:#9ca3af;">(ทางเลือก ถ้าไม่ใช้พร้อมเพย์)</span></label>
+        <input id="dep-ret-bank" type="text" placeholder="ธนาคาร / เลขบัญชี" value="${dep.refundBank||''}" style="width:100%;padding:8px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
       </div>
       <div style="margin-bottom:12px;">
         <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">หมายเหตุ</label>
@@ -196,9 +220,47 @@ function showReturnDepositModal(building, roomId) {
     </div>`;
   document.body.appendChild(modal);
   window._depPendingDeductions = (dep.deductions || []).map(d => ({...d}));
+  window._depReturnCtx = { building, roomId };
   _renderDepDeductions();
 }
 window.showReturnDepositModal = showReturnDepositModal;
+
+// Render a PromptPay QR for the CURRENT net refund (held − pending deductions) so the
+// admin can scan & pay the tenant the exact amount. Validates the PromptPay first.
+function _genRefundQR() {
+  const el = document.getElementById('dep-ret-qr');
+  if (!el) return;
+  const raw = document.getElementById('dep-ret-promptpay')?.value || '';
+  const v = window.DepositCalc ? window.DepositCalc.validPromptPay(raw) : { valid: false };
+  if (!v.valid) {
+    el.innerHTML = '<div style="font-size:11px;color:#dc2626;">พร้อมเพย์ไม่ถูกต้อง — เบอร์มือถือ 10 หลัก หรือ เลขบัตรประชาชน 13 หลัก</div>';
+    return;
+  }
+  const ctx = window._depReturnCtx || {};
+  const dep = _depositsCache.find(r => r.building === ctx.building && r.roomId === ctx.roomId);
+  const held = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep?.amount) || 0);
+  const net = Math.max(0, held - _dedTotal(window._depPendingDeductions || []));
+  const payload = window.DepositCalc ? window.DepositCalc.promptPayPayload(v.value, net) : null;
+  if (!payload || typeof QRCode === 'undefined') {
+    el.innerHTML = '<div style="font-size:11px;color:#9ca3af;">สร้าง QR ไม่ได้ (โหลด QR library ไม่สำเร็จ)</div>';
+    return;
+  }
+  el.innerHTML = '';
+  const box = document.createElement('div');
+  box.style.cssText = 'display:inline-block;padding:8px;background:white;border-radius:8px;';
+  el.appendChild(box);
+  try {
+    new QRCode(box, { text: payload, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M });
+  } catch (e) {
+    el.innerHTML = '<div style="font-size:11px;color:#9ca3af;">สร้าง QR ไม่ได้</div>';
+    return;
+  }
+  const label = document.createElement('div');
+  label.style.cssText = 'font-size:12px;color:#059669;font-weight:700;margin-top:6px;';
+  label.textContent = 'สแกนเพื่อโอนคืน ฿' + net.toLocaleString();
+  el.appendChild(label);
+}
+window._genRefundQR = _genRefundQR;
 
 function _renderDepDeductions() {
   const el = document.getElementById('dep-deductions-list');
@@ -276,8 +338,18 @@ async function _saveDepositReturn(building, roomId) {
   const retDate    = document.getElementById('dep-ret-date')?.value || new Date().toISOString().slice(0,10);
   const notes      = document.getElementById('dep-ret-notes')?.value || '';
   const refundBank = document.getElementById('dep-ret-bank')?.value || '';
+  const ppRaw      = document.getElementById('dep-ret-promptpay')?.value || '';
   const slipFile   = document.getElementById('dep-ret-slip')?.files?.[0] || null;
   const dep        = _depositsCache.find(r => r.building === building && r.roomId === roomId);
+
+  // PromptPay is optional, but if entered it must be a real target — a mashed number
+  // must not pass as a "refunded-to" record. Validate BEFORE any write (early return).
+  let refundPromptPay = '';
+  if (ppRaw.trim()) {
+    const v = window.DepositCalc ? window.DepositCalc.validPromptPay(ppRaw) : { valid: true, value: ppRaw.trim() };
+    if (!v.valid) { alert('พร้อมเพย์ไม่ถูกต้อง — กรอกเบอร์มือถือ 10 หลัก หรือ เลขบัตรประชาชน 13 หลัก (หรือเว้นว่างถ้าโอนผ่านบัญชีธนาคาร)'); return; }
+    refundPromptPay = v.value;
+  }
 
   // Lock the button: uploads are async, prevent a double-settle on impatient clicks.
   const saveBtn = document.querySelector('#returnDepositModal [data-action="saveDepositReturn"]');
@@ -318,6 +390,7 @@ async function _saveDepositReturn(building, roomId) {
       returnedAmount,
       deductions,
       refundBank,
+      refundPromptPay,
       refundSlip,
       notes,
       updatedAt: new Date().toISOString()
@@ -380,8 +453,10 @@ async function exportDepositReceipt(building, roomId) {
     <table style="width:100%;font-size:13px;border-collapse:collapse;">
       <tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">ห้อง / Room</td><td style="text-align:right;font-weight:700;">${roomId} (${building})</td></tr>
       <tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">มัดจำ / Deposit</td><td style="text-align:right;">${fmt(dep.amount)}</td></tr>
-      <tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">วันที่รับ / Received</td><td style="text-align:right;">${dep.receivedAt||'—'}</td></tr>
-      <tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">วันที่คืน / Returned</td><td style="text-align:right;">${dep.returnedAt||'—'}</td></tr>
+      <tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">วันที่รับ / Received</td><td style="text-align:right;">${_fmtDepDate(dep.receivedAt)}</td></tr>
+      <tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">วันที่คืน / Returned</td><td style="text-align:right;">${_fmtDepDate(dep.returnedAt)}</td></tr>
+      ${dep.refundPromptPay ? `<tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">พร้อมเพย์ / PromptPay</td><td style="text-align:right;">${dep.refundPromptPay}</td></tr>` : ''}
+      ${dep.refundBank ? `<tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">บัญชี / Account</td><td style="text-align:right;">${dep.refundBank}</td></tr>` : ''}
     </table>
     ${(dep.deductions||[]).length ? `
     <div style="margin-top:12px;padding:10px;background:#fef9ec;border-radius:8px;font-size:12px;">

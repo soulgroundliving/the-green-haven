@@ -86,3 +86,52 @@ describe('DepositCalc — deduction shape (Slice C)', () => {
     assert.equal(netRefund, 700);
   });
 });
+
+describe('DepositCalc — PromptPay refund target (Slice C follow-up)', () => {
+  it('validPromptPay accepts a 10-digit mobile starting 0 (strips separators)', () => {
+    assert.deepEqual(D.validPromptPay('0812345678'), { valid: true, type: 'mobile', value: '0812345678' });
+    assert.deepEqual(D.validPromptPay('08-1234-5678'), { valid: true, type: 'mobile', value: '0812345678' });
+  });
+
+  it('validPromptPay accepts a 13-digit national ID', () => {
+    const v = D.validPromptPay('1101700230451');
+    assert.equal(v.valid, true);
+    assert.equal(v.type, 'nationalId');
+  });
+
+  it('validPromptPay rejects garbage / wrong length (the 45422222… bug input)', () => {
+    assert.equal(D.validPromptPay('45422222444444444444444').valid, false);
+    assert.equal(D.validPromptPay('123').valid, false);
+    assert.equal(D.validPromptPay('').valid, false);
+    assert.equal(D.validPromptPay('8123456789').valid, false); // 10 digits but not starting 0
+  });
+
+  it('promptPayPayload returns null for an invalid target', () => {
+    assert.equal(D.promptPayPayload('garbage', 100), null);
+  });
+
+  it('promptPayPayload (mobile) matches the proven EMVCo reference algorithm', () => {
+    // Reference = the production mobile-only builder (dashboard-bill.js buildPromptPayPayload), inlined.
+    const ref = (phone, amount) => {
+      const s = phone.replace(/[^0-9]/g, '');
+      const t = s.startsWith('0') ? '0066' + s.slice(1) : s;
+      const aid = '0016A000000677010111' + '01' + String(t.length).padStart(2, '0') + t;
+      const a = amount.toFixed(2);
+      const p = '000201010212' + '29' + String(aid.length).padStart(2, '0') + aid + '5303764' + '54' + String(a.length).padStart(2, '0') + a + '5802TH6304';
+      let c = 0xFFFF;
+      for (let i = 0; i < p.length; i++) { c ^= p.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) : (c << 1); }
+      return p + (c & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+    };
+    assert.equal(D.promptPayPayload('0812345678', 1400), ref('0812345678', 1400));
+  });
+
+  it('promptPayPayload (national ID) is well-formed, tag-02, CRC self-validates', () => {
+    const payload = D.promptPayPayload('1101700230451', 1400);
+    assert.ok(payload.startsWith('000201010212'), 'EMVCo header');
+    assert.ok(payload.includes('1101700230451'), 'embeds the national ID verbatim');
+    const body = payload.slice(0, -4);
+    let c = 0xFFFF;
+    for (let i = 0; i < body.length; i++) { c ^= body.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) : (c << 1); }
+    assert.equal(payload.slice(-4), (c & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'), 'appended CRC matches body');
+  });
+});
