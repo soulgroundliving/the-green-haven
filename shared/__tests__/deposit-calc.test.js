@@ -49,3 +49,40 @@ describe('DepositCalc — installment math', () => {
     assert.equal(D.depositDue({ amount: 2000, paidSoFar: -50 }), 2000); // negative paid clamps to 0
   });
 });
+
+describe('DepositCalc — deduction shape (Slice C)', () => {
+  it('reads new {desc} shape', () => {
+    assert.equal(D.deductionDesc({ desc: 'ค่าทำความสะอาด', amount: 500 }), 'ค่าทำความสะอาด');
+  });
+
+  it('falls back to legacy {reason} when desc absent (§7-L back-compat)', () => {
+    assert.equal(D.deductionDesc({ reason: 'ค่าเสียหาย', amount: 800 }), 'ค่าเสียหาย');
+  });
+
+  it('prefers desc over reason when both present', () => {
+    assert.equal(D.deductionDesc({ desc: 'new', reason: 'old', amount: 1 }), 'new');
+  });
+
+  it('empty desc falls back to reason; both missing → empty string', () => {
+    assert.equal(D.deductionDesc({ desc: '', reason: 'fallback' }), 'fallback');
+    assert.equal(D.deductionDesc({ amount: 100 }), '');
+    assert.equal(D.deductionDesc(null), '');
+  });
+
+  it('deductionsTotal sums amounts (mixed legacy + new shapes)', () => {
+    assert.equal(D.deductionsTotal([{ reason: 'a', amount: 300 }, { desc: 'b', amount: 700 }]), 1000);
+  });
+
+  it('deductionsTotal defensive: non-array → 0, garbage amounts ignored', () => {
+    assert.equal(D.deductionsTotal(null), 0);
+    assert.equal(D.deductionsTotal([]), 0);
+    assert.equal(D.deductionsTotal([{ amount: 'x' }, { amount: 250 }]), 250);
+  });
+
+  it('example refund: held 3000 − deduction 2300 = 700 (spec §1.3)', () => {
+    const dep = { amount: 3000 };
+    const deductions = [{ desc: 'บิลเดือนสุดท้าย', amount: 2300 }];
+    const netRefund = D.depositPaid(dep) - D.deductionsTotal(deductions);
+    assert.equal(netRefund, 700);
+  });
+});

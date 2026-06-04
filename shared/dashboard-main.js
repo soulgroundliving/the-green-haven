@@ -976,12 +976,15 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
     // Deposit return modal
     if (a === 'addDepDeduction') {
-      const reason = (document.getElementById('dep-deduction-reason')?.value || '').trim();
+      const desc = (document.getElementById('dep-deduction-desc')?.value || '').trim();
       const amount = parseFloat(document.getElementById('dep-deduction-amount')?.value) || 0;
-      if (!reason || !amount) return;
-      (window._depPendingDeductions = window._depPendingDeductions || []).push({ reason, amount });
-      const rEl = document.getElementById('dep-deduction-reason'); if (rEl) rEl.value = '';
+      if (!desc || !amount) return;
+      const photoEl = document.getElementById('dep-deduction-photo');
+      const _file = photoEl?.files?.[0] || null; // uploaded on save, not here (§7-I preview → confirm)
+      (window._depPendingDeductions = window._depPendingDeductions || []).push(_file ? { desc, amount, _file } : { desc, amount });
+      const dEl = document.getElementById('dep-deduction-desc'); if (dEl) dEl.value = '';
       const aEl = document.getElementById('dep-deduction-amount'); if (aEl) aEl.value = '';
+      if (photoEl) photoEl.value = '';
       typeof window._renderDepDeductions === 'function' && window._renderDepDeductions();
       return;
     }
