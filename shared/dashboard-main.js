@@ -863,6 +863,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'saveServiceProvider') { typeof saveServiceProvider === 'function' && saveServiceProvider(); return; }
     if (a === 'showAddMaintenanceModal') { typeof showAddMaintenanceModal === 'function' && showAddMaintenanceModal(); return; }
     if (a === 'showReturnDepositModal') { typeof showReturnDepositModal === 'function' && showReturnDepositModal(el.dataset.building, el.dataset.room); return; }
+    if (a === 'showDepositInstallmentModal') { typeof showDepositInstallmentModal === 'function' && showDepositInstallmentModal(el.dataset.building, el.dataset.room); return; }
     if (a === 'exportDepositReceipt') { typeof exportDepositReceipt === 'function' && exportDepositReceipt(el.dataset.building, el.dataset.room); return; }
     if (a === 'showAddHousekeepingModal') { typeof showAddHousekeepingModal === 'function' && showAddHousekeepingModal(); return; }
     if (a === 'saveReward') { typeof saveReward === 'function' && saveReward(); return; }
@@ -986,6 +987,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     }
     if (a === 'closeReturnDepositModal') { document.getElementById('returnDepositModal')?.remove(); return; }
     if (a === 'saveDepositReturn')       { typeof window._saveDepositReturn === 'function' && window._saveDepositReturn(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'closeDepositInstallmentModal') { document.getElementById('depositInstallmentModal')?.remove(); return; }
+    if (a === 'saveDepositInstallment')  { typeof window._saveDepositInstallment === 'function' && window._saveDepositInstallment(el.dataset.id, el.dataset.arg); return; }
     if (a === 'removeDepDeduction') {
       const idx = parseInt(el.dataset.index);
       if (!isNaN(idx) && window._depPendingDeductions) {
