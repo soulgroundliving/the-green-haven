@@ -135,6 +135,7 @@ function renderDepositsPage() {
     const deductTotal = _dedTotal(r.deductions);
     const finalBillTotal = Number(r.finalBillTotal) || 0; // absorbed final/unpaid bill (spec §1.3)
     const isReturned = r.status === 'returned';
+    const hasEvidence = (r.deductions || []).some(d => d.photo) || !!r.refundSlip; // any stored damage photo / refund slip
     const depDue  = window.DepositCalc ? window.DepositCalc.depositDue(r) : 0;
     const depPaid = window.DepositCalc ? window.DepositCalc.depositPaid(r) : (Number(r.amount) || 0);
     const netRefund = depPaid - finalBillTotal - deductTotal; // held − final bill − damage
@@ -152,6 +153,7 @@ function renderDepositsPage() {
           ${(deductTotal || finalBillTotal) ? `${finalBillTotal ? `<div style="font-size:11px;color:#dc2626;">บิลเดือนสุดท้าย ${fmt(finalBillTotal)}</div>` : ''}${deductTotal ? `<div style="font-size:11px;color:#dc2626;">หักเสียหาย ${fmt(deductTotal)}</div>` : ''}<div style="font-size:var(--fs-sm);font-weight:700;color:#059669;">คืนสุทธิ ${fmt(netRefund)}</div>` : ''}
           <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap;">
             ${!isReturned ? `<button data-action="showReturnDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">บันทึกคืนมัดจำ</button>` : ''}
+            ${isReturned && hasEvidence ? `<button data-action="showDepositEvidence" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#eef2f6;color:#334435;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📎 ดูหลักฐาน</button>` : ''}
             ${isReturned ? `<button data-action="exportDepositReceipt" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📄 ใบรับเงิน</button>` : ''}
           </div>
         </div>
@@ -209,8 +211,9 @@ function showReturnDepositModal(building, roomId) {
 
         <div style="margin-bottom:14px;">
           <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">สลิปโอนคืน <span style="font-weight:400;color:#9ca3af;">(ไม่บังคับ)</span></label>
-          <div style="display:flex;gap:8px;align-items:center;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input id="dep-ret-slip" type="file" accept="image/*,application/pdf" style="flex:1;min-width:0;font-size:11px;font-family:inherit;color:#6b7280;">
+            <button data-action="previewRefundSlip" title="ดูรูปสลิปที่เลือก" style="padding:8px 11px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">👁 ดู</button>
             <button data-action="verifyRefundSlip" style="padding:8px 12px;background:#ecfdf5;color:#065f46;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">🔍 ตรวจสลิป</button>
           </div>
           <div id="dep-ret-slip-result" style="margin-top:8px;"></div>
@@ -433,7 +436,7 @@ function _renderDepDeductions() {
   if (!deductions.length) { el.innerHTML = ''; return; }
   el.innerHTML = `<div style="background:#fef9ec;border-radius:8px;padding:10px 12px;margin-bottom:8px;">
     ${deductions.map((d, i) => `<div style="display:flex;justify-content:space-between;align-items:center;font-size:var(--fs-sm);padding:3px 0;">
-      <span>${_dedDesc(d)}${(d._file || d.photo) ? ' <span title="แนบรูปหลักฐานแล้ว">📎</span>' : ''}</span>
+      <span>${_dedDesc(d)}${(d._file || d.photo) ? ` <button data-action="viewDepPendingPhoto" data-index="${i}" title="ดูรูปหลักฐาน" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:13px;line-height:1;">📎</button>` : ''}</span>
       <span style="display:flex;align-items:center;gap:8px;"><strong>฿${(Number(d.amount)||0).toLocaleString()}</strong>
         <button data-action="removeDepDeduction" data-index="${i}" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:14px;padding:0;font-family:inherit;">✕</button>
       </span>
@@ -667,6 +670,125 @@ async function _saveDepositReturn(building, roomId) {
   }
 }
 window._saveDepositReturn = _saveDepositReturn;
+
+// ── Evidence viewing ────────────────────────────────────────────────────────
+// The settlement evidence (damage photos + refund slip) is the whole point of
+// keeping it: an admin must be able to review it retrospectively and compare a
+// room's move-out condition against the next tenant. Upload alone is useless if
+// it can't be opened again.
+
+// Inline lightbox for a freshly-picked (not-yet-uploaded) evidence File. CSP
+// img-src allows blob: so the <img> renders; PDFs can't be framed (frame-src
+// lacks blob:) → open in a new tab. The object URL is revoked on close so a
+// repeated preview doesn't leak.
+function _previewDepFile(file) {
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+  if (isPdf) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return;
+  }
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out;';
+  const img = document.createElement('img');
+  img.src = url;
+  img.style.cssText = 'max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5);';
+  ov.appendChild(img);
+  ov.addEventListener('click', () => { ov.remove(); URL.revokeObjectURL(url); });
+  document.body.appendChild(ov);
+}
+window._previewDepFile = _previewDepFile;
+
+// View a pending deduction's attached evidence — a local File preview (common
+// case: admin just picked it and wants to confirm) or, defensively, an already-
+// saved Storage path if the row carried one.
+async function _viewDepPendingPhoto(idx) {
+  const d = (window._depPendingDeductions || [])[idx];
+  if (!d) return;
+  if (d._file) { _previewDepFile(d._file); return; }
+  if (d.photo) {
+    const sf = window.firebase?.storageFunctions, st = window.firebase?.storage?.();
+    if (!sf || !st) return;
+    try { window.open(await sf.getDownloadURL(sf.ref(st, d.photo)), '_blank', 'noopener,noreferrer'); }
+    catch (e) { console.warn('[deposit] evidence load failed:', e?.message || e); }
+  }
+}
+window._viewDepPendingPhoto = _viewDepPendingPhoto;
+
+// Preview the currently-selected refund slip File before upload — same lightbox
+// as the damage photos. Lets the admin confirm the right slip was picked.
+function _previewRefundSlipFile() {
+  const f = document.getElementById('dep-ret-slip')?.files?.[0] || null;
+  if (!f) {
+    const el = document.getElementById('dep-ret-slip-result');
+    if (el) el.innerHTML = '<div style="font-size:11px;color:#9ca3af;">เลือกไฟล์สลิปก่อนกดดู</div>';
+    return;
+  }
+  _previewDepFile(f);
+}
+window._previewRefundSlipFile = _previewRefundSlipFile;
+
+// Retrospective evidence gallery for a settled deposit — all stored damage
+// photos + the refund slip, resolved to download URLs (admin read grant on
+// storage.rules). Image → thumbnail (click = full size); PDF → open link.
+async function showDepositEvidence(building, roomId) {
+  const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
+  if (!dep) return;
+  document.getElementById('depEvidenceModal')?.remove();
+  const _esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
+
+  const modal = document.createElement('div');
+  modal.id = 'depEvidenceModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:460px;max-height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);">
+      <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
+        <div>
+          <h3 style="margin:0;font-size:1.05rem;color:#334435;font-weight:800;">📎 หลักฐานการคืนมัดจำ</h3>
+          <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">ห้อง ${_esc(roomId)} <span style="color:#9ca3af;">· ${_esc(building)}</span> · คืนเมื่อ ${_fmtDepDate(dep.returnedAt)}</div>
+        </div>
+        <button data-action="closeDepEvidenceModal" title="ปิด" style="background:none;border:none;font-size:24px;cursor:pointer;color:#9ca3af;line-height:1;padding:0;flex-shrink:0;">×</button>
+      </div>
+      <div id="dep-evidence-body" style="flex:1 1 auto;overflow-y:auto;padding:16px 22px;min-height:120px;">
+        <div style="text-align:center;color:#9ca3af;font-size:var(--fs-sm);padding:1.5rem;">⏳ กำลังโหลดหลักฐาน…</div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); }); // backdrop close
+
+  const body = document.getElementById('dep-evidence-body');
+  const sf = window.firebase?.storageFunctions;
+  const st = window.firebase?.storage?.();
+  if (!sf || !st) { if (body) body.innerHTML = '<div style="color:#dc2626;font-size:var(--fs-sm);">Firebase Storage ยังไม่พร้อม</div>'; return; }
+
+  // Collect every piece of evidence on the room's settlement doc.
+  const items = [];
+  (dep.deductions || []).forEach(d => { if (d.photo) items.push({ kind: 'deduction', label: _dedDesc(d), amount: d.amount, path: d.photo }); });
+  if (dep.refundSlip) items.push({ kind: 'slip', label: 'สลิปโอนคืน', path: dep.refundSlip });
+  if (!items.length) { if (body) body.innerHTML = '<div style="color:#9ca3af;font-size:var(--fs-sm);text-align:center;padding:1rem;">ไม่มีรูปหลักฐานแนบไว้สำหรับห้องนี้</div>'; return; }
+
+  const resolved = await Promise.all(items.map(async it => {
+    try { return { ...it, url: await sf.getDownloadURL(sf.ref(st, it.path)), isPdf: /\.pdf($|\?)/i.test(it.path) }; }
+    catch (e) { return { ...it, url: null, err: e?.message || 'load failed' }; }
+  }));
+  if (!document.getElementById('depEvidenceModal')) return; // closed while loading
+
+  const card = it => {
+    const head = it.kind === 'slip'
+      ? `<span style="font-weight:700;color:#065f46;">🧾 ${_esc(it.label)}</span>${dep.refundSlipVerified ? '<span style="margin-left:6px;font-size:10px;background:#d1fae5;color:#065f46;padding:1px 7px;border-radius:20px;font-weight:700;">✅ ตรวจสอบแล้ว</span>' : ''}`
+      : `<span style="font-weight:600;color:#374151;">${_esc(it.label)}</span>${it.amount != null ? `<span style="color:#dc2626;font-weight:700;margin-left:6px;">${fmt(it.amount)}</span>` : ''}`;
+    let media;
+    if (!it.url) media = `<div style="color:#dc2626;font-size:11px;">โหลดไม่สำเร็จ${it.err ? ': ' + _esc(it.err) : ''}</div>`;
+    else if (it.isPdf) media = `<a href="${_esc(it.url)}" target="_blank" rel="noopener noreferrer" style="color:#2d8653;font-weight:600;font-size:var(--fs-sm);">📄 เปิดไฟล์ PDF →</a>`;
+    else media = `<a href="${_esc(it.url)}" target="_blank" rel="noopener noreferrer"><img src="${_esc(it.url)}" loading="lazy" alt="${_esc(it.label)}" style="width:100%;max-height:260px;object-fit:contain;background:#f8fafc;border-radius:8px;border:1px solid #eef0ee;display:block;"></a>`;
+    return `<div style="margin-bottom:14px;"><div style="font-size:var(--fs-sm);margin-bottom:6px;">${head}</div>${media}</div>`;
+  };
+  if (body) body.innerHTML = resolved.map(card).join('');
+}
+window.showDepositEvidence = showDepositEvidence;
 
 async function exportDepositReceipt(building, roomId) {
   const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
