@@ -990,6 +990,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     }
     if (a === 'closeReturnDepositModal') { document.getElementById('returnDepositModal')?.remove(); return; }
     if (a === 'genRefundQR')             { typeof window._genRefundQR === 'function' && window._genRefundQR(); return; }
+    if (a === 'previewRefundSlip')       { typeof window._previewRefundSlipFile === 'function' && window._previewRefundSlipFile(); return; }
     if (a === 'verifyRefundSlip')        { typeof window._verifyRefundSlip === 'function' && window._verifyRefundSlip(); return; }
     if (a === 'saveDepositReturn')       { typeof window._saveDepositReturn === 'function' && window._saveDepositReturn(el.dataset.id, el.dataset.arg); return; }
     if (a === 'closeDepositInstallmentModal') { document.getElementById('depositInstallmentModal')?.remove(); return; }
@@ -1002,6 +1003,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       }
       return;
     }
+    if (a === 'viewDepPendingPhoto')  { typeof window._viewDepPendingPhoto === 'function' && window._viewDepPendingPhoto(parseInt(el.dataset.index)); return; }
+    if (a === 'showDepositEvidence')  { typeof window.showDepositEvidence === 'function' && window.showDepositEvidence(el.dataset.building, el.dataset.room); return; }
+    if (a === 'closeDepEvidenceModal'){ document.getElementById('depEvidenceModal')?.remove(); return; }
 
     // Facility booking admin
     if (a === 'facilityAdminCancel') { typeof window.facilityAdminCancel === 'function' && window.facilityAdminCancel(el.dataset.id); return; }
