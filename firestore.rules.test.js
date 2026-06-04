@@ -1705,6 +1705,37 @@ describe('deposits — admin write, accountant read, tenants denied', () => {
     await seedDoc(DEP_PATH, DEP_DATA);
     await assertFails(getDoc(doc(UNAUTH().firestore(), DEP_PATH)));
   });
+
+  // ── history subcollection (per-tenancy archived settlements) ──
+  const HIST_PATH = 'deposits/rooms_15/history/2026-03-01_tenantA';
+  const HIST_DATA = {
+    tenantId: 'tenantA', returnedAt: '2026-03-01', returnedAmount: 8000,
+    deductions: [{ desc: 'cleaning', amount: 500, photo: 'deposits/rooms/15/damage_1.jpg' }],
+    refundSlip: 'deposits/rooms/15/slip_1.jpg', archivedAt: '2026-03-01'
+  };
+
+  it('admin can write a deposit history settlement', async () => {
+    await assertSucceeds(setDoc(doc(EMAIL_ADMIN().firestore(), HIST_PATH), HIST_DATA));
+  });
+
+  it('admin can read a deposit history settlement', async () => {
+    await seedDoc(HIST_PATH, HIST_DATA);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), HIST_PATH)));
+  });
+
+  it('accountant can read a deposit history settlement', async () => {
+    await seedDoc(HIST_PATH, HIST_DATA);
+    await assertSucceeds(getDoc(doc(ACCOUNTANT().firestore(), HIST_PATH)));
+  });
+
+  it('accountant CANNOT write a deposit history settlement', async () => {
+    await assertFails(setDoc(doc(ACCOUNTANT().firestore(), HIST_PATH), HIST_DATA));
+  });
+
+  it('LIFF tenant CANNOT read a deposit history settlement', async () => {
+    await seedDoc(HIST_PATH, HIST_DATA);
+    await assertFails(getDoc(doc(LIFF_TENANT().firestore(), HIST_PATH)));
+  });
 });
 
 describe('buildings — admin CRUD, signed-in read (Multi-Property registry)', () => {

@@ -809,6 +809,15 @@ service cloud.firestore {
     match /deposits/{docId} {
       allow read:   if isAdmin() || isAccountant();
       allow write:  if isAdmin();
+
+      // Per-settlement immutable history (evidence per tenancy): when a room
+      // turns over, the prior settlement (deductions + evidence Storage paths +
+      // refund slip) is archived here so a room's move-out condition survives
+      // for comparison against the next tenant. Same access as the parent doc.
+      match /history/{settlementId} {
+        allow read:   if isAdmin() || isAccountant();
+        allow write:  if isAdmin();
+      }
     }
 
     // ===== PRESENCE (Sprint 7 follow-up — in-app activity tracking) =====
