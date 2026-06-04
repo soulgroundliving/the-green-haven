@@ -109,14 +109,14 @@ This codebase is operated with [Claude Code](https://claude.com/claude-code). Wo
 
 - Bug fixes / single-feature changes → direct PR
 - Multi-file architectural changes → plan-first protocol (write `tasks/todo.md`, get approval)
-- Recurring anti-patterns → logged in CLAUDE.md §7 (currently A–WW, 49 patterns)
+- Recurring anti-patterns → logged in CLAUDE.md §7 (currently A–XX, 50 patterns)
 - Memory drift → caught by pre-commit `npm run verify:memory`
 
 Pre-commit hook enforces: credential scan, memory verifier, CF unit tests (if `functions/` staged), anti-pattern audit, file-size limits, CSP hash drift.
 
 ## Documentation
 
-- [CLAUDE.md](CLAUDE.md) — workflow protocol, tech stack details, anti-pattern catalog (§7 A–WW)
+- [CLAUDE.md](CLAUDE.md) — workflow protocol, tech stack details, anti-pattern catalog (§7 A–XX)
 - `tasks/todo.md` — active plan (when above plan-first threshold)
 - `.github/workflows/*.yml` — CI documentation lives in each workflow header
 - Lifecycle docs live in the maintainer's `~/.claude/projects/...` memory (not committed)

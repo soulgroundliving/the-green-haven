@@ -734,27 +734,34 @@ window._saveDepositReturn = _saveDepositReturn;
 // room's move-out condition against the next tenant. Upload alone is useless if
 // it can't be opened again.
 
-// Inline lightbox for a freshly-picked (not-yet-uploaded) evidence File. CSP
-// img-src allows blob: so the <img> renders; PDFs can't be framed (frame-src
-// lacks blob:) → open in a new tab. The object URL is revoked on close so a
-// repeated preview doesn't leak.
+// Inline lightbox for a freshly-picked (not-yet-uploaded) evidence File. Reads
+// it as a data: URL — the DEPLOYED dashboard CSP allows `img-src data:` but NOT
+// `blob:` (the live header is set in Vercel project settings and omits blob:,
+// even though vercel.json lists it — §7-XX). A `blob:` <img> is blocked live.
+// PDFs can't preview inline here (Chrome blocks top-level data: navigation and
+// frame-src lacks data:) → settled-evidence gallery shows them post-save.
 function _previewDepFile(file) {
   if (!file) return;
-  const url = URL.createObjectURL(file);
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
   if (isPdf) {
-    window.open(url, '_blank', 'noopener,noreferrer');
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    if (typeof showToast === 'function') showToast('ไฟล์ PDF ดูได้หลังบันทึก (ปุ่ม 📎 ดูหลักฐาน)');
     return;
   }
-  const ov = document.createElement('div');
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out;';
-  const img = document.createElement('img');
-  img.src = url;
-  img.style.cssText = 'max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5);';
-  ov.appendChild(img);
-  ov.addEventListener('click', () => { ov.remove(); URL.revokeObjectURL(url); });
-  document.body.appendChild(ov);
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = String(reader.result || '');
+    if (!dataUrl) return;
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out;';
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.style.cssText = 'max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5);';
+    ov.appendChild(img);
+    ov.addEventListener('click', () => ov.remove());
+    document.body.appendChild(ov);
+  };
+  reader.onerror = () => { if (typeof showToast === 'function') showToast('เปิดรูปไม่สำเร็จ'); };
+  reader.readAsDataURL(file);
 }
 window._previewDepFile = _previewDepFile;
 

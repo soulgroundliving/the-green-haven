@@ -1361,6 +1361,33 @@ firebase deploy --only functions:getAirQualityWAQI --project the-green-haven --n
 ```
 Can't run these (no gcloud/console in-session)? Do NOT merge — a `defineSecret` migration is an **IAM/project-setup task**, hand the secret-creation + test-deploy to the user as a prerequisite. Family: §7-Z/FF (Firebase secret state has >1 place that must line up) + §7-AA/NN (deploy-time invariants the API surface doesn't reveal).
 
+### XX. Live CSP `img-src` omits `blob:` (Vercel-UI override ≠ vercel.json) — preview Files via `data:`, never `URL.createObjectURL`
+
+`vercel.json` lists `img-src 'self' data: blob: https:`, but the **deployed** dashboard header is `img-src 'self' data: https:` — **no `blob:`**. The live CSP is set in the **Vercel project Settings → Headers UI**, which **overrides `vercel.json`** ([[feedback_vercel_ui_overrides_json]]). So a grep of `vercel.json` is NOT proof of what the browser enforces — only the deployed header (or the runtime violation) is.
+
+Incident 2026-06-04 (deposit evidence viewer #259): `_previewDepFile` rendered a just-picked image via `<img src=URL.createObjectURL(file)>` (a `blob:` URL). Static-harness verification used `data:` SVG URLs (passed), and the `vercel.json` grep showed `blob:` present — both **false-green**. Live, the admin got `Loading the image 'blob:https://…' violates … "img-src 'self' data: https:". The action has been blocked.` and saw no preview. Fixed by switching to `FileReader.readAsDataURL` → a `data:` URL (which the live `img-src` DOES allow). No CSP change needed — `data:` is already permitted and is the narrower grant.
+
+**Rule:** to preview a local `File` as an `<img>`/inline media on a CSP-enforced page, read it to a **`data:` URL** (`FileReader.readAsDataURL`), not a `blob:` object URL. `blob:` for an `<img src>` is blocked wherever the live `img-src` omits it — and the live header may omit it even when `vercel.json` doesn't. `blob:`/`createObjectURL` is still fine for **downloads** (`<a download href=blob:>`) and canvas export — those aren't governed by `img-src`.
+
+```js
+// ❌ blocked live — img-src has no blob:
+img.src = URL.createObjectURL(file);
+// ✅ data: is in the live img-src
+const r = new FileReader();
+r.onload = () => { img.src = String(r.result); };
+r.readAsDataURL(file);
+```
+
+PDFs can't preview inline under this CSP either (Chrome blocks top-level `data:` navigation; `frame-src` lacks `data:`) → defer PDF preview to the stored-evidence view (admin reads it back via `getDownloadURL` → an `https:` URL, which `img-src https:` allows).
+
+**Detection:**
+```bash
+grep -rn "createObjectURL" shared/ *.html      # each <img src=…createObjectURL…> is a latent live-CSP block
+curl -sI https://the-green-haven.vercel.app/dashboard.html | grep -i content-security  # the REAL img-src, not vercel.json's
+```
+
+**Verify-live caveat:** a static harness that hardcodes `data:` URLs can't catch a `blob:` regression, and a `vercel.json` grep can't see the Vercel-UI override. Only the deployed header (curl) or a real authenticated load surfaces this class. Family: §7-Y (`fetch('data:')` blocked by `connect-src`), §7-II/RR (CSP kills assets silently; only visible on the deployed page), [[feedback_vercel_ui_overrides_json]].
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
