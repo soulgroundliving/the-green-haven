@@ -45,6 +45,12 @@
       .reduce((s, d) => s + (Number(d && d.amount) || 0), 0);
   }
 
+  // Net refund at move-out (spec §1.3): held − final/unpaid bill − damage deductions.
+  // Can go negative ⇒ tenant still owes (caller surfaces it as "ค้างเพิ่ม").
+  function netRefund(held, finalBillTotal, deductions) {
+    return (Number(held) || 0) - (Number(finalBillTotal) || 0) - deductionsTotal(deductions);
+  }
+
   // ── Refund destination — PromptPay (Slice C follow-up) ──────────────────
   // The deposit refund is sent to the tenant's PromptPay. Validate the target so
   // a mashed number can't pass as a "transferred-to" record (the free-text bank
@@ -82,7 +88,7 @@
     return p + (c & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
   }
 
-  const api = { depositPaid, depositDue, isFullyPaid, deductionDesc, deductionsTotal, validPromptPay, promptPayPayload };
+  const api = { depositPaid, depositDue, isFullyPaid, deductionDesc, deductionsTotal, netRefund, validPromptPay, promptPayPayload };
   if (typeof window !== 'undefined') window.DepositCalc = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

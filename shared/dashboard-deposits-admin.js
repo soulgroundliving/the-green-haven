@@ -133,10 +133,11 @@ function renderDepositsPage() {
 
   list.innerHTML = rows.map(r => {
     const deductTotal = _dedTotal(r.deductions);
+    const finalBillTotal = Number(r.finalBillTotal) || 0; // absorbed final/unpaid bill (spec §1.3)
     const isReturned = r.status === 'returned';
     const depDue  = window.DepositCalc ? window.DepositCalc.depositDue(r) : 0;
     const depPaid = window.DepositCalc ? window.DepositCalc.depositPaid(r) : (Number(r.amount) || 0);
-    const netRefund = depPaid - deductTotal; // refund the held amount (paidSoFar), not the full target
+    const netRefund = depPaid - finalBillTotal - deductTotal; // held − final bill − damage
     return `<div style="padding:14px 0;border-bottom:1px solid #f1f5f9;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
         <div>
@@ -148,7 +149,7 @@ function renderDepositsPage() {
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-size:1.15rem;font-weight:800;color:#334435;">${fmt(r.amount)}</div>
           ${!isReturned && depDue > 0 ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};">ชำระแล้ว ${fmt(depPaid)} · ค้าง <strong style="color:#dc2626;">${fmt(depDue)}</strong></div>` : ''}
-          ${deductTotal ? `<div style="font-size:11px;color:#dc2626;">หักแล้ว ${fmt(deductTotal)}</div><div style="font-size:var(--fs-sm);font-weight:700;color:#059669;">คืนสุทธิ ${fmt(netRefund)}</div>` : ''}
+          ${(deductTotal || finalBillTotal) ? `${finalBillTotal ? `<div style="font-size:11px;color:#dc2626;">บิลเดือนสุดท้าย ${fmt(finalBillTotal)}</div>` : ''}${deductTotal ? `<div style="font-size:11px;color:#dc2626;">หักเสียหาย ${fmt(deductTotal)}</div>` : ''}<div style="font-size:var(--fs-sm);font-weight:700;color:#059669;">คืนสุทธิ ${fmt(netRefund)}</div>` : ''}
           <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap;">
             ${!isReturned ? `<button data-action="showDepositInstallmentModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#fef3c7;color:#92400e;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">ผ่อนมัดจำ</button>` : ''}
             ${!isReturned ? `<button data-action="showReturnDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">บันทึกคืนมัดจำ</button>` : ''}
@@ -193,6 +194,7 @@ function showReturnDepositModal(building, roomId) {
         </div>
         <div style="font-size:10px;color:#9ca3af;margin-top:4px;">📎 แนบรูปหลักฐานต่อรายการ (ไม่บังคับ) — แนะนำให้แนบเพื่อความโปร่งใส</div>
       </div>
+      <div id="dep-ret-finalbill" style="margin-bottom:8px;"></div>
       <div id="dep-ret-summary" style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin-bottom:12px;"></div>
       <div style="margin-bottom:12px;">
         <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">สลิปโอนคืน <span style="font-weight:400;color:#9ca3af;">(ไม่บังคับ)</span></label>
@@ -222,9 +224,33 @@ function showReturnDepositModal(building, roomId) {
   document.body.appendChild(modal);
   window._depPendingDeductions = (dep.deductions || []).map(d => ({...d}));
   window._depReturnCtx = { building, roomId };
+  // Final/unpaid bill of the room — auto-deducted from the deposit (spec §1.3).
+  // rooms-building only; Nest has no bills → { total: 0 } → block hidden, no-op.
+  window._depFinalBills = (typeof window.outstandingBillsForRoom === 'function')
+    ? window.outstandingBillsForRoom(building, roomId) : { bills: [], total: 0 };
+  _renderFinalBillBlock();
   _renderDepDeductions();
 }
 window.showReturnDepositModal = showReturnDepositModal;
+
+// Read-only display of the room's outstanding bill(s) that will be deducted from the
+// deposit + marked paid-from-deposit on confirm. Static for the session (bills don't
+// change in-modal); the net in _updateRefundSummary subtracts this total.
+function _renderFinalBillBlock() {
+  const el = document.getElementById('dep-ret-finalbill');
+  if (!el) return;
+  const fb = window._depFinalBills || { bills: [], total: 0 };
+  if (!fb.total) { el.innerHTML = ''; return; }
+  const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
+  el.innerHTML = `<div style="background:#fef9ec;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;">
+    <div style="font-size:11px;color:#92400e;font-weight:700;margin-bottom:6px;">บิลค้างชำระ (หักจากมัดจำ → ทำเครื่องหมายจ่ายแล้ว)</div>
+    ${fb.bills.map(b => `<div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);padding:2px 0;">
+      <span style="color:#6b7280;">บิลเดือน ${b.month}/${b.beYear}</span><span>${fmt(b.total)}</span></div>`).join('')}
+    <div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);font-weight:700;margin-top:4px;padding-top:4px;border-top:1px solid #fde68a;">
+      <span>รวมบิลค้าง</span><span style="color:#92400e;">${fmt(fb.total)}</span></div>
+  </div>`;
+}
+window._renderFinalBillBlock = _renderFinalBillBlock;
 
 // Render a PromptPay QR for the CURRENT net refund (held − pending deductions) so the
 // admin can scan & pay the tenant the exact amount. Validates the PromptPay first.
@@ -240,7 +266,11 @@ function _genRefundQR() {
   const ctx = window._depReturnCtx || {};
   const dep = _depositsCache.find(r => r.building === ctx.building && r.roomId === ctx.roomId);
   const held = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep?.amount) || 0);
-  const net = Math.max(0, held - _dedTotal(window._depPendingDeductions || []));
+  const finalBillTotal = Number(window._depFinalBills?.total) || 0;
+  const deductions = window._depPendingDeductions || [];
+  const net = Math.max(0, window.DepositCalc
+    ? window.DepositCalc.netRefund(held, finalBillTotal, deductions)
+    : (held - finalBillTotal - _dedTotal(deductions)));
   const payload = window.DepositCalc ? window.DepositCalc.promptPayPayload(v.value, net) : null;
   if (!payload || typeof QRCode === 'undefined') {
     el.innerHTML = '<div style="font-size:11px;color:#9ca3af;">สร้าง QR ไม่ได้ (โหลด QR library ไม่สำเร็จ)</div>';
@@ -289,14 +319,20 @@ function _updateRefundSummary() {
   const ctx = window._depReturnCtx || {};
   const dep = _depositsCache.find(r => r.building === ctx.building && r.roomId === ctx.roomId);
   const held = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep?.amount) || 0);
-  const deductTotal = _dedTotal(window._depPendingDeductions || []);
-  const net = held - deductTotal;
+  const finalBillTotal = Number(window._depFinalBills?.total) || 0;
+  const deductions = window._depPendingDeductions || [];
+  const deductTotal = _dedTotal(deductions);
+  const net = window.DepositCalc
+    ? window.DepositCalc.netRefund(held, finalBillTotal, deductions)
+    : (held - finalBillTotal - deductTotal);
   const owes = net < 0;
   const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
   el.style.background = owes ? '#fef2f2' : '#f0fdf4';
   el.innerHTML = `
-    <div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);">
-      <span style="color:#6b7280;">หักทั้งหมด</span><span style="color:${deductTotal ? '#dc2626' : '#9ca3af'};">${deductTotal ? '−' : ''}${fmt(deductTotal)}</span></div>
+    ${finalBillTotal ? `<div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);">
+      <span style="color:#6b7280;">บิลเดือนสุดท้าย</span><span style="color:#dc2626;">−${fmt(finalBillTotal)}</span></div>` : ''}
+    <div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);${finalBillTotal ? 'margin-top:2px;' : ''}">
+      <span style="color:#6b7280;">หักความเสียหาย</span><span style="color:${deductTotal ? '#dc2626' : '#9ca3af'};">${deductTotal ? '−' : ''}${fmt(deductTotal)}</span></div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;padding-top:6px;border-top:1px solid ${owes ? '#fecaca' : '#d1fae5'};font-weight:800;">
       <span style="color:#334435;">${owes ? 'ผู้เช่าค้างเพิ่ม' : 'คืนสุทธิที่จะจ่าย'}</span>
       <span style="font-size:1.3rem;color:${owes ? '#dc2626' : '#059669'};">${fmt(Math.abs(net))}</span></div>`;
@@ -403,7 +439,12 @@ async function _saveDepositReturn(building, roomId) {
 
   const deductTotal    = _dedTotal(deductions);
   const held           = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep?.amount)||0);
-  const returnedAmount = held - deductTotal; // installment-aware: refund only what the tenant actually paid
+  const finalBills     = window._depFinalBills || { bills: [], total: 0 };
+  const finalBillTotal = Number(finalBills.total) || 0;
+  const returnedAmount = window.DepositCalc
+    ? window.DepositCalc.netRefund(held, finalBillTotal, deductions)
+    : (held - finalBillTotal - deductTotal); // spec §1.3: held − final bill − damage
+  const settledBills   = (finalBills.bills || []).map(b => ({ key: b.key, billId: b.billId, total: b.total }));
   try {
     await fs.setDoc(fs.doc(db, 'deposits', `${building}_${roomId}`), {
       building, roomId,
@@ -414,6 +455,8 @@ async function _saveDepositReturn(building, roomId) {
       returnedAt: retDate,
       returnedAmount,
       deductions,
+      finalBillTotal,                  // spec §1.3: last/unpaid bill absorbed by the deposit
+      settledBills,                    // which bills were marked paid-from-deposit
       refundBank,
       refundPromptPay,
       refundSlip,
@@ -427,6 +470,22 @@ async function _saveDepositReturn(building, roomId) {
       { merge: true }
     );
 
+    // Mark the room's final/unpaid bills paid-from-deposit (spec §1.3 — the deposit
+    // absorbs them). Partial firebaseUpdate preserves charges; flips status + paidVia
+    // so arrears clears + revenue counts them collected. Best-effort per bill: a failed
+    // one warns but never loses the settlement (§7-DD deposit+bills cross-write).
+    let billWarn = false;
+    if (finalBills.bills.length && window.firebaseUpdate && window.firebaseRef && window.firebaseDatabase) {
+      const paidAt = new Date().toISOString();
+      for (const b of finalBills.bills) {
+        try {
+          await window.firebaseUpdate(window.firebaseRef(window.firebaseDatabase, b.path), {
+            status: 'paid', paidVia: 'deposit_settlement', paidAt, paidRef: `deposit_${building}_${roomId}`,
+          });
+        } catch (e) { billWarn = true; console.warn('[deposit] mark final bill paid failed:', b.path, e?.message || e); }
+      }
+    }
+
     // Immutable settlement audit row — a deposit return is a financial mutation an
     // auditor must trace. recordAdminAction stamps actor/role/ip/time server-side;
     // fired AFTER the write, non-blocking (§7-I observe-only). +DEPOSIT_RETURNED in
@@ -439,7 +498,7 @@ async function _saveDepositReturn(building, roomId) {
           targetType: 'deposit',
           targetId: `${building}_${roomId}`,
           building, roomId,
-          after: { returnedAmount, deductionTotal: deductTotal, deductionCount: deductions.length, refundBank: refundBank || null },
+          after: { returnedAmount, finalBillTotal, settledBillIds: settledBills.map(b => b.billId || b.key), deductionTotal: deductTotal, deductionCount: deductions.length, refundBank: refundBank || null },
           note: notes || null,
         }).catch((e) => console.warn('[audit] recordAdminAction failed:', e?.message || e));
       }
@@ -447,7 +506,7 @@ async function _saveDepositReturn(building, roomId) {
 
     document.getElementById('returnDepositModal')?.remove();
     if (typeof showToast === 'function') {
-      showToast(uploadWarn ? '✅ บันทึกคืนมัดจำแล้ว (รูปบางรายการอัปโหลดไม่สำเร็จ)' : '✅ บันทึกคืนมัดจำแล้ว');
+      showToast((uploadWarn || billWarn) ? '✅ บันทึกคืนมัดจำแล้ว (บางรายการอัปโหลด/อัปเดตบิลไม่สำเร็จ)' : '✅ บันทึกคืนมัดจำแล้ว');
     }
   } catch (e) {
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✅ ยืนยันคืนมัดจำ'; }
@@ -460,8 +519,9 @@ async function exportDepositReceipt(building, roomId) {
   const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
   if (!dep) return;
   const deductTotal = _dedTotal(dep.deductions);
+  const finalBillTotal = Number(dep.finalBillTotal) || 0;
   const held = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep.amount)||0);
-  const netRefund = held - deductTotal;
+  const netRefund = held - finalBillTotal - deductTotal;
   const fmt = n => '฿' + (Number(n)||0).toLocaleString();
   const owner = window.OwnerConfigManager?.get() || {};
 
@@ -483,6 +543,10 @@ async function exportDepositReceipt(building, roomId) {
       ${dep.refundPromptPay ? `<tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">พร้อมเพย์ / PromptPay</td><td style="text-align:right;">${dep.refundPromptPay}</td></tr>` : ''}
       ${dep.refundBank ? `<tr><td style="padding:4px 0;color:${DashColors.TEXT_SECONDARY};">บัญชี / Account</td><td style="text-align:right;">${dep.refundBank}</td></tr>` : ''}
     </table>
+    ${finalBillTotal ? `
+    <div style="margin-top:12px;padding:10px;background:#fef9ec;border-radius:8px;font-size:12px;display:flex;justify-content:space-between;font-weight:700;">
+      <span style="color:#92400e;">บิลเดือนสุดท้าย / Final bill</span><span style="color:#dc2626;">−${fmt(finalBillTotal)}</span>
+    </div>` : ''}
     ${(dep.deductions||[]).length ? `
     <div style="margin-top:12px;padding:10px;background:#fef9ec;border-radius:8px;font-size:12px;">
       <div style="font-weight:700;color:#92400e;margin-bottom:6px;">รายการหัก / Deductions</div>

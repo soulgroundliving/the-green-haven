@@ -150,6 +150,33 @@
     };
   }
 
+  // Outstanding (unpaid) bills for ONE room, WITH their real RTDB path keys — for the
+  // deposit move-out settlement (spec §1.3: deduct the final/unpaid bill from the deposit,
+  // then mark those bills paid-from-deposit). Reuses _normBill + _isArrears so the §7-D/E
+  // room+year normalisation lives in one place. Returns the _cache KEY (not the billId
+  // field, which isn't guaranteed equal) + the full `path` so the caller can firebaseUpdate
+  // the exact bills/{b}/{r}/{key} node. Nest (no bills) → { bills: [], total: 0 } (no-op).
+  function outstandingBillsForRoom(building, room) {
+    const empty = { bills: [], total: 0 };
+    const BS = window.BillStore;
+    if (!BS || typeof BS.subscribe !== 'function') return empty;
+    BS.subscribe();
+    const bld = (typeof BS._bld === 'function') ? BS._bld(building) : String(building);
+    const rm = String(room);
+    const roomBills = (BS._cache && BS._cache[bld] && BS._cache[bld][rm]) || {};
+    const bills = [];
+    let total = 0;
+    for (const [key, raw] of Object.entries(roomBills)) {
+      if (!raw || typeof raw !== 'object') continue;
+      const n = _normBill(raw);
+      if (!_isArrears(n)) continue;
+      bills.push({ key, billId: n.id, month: n.month, beYear: n.beYear, total: n.total, path: `bills/${bld}/${rm}/${key}` });
+      total += n.total;
+    }
+    return { bills, total: Math.round(total * 100) / 100 };
+  }
+  window.outstandingBillsForRoom = outstandingBillsForRoom;
+
   // Resolve a room to its current tenant display name (arrears may belong to a
   // moved-out tenant → empty name is fine, the row still shows by room).
   function _tenantName(building, room) {

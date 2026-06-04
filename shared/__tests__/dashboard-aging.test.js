@@ -177,3 +177,50 @@ describe('computeAging — exported + bucketing', () => {
     assert.equal(r.summary.tenantsInArrears, 0);
   });
 });
+
+describe('outstandingBillsForRoom — final/unpaid bills for the deposit settlement', () => {
+  function withBillStore(cache) {
+    W.BillStore = { subscribe() {}, _bld: (b) => b, _cache: cache };
+    return W.outstandingBillsForRoom;
+  }
+
+  test('returns each unpaid bill with its real RTDB path key + total; skips paid/refunded/void', () => {
+    const fn = withBillStore({
+      rooms: { '15': {
+        'TGH-A': { status: 'pending',  totalCharge: 2300, month: 5, year: 2569, roomId: '15', building: 'rooms', charges: {} },
+        'TGH-B': { status: 'paid',     totalCharge: 1500, month: 4, year: 2569, roomId: '15', charges: {} },
+        'TGH-C': { status: 'refunded', totalCharge: 999,  month: 3, year: 2569, roomId: '15', charges: {} },
+        'TGH-D': { status: 'void',     totalCharge: 777,  month: 2, year: 2569, roomId: '15', charges: {} },
+      } },
+    });
+    const res = fn('rooms', '15');
+    assert.equal(res.total, 2300);
+    assert.equal(res.bills.length, 1);
+    assert.equal(res.bills[0].key, 'TGH-A');
+    assert.equal(res.bills[0].path, 'bills/rooms/15/TGH-A');
+    assert.equal(res.bills[0].total, 2300);
+  });
+
+  test('sums multiple unpaid bills (carry-forward arrears)', () => {
+    const fn = withBillStore({ rooms: { '15': {
+      M1: { status: 'pending', totalCharge: 2300, month: 5, year: 2569, roomId: '15', charges: {} },
+      M2: { status: 'overdue', totalCharge: 2100, month: 4, year: 2569, roomId: '15', charges: {} },
+    } } });
+    const res = fn('rooms', '15');
+    assert.equal(res.total, 4400);
+    assert.equal(res.bills.length, 2);
+  });
+
+  test('no BillStore / empty room → { bills: [], total: 0 } (Nest no-op)', () => {
+    // NB: assert primitives, not deepEqual — sandbox-realm objects have a different
+    // Object.prototype than the test realm, so deepStrictEqual would false-fail.
+    W.BillStore = undefined;
+    const noStore = W.outstandingBillsForRoom('nest', 'N101');
+    assert.equal(noStore.total, 0);
+    assert.equal(noStore.bills.length, 0);
+    const fn = withBillStore({ rooms: {} });
+    const emptyRoom = fn('rooms', '99');
+    assert.equal(emptyRoom.total, 0);
+    assert.equal(emptyRoom.bills.length, 0);
+  });
+});
