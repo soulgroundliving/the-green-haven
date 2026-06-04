@@ -194,6 +194,13 @@ exports.voidInvoice = require('./voidInvoice').voidInvoice;
 // must never be untraceable); idempotent via a deterministic audit key. Admin-gated.
 exports.refundBill = require('./refundBill').refundBill;
 
+// Verify a deposit REFUND slip with SlipOK (move-out settlement, Slice C). Pure
+// verification — confirms the slip is a real transfer + amount ≈ net refund + receiver
+// ≈ tenant PromptPay (advisory). Writes NOTHING (unlike verifySlip): the proof is
+// persisted by the client onto deposits/{b}_{r}.refundSlipVerified. Admin-gated, SE1,
+// reuses the SLIPOK_API_KEY secret (no new deploy secret). §7-NN callable.
+exports.verifyRefundSlip = require('./verifyRefundSlip').verifyRefundSlip;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ANNOUNCEMENTS — unified notice/event/banner (C4 — replaces broadcastMessages)
 // ═══════════════════════════════════════════════════════════════════════════
