@@ -170,58 +170,75 @@ function showReturnDepositModal(building, roomId) {
   modal.id = 'returnDepositModal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML = `
-    <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-      <h3 style="margin:0 0 16px;font-size:1.1rem;color:#334435;">💰 บันทึกคืนมัดจำ — ห้อง ${roomId}</h3>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">มัดจำที่ถือไว้</label>
-        <div style="font-size:1.3rem;font-weight:800;color:#334435;">฿${(window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep.amount)||0)).toLocaleString()}</div>
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">วันที่คืนมัดจำ</label>
-        <input id="dep-ret-date" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:8px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;">
-      </div>
-      <div id="dep-deductions-list" style="margin-bottom:8px;"></div>
-      <div style="background:#fafaf9;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:10px;padding:10px 12px;margin-bottom:12px;">
-        <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:6px;">เพิ่มรายการหัก (ความเสียหายจากผู้เช่า)</div>
-        <div style="display:flex;gap:8px;margin-bottom:6px;">
-          <input id="dep-deduction-desc" placeholder="รายละเอียด (เช่น ค่าทำความสะอาด)" style="flex:1;padding:7px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
-          <input id="dep-deduction-amount" type="number" min="0" placeholder="บาท" style="width:96px;padding:7px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:440px;max-height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);">
+      <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
+        <div>
+          <h3 style="margin:0;font-size:1.05rem;color:#334435;font-weight:800;line-height:1.3;">💰 คืนมัดจำ</h3>
+          <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">ห้อง ${roomId} <span style="color:#9ca3af;">· ${building}</span></div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <input id="dep-deduction-photo" type="file" accept="image/*,application/pdf" style="flex:1;font-size:10px;font-family:inherit;color:#6b7280;">
-          <button data-action="addDepDeduction" style="padding:6px 14px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">+ เพิ่ม</button>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:10px;color:#9ca3af;">มัดจำที่ถือไว้</div>
+          <div style="font-size:1.25rem;font-weight:800;color:#334435;">฿${(window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep.amount)||0)).toLocaleString()}</div>
         </div>
-        <div style="font-size:10px;color:#9ca3af;margin-top:4px;">📎 แนบรูปหลักฐานต่อรายการ (ไม่บังคับ) — แนะนำให้แนบเพื่อความโปร่งใส</div>
       </div>
-      <div id="dep-ret-finalbill" style="margin-bottom:8px;"></div>
-      <div id="dep-ret-summary" style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin-bottom:12px;"></div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">สลิปโอนคืน <span style="font-weight:400;color:#9ca3af;">(ไม่บังคับ)</span></label>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <input id="dep-ret-slip" type="file" accept="image/*,application/pdf" style="flex:1;font-size:11px;font-family:inherit;color:#6b7280;">
-          <button data-action="verifyRefundSlip" style="padding:8px 12px;background:#ecfdf5;color:#065f46;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">🔍 ตรวจสลิป</button>
+
+      <div style="flex:1 1 auto;overflow-y:auto;padding:16px 22px;">
+        <div style="margin-bottom:14px;">
+          <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">วันที่คืนมัดจำ</label>
+          <input id="dep-ret-date" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;">
         </div>
-        <div id="dep-ret-slip-result" style="margin-top:8px;"></div>
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">พร้อมเพย์ผู้เช่า (ปลายทางคืนเงิน)</label>
-        <div style="display:flex;gap:8px;">
-          <input id="dep-ret-promptpay" type="text" inputmode="numeric" placeholder="เบอร์ 10 หลัก หรือ เลขบัตร ปชช. 13 หลัก" value="${dep.refundPromptPay||''}" style="flex:1;padding:8px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
-          <button data-action="genRefundQR" style="padding:8px 14px;background:#e0f2fe;color:#075985;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">⬛ QR</button>
+
+        <div id="dep-deductions-list" style="margin-bottom:8px;"></div>
+        <div style="background:#fafaf9;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:10px;padding:10px 12px;margin-bottom:14px;">
+          <div style="font-size:11px;color:#6b7280;font-weight:700;margin-bottom:8px;">หักความเสียหายจากผู้เช่า</div>
+          <div style="display:flex;gap:8px;margin-bottom:6px;">
+            <input id="dep-deduction-desc" placeholder="รายละเอียด (เช่น ค่าทำความสะอาด)" style="flex:1;min-width:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;">
+            <input id="dep-deduction-amount" type="number" min="0" placeholder="บาท" style="width:80px;flex-shrink:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input id="dep-deduction-photo" type="file" accept="image/*,application/pdf" style="flex:1;min-width:0;font-size:10px;font-family:inherit;color:#6b7280;">
+            <button data-action="addDepDeduction" style="padding:7px 14px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">+ เพิ่ม</button>
+          </div>
+          <div style="font-size:10px;color:#9ca3af;margin-top:6px;">📎 แนบรูปหลักฐานต่อรายการ (ไม่บังคับ) — เพื่อความโปร่งใส</div>
         </div>
-        <div id="dep-ret-qr" style="margin-top:10px;text-align:center;"></div>
+
+        <div id="dep-ret-finalbill" style="margin-bottom:8px;"></div>
+        <div id="dep-ret-summary" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;margin-bottom:8px;"></div>
+
+        <div style="margin-top:16px;padding-top:14px;border-top:1px dashed #e5e7eb;font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:.03em;margin-bottom:12px;">ช่องทางคืนเงิน</div>
+
+        <div style="margin-bottom:14px;">
+          <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">สลิปโอนคืน <span style="font-weight:400;color:#9ca3af;">(ไม่บังคับ)</span></label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input id="dep-ret-slip" type="file" accept="image/*,application/pdf" style="flex:1;min-width:0;font-size:11px;font-family:inherit;color:#6b7280;">
+            <button data-action="verifyRefundSlip" style="padding:8px 12px;background:#ecfdf5;color:#065f46;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">🔍 ตรวจสลิป</button>
+          </div>
+          <div id="dep-ret-slip-result" style="margin-top:8px;"></div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">พร้อมเพย์ผู้เช่า <span style="font-weight:400;color:#9ca3af;">(ปลายทางคืนเงิน)</span></label>
+          <div style="display:flex;gap:8px;">
+            <input id="dep-ret-promptpay" type="text" inputmode="numeric" placeholder="เบอร์ 10 หลัก / เลขบัตร ปชช. 13 หลัก" value="${dep.refundPromptPay||''}" style="flex:1;min-width:0;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
+            <button data-action="genRefundQR" style="padding:9px 14px;background:#e0f2fe;color:#075985;border:none;border-radius:9px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">⬛ QR</button>
+          </div>
+          <div id="dep-ret-qr" style="margin-top:10px;text-align:center;"></div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">บัญชีธนาคาร <span style="font-weight:400;color:#9ca3af;">(ถ้าไม่ใช้พร้อมเพย์)</span></label>
+          <input id="dep-ret-bank" type="text" placeholder="ธนาคาร / เลขบัญชี" value="${dep.refundBank||''}" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
+        </div>
+
+        <div>
+          <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">หมายเหตุ</label>
+          <input id="dep-ret-notes" type="text" placeholder="(ไม่บังคับ)" value="${dep.notes||''}" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
+        </div>
       </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">บัญชีธนาคาร <span style="font-weight:400;color:#9ca3af;">(ทางเลือก ถ้าไม่ใช้พร้อมเพย์)</span></label>
-        <input id="dep-ret-bank" type="text" placeholder="ธนาคาร / เลขบัญชี" value="${dep.refundBank||''}" style="width:100%;padding:8px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">หมายเหตุ</label>
-        <input id="dep-ret-notes" type="text" placeholder="(ไม่บังคับ)" value="${dep.notes||''}" style="width:100%;padding:8px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;">
-      </div>
-      <div style="display:flex;gap:10px;margin-top:18px;">
-        <button data-action="closeReturnDepositModal" style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">ยกเลิก</button>
-        <button data-action="saveDepositReturn" data-id="${building}" data-arg="${roomId}" style="flex:2;padding:10px;background:#334435;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">✅ ยืนยันคืนมัดจำ</button>
+
+      <div style="flex-shrink:0;display:flex;gap:10px;padding:14px 22px;border-top:1px solid #eef0ee;background:#fff;">
+        <button data-action="closeReturnDepositModal" style="flex:1;padding:11px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">ยกเลิก</button>
+        <button data-action="saveDepositReturn" data-id="${building}" data-arg="${roomId}" style="flex:2;padding:11px;background:#334435;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">✅ ยืนยันคืนมัดจำ</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
