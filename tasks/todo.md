@@ -70,7 +70,11 @@ Independent of deposits; revenue-side only. Do first.
 **A** (pet fee — independent, closes #243-deferred) → **B** (deposit schema) → **C** (settlement, needs B). Each its own PR.
 
 ### Review (append per slice after execution)
-_(shipped / deferred / follow-ups)_
+- **A1 — `petFeeIncome` revenue category** ✅ SHIPPED #247 (`8efc162`). Behaviour-neutral (no bill emits petFee yet). CF deploy deferred → batch with A2b.
+- **A2a — `rooms_config.petFee` source** ✅ SHIPPED #248 (`718420b`). `shared/pet-fee.js` (+5 tests) · `syncRoomPetFee` wired to approve/reject/remove · `backfillRoomPetFees()` · RoomConfigManager carries petFee both sync directions (§7-T). Client-only, inert until A2b.
+- **A2b — bills emit ฿400×pets** ⛔ BLOCKED pending investigation — `billing-system.js:317 calculateBillFromMeterData` reads `room.rent` but config carries `rentPrice` (would abort), so the REAL RTDB-bill persist writer is unconfirmed. Must trace the live persist path before injecting `charges.petFee` into a bill total (financial blast). Full A2b map + injection points in `next_session_handoff_2026_06_04_petfee.md`.
+- **Slice B / C** — not started.
+- _Process: stopped A2b at a safe milestone (A1+A2a merged+inert) rather than rush financial multi-writer code at the tail of a long session (§score-instability breadth-trap). Null-byte §7-TT incident caught + fixed mid-A2a (node `0x00→0x20` pass)._
 
 ---
 
