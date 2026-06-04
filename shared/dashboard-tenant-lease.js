@@ -1325,20 +1325,79 @@ async function _writePetToFirestore(building, room, id, patch){
     await fs.setDoc(docRef, patch, { merge: true });
   } catch(e) { console.warn('Firestore pet update failed:', e); }
 }
+
+// Recompute a room's monthly pet fee (฿400 × approved pets, PetFee.computeRoomFee)
+// from Firestore and persist it to rooms_config/{building}/{room}.petFee via
+// RoomConfigManager.updateRoomField — which updates the local cache AND mirrors
+// to RTDB through the managed sync (so a later room-config save preserves it,
+// §7-T; and both the client bill-compute and the CF read the same value).
+// Best-effort: logs on failure and leaves the prior fee; never blocks approve/reject.
+async function syncRoomPetFee(building, room) {
+  try {
+    if (!building || !room) return;
+    if (!window.firebase?.firestore || typeof RoomConfigManager === 'undefined' || !window.PetFee) return;
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    const snap = await fs.getDocs(fs.collection(db, 'tenants', building, 'list', String(room), 'pets'));
+    const pets = snap.docs.map(d => d.data());
+    const petFee = window.PetFee.computeRoomFee(pets);
+    RoomConfigManager.updateRoomField(building, String(room), 'petFee', petFee);
+  } catch (e) {
+    console.warn('[petFee] syncRoomPetFee failed for', building, room, ':', e?.message || e);
+  }
+}
+
+// One-time backfill: populate rooms_config.petFee for rooms that ALREADY have
+// approved pets (registered before Slice A2 shipped). Page-independent — runs its
+// own collectionGroup('pets') read with the SAME live-path filter as the approvals
+// queue (§7-T: parts[2]==='list' keeps live, skips archived). Idempotent: re-running
+// re-derives the same fee. Run once from the admin console: await window.backfillRoomPetFees()
+async function backfillRoomPetFees() {
+  if (!window.firebase?.firestore || typeof RoomConfigManager === 'undefined' || !window.PetFee) {
+    console.warn('[petFee] backfill: prerequisites unavailable'); return 0;
+  }
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+  const snap = await fs.getDocs(fs.collectionGroup(db, 'pets'));
+  const approvedByRoom = {}; // 'building room' -> approved count
+  snap.docs.forEach(d => {
+    const parts = d.ref.path.split('/');
+    if (parts[2] !== 'list') return;           // live pets only (skip archived)
+    const data = d.data() || {};
+    if (data.status !== 'approved') return;
+    const building = data.building || parts[1];
+    const room     = data.room     || parts[3];
+    if (!building || !room) return;
+    const key = `${building} ${room}`;
+    approvedByRoom[key] = (approvedByRoom[key] || 0) + 1;
+  });
+  let n = 0;
+  Object.keys(approvedByRoom).forEach(key => {
+    const [building, room] = key.split(' ');
+    const fee = approvedByRoom[key] * window.PetFee.PER_PET;
+    if (RoomConfigManager.updateRoomField(building, String(room), 'petFee', fee)) n++;
+  });
+  console.info(`[petFee] backfill: set petFee on ${n} room(s) with approved pets`);
+  return n;
+}
+window.backfillRoomPetFees = backfillRoomPetFees;
+
 // _deletePetFromFirestore removed 2026-05-23 — was orphaning Storage files
 // at pets/{b}/{r}/{id}/* on admin "🗑️ Remove". Replaced by deletePetMedia CF
 // which deletes Firestore doc + Storage in one server call (admin-only gated).
 
-function approvePet(building, room, id) {
-  _writePetToFirestore(building, room, id, { status: 'approved', approvalDate: new Date().toISOString() });
+async function approvePet(building, room, id) {
+  await _writePetToFirestore(building, room, id, { status: 'approved', approvalDate: new Date().toISOString() });
   showToast('✅ Pet approved', 'success');
+  syncRoomPetFee(building, room); // recompute rooms_config.petFee (now +1 approved)
 }
 
 function rejectPet(building, room, id) {
-  window.ghConfirm('ปฏิเสธการขึ้นทะเบียนสัตว์เลี้ยงนี้?', { danger: true }).then(ok => {
+  window.ghConfirm('ปฏิเสธการขึ้นทะเบียนสัตว์เลี้ยงนี้?', { danger: true }).then(async ok => {
     if (!ok) return;
-    _writePetToFirestore(building, room, id, { status: 'rejected', rejectionDate: new Date().toISOString() });
+    await _writePetToFirestore(building, room, id, { status: 'rejected', rejectionDate: new Date().toISOString() });
     showToast('✅ Pet rejected', 'success');
+    syncRoomPetFee(building, room); // a previously-approved pet may now be un-billable
   });
 }
 
@@ -1356,6 +1415,7 @@ async function removePetApproval(building, room, id) {
     const data = res?.data || {};
     const errSuffix = data.storageErrors ? ` (Storage: ${data.storageErrors} error)` : '';
     showToast(`✅ ลบสำเร็จ — ลบไฟล์ ${data.storageDeleted || 0} ไฟล์${errSuffix}`, 'success');
+    syncRoomPetFee(building, room); // pet removed → recompute rooms_config.petFee
   } catch (e) {
     console.warn('deletePetMedia call failed:', e);
     showToast(`❌ ลบไม่สำเร็จ: ${e.message || 'unknown'}`, 'error');
