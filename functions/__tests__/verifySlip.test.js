@@ -34,9 +34,11 @@ let getValidBuildingsThrow = false;  // true = getValidBuildings throws (unexpec
 // Configurable behaviour for non-blocking side effects
 let markBillPaidShouldThrow = false;
 let recordPaymentShouldThrow = false;
+let capturedFetchOpts = null;   // { method, headers, body } passed to fetch (§7-YY guard)
 
 function resetStubs() {
   slipOkResponse = null;
+  capturedFetchOpts = null;
   runTransactionResult = true;
   verifiedSlipExists = false;
   counterDocSeq = null;
@@ -165,13 +167,10 @@ const adminStub = {
 // ── fetch stub ────────────────────────────────────────────────────────────────
 
 const fetchStub = async (_url, _opts) => {
+  capturedFetchOpts = _opts || null;
   if (slipOkResponse !== null) return slipOkResponse;
   return makeSlipOkOk();
 };
-
-// ── FormData stub ─────────────────────────────────────────────────────────────
-
-const FormDataStub = class { append() {} };
 
 // ── firebase-functions/v1 stub ────────────────────────────────────────────────
 
@@ -231,7 +230,7 @@ Module._load = function (request, parent, isMain) {
   if (request === 'firebase-admin') return adminStub;
   if (request === 'firebase-functions/v1') return functionsStub;
   if (request === 'firebase-functions/params') return paramStub;
-  if (request === 'form-data') return FormDataStub;
+  // NO 'form-data' interception — callSlipOKAPI uses global FormData + Blob (§7-YY).
   if (request === './_authSoT') return authSoTStub;
   if (request === './_billFlex') return billFlexStub;
   if (request === './buildingRegistry') return {
@@ -392,6 +391,18 @@ describe('verifySlip — callable handler', () => {
       const result = await handler(validData, makeCtx());
       assert.equal(result.success, false);
       assert.ok(result.message, 'message field must be present');
+    });
+
+    // §7-YY regression: body must be a real multipart FormData (global + Blob),
+    // not the form-data pkg (Node 22 undici stringifies it to "[object FormData]"
+    // → SlipOK 400 "missing files"). Locks the global-FormData construction.
+    it('SlipOK body is a global FormData with a Blob files entry (§7-YY)', async () => {
+      await handler(validData, makeCtx());
+      const body = capturedFetchOpts && capturedFetchOpts.body;
+      assert.ok(body instanceof FormData, 'fetch body must be a global FormData (not form-data pkg / a string)');
+      assert.ok(body.get('files') instanceof Blob, 'the "files" entry must be a Blob (real bytes)');
+      const hKeys = Object.keys((capturedFetchOpts && capturedFetchOpts.headers) || {}).map(k => k.toLowerCase());
+      assert.ok(!hKeys.includes('content-type'), 'do not set Content-Type manually (undici derives the boundary)');
     });
 
     it('SCB delay — error body contains "code":1010 → { success:false, retryable:true, code:scb_delay }', async () => {

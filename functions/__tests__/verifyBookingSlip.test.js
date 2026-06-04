@@ -21,6 +21,7 @@ let storageUploadShouldThrow;
 let bookingUpdateArgs;
 let verifiedSlipCreateArgs;
 let slipOkFetchCalled;
+let capturedFetchOpts;         // { method, headers, body } passed to fetch (§7-YY guard)
 
 function resetStubs() {
   slipOkApiResponse = {
@@ -45,6 +46,7 @@ function resetStubs() {
   bookingUpdateArgs = null;
   verifiedSlipCreateArgs = null;
   slipOkFetchCalled = false;
+  capturedFetchOpts = null;
 }
 resetStubs();
 
@@ -118,11 +120,8 @@ const adminStub = {
 
 const fetchStub = async (url, opts) => {
   slipOkFetchCalled = true;
+  capturedFetchOpts = opts || null;
   return slipOkApiResponse;
-};
-
-const FormDataStub = class {
-  append() {}
 };
 
 const HttpsError = class extends Error {
@@ -150,7 +149,7 @@ Module._load = function (req, parent, isMain) {
   if (req === 'firebase-admin') return adminStub;
   if (req === 'firebase-functions/v1') return functionsStub;
   if (req === 'firebase-functions/params') return paramStub;
-  if (req === 'form-data') return FormDataStub;
+  // NO 'form-data' interception — callSlipOKAPI uses global FormData + Blob (§7-YY).
   return _origLoad.call(this, req, parent, isMain);
 };
 
@@ -416,6 +415,18 @@ describe('verifyBookingSlip — SlipOK API call', () => {
       () => handler(validData, prospectCtx),
       (e) => e.code === 'failed-precondition',
     );
+  });
+
+  // §7-YY regression: body must be a real multipart FormData (global + Blob), not
+  // the form-data pkg (which Node 22 undici stringifies to "[object FormData]").
+  it('23b. SlipOK body is a global FormData with a Blob files entry (§7-YY)', async () => {
+    seedBooking();
+    await handler(validData, prospectCtx);
+    const body = capturedFetchOpts && capturedFetchOpts.body;
+    assert.ok(body instanceof FormData, 'fetch body must be a global FormData (not form-data pkg / a string)');
+    assert.ok(body.get('files') instanceof Blob, 'the "files" entry must be a Blob (real bytes)');
+    const hKeys = Object.keys((capturedFetchOpts && capturedFetchOpts.headers) || {}).map(k => k.toLowerCase());
+    assert.ok(!hKeys.includes('content-type'), 'do not set Content-Type manually (undici derives the boundary)');
   });
 
   it('24. SCB delay — message includes "code":1010 → retryable shape', async () => {

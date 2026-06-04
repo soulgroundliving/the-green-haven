@@ -10,7 +10,8 @@
 const functions = require('firebase-functions/v1');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
-const FormData = require('form-data');
+// NOTE: do NOT require('form-data') — Node 22 undici fetch stringifies that
+// package to "[object FormData]". callSlipOKAPI uses global FormData + Blob (§7-YY).
 const { getValidBuildings } = require('./buildingRegistry');
 const { assertTenantAccess } = require('./_authSoT');
 const { appendPointsLedger } = require('./_pointsLedger');
@@ -159,14 +160,17 @@ function isSafeTransactionId(txid) {
  */
 async function callSlipOKAPI(fileBuffer) {
   try {
-    const form = new FormData();
     // Detect image type from buffer magic bytes
     let mimeType = 'image/jpeg';
     let ext = 'jpg';
     if (fileBuffer[0] === 0x89 && fileBuffer[1] === 0x50) { mimeType = 'image/png'; ext = 'png'; }
     else if (fileBuffer[0] === 0x47 && fileBuffer[1] === 0x49) { mimeType = 'image/gif'; ext = 'gif'; }
     else if (fileBuffer[0] === 0x52 && fileBuffer[1] === 0x49) { mimeType = 'image/webp'; ext = 'webp'; }
-    form.append('files', fileBuffer, { filename: `slip.${ext}`, contentType: mimeType });
+    // §7-YY: global FormData + Blob (NOT the form-data pkg, which Node 22 undici
+    // stringifies to "[object FormData]" → SlipOK 400 "missing files"). No
+    // Content-Type header — undici derives the multipart boundary.
+    const form = new FormData();
+    form.append('files', new Blob([fileBuffer], { type: mimeType }), `slip.${ext}`);
 
     const response = await fetch(SLIPOK_API_URL.value(), {
       method: 'POST',
@@ -174,7 +178,6 @@ async function callSlipOKAPI(fileBuffer) {
         'x-authorization': SLIPOK_API_KEY.value()
       },
       body: form,
-      timeout: 30000 // 30 second timeout
     });
 
     const responseText = await response.text();

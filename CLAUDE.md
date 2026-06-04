@@ -1411,10 +1411,10 @@ await fetch(url, { method: 'POST', headers: { 'x-authorization': key }, body: fo
 
 **Detection:**
 ```bash
-grep -rn "require('form-data')\|require(\"form-data\")" functions/   # each is a latent Node-22 multipart break
-grep -rln "new FormData()" functions/ | xargs grep -L "Blob"        # FormData without Blob = suspect
+grep -rn "= *require('form-data')\|= *require(\"form-data\")" functions/  # an ASSIGNMENT (not a NOTE comment) = latent Node-22 multipart break
+grep -rln "new FormData()" functions/ | xargs grep -L "Blob"             # FormData without Blob = suspect
 ```
-Lock it with a unit test that captures the fetch `body` and asserts `body instanceof FormData` + `body.get('files') instanceof Blob` (see `verifyRefundSlip.test.js` test 29). **Still-affected (verify before any redeploy):** `verifySlip.js`, `verifyBookingSlip.js`. Family: §7-WW/AA/NN (deploy-time/runtime invariants the source doesn't reveal), §7-Y (data:/blob: vs CSP — sibling "the transport isn't what the code implies").
+Lock it with a unit test that captures the fetch `body` and asserts `body instanceof FormData` + `body.get('files') instanceof Blob` (see `verifyRefundSlip.test.js` test 29, `verifySlip.test.js` + `verifyBookingSlip.test.js` siblings). **Status:** all three SlipOK CFs (`verifyRefundSlip` + `verifySlip` + `verifyBookingSlip`) migrated to global FormData+Blob 2026-06-04/05 — no `form-data`-pkg multipart remains in `functions/`. Family: §7-WW/AA/NN (deploy-time/runtime invariants the source doesn't reveal), §7-Y (data:/blob: vs CSP — sibling "the transport isn't what the code implies").
 
 ---
 
