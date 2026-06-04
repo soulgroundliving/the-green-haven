@@ -1,0 +1,190 @@
+/*
+ * Green Haven — Legal page styles (privacy.html + terms.html)
+ *
+ * Extracted from the per-page inline <style> blocks so the enforced Vercel CSP
+ * (style-src-elem = hashes only, NO 'unsafe-inline') stops stripping them. An
+ * external sheet loads via style-src-elem 'self' — no hash pipeline, no drift
+ * (§7-RR). Both legal pages <link> this file; do NOT load it inside the app
+ * shells (tenant_app/dashboard) — several rules here are intentionally
+ * unscoped (body, h1, details, summary) and would clobber app layout.
+ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: auto; }
+body {
+  font-family: var(--font-brand);
+  background: var(--surface-page);
+  color: var(--ink);
+  line-height: var(--leading-normal);
+  min-height: 100vh;
+  padding: 24px 16px 80px;
+  -webkit-font-smoothing: antialiased;
+}
+.container { max-width: 720px; margin: 0 auto; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--brand-primary);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  padding: 8px 12px;
+  border-radius: var(--radius-xs);
+  transition: background 120ms ease;
+}
+.back-link:hover, .back-link:focus-visible {
+  background: var(--brand-primary-soft);
+  outline: none;
+}
+.back-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-card);
+  border: 1px solid var(--border-base);
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: background 120ms ease;
+}
+.theme-toggle:hover, .theme-toggle:focus-visible {
+  background: var(--brand-primary-soft);
+  outline: none;
+}
+
+h1 {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+  margin-bottom: 4px;
+  line-height: var(--leading-tight);
+}
+.effective-date {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  margin-bottom: 24px;
+}
+
+.draft-notice {
+  background: var(--brand-primary-soft);
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  font-size: var(--text-sm);
+  color: var(--brand-primary-dark);
+  line-height: var(--leading-relaxed);
+}
+
+.card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.intro {
+  font-size: var(--text-base);
+  color: var(--muted);
+  margin-bottom: 20px;
+  line-height: var(--leading-relaxed);
+}
+
+details {
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 14px 0;
+}
+details:first-of-type { padding-top: 4px; }
+details:last-of-type { border-bottom: none; padding-bottom: 4px; }
+summary {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-md);
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  user-select: none;
+}
+summary::-webkit-details-marker { display: none; }
+summary::after {
+  content: '+';
+  font-size: 20px;
+  font-weight: var(--weight-regular);
+  color: var(--brand-primary);
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+details[open] summary::after { content: '−'; }
+summary:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+.answer {
+  margin-top: 12px;
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--ink);
+}
+.answer p { margin-bottom: 12px; }
+.answer p:last-child { margin-bottom: 0; }
+.answer strong {
+  color: var(--brand-primary-dark);
+  font-weight: var(--weight-semibold);
+}
+/* Placeholder text awaiting the owner's/lawyer's legal copy. */
+.placeholder {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 32px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+.footer p { margin-bottom: 6px; }
+.footer p:last-child { margin-bottom: 0; }
+.footer a {
+  color: var(--brand-primary);
+  text-decoration: none;
+}
+.footer a:hover, .footer a:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+@media (max-width: 480px) {
+  body { padding: 16px 12px 64px; }
+  .card { padding: 18px 16px; }
+  h1 { font-size: var(--text-lg); }
+  .topbar { margin-bottom: 20px; }
+}
+
+/* Dark mode contrast tweaks — brand.css tokens flip automatically;
+   only add explicit overrides for the summary marker contrast. */
+:root[data-theme="dark"] summary::after { color: var(--brand-primary-light); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) summary::after { color: var(--brand-primary-light); }
+}

@@ -28,6 +28,127 @@
   var NOTICE_VERSION = 'v1';
   var _busy = false;
 
+  // ── In-app legal-doc viewer ──────────────────────────────────────────────
+  // The consent prompt must NOT pop a new tab or navigate away. In LIFF a 2nd
+  // tab confuses back-nav, and the legal pages' "/" link → index.html →
+  // location.replace('/dashboard') would dump tenants on the ADMIN page. So the
+  // privacy/ToS links open a STACKED GhModal in-app instead:
+  //   • privacy → clone the in-DOM #policy-privacy-content (no network, styled)
+  //   • ToS     → fetch /terms.html <main> (SSoT; AbortController timeout §7-R)
+  // Closing the doc modal returns to the consent prompt to tap "ยอมรับ".
+
+  function _lineSafeOpen(url) {
+    // Last-resort fallback (no modal infra / fetch failed). external:true opens
+    // the system browser outside LINE — the app's openDocFile convention.
+    try {
+      if (window.liff && typeof liff.isInClient === 'function' && liff.isInClient()) {
+        liff.openWindow({ url: url, external: true });
+        return;
+      }
+    } catch (_) { /* fall through */ }
+    try { window.open(url, '_blank', 'noopener'); } catch (_) { /* noop */ }
+  }
+
+  function _openDocModal(title, bodyEl) {
+    return window.GhModal.open({
+      title: title,
+      body: bodyEl,
+      size: 'large',
+      dismissible: true,
+      actions: [{ label: 'ปิด', variant: 'ghost', onClick: function (m) { m.close(); } }],
+    });
+  }
+
+  // Keep anchors inside fetched legal HTML in-app — a raw <a href="/privacy.html">
+  // would full-page-navigate the LIFF webview (re-introducing the new-tab/admin bug).
+  function _rewireDocLinks(scope) {
+    var links = scope.querySelectorAll('a[href]');
+    for (var i = 0; i < links.length; i++) {
+      (function (a) {
+        var href = a.getAttribute('href') || '';
+        if (href.indexOf('mailto:') === 0) return; // email links are fine
+        a.addEventListener('click', function (e) {
+          e.preventDefault();
+          if (/\/privacy\.html/.test(href)) {
+            _openLegalModal({ title: 'นโยบายความเป็นส่วนตัว', cloneId: 'policy-privacy-content', url: '/privacy.html' });
+          } else if (/\/terms\.html/.test(href)) {
+            _openLegalModal({ title: 'ข้อตกลงการใช้งาน', url: '/terms.html' });
+          } else {
+            _lineSafeOpen(href);
+          }
+        });
+      })(links[i]);
+    }
+  }
+
+  function _openLegalModal(opts) {
+    if (!window.GhModal || typeof window.GhModal.open !== 'function') {
+      _lineSafeOpen(opts.url);  // no modal infra — degrade to LINE-safe open
+      return;
+    }
+
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'max-height:68vh; overflow-y:auto; -webkit-overflow-scrolling:touch;';
+
+    // 1) Prefer cloning content already rendered in the app (no network, styled).
+    var src = opts.cloneId ? document.getElementById(opts.cloneId) : null;
+    if (src) {
+      var clone = src.cloneNode(true);
+      clone.removeAttribute('id');   // avoid a duplicate id in the document
+      clone.className = '';          // drop .card/.u-pb-nav → no card-in-card
+      wrap.appendChild(clone);
+      _openDocModal(opts.title, wrap);
+      return;
+    }
+
+    // 2) Otherwise fetch the canonical page and show its <main> (single source).
+    var loading = document.createElement('p');
+    loading.textContent = 'กำลังโหลด…';
+    loading.style.cssText = 'text-align:center; color:var(--text-muted,#888); padding:24px 0;';
+    wrap.appendChild(loading);
+    var modal = _openDocModal(opts.title, wrap);
+
+    var ctrl = new AbortController();
+    var to = setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 8000); // §7-R
+    fetch(opts.url, { signal: ctrl.signal, credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.text(); })
+      .then(function (html) {
+        var parsed = new DOMParser().parseFromString(html, 'text/html');
+        var main = parsed.querySelector('main');
+        if (!main) throw new Error('no <main>');
+        wrap.textContent = '';
+        wrap.appendChild(main);     // parsed in an inert doc → its scripts never run
+        _rewireDocLinks(wrap);
+      })
+      .catch(function (e) {
+        wrap.textContent = '';
+        var err = document.createElement('p');
+        err.style.cssText = 'text-align:center; color:var(--text-muted,#888); padding:16px 0;';
+        err.textContent = 'โหลดเอกสารไม่สำเร็จ';
+        wrap.appendChild(err);
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'gh-btn gh-btn--ghost';
+        btn.textContent = 'เปิดหน้าเต็ม';
+        btn.style.cssText = 'display:block; margin:10px auto 0;';
+        btn.addEventListener('click', function () { _lineSafeOpen(opts.url); if (modal) modal.close(); });
+        wrap.appendChild(btn);
+        if (window.console) console.warn('[consent] legal doc load failed:', e && e.message);
+      })
+      .finally(function () { clearTimeout(to); });
+  }
+
+  function _legalLinkItem(label, opts) {
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.href = opts.url || '#';   // real href → graceful nav if JS is disabled
+    a.textContent = label;
+    a.style.cssText = 'color:var(--brand-primary,#2f6f4e); text-decoration:underline; cursor:pointer;';
+    a.addEventListener('click', function (e) { e.preventDefault(); _openLegalModal(opts); });
+    li.appendChild(a);
+    return li;
+  }
+
   function _alreadyHandled() {
     try {
       if (localStorage.getItem(LS_KEY) === '1') return true;
@@ -47,15 +168,27 @@
     try {
       var body = document.createElement('div');
       body.style.cssText = 'font-size:var(--fs-sm,0.9rem); line-height:1.6; color:var(--text-dark,#333);';
-      body.innerHTML =
-        '<p style="margin:0 0 10px;">เพื่อให้บริการแอป Nature Haven เรามีการเก็บและใช้ข้อมูลส่วนบุคคลของคุณ ' +
-        '(เช่น ข้อมูลห้องพัก บิล การชำระเงิน และข้อมูลติดต่อ) ตามที่ระบุไว้ใน:</p>' +
-        '<ul style="margin:0 0 12px; padding-left:20px;">' +
-          '<li><a href="/privacy.html" target="_blank" rel="noopener">นโยบายความเป็นส่วนตัว (PDPA)</a></li>' +
-          '<li><a href="/terms.html" target="_blank" rel="noopener">ข้อตกลงการใช้งาน</a></li>' +
-        '</ul>' +
-        '<p style="margin:0; color:var(--text-muted,#888); font-size:var(--fs-sm,0.85rem);">' +
-        'กด "ยอมรับ" เพื่อยืนยันว่าคุณได้อ่านและยอมรับนโยบายข้างต้น</p>';
+
+      var _p1 = document.createElement('p');
+      _p1.style.cssText = 'margin:0 0 10px;';
+      _p1.textContent = 'เพื่อให้บริการแอป Nature Haven เรามีการเก็บและใช้ข้อมูลส่วนบุคคลของคุณ ' +
+        '(เช่น ข้อมูลห้องพัก บิล การชำระเงิน และข้อมูลติดต่อ) ตามที่ระบุไว้ใน:';
+      body.appendChild(_p1);
+
+      var _ul = document.createElement('ul');
+      _ul.style.cssText = 'margin:0 0 12px; padding-left:20px;';
+      _ul.appendChild(_legalLinkItem('นโยบายความเป็นส่วนตัว (PDPA)', {
+        title: 'นโยบายความเป็นส่วนตัว', cloneId: 'policy-privacy-content', url: '/privacy.html',
+      }));
+      _ul.appendChild(_legalLinkItem('ข้อตกลงการใช้งาน', {
+        title: 'ข้อตกลงการใช้งาน', url: '/terms.html',
+      }));
+      body.appendChild(_ul);
+
+      var _p2 = document.createElement('p');
+      _p2.style.cssText = 'margin:0; color:var(--text-muted,#888); font-size:var(--fs-sm,0.85rem);';
+      _p2.textContent = 'กด "ยอมรับ" เพื่อยืนยันว่าคุณได้อ่านและยอมรับนโยบายข้างต้น';
+      body.appendChild(_p2);
 
       var ok = await window.GhModal.confirm({
         title: '🛡️ ความเป็นส่วนตัวและข้อตกลงการใช้งาน',
