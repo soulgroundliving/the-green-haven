@@ -72,8 +72,9 @@ Independent of deposits; revenue-side only. Do first.
 ### Review (append per slice after execution)
 - **A1 — `petFeeIncome` revenue category** ✅ SHIPPED #247 (`8efc162`). Behaviour-neutral (no bill emits petFee yet). CF deploy deferred → batch with A2b.
 - **A2a — `rooms_config.petFee` source** ✅ SHIPPED #248 (`718420b`). `shared/pet-fee.js` (+5 tests) · `syncRoomPetFee` wired to approve/reject/remove · `backfillRoomPetFees()` · RoomConfigManager carries petFee both sync directions (§7-T). Client-only, inert until A2b.
-- **A2b — bills emit ฿400×pets** ⛔ BLOCKED pending investigation — `billing-system.js:317 calculateBillFromMeterData` reads `room.rent` but config carries `rentPrice` (would abort), so the REAL RTDB-bill persist writer is unconfirmed. Must trace the live persist path before injecting `charges.petFee` into a bill total (financial blast). Full A2b map + injection points in `next_session_handoff_2026_06_04_petfee.md`.
-- **Slice B / C** — not started.
+- **A2b — bills emit ฿400×pets** ⏸️ PARKED till Nest live (~Aug 2026). Live trace 2026-06-04: real persist writer = `saveBillToFirebase` (nested charges, **rooms-bldg only**); `calculateBillFromMeterData` confirmed dead (prod config has `rentPrice` not `rent`). **Nest = all pet rooms, but it's unbuilt (~Aug, owner restructuring to all-floors-pet) → `bills/nest` null, 0 nest meter_data → no Nest bill to emit petFee onto, and revenue reads `bills/`.** A1+A2a ready for when Nest is billed. Map in `next_session_handoff_2026_06_04_petfee.md`.
+- ⚠️ **Nest billing-pipeline gap (surfaced):** Nest has no meters→bills→revenue at all. It needs one (like the rooms building) before the Aug launch — prerequisite for pet fee + pet deposit + pet-damage. Separate project.
+- **Slice B / C** — not started. Buildable NOW (rooms building): deposit installments (B core) + move-out settlement w/ human-damage routing + `DEPOSIT_RETURNED` audit + refund slip (C core). Defer pet-deposit (B) + pet-damage routing (C) to Nest-online (~Aug).
 - _Process: stopped A2b at a safe milestone (A1+A2a merged+inert) rather than rush financial multi-writer code at the tail of a long session (§score-instability breadth-trap). Null-byte §7-TT incident caught + fixed mid-A2a (node `0x00→0x20` pass)._
 
 ---
