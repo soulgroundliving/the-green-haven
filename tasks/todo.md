@@ -4,6 +4,48 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-04 eve) — Per-tenant deposit evidence HISTORY (Item B) · ✅ APPROVED (split) · steps 1-3 + doc SHIPPED to branch · step 4 (history UI) deferred
+
+> **Review (steps 1-3+6):** `tenantId` stamped on seed+return; `_reconcileDepositForRoom` (per-room, self-healing) backfills holding tenantId + archives a settled doc whose tenantId≠current to `deposits/{b}_{r}/history/{settlementId}` (archive FIRST, then reset to holding). `firestore.rules` history subcollection (admin write / accountant read) + 5 tests. Gates: node --check · **test:rules 276/0** (emulator) · **test:shared 386/0** · verify:memory ALL GREEN (README 256→261) · mojibake clean. Legacy (no tenantId) docs untouched (§7-L). **Step 4 (gallery "ดูประวัติ" reading history/) deferred** — capture shipped first so no turnover is lost. **Open (owner):** confirm a real move-in sets `deposit`+`tenantId` so the turnover reset fires (open decision #3). client-side archive writer (D1 REC).
+
+**Context:** Same session shipped the deposit evidence VIEWER (bug-fix, not logged here): clickable 📎 on pending deductions → blob lightbox · `showDepositEvidence` retrospective gallery button on returned cards (thumbnails via `getDownloadURL` + ✅-verified slip badge + PDF link) · `👁 ดู` slip preview in the return modal. `shared/dashboard-deposits-admin.js` + 4 `data-action` hub wires in `shared/dashboard-main.js`; node --check clean, static-harness verified, NOT yet pushed. Owner then asked to also **"ทำประวัติหลักฐานรายผู้เช่า"** — keep each tenancy's move-out evidence so a room's condition can be compared across successive tenants.
+
+**Why Plan-First:** schema change (`deposits/` doc + new `history/` subcollection), `firestore.rules` change (+tests), touches the seed that runs for EVERY room on admin load (blast radius), 2+ valid designs → crosses CLAUDE.md §1 threshold.
+
+### Current-state findings (grep-verified this session)
+- `deposits/{b}_{r}` = **one doc per room**; written only in seed (create-if-missing), `_saveDepositInstallment` (merge), `_saveDepositReturn` (**full `setDoc`** → `returned`). *(verify: `grep -n "doc(db, 'deposits'" shared/dashboard-deposits-admin.js`)*
+- `status:'holding'` set **only** in the seed; seed keys by room id, **skips any existing doc**, and does **not** read/store `tenantId`. → a new tenant in a previously-returned room gets **no fresh deposit**; tenant A's returned doc + evidence linger for tenant B. *(verify: `grep -rn "status: 'holding'" shared/`; `grep -n existingIds shared/dashboard-deposits-admin.js`)*
+- No CF resets `deposits/` on move-out — `archiveTenantOnMoveOut` only zeroes the TENANT doc (`deposit:0`, `tenantId:''`, status `vacant`). Storage evidence files **persist** (unique timestamped paths, no delete CF) — only doc references are overwritten at the next settlement.
+- Tenant SSoT doc DOES carry `tenantId` (written by `dashboard-tenant-modal.js`, cleared by `archiveTenantOnMoveOut`) → usable to detect tenant change. *(verify: `grep -n "tenantId:" shared/dashboard-tenant-modal.js`)*
+
+**Implication:** the deposit system is single-cycle-per-room today. "Compare with the next tenant" first needs the doc to become **tenant-aware** + gain a **new-cycle reset**; the history archive is the payload.
+
+### Recommended approach — `history/` subcollection + tenant-aware seed
+- **+`deposits/{b}_{r}.tenantId`** — stamp current tenancy at seed + return (legacy docs absent → "unknown previous"; never archived spuriously).
+- **+`deposits/{b}_{r}/history/{settlementId}`** — immutable snapshot per completed settlement `{tenantId, returnedAt, returnedAmount, finalBillTotal, deductions[], refundSlip, refundSlipVerified, archivedAt}` (Storage paths still live). Mirrors the `actionAudit/` immutable-record philosophy; keeps the live "current" doc simple.
+  - *Alt considered:* flat top-level `depositSettlements/{…}` — more decoupled but +1 listener/collection; rejected as heavier for now.
+
+### Steps
+- [ ] **1.** Stamp `tenantId` on the deposit doc (seed writes `t.tenantId||''`; `_saveDepositReturn` preserves). — *join key for "which tenancy".*
+- [ ] **2.** Tenant-aware new-cycle reset in `_seedDepositsFromTenants`: existing doc whose stored `tenantId` is non-empty AND ≠ current AND status==`returned` → archive into `history/`, then reset main doc to fresh `holding` for the new tenant. Same/legacy-empty tenantId → current skip (no spurious archive). — *makes turnover create a new cycle while preserving the old.* **Heavy guard — only on confirmed mismatch (must never wipe a live holding).**
+- [ ] **3.** `firestore.rules` for `deposits/{b}_{r}/history/{id}` (admin read+write, accountant read) + `test:rules` cases. — *new path is default-deny.*
+- [ ] **4.** Gallery "ดูประวัติ (N)": `showDepositEvidence` shows current first, then collapsible past settlements (each its own sub-gallery, labelled tenant + returnedAt) from `history/`. — *the actual cross-tenant compare surface.*
+- [ ] **5.** Legacy degrades cleanly (§7-L): existing returned docs render as the single current settlement; first turnover after ship starts history. No backfill.
+- [ ] **6.** Update `lifecycle_deposit_management.md` (schema + Flow + Key Files) + `npm run verify:memory`.
+
+### Open decisions (need owner call)
+1. **Archive writer:** client-side in the seed (admin-authed, simplest, no §7-NN SE3 concern) **[REC]** vs a small `onCall` CF for atomicity.
+2. **PR scope:** ship 1–6 together vs land 1–3 (capture history now so no turnover is lost) then 4 (compare UI) as follow-up **[REC: split]**.
+3. **Does turnover actually re-seed today?** Reset fires only when a new tenant's `deposit` is set & status≠vacant — confirm against one real move-in before building step 2.
+
+### Guardrails
+§7-I (no auto-write to prod beyond the intended reset; preview) · §7-T (grep `tenantId`/`history` writers+readers) · §7-L (legacy degrade) · §7-DD (deposit doc is the only write here) · §7-J (no new index unless a `history` query needs one) · `test:rules` green before deploy (branch-protection) · one PR off fresh main behind `validate.yml`.
+
+### Out of scope (named)
+Auto-collecting any tenant still-owes · pet-deposit history (Nest ~Aug) · backfilling pre-ship returned docs into history · automatic move-out→settlement coupling (stays manual per Slice C D4).
+
+---
+
 ## ▶▶▶ ACTIVE PLAN (2026-06-04 PM) — Deposit settlement: deduct final/outstanding bill (spec §1.3) · ✅ SHIPPED to branch (PR pending) — gates green (shared 382/0, +8: netRefund + outstandingBillsForRoom), verify:memory 0 fail, mojibake clean, client-only
 
 **Why:** owner caught that Slice C settlement deducts only manual damage rows — it never pulls the **final-month bill** (ค่าเช่า+น้ำ+ไฟ+ขยะ) that spec §1.3 says to deduct from the deposit (canonical example: มัดจำ 3,000 − บิลเดือนสุดท้าย 2,300 = คืน 700). The `finalBillTotal` was in the original Slice C plan but dropped in the "core" re-scope. Owner chose **Option 1 (auto-pull + deduct + mark bills paid-from-deposit)**.

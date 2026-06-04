@@ -721,44 +721,20 @@ function initPropertyPage(){
   updateShopInfoCard();
 }
 
-// ─── Dynamic Nest info cards — reads from RoomConfigManager ───
+// ─── Nest total-income KPI (stats strip) — reads from RoomConfigManager ───
+// The per-type (Studio / Pet-Allowed) rate cards were removed from the HTML and
+// moved to the room-rate management tab (SSoT). Only the 💰 total-income figure
+// (#nest-total-income in the Nest stats strip) is still rendered from here — the
+// old set() calls to nest-studio-*/nest-pet-*/nest-total-title/-income2/-breakdown
+// wrote to elements that no longer exist (dead no-ops). Trimmed 2026-06.
 function updateNestInfoCards() {
   const nestConfig = (typeof RoomConfigManager !== 'undefined') ? RoomConfigManager.getRoomsConfig('nest') : null;
   const rooms = nestConfig?.rooms?.filter(r => !r.deleted) || [];
   if (!rooms.length) return;
 
-  const byType = { studio: [], 'pet-allowed': [] };
-  rooms.forEach(r => { const key = r.type === 'pet-allowed' ? 'pet-allowed' : 'studio'; byType[key].push(r); });
-
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  const fmtRent  = v => v > 0 ? `฿${v.toLocaleString()}/เดือน` : '—';
-  const fmtElec  = v => v > 0 ? `${v} บาท/หน่วย` : '—';
-  const fmtWater = v => v > 0 ? `${v} บาท/หน่วย` : '—';
-  const fmtTrash = v => v > 0 ? `฿${v}/เดือน` : '—';
-  const floorStr = arr => [...new Set(arr.map(r => r.floor).filter(Boolean))].sort((a,b)=>a-b).join(', ');
-  const rep = arr => arr[0] || {};
-
-  const s = byType.studio, p = byType['pet-allowed'];
-
-  const rs = rep(s);
-  set('nest-studio-title', `🏠 Studio (N101–N205)${s.length ? ' — ' + s.length + ' ห้อง' : ''}`);
-  set('nest-studio-rent',  fmtRent(rs.rentPrice));
-  set('nest-studio-elec',  fmtElec(rs.electricRate));
-  set('nest-studio-water', fmtWater(rs.waterRate));
-  set('nest-studio-trash', fmtTrash(rs.trashRate));
-
-  const rp = rep(p);
-  set('nest-pet-title', `🐾 Pet-Allowed (N301–N405)${p.length ? ' — ' + p.length + ' ห้อง' : ''}`);
-  set('nest-pet-rent',  fmtRent(rp.rentPrice));
-  set('nest-pet-elec',  fmtElec(rp.electricRate));
-  set('nest-pet-water', fmtWater(rp.waterRate));
-  set('nest-pet-trash', fmtTrash(rp.trashRate));
-
   const totalRent = rooms.reduce((a, r) => a + (r.rentPrice || 0), 0);
-  set('nest-total-title', `📊 รวมทั้งหมด (${rooms.length} ห้อง)`);
-  set('nest-total-income',  `฿${totalRent.toLocaleString()}/เดือน`);
-  set('nest-total-income2', `฿${totalRent.toLocaleString()}/เดือน`);
-  set('nest-total-breakdown', `${s.length} Studio + ${p.length} Pet-Allowed`);
+  const incomeEl = document.getElementById('nest-total-income');
+  if (incomeEl) incomeEl.textContent = `฿${totalRent.toLocaleString()}/เดือน`;
 }
 
 // ─── Dynamic shop info card — reads from RoomConfigManager ───

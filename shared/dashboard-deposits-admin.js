@@ -8,6 +8,11 @@
 // refundPromptPay (Slice C follow-up): tenant PromptPay the refund was sent to (validated; QR generated
 //   for the admin to scan & pay). refundBank stays as an optional free-text fallback for bank transfers.
 // Audit: _saveDepositReturn fires recordAdminAction({action:'DEPOSIT_RETURNED'}) — immutable settlement trail.
+// tenantId + history (Item B): the doc is stamped with its owning tenancy (tenantId). On turnover the
+//   seed archives a SETTLED prior doc into deposits/{building}_{roomId}/history/{settlementId} (immutable,
+//   admin/accountant read) before resetting to holding for the newcomer — so each tenant's move-out
+//   evidence survives for cross-tenancy comparison. Storage files are never deleted (§7-L legacy: docs
+//   without tenantId are left untouched; first holding cycle after this ship backfills the owner).
 
 let _depositsCache = []; // flat array: { building, roomId, ...fields }
 let _depositsUnsub = null;
@@ -78,27 +83,78 @@ async function _seedDepositsFromTenants() {
       if (!eligible.length) continue;
       // Batch-fetch all deposit docs to avoid N+1 round-trips
       const depSnaps = await Promise.all(eligible.map(d => fs.getDoc(fs.doc(db, 'deposits', `${building}_${d.id}`))));
-      const existingIds = new Set(depSnaps.filter(s => s.exists()).map(s => s.id));
-      await Promise.all(eligible
-        .filter(d => !existingIds.has(`${building}_${d.id}`))
-        .map(d => {
-          const t = d.data();
-          return fs.setDoc(fs.doc(db, 'deposits', `${building}_${d.id}`), {
-            building, roomId: d.id,
-            amount: Number(t.deposit) || 0,
-            paidSoFar: Number(t.deposit) || 0, // seed = fully paid; admin lowers it via ผ่อนมัดจำ for installment tenants
-            status: 'holding',
-            receivedAt: t.moveInDate || t.createdAt || null,
-            deductions: [],
-            refundBank: '',
-            notes: '',
-            updatedAt: new Date().toISOString()
-          });
-        })
-      );
+      // Per-room so one failure never blocks the others (archive→reset is
+      // self-healing: a partial run re-detects the same mismatch next load).
+      await Promise.all(eligible.map(async (d, i) => {
+        try { await _reconcileDepositForRoom(fs, db, building, d, depSnaps[i]); }
+        catch (e) { console.warn(`⚠️ deposit seed (${building}/${d.id}):`, e?.message || e); }
+      }));
     }
   } catch (e) {
     console.warn('⚠️ deposit seed skipped:', e.message);
+  }
+}
+
+// Bring one room's deposit doc in line with its current tenant:
+//  • no doc                → create a fresh holding (stamped with the tenant).
+//  • holding, no owner     → backfill tenantId (safe: a holding deposit is the
+//                            current occupant's) so turnover is detectable next cycle.
+//  • returned + tenant changed (both ids known) → archive the prior settlement to
+//                            deposits/{id}/history/ (its evidence Storage paths
+//                            survive) THEN reset to holding for the newcomer.
+//                            Archive FIRST so a failed reset never loses the proof.
+//  • else (same tenant / legacy empty tenantId / still holding) → leave as-is.
+// Storage evidence files are never deleted, so an archived settlement's photos +
+// refund slip stay resolvable — the basis for comparing a room across tenancies.
+async function _reconcileDepositForRoom(fs, db, building, d, depSnap) {
+  const t = d.data() || {};
+  const docId = `${building}_${d.id}`;
+  const curTenantId = t.tenantId || '';
+  const freshHolding = () => ({
+    building, roomId: d.id,
+    tenantId: curTenantId,
+    amount: Number(t.deposit) || 0,
+    paidSoFar: Number(t.deposit) || 0, // seed = fully paid; admin lowers it via ผ่อนมัดจำ for installment tenants
+    status: 'holding',
+    receivedAt: t.moveInDate || t.createdAt || null,
+    deductions: [],
+    refundBank: '',
+    notes: '',
+    updatedAt: new Date().toISOString()
+  });
+
+  if (!depSnap.exists()) {
+    await fs.setDoc(fs.doc(db, 'deposits', docId), freshHolding());
+    return;
+  }
+  const dd = depSnap.data() || {};
+
+  // Backfill tenantId onto a holding doc that predates tenant-awareness.
+  if (dd.status !== 'returned' && !dd.tenantId && curTenantId) {
+    await fs.setDoc(fs.doc(db, 'deposits', docId), { tenantId: curTenantId }, { merge: true });
+    return;
+  }
+
+  // Turnover: a SETTLED deposit whose owner differs from the room's current
+  // tenant. Both ids must be non-empty so legacy docs (no tenantId) are never
+  // archived spuriously and a live holding deposit is never reset.
+  if (dd.status === 'returned' && dd.tenantId && curTenantId && dd.tenantId !== curTenantId) {
+    const settlementId = `${dd.returnedAt || 'unknown'}_${dd.tenantId}`.replace(/[^\w-]/g, '_');
+    await fs.setDoc(fs.doc(db, `deposits/${docId}/history/${settlementId}`), {
+      tenantId: dd.tenantId,
+      returnedAt: dd.returnedAt || null,
+      returnedAmount: Number(dd.returnedAmount) || 0,
+      finalBillTotal: Number(dd.finalBillTotal) || 0,
+      deductions: dd.deductions || [],
+      settledBills: dd.settledBills || [],
+      refundBank: dd.refundBank || '',
+      refundPromptPay: dd.refundPromptPay || '',
+      refundSlip: dd.refundSlip || '',
+      refundSlipVerified: dd.refundSlipVerified || null,
+      notes: dd.notes || '',
+      archivedAt: new Date().toISOString()
+    });
+    await fs.setDoc(fs.doc(db, 'deposits', docId), freshHolding());
   }
 }
 
@@ -603,6 +659,7 @@ async function _saveDepositReturn(building, roomId) {
   try {
     await fs.setDoc(fs.doc(db, 'deposits', `${building}_${roomId}`), {
       building, roomId,
+      tenantId: dep?.tenantId || '',   // preserve the owning tenancy → archived to history/ on the next turnover
       amount: Number(dep?.amount) || 0,
       paidSoFar: held,                 // preserve the installment-held amount on the settled record
       status: 'returned',
