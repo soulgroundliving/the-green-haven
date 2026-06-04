@@ -116,6 +116,11 @@
         var parsed = new DOMParser().parseFromString(html, 'text/html');
         var main = parsed.querySelector('main');
         if (!main) throw new Error('no <main>');
+        // The page wraps its body in <section class="card"> — inside the modal
+        // that renders as a nested framed box (cramped, hard to read). Drop the
+        // card framing so the content flows flat in the modal body.
+        var cards = main.querySelectorAll('.card');
+        for (var c = 0; c < cards.length; c++) cards[c].classList.remove('card');
         wrap.textContent = '';
         wrap.appendChild(main);     // parsed in an inert doc → its scripts never run
         _rewireDocLinks(wrap);

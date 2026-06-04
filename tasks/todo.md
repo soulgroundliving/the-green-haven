@@ -4,7 +4,77 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-03 PM) — Roadmap Phase 2: Refund flow (reverse a PAID bill + trail) · 🚧 APPROVED + EXECUTING (branch `feat/phase2-refund-flow`)
+## ▶▶▶ ACTIVE PLAN (2026-06-04) — Deposit · Pet-fee · Damage-settlement · ⏳ AWAITING APPROVAL (Plan-First)
+
+**Source spec:** [tasks/deposit-pet-damage-rules.md](deposit-pet-damage-rules.md) — owner-confirmed 2026-06-04 (deposit = 2×rent w/ installments · pet fee ฿400/ตัว/เดือน · pet deposit ฿10,000/ห้อง · move-out settlement w/ itemized damage routing). This plan = the implementation of §2 "สเปกระบบ" of that doc.
+
+**Why Plan-First:** schema change (`deposits/` doc shape, bill `charges.petFee`, new revenue category, settlement record), new `onCall` CF, rules + storage + index changes, multi-session, 2+ valid approaches → CLAUDE.md §1 threshold (every leg crosses it).
+
+### Verified current state (3 Explore agents, file:line — grep-advisory, re-confirm at build)
+- **`deposits/{b}_{r}`** flat doc = `{building, roomId, amount, status('holding'|'returned'), receivedAt, returnedAt, returnedAmount, deductions[{reason,amount}], refundBank, notes, updatedAt}` (`dashboard-deposits-admin.js:2-3,47-56,185-202`). Seed `amount = Number(t.deposit)` from `tenants/{b}/list/{r}.deposit` (`:38,49`) — **NOT** computed 2×rent. **No installment** (grep `paidSoFar|installment|partial` = 0), **no pet deposit** (grep `petDeposit|ประกันสัตว์` = 0), status only holding/returned. Rules `firestore.rules:805-812` (admin write · admin+accountant read). Tenant badge `tenant-render.js:240-254` reads `depositStatus`. **No audit** on `_saveDepositReturn`.
+- **Rent source:** room config `config-unified.js` (`rent` for rooms `:220`, `rentPrice` for nest `:257`) + tenant doc `rent`/`rentAmount` (`tenant-render.js:240`). Pet-allowed rooms = `type:'pet-allowed'` in nest config (`:267-276`).
+- **Bill charges** = rent/electric/water/trash (+eUnits/wUnits) only — `notifyTenantOnMeterUpload.js:107-126` (Firestore `invoices/` of-record) · `billing-system.js:338-355` (tenant RTDB view) · `_billFlex.js:94-100` (compute). **No `petFee`** anywhere (grep = 0).
+- **`aggregateMonthlyRevenue.js`**: categories `rentIncome/electricIncome/waterIncome/trashIncome/otherIncome/totalRevenue` (`_emptyMonth :50-58`); `other = max(0, total − rent − elec − water − trash)` residual (`:101-103`); accumulate `:106-111`; per-building `:120-124`; annual `:137-153`; skips `status==='refunded'` (`:94`). `otherIncome` (#243) = **generic residual, NOT pet-specific** (#243 explicitly deferred pet-fee-as-category "no data"). → `taxSummary/{BE}` via `writeSummary :170-182`; tax-filing UI renders the columns.
+- **Pets:** `tenants/{b}/list/{r}/pets/{petId}` w/ `status` field (`tenant-pets.js:38-42,189-201`); initial `'pending'`. ⚠️ exact APPROVED enum value NOT yet confirmed — grep the admin pet-approval writer at build (lifecycle_pets_registration).
+- **Move-out:** `archiveTenantOnMoveOut.js` writes tenants+leases+occupancyLog in one batch (`:249-314`) — **never deposits**; deposit return is the separate manual `_saveDepositReturn`. §7-DD already satisfied for leases.
+- **Audit:** `recordAdminAction` onCall SE1 `{action,targetType,targetId?,building?,roomId?,before?,after?,note?}` (`recordAdminAction.js:49-89`); in-tx `appendActionAudit(writer,fs,payload)` (`_actionAudit.js:84-126`); `VALID_ACTIONS` Set (`:53-61`) has **no `DEPOSIT_RETURNED`**.
+- **Refund slip storage:** `refundBill.js` (#245) stores status+audit, **no image**. Admin-image storage pattern = `{collection}/{id}/{subdir}/{file}` (`storage.rules` booking/lease/checklist); **no deposit-slip path** exists.
+- **Outstanding/arrears** reusable: aging just shipped (#246) — `BillStore.listAll()` (`billing-system.js:914`) + `computeAging` (`dashboard-aging.js`) give per-room outstanding for settlement overflow.
+
+### Design decisions (confirm or adjust before build)
+- **D1 — Pet deposit storage:** nest a `pet:{amount,paidSoFar,status,returnedAt,returnedAmount}` object on the SAME `deposits/{b}_{r}` doc (one read, atomic with room deposit, no new collection). *Alt:* separate `deposits/{b}_{r}_pet` doc. **Recommend: same doc, nested `pet`.**
+- **D2 — Pet-fee revenue category:** own `petFeeIncome` key in `aggregateMonthlyRevenue` (spec §2.1 lists ค่าสัตว์ as its own revenue line; auditor-clear) + subtract petFee from the `other` residual so total still reconciles. *Alt:* fold into `otherIncome` (simpler, loses visibility). **Recommend: own `petFeeIncome`.**
+- **D3 — Pet-fee timing:** compute `petFee = 400 × (approved pets in room)` at bill generation inside `notifyTenantOnMeterUpload` (auto, admin sees it in the bill preview before approve — §7-I safe). *Alt:* admin manually keys it. **Recommend: auto-compute, admin-visible.**
+- **D4 — Settlement ↔ move-out coupling:** keep `settleDeposit` a SEPARATE admin action (don't auto-fire from `archiveTenantOnMoveOut` — avoids coupling + §7-DD blast); surface a "ยังไม่ settle มัดจำ" badge on vacant/archived rooms so it isn't forgotten. **Recommend: separate + reminder badge.**
+
+### SLICE A — Pet fee billing + `petFeeIncome` revenue category · ~0.5–1 day · risk LOW · own PR (closes #243-deferred)
+Independent of deposits; revenue-side only. Do first.
+- [ ] **Confirm approved-pet predicate** — grep the pet-approval writer to get the exact `status` value + whether pet-allowed-room gating matters. *Why:* §7-T/§7-J — count must match the real enum, not assume `'approved'`.
+- [ ] **Add `charges.petFee`** at the canonical bill-assembly site `notifyTenantOnMeterUpload.js:107-126` = `400 × approvedPetCount` (read `tenants/{b}/list/{r}/pets` server-side in the CF). Mirror into the tenant RTDB bill view (`billing-system.js:338-355`) + dashboard bill form display (`dashboard-bill.js:411-443`). *Why:* one source-of-truth charge, surfaced everywhere a bill renders.
+- [ ] **`aggregateMonthlyRevenue.js`** — add `petFeeIncome` to `_emptyMonth`/`_emptyByBuilding`/annual; compute `petFee = Number(b.charges?.petFee)||0`; `m.petFeeIncome += petFee`; change residual to `other = max(0, total − rent − elec − water − trash − petFee)`. *Why:* keeps Σcategories === totalRevenue (the #243 invariant) while giving pet fee its own line.
+- [ ] **tax-filing UI** — add "ค่าสัตว์เลี้ยง" column reading `petFeeIncome` (mirror the #243 otherIncome column). 
+- [ ] **Tests + gate:** unit test pet-fee math in the bill CF + a `aggregateMonthlyRevenue` reconciliation test (Σ === total incl. petFee). `node --check`, `test:shared`, rules unaffected.
+- [ ] **Deploy:** `firebase deploy --only functions:notifyTenantOnMeterUpload,functions:aggregateMonthlyRevenue` (branch-check first per [[feedback_branch_before_firebase_deploy]]) + Vercel for UI. Live-verify: a room with N pets → bill shows ฿400N → tax P&L petFee column populates.
+
+### SLICE B — Deposit installments + pet deposit · ~1–2 days · risk MED · own PR
+- [ ] **Schema extend `deposits/{b}_{r}`** — add `paidSoFar` (number, default = `amount` for legacy = treat existing as fully paid), derived `due = amount − paidSoFar`; add `status:'partial'` between holding/returned; nest `pet:{amount:10000, paidSoFar, status}` (D1) only for pet-allowed rooms / rooms with pets. *Why:* spec §1.1 installments + §1.2 separate pet deposit. §7-L: existing docs keep working (reader treats missing `paidSoFar` as fully-paid; no destructive migration).
+- [ ] **Seed = 2×rent** — `_seedDepositsFromTenants` derive room-deposit `amount = 2 × monthlyRent` (rent from config/tenant) when seeding NEW docs; leave existing `amount` untouched. *Why:* spec §1.1; don't rewrite live amounts (§7-I/§7-L).
+- [ ] **Admin UI** (`dashboard-deposits-admin.js`) — "บันทึกการผ่อนมัดจำ" (record an installment → bump `paidSoFar`, flip `partial`→`holding` when complete) + pet-deposit fields in the same panel. KPI: add outstanding-deposit total. *Why:* spec §1.1 "ส่วนที่ยังไม่ครบ = ยอดค้าง".
+- [ ] **Rules** — `deposits` stays admin-write/admin+accountant-read (new fields, same access); add `test:rules` cases for the nested `pet` + `paidSoFar`. 
+- [ ] **Tenant badge** (`tenant-render.js:240-254`) — show installment progress (`paidSoFar/amount`) + pet-deposit status when present. *Why:* tenant transparency (spec §1.5).
+- [ ] **Tests + gate** + Vercel live-verify (admin records partial → tenant sees progress).
+
+### SLICE C — Move-out settlement: itemized damage routing + audit + refund slip · ~2 days · risk MED-HIGH · own PR (depends on B)
+- [ ] **Deduction shape** → `{type, cause:'human'|'pet', desc, amount, photo}` (photo = Storage path). Replace `{reason,amount}` reader/writer in `dashboard-deposits-admin.js` (back-compat: treat legacy `reason` as `desc`, missing `cause` as `'human'`). *Why:* spec §2.2 routing needs `cause`; §1.4 needs photo evidence.
+- [ ] **New CF `functions/settleDeposit.js`** (onCall SE1, admin-gated — copy `refundBill.js`/`archiveTenantOnMoveOut.js` pattern, §7-NN). Input `{building, room, deductions[], finalBillTotal, refundBankRef}`. Routing (spec §2.2), atomic Firestore tx:
+  - `cause==='pet'`: consume `pet.amount` → overflow `room amount` → overflow = tenant still-owes (record, don't auto-collect).
+  - `cause==='human'`/ambiguous-default: consume `room amount` → overflow still-owes. **Never touch `pet`.**
+  - Subtract `finalBillTotal` from room deposit (spec §1.3). Compute `returnedAmount` (room) + pet `returnedAmount`.
+  - Write `deposits/{b}_{r}` status='returned' + settlement record; `appendActionAudit({action:'DEPOSIT_RETURNED', before, after, ...})` in the SAME tx (§7-DD). 
+- [ ] **`_actionAudit.js:53-61`** — add `'DEPOSIT_RETURNED'` to `VALID_ACTIONS` (+ test).
+- [ ] **Storage** — new admin-write path `deposits/{b}_{r}/{damage|slip}/{file}` in `storage.rules` (mirror checklist/lease admin-image pattern); use `dataUrlToBlob` not `fetch(dataURL)` for canvas→blob (§7-Y).
+- [ ] **Admin settlement UI** — itemized-deduction editor (cause dropdown + photo upload per row), live preview of routed refund (reuse `computeAging`/`BillStore.listAll` for outstanding), `httpsCallable('settleDeposit')` — **§7-I: preview → admin clicks, never auto-`.click()`**. Upload refund transfer slip.
+- [ ] **Reminder badge** (D4) — mark vacant/archived rooms with held deposit as "ยังไม่ settle".
+- [ ] **Tests** (routing math: pet-overflow-to-room, human-never-touches-pet, final-bill-deduction, return-difference example มัดจำ3000−บิล2300=700) **+ rules test + index READY (§7-J) + live-verify** (admin settles a test room → audit row immutable, slip stored, tenant badge flips).
+
+### Cross-cutting guardrails (every slice)
+- One surface per PR, behind `validate.yml`; tests with/before the change. Backend = `onCall` SE1 not Firestore trigger (§7-NN). New field → grep writer+reader first (§7-T). Composite index `READY` before any query (§7-J). Production data actions → preview, never auto-`.click()` (§7-I). After each: re-read session diffs for self-conflict (§7-G); update `lifecycle_deposit_management.md` SAME session.
+- Auto-merge own PRs per [[feedback_auto_merge_prs]]; **deploy step waits for owner confirmation**. Don't stack PRs (§stacked-PR lesson) — branch each off fresh `main`.
+
+### Out of scope (named, not dropped)
+- Auto-collecting the still-owes overflow (settlement records it; collection is a separate dunning flow).
+- Auto-firing settlement from move-out (D4 keeps them separate).
+- Multi-currency / partial pet-deposit refund schedules.
+
+### Recommended order
+**A** (pet fee — independent, closes #243-deferred) → **B** (deposit schema) → **C** (settlement, needs B). Each its own PR.
+
+### Review (append per slice after execution)
+_(shipped / deferred / follow-ups)_
+
+---
+
+## ▶▶▶ ACTIVE PLAN (2026-06-03 PM) — Roadmap Phase 2: Refund flow (reverse a PAID bill + trail) · ✅ SHIPPED #245 (main `3d35c8f`)
 
 **Scope:** roadmap Phase 2 "Refund flow — paid-bill reversal with trail + 1.1 audit row." Blueprint (PDF p.1) lists **คืนเงิน (refund)** as a SEPARATE internal-control from **ยกเลิกบิล (void**, shipped 1.3): refund = money already COLLECTED is returned. Forward-only. Mirrors the `voidInvoice` CF + audit pattern exactly. **Branch off fresh `main` (NOT stacked — §stacked-PR lesson 2026-06-03 [[feedback_stacked_pr_squash_merge]]).**
 
