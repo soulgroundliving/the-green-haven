@@ -151,9 +151,8 @@ function renderDepositsPage() {
           ${!isReturned && depDue > 0 ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};">ชำระแล้ว ${fmt(depPaid)} · ค้าง <strong style="color:#dc2626;">${fmt(depDue)}</strong></div>` : ''}
           ${(deductTotal || finalBillTotal) ? `${finalBillTotal ? `<div style="font-size:11px;color:#dc2626;">บิลเดือนสุดท้าย ${fmt(finalBillTotal)}</div>` : ''}${deductTotal ? `<div style="font-size:11px;color:#dc2626;">หักเสียหาย ${fmt(deductTotal)}</div>` : ''}<div style="font-size:var(--fs-sm);font-weight:700;color:#059669;">คืนสุทธิ ${fmt(netRefund)}</div>` : ''}
           <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap;">
-            ${!isReturned ? `<button data-action="showDepositInstallmentModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#fef3c7;color:#92400e;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">ผ่อนมัดจำ</button>` : ''}
             ${!isReturned ? `<button data-action="showReturnDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">บันทึกคืนมัดจำ</button>` : ''}
-            <button data-action="exportDepositReceipt" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📄 ใบรับเงิน</button>
+            ${isReturned ? `<button data-action="exportDepositReceipt" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📄 ใบรับเงิน</button>` : ''}
           </div>
         </div>
       </div>
