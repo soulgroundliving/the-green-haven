@@ -315,6 +315,38 @@ describe('aggregateMonthlyRevenue', () => {
       assert.equal(call.data.months[9].otherIncome, 0);
     });
 
+    it('petFee is its own category and is excluded from the otherIncome remainder', async () => {
+      buildingsList = ['rooms'];
+      const currentBE = new Date().getFullYear() + 543;
+      // totalCharge 1500: rent 800 + elec 100 + water 50 + trash 50 + petFee 400 (2 pets) + other 100
+      seedBill(makeBill(currentBE, 5, {
+        status: 'paid', totalCharge: 1500,
+        charges: { rent: 800, electric: { cost: 100 }, water: { cost: 50 }, trash: 50, petFee: 400 },
+      }));
+      await scheduledHandler({});
+      const call = fsSetCalls.find(c => c.path === `taxSummary/${currentBE}`);
+      const m5 = call.data.months[5];
+      assert.equal(m5.petFeeIncome, 400, 'charges.petFee → petFeeIncome');
+      assert.equal(m5.otherIncome, 100, 'remainder excludes petFee: 1500-800-100-50-50-400 = 100');
+      assert.equal(
+        m5.rentIncome + m5.electricIncome + m5.waterIncome + m5.trashIncome + m5.petFeeIncome + m5.otherIncome,
+        m5.totalRevenue, 'all categories incl. petFee sum to totalRevenue');
+      assert.equal(call.data.annual.petFeeIncome, 400, 'annual rolls up petFeeIncome');
+      assert.equal(m5.byBuilding.rooms.petFee, 400, 'per-building carries petFee');
+    });
+
+    it('petFeeIncome is 0 and the remainder formula is unchanged for legacy bills with no charges.petFee', async () => {
+      buildingsList = ['rooms'];
+      const currentBE = new Date().getFullYear() + 543;
+      // makeBill has no petFee field → petFeeIncome 0, other = 1100-1000 = 100 (back-compat)
+      seedBill(makeBill(currentBE, 9, { status: 'paid', totalCharge: 1100 }));
+      await scheduledHandler({});
+      const call = fsSetCalls.find(c => c.path === `taxSummary/${currentBE}`);
+      const m9 = call.data.months[9];
+      assert.equal(m9.petFeeIncome, 0, 'absent charges.petFee → 0');
+      assert.equal(m9.otherIncome, 100, 'remainder unchanged when petFee absent');
+    });
+
     it('refunded bill is excluded from all revenue (paid, pending, and totals)', async () => {
       buildingsList = ['rooms'];
       const currentBE = new Date().getFullYear() + 543;

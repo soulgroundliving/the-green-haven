@@ -8,12 +8,12 @@
  *   year: 2569,
  *   updatedAt: ...,
  *   months: {
- *     1: { rentIncome, electricIncome, waterIncome, trashIncome, otherIncome, totalRevenue,
+ *     1: { rentIncome, electricIncome, waterIncome, trashIncome, petFeeIncome, otherIncome, totalRevenue,
  *          paidCount, paidRevenue, pendingCount, pendingRevenue,
  *          byBuilding: { rooms: {...}, nest: {...} } },
  *     2: {...}, ..., 12: {...}
  *   },
- *   annual: { rentIncome, electricIncome, waterIncome, trashIncome, otherIncome, totalRevenue,
+ *   annual: { rentIncome, electricIncome, waterIncome, trashIncome, petFeeIncome, otherIncome, totalRevenue,
  *             paidRevenue, pendingRevenue,
  *             // Tax estimates (Thai personal income tax — บุคคลธรรมดา)
  *             standardDeduction30: totalRevenue * 0.30,
@@ -43,13 +43,13 @@ const { getAllBuildings } = require('./buildingRegistry');
 function _emptyByBuilding(buildings) {
   const out = {};
   for (const b of buildings) {
-    out[b] = { rent: 0, electric: 0, water: 0, trash: 0, other: 0, total: 0, paid: 0, pending: 0 };
+    out[b] = { rent: 0, electric: 0, water: 0, trash: 0, petFee: 0, other: 0, total: 0, paid: 0, pending: 0 };
   }
   return out;
 }
 function _emptyMonth(buildings) {
   return {
-    rentIncome: 0, electricIncome: 0, waterIncome: 0, trashIncome: 0, otherIncome: 0,
+    rentIncome: 0, electricIncome: 0, waterIncome: 0, trashIncome: 0, petFeeIncome: 0, otherIncome: 0,
     totalRevenue: 0,
     paidCount: 0, paidRevenue: 0,
     pendingCount: 0, pendingRevenue: 0,
@@ -98,15 +98,17 @@ async function aggregateYear(yearBE) {
         const elec  = Number(b.charges?.electric?.cost) || 0;
         const water = Number(b.charges?.water?.cost) || 0;
         const trash = Number(b.charges?.trash) || 0;
+        const petFee = Number(b.charges?.petFee) || 0;
         // Reconciling remainder: late fee / `other` / common / any future fee field
-        // (bill total minus the 4 named categories) so categories always sum to total.
-        const other = Math.max(0, total - rent - elec - water - trash);
+        // (bill total minus the named categories) so categories always sum to total.
+        const other = Math.max(0, total - rent - elec - water - trash - petFee);
         const isPaid = b.status === 'paid';
 
         m.rentIncome     += rent;
         m.electricIncome += elec;
         m.waterIncome    += water;
         m.trashIncome    += trash;
+        m.petFeeIncome   += petFee;
         m.otherIncome    += other;
         m.totalRevenue   += total;
         if (isPaid) {
@@ -119,7 +121,7 @@ async function aggregateYear(yearBE) {
         // Per-building breakdown
         const bb = m.byBuilding[building];
         if (bb) {
-          bb.rent += rent; bb.electric += elec; bb.water += water; bb.trash += trash; bb.other += other;
+          bb.rent += rent; bb.electric += elec; bb.water += water; bb.trash += trash; bb.petFee += petFee; bb.other += other;
           bb.total += total;
           if (isPaid) bb.paid += total; else bb.pending += total;
         }
@@ -129,7 +131,7 @@ async function aggregateYear(yearBE) {
 
   // Annual totals
   const annual = {
-    rentIncome: 0, electricIncome: 0, waterIncome: 0, trashIncome: 0, otherIncome: 0,
+    rentIncome: 0, electricIncome: 0, waterIncome: 0, trashIncome: 0, petFeeIncome: 0, otherIncome: 0,
     totalRevenue: 0, paidRevenue: 0, pendingRevenue: 0,
     paidCount: 0, pendingCount: 0,
     byBuilding: _emptyByBuilding(buildings)
@@ -140,6 +142,7 @@ async function aggregateYear(yearBE) {
     annual.electricIncome += x.electricIncome;
     annual.waterIncome    += x.waterIncome;
     annual.trashIncome    += x.trashIncome;
+    annual.petFeeIncome   += x.petFeeIncome;
     annual.otherIncome    += x.otherIncome;
     annual.totalRevenue   += x.totalRevenue;
     annual.paidRevenue    += x.paidRevenue;
@@ -149,7 +152,7 @@ async function aggregateYear(yearBE) {
     buildings.forEach(b => {
       const a = annual.byBuilding[b]; const s = x.byBuilding[b];
       if (!a || !s) return;
-      ['rent','electric','water','trash','other','total','paid','pending'].forEach(k => { a[k] += s[k]; });
+      ['rent','electric','water','trash','petFee','other','total','paid','pending'].forEach(k => { a[k] += s[k]; });
     });
   }
 
