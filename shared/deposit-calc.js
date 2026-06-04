@@ -29,7 +29,23 @@
     return depositDue(dep) <= 0;
   }
 
-  const api = { depositPaid, depositDue, isFullyPaid };
+  // ── Move-out deductions (Slice C) ───────────────────────────────────────
+  // The settlement deduction shape migrated {reason, amount} → {desc, amount,
+  // photo}. §7-L back-compat: a legacy `reason` reads as `desc`; a missing
+  // `photo` is simply absent (optional damage evidence on rooms-building).
+  function deductionDesc(d) {
+    if (!d) return '';
+    const v = (d.desc != null && d.desc !== '') ? d.desc : d.reason;
+    return v == null ? '' : String(v);
+  }
+
+  // Sum the deduction amounts (defensive: non-array → 0, garbage amount → 0).
+  function deductionsTotal(list) {
+    return (Array.isArray(list) ? list : [])
+      .reduce((s, d) => s + (Number(d && d.amount) || 0), 0);
+  }
+
+  const api = { depositPaid, depositDue, isFullyPaid, deductionDesc, deductionsTotal };
   if (typeof window !== 'undefined') window.DepositCalc = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

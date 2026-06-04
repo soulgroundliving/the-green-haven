@@ -58,6 +58,7 @@ const VALID_ACTIONS = new Set([
   'BILL_ISSUED',           // gapless invoice number minted at issuance (Phase 1.2)
   'BILL_VOIDED',           // admin voids an issued invoice (Phase 1.3)
   'BILL_REFUNDED',         // admin refunds a PAID bill — money returned (Phase 2)
+  'DEPOSIT_RETURNED',      // admin settles + returns a security deposit at move-out (Slice C)
 ]);
 
 // Firestore doc IDs cannot contain '/' or start with '.'. Build a safe segment.

@@ -1,10 +1,32 @@
 // ===== DEPOSIT MANAGEMENT =====
 // Firestore path: deposits/{building}/{roomId}
-// One doc per room: { amount, paidSoFar, status, receivedAt, returnedAt, returnedAmount, deductions[], refundBank, notes, updatedAt }
+// One doc per room: { amount, paidSoFar, status, receivedAt, returnedAt, returnedAmount, deductions[], refundBank, refundSlip, notes, updatedAt }
 // paidSoFar (Slice B): deposit paid so far for installments; absent = fully paid (§7-L). due = amount - paidSoFar.
+// deductions (Slice C): [{ desc, amount, photo }] — move-out damage settlement. §7-L back-compat:
+//   legacy rows are { reason, amount } (no photo); DepositCalc.deductionDesc() reads either. photo +
+//   refundSlip are Storage paths under deposits/{building}/{roomId}/ (admin-only, storage.rules).
+// Audit: _saveDepositReturn fires recordAdminAction({action:'DEPOSIT_RETURNED'}) — immutable settlement trail.
 
 let _depositsCache = []; // flat array: { building, roomId, ...fields }
 let _depositsUnsub = null;
+
+// DepositCalc is loaded before this module (dashboard.html), but guard defensively.
+const _dedDesc  = d    => window.DepositCalc ? window.DepositCalc.deductionDesc(d)     : ((d && (d.desc || d.reason)) || '');
+const _dedTotal = list => window.DepositCalc ? window.DepositCalc.deductionsTotal(list) : (Array.isArray(list) ? list : []).reduce((s, d) => s + (Number(d && d.amount) || 0), 0);
+
+// Upload an admin-captured File (damage photo / refund slip) to Storage and return
+// its path. File inputs yield File objects → uploadBytes directly (no §7-Y dataURL
+// concern). Returns '' if Storage isn't ready or no file — caller treats as "no evidence".
+async function _uploadDepositFile(building, roomId, file, prefix) {
+  const sf = window.firebase?.storageFunctions;
+  const st = window.firebase?.storage?.();
+  if (!sf || !st || !file) return '';
+  const ext  = (file.name && file.name.split('.').pop().toLowerCase()) || 'jpg';
+  const safe = String(roomId).replace(/[^\w-]/g, '_');
+  const path = `deposits/${building}/${safe}/${prefix}_${Date.now()}.${ext}`;
+  await sf.uploadBytes(sf.ref(st, path), file);
+  return path;
+}
 
 function initDepositsPage() {
   if (_depositsUnsub) { renderDepositsPage(); return; }
@@ -94,7 +116,7 @@ function renderDepositsPage() {
     : '<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;">💰 ถือมัดจำ</span>';
 
   list.innerHTML = rows.map(r => {
-    const deductTotal = (r.deductions || []).reduce((s, d) => s + (Number(d.amount) || 0), 0);
+    const deductTotal = _dedTotal(r.deductions);
     const isReturned = r.status === 'returned';
     const depDue  = window.DepositCalc ? window.DepositCalc.depositDue(r) : 0;
     const depPaid = window.DepositCalc ? window.DepositCalc.depositPaid(r) : (Number(r.amount) || 0);
@@ -104,7 +126,7 @@ function renderDepositsPage() {
         <div>
           <div style="font-weight:700;color:#334435;font-size:var(--fs-md);">ห้อง ${r.roomId} <span style="font-size:11px;color:#9ca3af;font-weight:400;">${r.building}</span></div>
           <div style="font-size:var(--fs-sm);color:${DashColors.TEXT_SECONDARY};margin-top:3px;">รับเมื่อ: ${r.receivedAt || '—'} · ${statusBadge(r.status)}${!isReturned && depDue > 0 ? ` <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">ค้างมัดจำ ${fmt(depDue)}</span>` : ''}</div>
-          ${(r.deductions||[]).length ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};margin-top:4px;">หัก: ${(r.deductions||[]).map(d=>`${d.reason} (${fmt(d.amount)})`).join(', ')}</div>` : ''}
+          ${(r.deductions||[]).length ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};margin-top:4px;">หัก: ${(r.deductions||[]).map(d=>`${_dedDesc(d)}${d.photo?' 📎':''} (${fmt(d.amount)})`).join(', ')}</div>` : ''}
           ${r.notes ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">หมายเหตุ: ${r.notes}</div>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0;">
@@ -143,10 +165,25 @@ function showReturnDepositModal(building, roomId) {
         <input id="dep-ret-date" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:8px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;">
       </div>
       <div id="dep-deductions-list" style="margin-bottom:8px;"></div>
-      <button data-action="addDepDeduction" style="font-size:11px;color:#3b82f6;background:none;border:none;cursor:pointer;padding:0;margin-bottom:8px;font-family:inherit;">+ เพิ่มรายการหัก</button>
-      <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <input id="dep-deduction-reason" placeholder="เหตุผล (เช่น ค่าเสียหาย)" style="flex:1;padding:7px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
-        <input id="dep-deduction-amount" type="number" placeholder="จำนวนเงิน" style="width:110px;padding:7px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
+      <div style="background:#fafaf9;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:10px;padding:10px 12px;margin-bottom:12px;">
+        <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:6px;">เพิ่มรายการหัก (ความเสียหายจากผู้เช่า)</div>
+        <div style="display:flex;gap:8px;margin-bottom:6px;">
+          <input id="dep-deduction-desc" placeholder="รายละเอียด (เช่น ค่าทำความสะอาด)" style="flex:1;padding:7px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
+          <input id="dep-deduction-amount" type="number" min="0" placeholder="บาท" style="width:96px;padding:7px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="dep-deduction-photo" type="file" accept="image/*,application/pdf" style="flex:1;font-size:10px;font-family:inherit;color:#6b7280;">
+          <button data-action="addDepDeduction" style="padding:6px 14px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">+ เพิ่ม</button>
+        </div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:4px;">📎 แนบรูปหลักฐานต่อรายการ (ไม่บังคับ) — แนะนำให้แนบเพื่อความโปร่งใส</div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">สลิปโอนคืน <span style="font-weight:400;color:#9ca3af;">(ไม่บังคับ)</span></label>
+        <input id="dep-ret-slip" type="file" accept="image/*,application/pdf" style="width:100%;font-size:11px;font-family:inherit;color:#6b7280;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">บัญชีที่โอนคืน</label>
+        <input id="dep-ret-bank" type="text" placeholder="ธนาคาร / เลขบัญชี (ไม่บังคับ)" value="${dep.refundBank||''}" style="width:100%;padding:8px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
       </div>
       <div style="margin-bottom:12px;">
         <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">หมายเหตุ</label>
@@ -170,7 +207,7 @@ function _renderDepDeductions() {
   if (!deductions.length) { el.innerHTML = ''; return; }
   el.innerHTML = `<div style="background:#fef9ec;border-radius:8px;padding:10px 12px;margin-bottom:8px;">
     ${deductions.map((d, i) => `<div style="display:flex;justify-content:space-between;align-items:center;font-size:var(--fs-sm);padding:3px 0;">
-      <span>${d.reason}</span>
+      <span>${_dedDesc(d)}${(d._file || d.photo) ? ' <span title="แนบรูปหลักฐานแล้ว">📎</span>' : ''}</span>
       <span style="display:flex;align-items:center;gap:8px;"><strong>฿${(Number(d.amount)||0).toLocaleString()}</strong>
         <button data-action="removeDepDeduction" data-index="${i}" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:14px;padding:0;font-family:inherit;">✕</button>
       </span>
@@ -235,23 +272,53 @@ async function _saveDepositReturn(building, roomId) {
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
-  const deductions = window._depPendingDeductions || [];
-  const retDate  = document.getElementById('dep-ret-date')?.value || new Date().toISOString().slice(0,10);
-  const notes    = document.getElementById('dep-ret-notes')?.value || '';
-  const dep      = _depositsCache.find(r => r.building === building && r.roomId === roomId);
-  const deductTotal = deductions.reduce((s, d) => s + (Number(d.amount)||0), 0);
-  const held = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep?.amount)||0);
+  const pending    = window._depPendingDeductions || [];
+  const retDate    = document.getElementById('dep-ret-date')?.value || new Date().toISOString().slice(0,10);
+  const notes      = document.getElementById('dep-ret-notes')?.value || '';
+  const refundBank = document.getElementById('dep-ret-bank')?.value || '';
+  const slipFile   = document.getElementById('dep-ret-slip')?.files?.[0] || null;
+  const dep        = _depositsCache.find(r => r.building === building && r.roomId === roomId);
+
+  // Lock the button: uploads are async, prevent a double-settle on impatient clicks.
+  const saveBtn = document.querySelector('#returnDepositModal [data-action="saveDepositReturn"]');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'กำลังบันทึก…'; }
+
+  // Upload damage photos (optional, best-effort) → normalize to {desc, amount, photo}.
+  // A flaky photo upload must NOT lose the financial settlement — record desc+amount
+  // regardless, warn if any evidence upload failed.
+  let uploadWarn = false;
+  const deductions = [];
+  for (const d of pending) {
+    let photo = d.photo || '';
+    if (d._file) {
+      try { photo = await _uploadDepositFile(building, roomId, d._file, 'damage'); }
+      catch (e) { uploadWarn = true; console.warn('[deposit] damage photo upload failed:', e?.message || e); }
+    }
+    deductions.push({ desc: _dedDesc(d), amount: Number(d.amount) || 0, photo: photo || '' });
+  }
+
+  // Upload refund transfer slip (optional, best-effort) — closes the "ไม่ได้คืน" dispute.
+  let refundSlip = dep?.refundSlip || '';
+  if (slipFile) {
+    try { refundSlip = await _uploadDepositFile(building, roomId, slipFile, 'slip'); }
+    catch (e) { uploadWarn = true; console.warn('[deposit] refund slip upload failed:', e?.message || e); }
+  }
+
+  const deductTotal    = _dedTotal(deductions);
+  const held           = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep?.amount)||0);
   const returnedAmount = held - deductTotal; // installment-aware: refund only what the tenant actually paid
   try {
     await fs.setDoc(fs.doc(db, 'deposits', `${building}_${roomId}`), {
       building, roomId,
       amount: Number(dep?.amount) || 0,
+      paidSoFar: held,                 // preserve the installment-held amount on the settled record
       status: 'returned',
       receivedAt: dep?.receivedAt || null,
       returnedAt: retDate,
       returnedAmount,
       deductions,
-      refundBank: dep?.refundBank || '',
+      refundBank,
+      refundSlip,
       notes,
       updatedAt: new Date().toISOString()
     });
@@ -261,9 +328,31 @@ async function _saveDepositReturn(building, roomId) {
       { depositStatus: 'returned', depositReturnedAt: retDate },
       { merge: true }
     );
+
+    // Immutable settlement audit row — a deposit return is a financial mutation an
+    // auditor must trace. recordAdminAction stamps actor/role/ip/time server-side;
+    // fired AFTER the write, non-blocking (§7-I observe-only). +DEPOSIT_RETURNED in
+    // _actionAudit.js VALID_ACTIONS (redeploy recordAdminAction).
+    try {
+      const _recordAudit = window.firebase?.functions?.httpsCallable?.('recordAdminAction');
+      if (_recordAudit) {
+        _recordAudit({
+          action: 'DEPOSIT_RETURNED',
+          targetType: 'deposit',
+          targetId: `${building}_${roomId}`,
+          building, roomId,
+          after: { returnedAmount, deductionTotal: deductTotal, deductionCount: deductions.length, refundBank: refundBank || null },
+          note: notes || null,
+        }).catch((e) => console.warn('[audit] recordAdminAction failed:', e?.message || e));
+      }
+    } catch (e) { console.warn('[audit] recordAdminAction skipped:', e?.message || e); }
+
     document.getElementById('returnDepositModal')?.remove();
-    if (typeof showToast === 'function') showToast('✅ บันทึกคืนมัดจำแล้ว');
+    if (typeof showToast === 'function') {
+      showToast(uploadWarn ? '✅ บันทึกคืนมัดจำแล้ว (รูปบางรายการอัปโหลดไม่สำเร็จ)' : '✅ บันทึกคืนมัดจำแล้ว');
+    }
   } catch (e) {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✅ ยืนยันคืนมัดจำ'; }
     alert('เกิดข้อผิดพลาด: ' + e.message);
   }
 }
@@ -272,7 +361,7 @@ window._saveDepositReturn = _saveDepositReturn;
 async function exportDepositReceipt(building, roomId) {
   const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
   if (!dep) return;
-  const deductTotal = (dep.deductions||[]).reduce((s,d) => s+(Number(d.amount)||0), 0);
+  const deductTotal = _dedTotal(dep.deductions);
   const held = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep.amount)||0);
   const netRefund = held - deductTotal;
   const fmt = n => '฿' + (Number(n)||0).toLocaleString();
@@ -297,7 +386,7 @@ async function exportDepositReceipt(building, roomId) {
     ${(dep.deductions||[]).length ? `
     <div style="margin-top:12px;padding:10px;background:#fef9ec;border-radius:8px;font-size:12px;">
       <div style="font-weight:700;color:#92400e;margin-bottom:6px;">รายการหัก / Deductions</div>
-      ${(dep.deductions||[]).map(d=>`<div style="display:flex;justify-content:space-between;"><span>${d.reason}</span><span>${fmt(d.amount)}</span></div>`).join('')}
+      ${(dep.deductions||[]).map(d=>`<div style="display:flex;justify-content:space-between;"><span>${_dedDesc(d)}</span><span>${fmt(d.amount)}</span></div>`).join('')}
       <div style="display:flex;justify-content:space-between;font-weight:700;margin-top:6px;border-top:1px solid #fde68a;padding-top:6px;"><span>รวมหัก</span><span style="color:#dc2626;">${fmt(deductTotal)}</span></div>
     </div>` : ''}
     <div style="margin-top:14px;padding:14px;background:#f0fdf4;border-radius:10px;display:flex;justify-content:space-between;align-items:center;">

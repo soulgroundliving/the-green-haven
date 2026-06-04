@@ -385,3 +385,41 @@ describe('Marketplace — owner write via Firestore cross-check', () => {
     await assertFails(uploadBytes(ref(storage, 'marketplace/no-such-post/photo.png'), TINY_PNG, PNG_META));
   });
 });
+
+describe('Deposits — admin-only settlement evidence (Slice C)', () => {
+  it('Admin CAN upload a damage photo (image, <10MB)', async () => {
+    const storage = EMAIL_ADMIN().storage();
+    await assertSucceeds(uploadBytes(ref(storage, 'deposits/rooms/15/damage_1.png'), TINY_PNG, PNG_META));
+  });
+
+  it('Admin CAN upload a refund slip (PDF)', async () => {
+    const storage = EMAIL_ADMIN().storage();
+    await assertSucceeds(uploadBytes(ref(storage, 'deposits/rooms/15/slip_1.pdf'), TINY_PNG, PDF_META));
+  });
+
+  it('LIFF tenant CANNOT upload deposit evidence (admin-only write)', async () => {
+    const storage = LIFF_TENANT('line:U001', '15', 'rooms').storage();
+    await assertFails(uploadBytes(ref(storage, 'deposits/rooms/15/damage_x.png'), TINY_PNG, PNG_META));
+  });
+
+  it('LIFF tenant CANNOT read deposit evidence (admin-only read — dispute photos)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(ref(ctx.storage(), 'deposits/rooms/15/damage_1.png'), TINY_PNG, PNG_META);
+    });
+    const storage = LIFF_TENANT('line:U001', '15', 'rooms').storage();
+    await assertFails(getBytes(ref(storage, 'deposits/rooms/15/damage_1.png')));
+  });
+
+  it('Admin CANNOT upload oversize file (>10MB)', async () => {
+    const storage = EMAIL_ADMIN().storage();
+    await assertFails(uploadBytes(ref(storage, 'deposits/rooms/15/huge.png'), oversized(11), PNG_META));
+  });
+
+  it('LIFF tenant CANNOT delete deposit evidence (admin-only delete)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(ref(ctx.storage(), 'deposits/rooms/15/damage_1.png'), TINY_PNG, PNG_META);
+    });
+    const storage = LIFF_TENANT('line:U001', '15', 'rooms').storage();
+    await assertFails(deleteObject(ref(storage, 'deposits/rooms/15/damage_1.png')));
+  });
+});

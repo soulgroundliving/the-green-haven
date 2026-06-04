@@ -178,4 +178,23 @@ describe('VALID_ACTIONS', () => {
       assert.ok(VALID_ACTIONS.has(a), `VALID_ACTIONS must include ${a}`);
     }
   });
+
+  it('includes the financial-record actions (Phase 1.2/1.3/2 + Slice C)', () => {
+    for (const a of ['BILL_ISSUED', 'BILL_VOIDED', 'BILL_REFUNDED', 'DEPOSIT_RETURNED']) {
+      assert.ok(VALID_ACTIONS.has(a), `VALID_ACTIONS must include ${a}`);
+    }
+  });
+
+  it('accepts a DEPOSIT_RETURNED write (Slice C move-out settlement)', () => {
+    const writer = makeWriter();
+    appendActionAudit(writer, firestore, {
+      actor: 'admin-uid-1', actorRole: 'admin',
+      action: 'DEPOSIT_RETURNED', targetType: 'deposit', targetId: 'rooms_15',
+      building: 'rooms', roomId: '15',
+      after: { returnedAmount: 700, deductionTotal: 2300, deductionCount: 1 },
+    });
+    assert.equal(writer.calls.length, 1);
+    assert.equal(writer.calls[0].data.action, 'DEPOSIT_RETURNED');
+    assert.equal(writer.calls[0].data.targetType, 'deposit');
+  });
 });

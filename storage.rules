@@ -185,6 +185,20 @@ service firebase.storage {
             && firestore.get(/databases/(default)/documents/marketplace/$(postId)).data.ownerUid == request.auth.uid);
     }
 
+    // ===== DEPOSITS — admin move-out settlement evidence (Slice C) =====
+    // Path: deposits/{building}/{roomId}/{fileName}
+    // Damage-evidence photos + the refund transfer slip the admin attaches when
+    // settling a move-out deposit (tasks/deposit-pet-damage-rules.md §1.4/§2.4).
+    // Admin-only — mirrors the deposits/{b}_{r} Firestore doc (admin-write) and the
+    // dispute-evidence purpose: a tenant never reads another party's settlement
+    // photos, and there is no tenant upload path (the admin captures the evidence,
+    // not the tenant). 10MB cap + image/PDF only, same as the other admin uploads.
+    match /deposits/{building}/{roomId}/{fileName} {
+      allow read:   if isAdmin();
+      allow write:  if isAdmin() && fitsSizeLimit() && isImageOrPdf();
+      allow delete: if isAdmin();
+    }
+
     // Default deny.
     match /{allPaths=**} {
       allow read, write: if false;
