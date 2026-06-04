@@ -87,6 +87,29 @@ describe('DepositCalc — deduction shape (Slice C)', () => {
   });
 });
 
+describe('DepositCalc — netRefund (final bill + damage, spec §1.3)', () => {
+  it('spec §1.3 example: held 3000 − final bill 2300 − 0 damage = 700', () => {
+    assert.equal(D.netRefund(3000, 2300, []), 700);
+  });
+
+  it('final bill + damage both deducted', () => {
+    assert.equal(D.netRefund(10000, 3500, [{ amount: 1200 }, { amount: 800 }]), 4500);
+  });
+
+  it('no final bill (paid / Nest no-bill) → held − damage only', () => {
+    assert.equal(D.netRefund(2400, 0, [{ amount: 500 }, { amount: 500 }]), 1400);
+  });
+
+  it('over-deduction goes negative (tenant still owes)', () => {
+    assert.equal(D.netRefund(3000, 2800, [{ amount: 500 }]), -300);
+  });
+
+  it('defensive: garbage args coerce to 0', () => {
+    assert.equal(D.netRefund(undefined, null, null), 0);
+    assert.equal(D.netRefund('x', 'y', 'z'), 0);
+  });
+});
+
 describe('DepositCalc — PromptPay refund target (Slice C follow-up)', () => {
   it('validPromptPay accepts a 10-digit mobile starting 0 (strips separators)', () => {
     assert.deepEqual(D.validPromptPay('0812345678'), { valid: true, type: 'mobile', value: '0812345678' });

@@ -4,6 +4,38 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-04 PM) — Deposit settlement: deduct final/outstanding bill (spec §1.3) · ✅ SHIPPED to branch (PR pending) — gates green (shared 382/0, +8: netRefund + outstandingBillsForRoom), verify:memory 0 fail, mojibake clean, client-only
+
+**Why:** owner caught that Slice C settlement deducts only manual damage rows — it never pulls the **final-month bill** (ค่าเช่า+น้ำ+ไฟ+ขยะ) that spec §1.3 says to deduct from the deposit (canonical example: มัดจำ 3,000 − บิลเดือนสุดท้าย 2,300 = คืน 700). The `finalBillTotal` was in the original Slice C plan but dropped in the "core" re-scope. Owner chose **Option 1 (auto-pull + deduct + mark bills paid-from-deposit)**.
+
+**Why Plan-First:** money-flow (marks prod bills `status:'paid'`), cross-collection (deposit + bills + audit, §7-DD), not single-revert (writes prod bill status). Rooms-building only (Nest has no billing pipeline → no-op there).
+
+### Verified infra (this session, file:line)
+- **Outstanding source:** `BillStore.listAll()` (`billing-system.js:914`) + `dashboard-aging.js` `_normBill` (`:138`, reads `b.roomId||b.room`, BE-year via `toBE`) + `_isArrears` (status ∉ {paid,refunded,void}). `computeAging` (`:86`) groups by building+room. **Reuse via a new exported `outstandingBillsForRoom(b,r)`** — DON'T re-implement the filter (§7-D/E year+room traps live in `_normBill`).
+- **Mark-paid path:** existing `saveBillToFirebase` (`dashboard-bill-payment-status.js:107`) is a FULL-replace from the admin form — NOT reusable here (no form `d`). Use a **partial** `firebaseUpdate` (exposed in dashboard.html) on `bills/{b}/{r}/{billId}` → `{status:'paid', paidVia:'deposit_settlement', paidAt, paidRef:'deposit_'+key}`, preserving charges.
+- **⚠️ path-key trap:** `listAll()`/`getByRoom()` drop the RTDB path key (return `Object.values`). Marking paid needs the exact key → read `BillStore._cache[bld][room]` via `Object.entries` to get `[pathKey, bill]`. `billId` field == path key for saveBillToFirebase-written bills but NOT guaranteed for others → use the real key.
+- **Audit:** one `DEPOSIT_RETURNED` event (not N `BILL_PAID_MANUAL`) — its `after` carries `finalBillTotal` + `settledBillIds[]`.
+
+### Build
+- [ ] **`dashboard-aging.js`** — export `window.outstandingBillsForRoom(building, room)` → `{ bills:[{key, billId, month, beYear, total}], total }` (reuse `_normBill`+`_isArrears`; iterate `_cache[bld][room]` entries for the key). +unit test (mock BillStore).
+- [ ] **`deposit-calc.js`** — `netRefund(held, finalBillTotal, deductions)` pure helper (`held − finalBillTotal − Σdeductions`) + test (incl. spec §1.3 example).
+- [ ] **`dashboard-deposits-admin.js`** — `showReturnDepositModal`: pull `outstandingBillsForRoom` → stash `_depFinalBills`; show a read-only "บิลค้างชำระ (เดือนสุดท้าย)" block (only if total>0). `_updateRefundSummary` + `_genRefundQR`: net = held − finalBillTotal − damageTotal. `_saveDepositReturn`: firebaseUpdate each final bill → paid/deposit_settlement; store `finalBillTotal`+`settledBills[]` on deposit doc; DEPOSIT_RETURNED `after` += finalBillTotal+settledBillIds. **§7-I:** the bills show in the preview; the existing ยืนยัน click is the gate (no auto-click). Nest → empty → no bill writes.
+- [ ] **receipt** (`exportDepositReceipt`) — add "บิลเดือนสุดท้าย" line above net.
+- [ ] Gate (node --check, test:shared, mojibake, verify:memory) + lifecycle doc + live-verify on a **rooms-building** room with an unpaid bill.
+
+### Decisions
+- **D1 mark-paid mechanism:** partial `firebaseUpdate` (preserve charges) **[REC]** vs full `saveBillToFirebase` rebuild (needs form data — N/A).
+- **D2 reconcile impact:** deposit-settled bills have no slip → would land in reconcile's "unmatched paid" bucket. **DEFER + name** (the bill is correctly paid; reconcile cosmetic) vs add `paidVia:'deposit_settlement'` skip to `dashboard-reconcile.js` now. **[REC: defer]**
+- **D3 idempotency:** re-settling an already-`returned` deposit shouldn't re-mark bills. Guard on deposit `status==='returned'` (modal only opens for non-returned) — sufficient.
+
+### Guardrails
+§7-DD (deposit + bills + lease siblings — here deposit+bills) · §7-I (preview→explicit click, no auto-`.click()`) · §7-D/E (reuse `_normBill`, don't re-filter) · §7-T (grep `paidVia`/`settledBills` readers) · money-flow client-side write (precedent: manual mark-paid is client-side) · branch off fresh main, behind `validate.yml`, auto-merge per [[feedback_auto_merge_prs]] (client-only — no CF deploy).
+
+### Out of scope (named)
+Synthetic manualReceipt for reconcile (D2) · partial bill settlement (all-or-nothing per bill) · Nest (no bills until ~Aug).
+
+---
+
 ## ▶▶▶ ACTIVE PLAN (2026-06-04) — Deposit · Pet-fee · Damage-settlement · ⏳ AWAITING APPROVAL (Plan-First)
 
 **Source spec:** [tasks/deposit-pet-damage-rules.md](deposit-pet-damage-rules.md) — owner-confirmed 2026-06-04 (deposit = 2×rent w/ installments · pet fee ฿400/ตัว/เดือน · pet deposit ฿10,000/ห้อง · move-out settlement w/ itemized damage routing). This plan = the implementation of §2 "สเปกระบบ" of that doc.
