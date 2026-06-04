@@ -193,6 +193,7 @@ function showReturnDepositModal(building, roomId) {
         </div>
         <div style="font-size:10px;color:#9ca3af;margin-top:4px;">📎 แนบรูปหลักฐานต่อรายการ (ไม่บังคับ) — แนะนำให้แนบเพื่อความโปร่งใส</div>
       </div>
+      <div id="dep-ret-summary" style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin-bottom:12px;"></div>
       <div style="margin-bottom:12px;">
         <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:4px;">สลิปโอนคืน <span style="font-weight:400;color:#9ca3af;">(ไม่บังคับ)</span></label>
         <input id="dep-ret-slip" type="file" accept="image/*,application/pdf" style="width:100%;font-size:11px;font-family:inherit;color:#6b7280;">
@@ -263,6 +264,7 @@ function _genRefundQR() {
 window._genRefundQR = _genRefundQR;
 
 function _renderDepDeductions() {
+  _updateRefundSummary(); // keep the live net refund in sync on every add/remove (and 0-deduction state)
   const el = document.getElementById('dep-deductions-list');
   if (!el) return;
   const deductions = window._depPendingDeductions || [];
@@ -277,6 +279,29 @@ function _renderDepDeductions() {
   </div>`;
 }
 window._renderDepDeductions = _renderDepDeductions;
+
+// Live net-refund summary in the return modal: held − Σdeductions = what's actually paid.
+// Recomputed on every add/remove so the admin sees the real payout BEFORE confirming,
+// not only on the receipt afterwards. Negative net (deductions > held) = tenant still owes.
+function _updateRefundSummary() {
+  const el = document.getElementById('dep-ret-summary');
+  if (!el) return;
+  const ctx = window._depReturnCtx || {};
+  const dep = _depositsCache.find(r => r.building === ctx.building && r.roomId === ctx.roomId);
+  const held = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep?.amount) || 0);
+  const deductTotal = _dedTotal(window._depPendingDeductions || []);
+  const net = held - deductTotal;
+  const owes = net < 0;
+  const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
+  el.style.background = owes ? '#fef2f2' : '#f0fdf4';
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);">
+      <span style="color:#6b7280;">หักทั้งหมด</span><span style="color:${deductTotal ? '#dc2626' : '#9ca3af'};">${deductTotal ? '−' : ''}${fmt(deductTotal)}</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;padding-top:6px;border-top:1px solid ${owes ? '#fecaca' : '#d1fae5'};font-weight:800;">
+      <span style="color:#334435;">${owes ? 'ผู้เช่าค้างเพิ่ม' : 'คืนสุทธิที่จะจ่าย'}</span>
+      <span style="font-size:1.3rem;color:${owes ? '#dc2626' : '#059669'};">${fmt(Math.abs(net))}</span></div>`;
+}
+window._updateRefundSummary = _updateRefundSummary;
 
 // ── Installments (Slice B): record how much of the deposit the tenant has paid ──
 function showDepositInstallmentModal(building, roomId) {
