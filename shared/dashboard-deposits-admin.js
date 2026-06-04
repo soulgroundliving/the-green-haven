@@ -150,7 +150,6 @@ async function _reconcileDepositForRoom(fs, db, building, d, depSnap) {
       refundBank: dd.refundBank || '',
       refundPromptPay: dd.refundPromptPay || '',
       refundSlip: dd.refundSlip || '',
-      refundSlipVerified: dd.refundSlipVerified || null,
       notes: dd.notes || '',
       archivedAt: new Date().toISOString()
     });
@@ -266,11 +265,10 @@ function showReturnDepositModal(building, roomId) {
         <div style="margin-top:16px;padding-top:14px;border-top:1px dashed #e5e7eb;font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:.03em;margin-bottom:12px;">ช่องทางคืนเงิน</div>
 
         <div style="margin-bottom:14px;">
-          <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">สลิปโอนคืน <span style="font-weight:400;color:#9ca3af;">(ไม่บังคับ)</span></label>
+          <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">สลิปโอนคืน <span style="font-weight:400;color:#9ca3af;">(ไม่บังคับ — เก็บเป็นหลักฐาน)</span></label>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input id="dep-ret-slip" type="file" accept="image/*,application/pdf" style="flex:1;min-width:0;font-size:11px;font-family:inherit;color:#6b7280;">
             <button data-action="previewRefundSlip" title="ดูรูปสลิปที่เลือก" style="padding:8px 11px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">👁 ดู</button>
-            <button data-action="verifyRefundSlip" style="padding:8px 12px;background:#ecfdf5;color:#065f46;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">🔍 ตรวจสลิป</button>
           </div>
           <div id="dep-ret-slip-result" style="margin-top:8px;"></div>
         </div>
@@ -303,7 +301,6 @@ function showReturnDepositModal(building, roomId) {
   document.body.appendChild(modal);
   window._depPendingDeductions = (dep.deductions || []).map(d => ({...d}));
   window._depReturnCtx = { building, roomId };
-  window._depRefundSlipVerified = null; // SlipOK verdict for the CURRENT slip file (set by _verifyRefundSlip)
   // Final/unpaid bill of the room — auto-deducted from the deposit (spec §1.3).
   // rooms-building only; Nest has no bills → { total: 0 } → block hidden, no-op.
   window._depFinalBills = (typeof window.outstandingBillsForRoom === 'function')
@@ -373,119 +370,8 @@ function _genRefundQR() {
 }
 window._genRefundQR = _genRefundQR;
 
-// Verify the selected refund slip with SlipOK (verifyRefundSlip CF). Confirms the
-// slip is a REAL transfer + its amount ≈ the net refund + receiver ≈ tenant PromptPay.
-// Advisory only (§7-I): renders ✅/⚠ and stashes the verdict for the save write — it
-// never blocks ยืนยันคืนมัดจำ. The verdict is keyed to the file NAME so a slip swapped
-// after verifying doesn't carry a stale verdict onto the deposit doc.
-async function _verifyRefundSlip() {
-  const el = document.getElementById('dep-ret-slip-result');
-  if (!el) return;
-  const _esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-  const slipFile = document.getElementById('dep-ret-slip')?.files?.[0] || null;
-  if (!slipFile) {
-    el.innerHTML = '<div style="font-size:11px;color:#9ca3af;">เลือกไฟล์สลิปก่อนกดตรวจสอบ</div>';
-    return;
-  }
-  if (!window.firebase?.functions?.httpsCallable) {
-    el.innerHTML = '<div style="font-size:11px;color:#dc2626;">เชื่อมต่อ Cloud Function ไม่ได้</div>';
-    return;
-  }
-  // Net refund = held − final bill − pending deductions (same math as _genRefundQR / save).
-  const ctx = window._depReturnCtx || {};
-  const dep = _depositsCache.find(r => r.building === ctx.building && r.roomId === ctx.roomId);
-  const held = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep?.amount) || 0);
-  const finalBillTotal = Number(window._depFinalBills?.total) || 0;
-  const deductions = window._depPendingDeductions || [];
-  const net = window.DepositCalc
-    ? window.DepositCalc.netRefund(held, finalBillTotal, deductions)
-    : (held - finalBillTotal - _dedTotal(deductions));
-  if (net <= 0) {
-    el.innerHTML = '<div style="font-size:11px;color:#9ca3af;">ไม่มียอดคืนสุทธิ (ผู้เช่าไม่ได้รับเงินคืน) — ไม่ต้องตรวจสลิป</div>';
-    return;
-  }
-  // Tenant PromptPay → advisory receiver match (best-effort; CF returns null if it can't compare).
-  const ppRaw = document.getElementById('dep-ret-promptpay')?.value || '';
-  const ppv = (ppRaw.trim() && window.DepositCalc) ? window.DepositCalc.validPromptPay(ppRaw) : { valid: false, value: '' };
-  const expectedReceiver = ppv.valid ? ppv.value : '';
-
-  const btn = document.querySelector('#returnDepositModal [data-action="verifyRefundSlip"]');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ ตรวจสอบ…'; }
-  el.innerHTML = '<div style="font-size:11px;color:#6b7280;">⏳ กำลังตรวจสอบกับ SlipOK…</div>';
-  try {
-    const base64 = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result).split(',')[1]);
-      r.onerror = reject;
-      r.readAsDataURL(slipFile);
-    });
-    const call = window.firebase.functions.httpsCallable('verifyRefundSlip');
-    const res = await call({ file: base64, expectedAmount: net, expectedReceiver, building: ctx.building, room: ctx.roomId });
-    const j = res.data || {};
-    if (!j.success) {
-      window._depRefundSlipVerified = null;
-      if (j.code === 'scb_delay') {
-        el.innerHTML = '<div style="font-size:11px;color:#b45309;">⏳ ' + _esc(j.message || 'สลิป SCB ใช้เวลาตรวจสอบ ~2 นาที กรุณาลองใหม่') + '</div>';
-      } else {
-        el.innerHTML = '<div style="font-size:11px;color:#dc2626;">❌ สลิปไม่ผ่าน: ' + _esc(j.message || j.error || 'ไม่ทราบสาเหตุ') + '</div>';
-      }
-      return;
-    }
-    const d = j.data || {};
-    const fmtB = n => '฿' + (Number(n) || 0).toLocaleString();
-    // SlipOK returns an ISO transfer timestamp; format defensively (skip if unparseable).
-    let tDate = '';
-    if (d.date) { const dt = new Date(d.date); if (!isNaN(dt.getTime())) tDate = dt.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }); }
-    const amountLine = j.amountMatch
-      ? `<span style="color:#059669;">✅ ยอดตรง ${fmtB(j.slipAmount)}</span>`
-      : `<span style="color:#b45309;">⚠️ ยอดสลิป ${fmtB(j.slipAmount)} ≠ ยอดคืน ${fmtB(j.expectedAmount)}</span>`;
-    const recvLine = j.receiverMatch === true
-      ? '<span style="color:#059669;">✅ ปลายทางตรงพร้อมเพย์</span>'
-      : (j.receiverMatch === false
-          ? '<span style="color:#b45309;">⚠️ ปลายทางอาจไม่ตรงพร้อมเพย์ — โปรดตรวจสอบ</span>'
-          : '<span style="color:#9ca3af;">— ตรวจปลายทางอัตโนมัติไม่ได้</span>');
-    // All SlipOK-sourced strings go through _esc before innerHTML (external-API input).
-    el.innerHTML = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 10px;font-size:11px;line-height:1.7;">
-      <div style="font-weight:700;color:#065f46;">✅ สลิปจริง (ตรวจสอบกับธนาคารแล้ว)</div>
-      <div>ผู้โอน: ${_esc(d.sender || '—')}</div>
-      <div>ผู้รับ: ${_esc(d.receiver || '—')}</div>
-      ${tDate ? `<div>เวลาโอน: ${_esc(tDate)}</div>` : ''}
-      <div>${amountLine}</div>
-      <div>${recvLine}</div>
-    </div>`;
-    // Stash the verdict for the save write — fingerprinted by name+size+lastModified so
-    // a swapped (even same-named) file can't carry a stale verdict onto deposits/{b}_{r}.
-    // expectedAmount records the net it was checked against (audit clarity vs returnedAmount).
-    window._depRefundSlipVerified = {
-      transactionId: d.transactionId || null,
-      amount: j.slipAmount ?? null,
-      amountMatch: !!j.amountMatch,
-      receiverMatch: j.receiverMatch ?? null,
-      expectedAmount: j.expectedAmount ?? net,
-      verifiedAt: new Date().toISOString(),
-      fileName: slipFile.name || '',
-      fileSize: slipFile.size || 0,
-      fileLastModified: slipFile.lastModified || 0,
-    };
-  } catch (e) {
-    window._depRefundSlipVerified = null;
-    el.innerHTML = '<div style="font-size:11px;color:#dc2626;">⚠️ ตรวจสลิปไม่สำเร็จ: ' + _esc(e?.message || 'Network error') + '</div>';
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🔍 ตรวจสลิป'; }
-  }
-}
-window._verifyRefundSlip = _verifyRefundSlip;
-
 function _renderDepDeductions() {
   _updateRefundSummary(); // keep the live net refund in sync on every add/remove (and 0-deduction state)
-  // A deduction change moves the net refund → any prior slip verdict was checked
-  // against a stale amount. Drop it so a misleading amountMatch can't reach the doc;
-  // prompt a re-verify. Guard skips the no-op at modal open (verdict starts null).
-  if (window._depRefundSlipVerified) {
-    window._depRefundSlipVerified = null;
-    const _sr = document.getElementById('dep-ret-slip-result');
-    if (_sr) _sr.innerHTML = '<div style="font-size:11px;color:#9ca3af;">ยอดเปลี่ยน — กรุณากดตรวจสลิปใหม่</div>';
-  }
   const el = document.getElementById('dep-deductions-list');
   if (!el) return;
   const deductions = window._depPendingDeductions || [];
@@ -628,26 +514,6 @@ async function _saveDepositReturn(building, roomId) {
     catch (e) { uploadWarn = true; console.warn('[deposit] refund slip upload failed:', e?.message || e); }
   }
 
-  // SlipOK verdict (verifyRefundSlip CF) — proof the refund slip is a real transfer.
-  // Attach only when it belongs to the slip being saved (name+size+lastModified
-  // fingerprint, so a same-named swap can't pass); otherwise preserve any prior verdict
-  // so a re-save without a new file doesn't wipe it.
-  let refundSlipVerified = dep?.refundSlipVerified || null;
-  const _vrf = window._depRefundSlipVerified;
-  if (slipFile && _vrf &&
-      _vrf.fileName === slipFile.name &&
-      _vrf.fileSize === slipFile.size &&
-      _vrf.fileLastModified === slipFile.lastModified) {
-    refundSlipVerified = {
-      transactionId: _vrf.transactionId ?? null,
-      amount: _vrf.amount ?? null,
-      amountMatch: !!_vrf.amountMatch,
-      receiverMatch: _vrf.receiverMatch ?? null,
-      expectedAmount: _vrf.expectedAmount ?? null,
-      verifiedAt: _vrf.verifiedAt || new Date().toISOString(),
-    };
-  }
-
   const deductTotal    = _dedTotal(deductions);
   const held           = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep?.amount)||0);
   const finalBills     = window._depFinalBills || { bills: [], total: 0 };
@@ -671,8 +537,7 @@ async function _saveDepositReturn(building, roomId) {
       settledBills,                    // which bills were marked paid-from-deposit
       refundBank,
       refundPromptPay,
-      refundSlip,
-      refundSlipVerified,              // SlipOK verdict proof (verifyRefundSlip CF) — null if not verified
+      refundSlip,                      // Storage path — kept as move-out evidence (viewable in the gallery)
       notes,
       updatedAt: new Date().toISOString()
     });
@@ -842,7 +707,7 @@ async function showDepositEvidence(building, roomId) {
 
   const card = it => {
     const head = it.kind === 'slip'
-      ? `<span style="font-weight:700;color:#065f46;">🧾 ${_esc(it.label)}</span>${dep.refundSlipVerified ? '<span style="margin-left:6px;font-size:10px;background:#d1fae5;color:#065f46;padding:1px 7px;border-radius:20px;font-weight:700;">✅ ตรวจสอบแล้ว</span>' : ''}`
+      ? `<span style="font-weight:700;color:#065f46;">🧾 ${_esc(it.label)}</span>`
       : `<span style="font-weight:600;color:#374151;">${_esc(it.label)}</span>${it.amount != null ? `<span style="color:#dc2626;font-weight:700;margin-left:6px;">${fmt(it.amount)}</span>` : ''}`;
     let media;
     if (!it.url) media = `<div style="color:#dc2626;font-size:11px;">โหลดไม่สำเร็จ${it.err ? ': ' + _esc(it.err) : ''}</div>`;
