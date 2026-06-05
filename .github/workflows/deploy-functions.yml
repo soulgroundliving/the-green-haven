@@ -76,7 +76,7 @@ jobs:
       # functions/.env (gitignored). For CI we write it from a GitHub secret.
       SLIPOK_API_URL: ${{ secrets.SLIPOK_API_URL }}
       WAQI_API_TOKEN: ${{ secrets.WAQI_API_TOKEN }}
-      # Opt actions/checkout@v4 + google-github-actions/auth@v2 into Node.js 24
+      # Opt actions/checkout@v4 + google-github-actions/auth@v3 into Node.js 24
       # runtime ahead of the forced migration on 2026-06-02.
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -124,7 +124,7 @@ jobs:
         run: npm test
 
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THE_GREEN_HAVEN }}
 
