@@ -820,7 +820,16 @@ async function exportDepositReceipt(building, roomId) {
   try {
     if (typeof window.ensureHtml2Canvas === 'function') await window.ensureHtml2Canvas();
     const html2canvas = window.html2canvas;
-    const canvas = await html2canvas(wrap, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    // html2canvas clones the WHOLE dashboard to resolve styles, so it tries to clone the
+    // dashboard's Chart.js canvas (`chartYears`) — which is tainted, logging "Unable to clone
+    // canvas as it is tainted". The receipt has NO canvas of its own, so skip all canvases
+    // during the clone to drop that noise. (The separate `style-src-elem` CSP warning is a
+    // KNOWN-benign html2canvas quirk documented at the ensureHtml2Canvas loader in
+    // dashboard.html — PNG still exports correctly; the real fix is a CSP-friendly library.)
+    const canvas = await html2canvas(wrap, {
+      scale: 2, useCORS: true, backgroundColor: '#ffffff',
+      ignoreElements: (el) => el.nodeName === 'CANVAS',
+    });
     const link = document.createElement('a');
     link.download = `deposit_receipt_${building}_${roomId}.png`;
     link.href = canvas.toDataURL('image/png');
