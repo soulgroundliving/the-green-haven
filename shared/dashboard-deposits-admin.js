@@ -13,6 +13,8 @@
 //   admin/accountant read) before resetting to holding for the newcomer — so each tenant's move-out
 //   evidence survives for cross-tenancy comparison. Storage files are never deleted (§7-L legacy: docs
 //   without tenantId are left untouched; first holding cycle after this ship backfills the owner).
+//   historyCount on the live doc counts archived prior settlements so the card can offer "ดูประวัติ (N)"
+//   and the holding card surfaces a prior tenant's evidence — both without an N+1 subcollection query.
 
 let _depositsCache = []; // flat array: { building, roomId, ...fields }
 let _depositsUnsub = null;
@@ -110,7 +112,7 @@ async function _reconcileDepositForRoom(fs, db, building, d, depSnap) {
   const t = d.data() || {};
   const docId = `${building}_${d.id}`;
   const curTenantId = t.tenantId || '';
-  const freshHolding = () => ({
+  const freshHolding = (historyCount = 0) => ({
     building, roomId: d.id,
     tenantId: curTenantId,
     amount: Number(t.deposit) || 0,
@@ -119,6 +121,7 @@ async function _reconcileDepositForRoom(fs, db, building, d, depSnap) {
     receivedAt: t.moveInDate || t.createdAt || null,
     deductions: [],
     refundBank: '',
+    historyCount,                       // # of archived prior settlements (Item B step 4) — drives the card's "ดูประวัติ (N)"
     notes: '',
     updatedAt: new Date().toISOString()
   });
@@ -153,7 +156,7 @@ async function _reconcileDepositForRoom(fs, db, building, d, depSnap) {
       notes: dd.notes || '',
       archivedAt: new Date().toISOString()
     });
-    await fs.setDoc(fs.doc(db, 'deposits', docId), freshHolding());
+    await fs.setDoc(fs.doc(db, 'deposits', docId), freshHolding((dd.historyCount || 0) + 1));
   }
 }
 
@@ -191,6 +194,8 @@ function renderDepositsPage() {
     const finalBillTotal = Number(r.finalBillTotal) || 0; // absorbed final/unpaid bill (spec §1.3)
     const isReturned = r.status === 'returned';
     const hasEvidence = (r.deductions || []).some(d => d.photo) || !!r.refundSlip; // any stored damage photo / refund slip
+    const hasHistory = (Number(r.historyCount) || 0) > 0; // archived prior tenancies (Item B step 4) — viewable on holding rooms too
+    const evLabel = (isReturned && hasEvidence ? 'ดูหลักฐาน' : 'ดูประวัติ') + (hasHistory ? ` (${r.historyCount})` : '');
     const depDue  = window.DepositCalc ? window.DepositCalc.depositDue(r) : 0;
     const depPaid = window.DepositCalc ? window.DepositCalc.depositPaid(r) : (Number(r.amount) || 0);
     const netRefund = depPaid - finalBillTotal - deductTotal; // held − final bill − damage
@@ -208,7 +213,7 @@ function renderDepositsPage() {
           ${(deductTotal || finalBillTotal) ? `${finalBillTotal ? `<div style="font-size:11px;color:#dc2626;">บิลเดือนสุดท้าย ${fmt(finalBillTotal)}</div>` : ''}${deductTotal ? `<div style="font-size:11px;color:#dc2626;">หักเสียหาย ${fmt(deductTotal)}</div>` : ''}<div style="font-size:var(--fs-sm);font-weight:700;color:#059669;">คืนสุทธิ ${fmt(netRefund)}</div>` : ''}
           <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap;">
             ${!isReturned ? `<button data-action="showReturnDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">บันทึกคืนมัดจำ</button>` : ''}
-            ${isReturned && hasEvidence ? `<button data-action="showDepositEvidence" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#eef2f6;color:#334435;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📎 ดูหลักฐาน</button>` : ''}
+            ${(isReturned && hasEvidence) || hasHistory ? `<button data-action="showDepositEvidence" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#eef2f6;color:#334435;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📎 ${evLabel}</button>` : ''}
             ${isReturned ? `<button data-action="exportDepositReceipt" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📄 ใบรับเงิน</button>` : ''}
           </div>
         </div>
@@ -659,15 +664,20 @@ function _previewRefundSlipFile() {
 }
 window._previewRefundSlipFile = _previewRefundSlipFile;
 
-// Retrospective evidence gallery for a settled deposit — all stored damage
-// photos + the refund slip, resolved to download URLs (admin read grant on
-// storage.rules). Image → thumbnail (click = full size); PDF → open link.
+// Retrospective evidence gallery for a deposit — the latest settlement's damage
+// photos + refund slip, PLUS a collapsible sub-gallery per archived prior tenancy
+// (deposits/{building}_{roomId}/history/, Item B step 4) so a room's move-out
+// condition can be compared across successive tenants. Storage paths resolve to
+// download URLs (admin read grant on storage.rules); images load lazily, PDFs open
+// in a tab. History reads degrade silently if its rules aren't deployed yet (#260) —
+// no turnover has archived anything until then anyway.
 async function showDepositEvidence(building, roomId) {
   const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
   if (!dep) return;
   document.getElementById('depEvidenceModal')?.remove();
   const _esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
   const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
+  const subtitle = dep.status === 'returned' ? `คืนเมื่อ ${_fmtDepDate(dep.returnedAt)}` : 'ปัจจุบัน: ถือมัดจำอยู่';
 
   const modal = document.createElement('div');
   modal.id = 'depEvidenceModal';
@@ -676,8 +686,8 @@ async function showDepositEvidence(building, roomId) {
     <div style="background:#fff;border-radius:16px;width:100%;max-width:460px;max-height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);">
       <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
         <div>
-          <h3 style="margin:0;font-size:1.05rem;color:#334435;font-weight:800;">📎 หลักฐานการคืนมัดจำ</h3>
-          <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">ห้อง ${_esc(roomId)} <span style="color:#9ca3af;">· ${_esc(building)}</span> · คืนเมื่อ ${_fmtDepDate(dep.returnedAt)}</div>
+          <h3 style="margin:0;font-size:1.05rem;color:#334435;font-weight:800;">📎 หลักฐานมัดจำ</h3>
+          <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">ห้อง ${_esc(roomId)} <span style="color:#9ca3af;">· ${_esc(building)}</span> · ${subtitle}</div>
         </div>
         <button data-action="closeDepEvidenceModal" title="ปิด" style="background:none;border:none;font-size:24px;cursor:pointer;color:#9ca3af;line-height:1;padding:0;flex-shrink:0;">×</button>
       </div>
@@ -693,18 +703,18 @@ async function showDepositEvidence(building, roomId) {
   const st = window.firebase?.storage?.();
   if (!sf || !st) { if (body) body.innerHTML = '<div style="color:#dc2626;font-size:var(--fs-sm);">Firebase Storage ยังไม่พร้อม</div>'; return; }
 
-  // Collect every piece of evidence on the room's settlement doc.
-  const items = [];
-  (dep.deductions || []).forEach(d => { if (d.photo) items.push({ kind: 'deduction', label: _dedDesc(d), amount: d.amount, path: d.photo }); });
-  if (dep.refundSlip) items.push({ kind: 'slip', label: 'สลิปโอนคืน', path: dep.refundSlip });
-  if (!items.length) { if (body) body.innerHTML = '<div style="color:#9ca3af;font-size:var(--fs-sm);text-align:center;padding:1rem;">ไม่มีรูปหลักฐานแนบไว้สำหรับห้องนี้</div>'; return; }
-
-  const resolved = await Promise.all(items.map(async it => {
+  // Pull every damage photo + refund slip off a settlement-shaped object — the live
+  // doc OR a history snapshot (both carry deductions[] + refundSlip).
+  const collect = s => {
+    const items = [];
+    (s.deductions || []).forEach(d => { if (d.photo) items.push({ kind: 'deduction', label: _dedDesc(d), amount: d.amount, path: d.photo }); });
+    if (s.refundSlip) items.push({ kind: 'slip', label: 'สลิปโอนคืน', path: s.refundSlip });
+    return items;
+  };
+  const resolve = items => Promise.all(items.map(async it => {
     try { return { ...it, url: await sf.getDownloadURL(sf.ref(st, it.path)), isPdf: /\.pdf($|\?)/i.test(it.path) }; }
     catch (e) { return { ...it, url: null, err: e?.message || 'load failed' }; }
   }));
-  if (!document.getElementById('depEvidenceModal')) return; // closed while loading
-
   const card = it => {
     const head = it.kind === 'slip'
       ? `<span style="font-weight:700;color:#065f46;">🧾 ${_esc(it.label)}</span>`
@@ -715,7 +725,49 @@ async function showDepositEvidence(building, roomId) {
     else media = `<a href="${_esc(it.url)}" target="_blank" rel="noopener noreferrer"><img src="${_esc(it.url)}" loading="lazy" alt="${_esc(it.label)}" style="width:100%;max-height:260px;object-fit:contain;background:#f8fafc;border-radius:8px;border:1px solid #eef0ee;display:block;"></a>`;
     return `<div style="margin-bottom:14px;"><div style="font-size:var(--fs-sm);margin-bottom:6px;">${head}</div>${media}</div>`;
   };
-  if (body) body.innerHTML = resolved.map(card).join('');
+  const gallery = resolved => resolved.length ? resolved.map(card).join('') : '<div style="color:#9ca3af;font-size:11px;padding:4px 0 10px;">ไม่มีรูปหลักฐานในรอบนี้</div>';
+
+  // 1) Latest settlement on the live doc (empty for a fresh holding — that's fine,
+  //    the history section below still renders for a turned-over room).
+  const curResolved = await resolve(collect(dep));
+
+  // 2) Archived prior tenancies. Degrades silently if the history rules aren't live
+  //    yet (#260) or none exist; each prior settlement is its own collapsible gallery.
+  let histHtml = '';
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    const docId = `${building}_${roomId}`;
+    const hsnap = await fs.getDocs(fs.collection(db, `deposits/${docId}/history`));
+    const hist = hsnap.docs.map(hd => hd.data())
+      .sort((a, b) => String(b.returnedAt || b.archivedAt || '').localeCompare(String(a.returnedAt || a.archivedAt || '')));
+    if (hist.length) {
+      const blocks = await Promise.all(hist.map(async h => {
+        let name = '';
+        try { const p = await window.PersonManager?.getPerson?.(h.tenantId); name = (p && (p.name || `${p.firstName || ''} ${p.lastName || ''}`.trim())) || ''; }
+        catch (_) { /* person fetch failed — label by truncated id */ }
+        const who = name || ('ผู้เช่าเดิม #' + String(h.tenantId || '').slice(0, 6));
+        const resolved = await resolve(collect(h));
+        return `<details style="border:1px solid #eef0ee;border-radius:10px;margin-bottom:10px;background:#fafbfa;">
+          <summary style="cursor:pointer;padding:10px 12px;font-size:var(--fs-sm);font-weight:700;color:#334435;">👤 ${_esc(who)} <span style="color:#9ca3af;font-weight:400;">· คืน ${_fmtDepDate(h.returnedAt)} · สุทธิ ${fmt(h.returnedAmount)}</span></summary>
+          <div style="padding:4px 12px 8px;">${gallery(resolved)}</div>
+        </details>`;
+      }));
+      histHtml = `<div style="margin-top:8px;border-top:1px dashed #e5e7eb;padding-top:14px;">
+        <div style="font-size:var(--fs-sm);font-weight:800;color:#6b7280;margin-bottom:10px;">📜 ประวัติผู้เช่าก่อนหน้า (${hist.length})</div>
+        ${blocks.join('')}</div>`;
+    }
+  } catch (e) { console.warn('[deposit] history load skipped:', e?.message || e); }
+
+  if (!document.getElementById('depEvidenceModal')) return; // closed while loading
+  let html = '';
+  if (curResolved.length) {
+    if (histHtml) html += '<div style="font-size:var(--fs-sm);font-weight:800;color:#334435;margin-bottom:10px;">การคืนล่าสุด</div>';
+    html += curResolved.map(card).join('');
+  }
+  html += histHtml;
+  if (!html) html = '<div style="color:#9ca3af;font-size:var(--fs-sm);text-align:center;padding:1rem;">ไม่มีรูปหลักฐานแนบไว้สำหรับห้องนี้</div>';
+  if (body) body.innerHTML = html;
 }
 window.showDepositEvidence = showDepositEvidence;
 
