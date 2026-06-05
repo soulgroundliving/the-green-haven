@@ -276,10 +276,12 @@ exports.backupFirestoreScheduled = require('./backupFirestore').backupFirestoreS
 exports.backupFirestore          = require('./backupFirestore').backupFirestore;
 
 // Scheduled cleanup of collections that would otherwise grow forever:
-//   rateLimits (daily 04:00), maintenance RTDB (daily 04:10), liffUsers rejected (Sunday 04:20).
+//   rateLimits (daily 04:00), maintenance RTDB (daily 04:10), liffUsers rejected (Sunday 04:20),
+//   maintenance archive (daily 03:50 — preserves closed tickets before the 04:10 delete).
 exports.cleanupRateLimitsScheduled         = require('./cleanupOldDocs').cleanupRateLimitsScheduled;
 exports.cleanupMaintenanceRTDBScheduled    = require('./cleanupOldDocs').cleanupMaintenanceRTDBScheduled;
 exports.cleanupLiffUsersRejectedScheduled  = require('./cleanupOldDocs').cleanupLiffUsersRejectedScheduled;
+exports.archiveMaintenanceScheduled        = require('./cleanupOldDocs').archiveMaintenanceScheduled;
 exports.cleanupOldDocs                     = require('./cleanupOldDocs').cleanupOldDocs;
 
 // IQAir AirVisual proxy with 1-hour Firestore cache. Hybrid: IQAir for AQI + Open-Meteo for μg/m³.
