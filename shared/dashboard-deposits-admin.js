@@ -820,15 +820,23 @@ async function exportDepositReceipt(building, roomId) {
   try {
     if (typeof window.ensureHtml2Canvas === 'function') await window.ensureHtml2Canvas();
     const html2canvas = window.html2canvas;
-    // html2canvas clones the WHOLE dashboard to resolve styles, so it tries to clone the
-    // dashboard's Chart.js canvas (`chartYears`) — which is tainted, logging "Unable to clone
-    // canvas as it is tainted". The receipt has NO canvas of its own, so skip all canvases
-    // during the clone to drop that noise. (The separate `style-src-elem` CSP warning is a
-    // KNOWN-benign html2canvas quirk documented at the ensureHtml2Canvas loader in
-    // dashboard.html — PNG still exports correctly; the real fix is a CSP-friendly library.)
+    // html2canvas clones the WHOLE dashboard to resolve styles, producing two kinds of
+    // console noise under the enforced CSP:
+    //   1. it clones the dashboard's tainted Chart.js canvas (`chartYears`) → "Unable to
+    //      clone canvas as it is tainted". The receipt has NO canvas of its own →
+    //      `ignoreElements` skips all canvases.
+    //   2. it re-injects the cloned page <style> blocks + a pseudoelement-reset <style>
+    //      into its render iframe → blocked by `style-src-elem`. Verified via a real-
+    //      html2canvas harness: stripping <style>/<link> from the clone in `onclone`
+    //      removes BOTH injected styles (0 left) → zero CSP violations, and the receipt
+    //      still renders identically (it is 100% inline style="", so the page stylesheets
+    //      are not needed to paint it). Robust — no fragile per-version hash to maintain.
     const canvas = await html2canvas(wrap, {
       scale: 2, useCORS: true, backgroundColor: '#ffffff',
       ignoreElements: (el) => el.nodeName === 'CANVAS',
+      onclone: (clonedDoc) => {
+        clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach(n => n.remove());
+      },
     });
     const link = document.createElement('a');
     link.download = `deposit_receipt_${building}_${roomId}.png`;

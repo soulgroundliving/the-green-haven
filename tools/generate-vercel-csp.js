@@ -62,17 +62,22 @@ const STYLE_SRC_EXTERNAL = [
   'https://cdn.jsdelivr.net',
 ].join(' ');
 
-// html2canvas (v1.4.1, lazy-loaded for the PNG receipt/checklist exports) injects
-// two FIXED runtime <style> elements during render (clone/iframe reset — applied at
-// library init, NOT per-element, so they're content-independent + stable for the
-// pinned version). Without allowlisting them every PNG export floods the console with
-// `style-src-elem` violations (the PNG still renders — see the ensureHtml2Canvas note
-// in dashboard.html). Allowing the two SPECIFIC hashes is the CSP-correct fix — it does
-// NOT weaken the directive (unlike 'unsafe-inline'). Re-capture these from the console
-// if html2canvas is ever upgraded off 1.4.1.
+// html2canvas (v1.4.1, lazy-loaded for the PNG receipt/checklist exports) re-injects
+// two <style> elements into its render clone (the page's reformatted stylesheets +
+// a pseudoelement-reset), both blocked by `style-src-elem`. The PNG still renders (see
+// the ensureHtml2Canvas note in dashboard.html). Verified via a real-html2canvas harness:
+// the pseudoelement-reset hash below is content-independent + stable for the pinned
+// version; the cloned-stylesheet hash tracks the dashboard's inline styles (so it can
+// drift when those change — regenerate if it reappears). Allowing the two SPECIFIC hashes
+// is the CSP-correct fix (NOT 'unsafe-inline').
+//
+// NOTE: the deposit export (`exportDepositReceipt`) instead strips <style>/<link> from the
+// clone via html2canvas `onclone`, which removes BOTH injected styles outright (robust, no
+// hash to maintain). These allowlist entries cover the checklist + tenant receipt exports
+// that don't yet do that. Prefer the `onclone` approach for new exports.
 const STYLE_SRC_RUNTIME = [
-  "'sha256-o/aIZnrzFh03q9JH54Wr0UZbTwytXEgmeuG4ce8fRgI='",
-  "'sha256-UP0QZg7irVSMvOBz9mH2PIIE28+57UiavRfeVea0l3g='",
+  "'sha256-o/aIZnrzFh03q9JH54Wr0UZbTwytXEgmeuG4ce8fRgI='", // cloned dashboard stylesheets (may drift)
+  "'sha256-UP0QZg7irvSMvOBz9mH2PIIE28+57UiavRfeVea0l3g='", // pseudoelement reset (stable; harness-verified)
 ].join(' ');
 
 const FONT_SRC = [
