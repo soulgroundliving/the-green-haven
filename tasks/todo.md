@@ -4,6 +4,57 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-06) — Roadmap Phase 3.1: Behavioral Intelligence · ⏳ AWAITING APPROVAL (Plan-First)
+
+**Scope:** roadmap Phase 3.1 "Behavioral Intelligence" — admin analytics that read the historical substrate Phase 0 created. **Re-scoped after evidence (3 Explore agents, file:line):** the roadmap's premise "skeleton not greenfield" UNDERSTATES it — **15 analytics signals already ship** (7 OLD `ins-*` in People→Insights via `dashboard-owner-insights.js`; 8 NEW `dash*` across 5 tabs via `dashboard-insights{,-community,-financial,-tenant,-operations}.js`). So v1 = build only what's **genuinely new AND green-data**, extend (not duplicate) what exists, defer what's blocked — with reasons.
+
+**Why Plan-First:** multi-session feature, 5+ files, 2+ valid architectures (client-on-read vs pre-compute CF) → CLAUDE.md §1 threshold. (Reversible per-card, but the program spans sessions + sets the analytics-architecture precedent.)
+
+### Verified current state (file:line — grep-advisory, re-confirm at build)
+- **Compute architecture = client-on-read, NO pre-compute CF exists.** All 15 signals compute in-browser on tab-show, 5-min client cache (`dashboard-insights.js:27`); `window._ins.utils` namespace (loads first, `dashboard.html:5671`). `grep "pubsub.schedule" functions/` = 11 scheduled jobs, **none analytics** (revenue/cleanup/reminders only).
+- **Substrate READY — both new sources unused by any card yet** (`grep -rln "pointsLedger\|occupancyLog" shared/` = only the writer `occupancy-log.js` + `dashboard-tenant-modal.js`, **zero analytics readers**):
+  - `occupancyLog` (subcoll `tenants/{b}/list/{r}/occupancyLog/{idemKey}`) — append-only, server-`at`, `action` ∈ moved_in/moved_out/transferred_*/archived/restored. Composite index `tenantId ASC, at DESC` EXISTS (`firestore.indexes.json:170`, collectionGroup) + READY in prod (24/24 per MEMORY). **GREEN.**
+  - `pointsLedger` (flat `pointsLedger/{idemKey}`) — append-only, signed `points`, `balanceAfter`, server-`at`, `source` ∈ 6 enums. Composite index `tenantId ASC, at DESC` EXISTS (`firestore.indexes.json:178`). **GREEN.**
+- **Existing churn/health is point-in-time, occupancyLog-blind:** `computeHealthScore({paymentDelta,streak,complaintCount90d,monthsTenure})` (`dashboard-insights-tenant.js:18`) — `monthsTenure == null → 12` neutral guess (`:44`); churn flags + `churnCount` (`:245/:276`) annotate rooms but read NO real tenure history. → extend this, don't rebuild.
+- **Per-signal data readiness (Agent 2 verdict):** move-out propensity **GREEN** (occupancyLog) · community-activity **GREEN** (pointsLedger) · energy pattern **YELLOW but already shipped** (`renderMeterSpike` ops tab + meter-anomaly z-score OLD) · payment behavior **YELLOW but already shipped** (`renderPaymentBehavior` + `renderOverdueBills`) · peak-repair-season **RED** (RTDB maintenance `status=done` deleted >30d by `cleanupMaintenanceRTDBScheduled` 04:10 — seasonality impossible without first preserving history) · pet patterns **YELLOW-thin** (only current binary state; no approval/adoption timeline logged).
+
+### Architecture decision — client-on-read, NO new CF/schema/rules/index (matches all 15 existing signals)
+The historical record ALREADY exists (occupancyLog + pointsLedger are the append-only logs Phase 0/4C created), so the analytics layer is pure read+compute. **No `behavioralScores/` pre-compute doc, no scheduled CF** for v1. *Why:* minimal blast radius, per-card reversible, gate-first, zero deploy risk, no §7-NN concern. *Alt (rejected for v1):* nightly CF writing score docs — only justified if we needed cross-day snapshots, but the ledgers ARE the snapshots. Revisit only for Trust System (3.2) if read-cost bites.
+
+### v1 SCOPE — the 2 green-new signals that exploit the unused substrate (each = own PR, gate-first)
+
+#### PR A — Move-out / Tenure Intelligence (occupancyLog → real tenure + turnover) · ~1 day · risk LOW
+Home: **tenants tab** (next to existing health/churn — extend, per §7-K/AA discovery discipline).
+- [ ] **Grep-confirm first** the exact existing churn/health surface (`dashboard-insights-tenant.js:18-57,232-276`) so we extend the same card, not add a duplicate.
+- [ ] **`shared/dashboard-behavioral-tenure.js`** — read occupancyLog (per-room subcoll, or collectionGroup `where at >= cutoff`) → derive per-tenant **real `monthsTenure`** (from `moved_in` `at`, fallback `moveInDate`) and feed it into `computeHealthScore` to replace the `null→12` guess (one honest input, no formula change).
+- [ ] **"Tenure & Turnover" card** — building-level: avg/median stay length, historical turnover rate (moved_out count / window), longest/shortest current stays, and a **move-out propensity ranking** grounded in real exits (tenants resembling past short-stayers) — NOT a new point-in-time guess. §7-E year math via `YearUtils` where dates touch BE.
+- [ ] Render via `_ins.utils` pattern; CSS in `shared/components.css` (**§7-RR** — never `createElement('style')`); external `<script src>` after `dashboard-insights.js` (**§7-II** no CSP drift, **§7-PP** load order); `_ins.utils.errorHTML` on failure (**§7-N**).
+- [ ] Unit test the pure tenure/turnover math (mock occupancyLog rows). Gate: node --check · test:shared · mojibake · verify:memory · no CSP drift.
+
+#### PR B — Community Engagement Trend (pointsLedger time-series — the roadmap's headline unlock) · ~1 day · risk LOW
+Home: **community tab** (next to streak leaderboard). First card to read pointsLedger as a series.
+- [ ] **`shared/dashboard-behavioral-engagement.js`** — query last-90d ledger (`where at >= cutoff order by at` single-field, group client-side by `tenantId`; or per-tenant composite). Compute per-tenant **engagement velocity** (Σ positive `points` per 30/90d), building **participation rate** (active earners / occupied), and **top risers / fallers** (Δ vs prior window) — "whose engagement rose/fell over time", impossible before the ledger.
+- [ ] Exclude redemptions (`points < 0`) from the *earning* signal; surface them separately if useful. Respect `GAMIFICATION_LIVE` (LIVE 2026-05-10) — if ever off, render a muted "ปิดอยู่" state not an error.
+- [ ] Same render/CSP/load-order/error guardrails as PR A. Unit test the velocity/participation/Δ math (mock ledger rows).
+- [ ] Gate identical to PR A.
+
+### DEFERRED (named, not dropped — with the reason each is not in v1)
+- **Peak-repair-season → BLOCKED (RED).** Needs a maintenance-history archive FIRST (a mini-"Phase 0 for maintenance") because `cleanupMaintenanceRTDBScheduled` (04:10) deletes `status=done` >30d — we're losing the data daily. Separate prerequisite PR: archive closed tickets to Firestore before cleanup, then build seasonality on the archive. *Flag to owner: the longer this waits, the less history survives* (same irreversibility logic that made pointsLedger Phase-0).
+- **Pet patterns → THIN (YELLOW).** Only current binary `has-pets` state exists; no approval/vaccination/adoption timeline is logged → no real time-series. Low value until pet-lifecycle events are logged (pairs with the Nest pet-deposit work ~Aug).
+- **Energy / payment behavior → ALREADY SHIPPED.** `renderMeterSpike`, meter-anomaly z-score, `renderPaymentBehavior`, `renderOverdueBills` cover these. Extend only if a specific gap surfaces — don't rebuild (§7-K).
+- **Pre-compute CF / `behavioralScores/` doc** — only if 3.2 Trust System needs cross-day snapshots or read-cost bites.
+
+### Cross-cutting guardrails (every PR)
+One surface per PR behind `validate.yml`; tests with/before the change. Client-on-read only (no CF → §7-NN moot). New reader → grep writer first (§7-T). Composite indexes already READY (§7-J satisfied — re-confirm `gcloud firestore indexes composite list` shows READY before first query). CSS → `components.css` not inline/injected (§7-RR/II). Script after `dashboard-insights.js` (§7-PP). `onSnapshot`/read error → UI state (§7-N). Year math via `YearUtils` (§7-E). Admin-gated → live-verify on Vercel via Chrome MCP (agent can't drive admin — §7-J/I). Auto-merge own PRs ([[feedback_auto_merge_prs]]); no CF deploy so no owner gate, BUT live-verify each card on prod admin before "done". Re-read session diffs for self-conflict (§7-G). Update `lifecycle_insights_analytics.md` SAME session as each card.
+
+### Open decision (need owner call before build)
+1. **v1 scope** — **[REC]** ship PR A + PR B only (the 2 green-new signals), defer the rest with the reasons above · vs also build the **maintenance-archive prerequisite** now so peak-repair-season isn't perpetually losing data · vs a different subset. *My recommendation: A + B now (fast, pure-additive, zero-deploy), and separately greenlight the maintenance-archive as its own small PR since every day delays loses repair history.*
+
+### Review (append per PR after execution)
+_(shipped / deferred / follow-ups)_
+
+---
+
 ## ✅ DONE — Per-tenant deposit evidence HISTORY (Item B) · steps 1-3 #260 + step 4 #265 (2026-06-05) ALL SHIPPED
 
 > **Review (steps 1-3+6):** `tenantId` stamped on seed+return; `_reconcileDepositForRoom` (per-room, self-healing) backfills holding tenantId + archives a settled doc whose tenantId≠current to `deposits/{b}_{r}/history/{settlementId}` (archive FIRST, then reset to holding). `firestore.rules` history subcollection (admin write / accountant read) + 5 tests. Gates: node --check · **test:rules 276/0** (emulator) · **test:shared 386/0** · verify:memory ALL GREEN (README 256→261) · mojibake clean. Legacy (no tenantId) docs untouched (§7-L).

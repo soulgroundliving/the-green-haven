@@ -302,6 +302,10 @@
     _tenInited = true;
     renderTenantDashSummary();
     window._ins.tenant.renderTenantInsights();
+    // Phase 3.1 Behavioral Intelligence — tenure & move-out propensity card.
+    // Rendered after the Health card so it can reuse the warmed payment/complaint
+    // caches for propensity enrichment (best-effort; degrades without them).
+    if (window._ins.behavioralTenure) window._ins.behavioralTenure.renderTenureInsights();
   }
   function initOperationsInsights() {
     if (_opsInited) return;
@@ -320,6 +324,7 @@
       cacheClear('tenants_all'); cacheClear('payment_deltas'); cacheClear('complaints_90d');
       window._ins.tenant.renderTenantInsights();
     }
+    else if (target === 'behavioralTenure') { cacheClear('behavioral_archives'); window._ins.behavioralTenure.renderTenureInsights(); }
     else if (target === 'operations') { cacheClear('ops_insights'); window._ins.operations.renderOperationsInsights(); }
     else if (target === 'meterSpike') { cacheClear('meter_spike'); window._ins.operations.renderMeterSpike(); }
     else if (target === 'providerScore') { window._ins.operations.renderProviderScore(); }
