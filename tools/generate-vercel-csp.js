@@ -64,19 +64,18 @@ const STYLE_SRC_EXTERNAL = [
 
 // html2canvas (v1.4.1, lazy-loaded for the PNG receipt/checklist exports) re-injects
 // two <style> elements into its render clone (the page's reformatted stylesheets +
-// a pseudoelement-reset), both blocked by `style-src-elem`. The PNG still renders (see
-// the ensureHtml2Canvas note in dashboard.html). Verified via a real-html2canvas harness:
-// the pseudoelement-reset hash below is content-independent + stable for the pinned
-// version; the cloned-stylesheet hash tracks the dashboard's inline styles (so it can
-// drift when those change — regenerate if it reappears). Allowing the two SPECIFIC hashes
-// is the CSP-correct fix (NOT 'unsafe-inline').
+// a pseudoelement-reset), both blocked by `style-src-elem`. The robust fix is to strip
+// <style>/<link> from the clone in html2canvas `onclone`, which removes BOTH injected
+// styles outright (0 left, harness-verified) → no hash to maintain. The DASHBOARD exports
+// exportDepositReceipt + exportChecklistPng both do this, so the fragile dashboard-style-
+// coupled cloned-stylesheet hash that used to drift on every inline-style change is GONE.
 //
-// NOTE: the deposit export (`exportDepositReceipt`) instead strips <style>/<link> from the
-// clone via html2canvas `onclone`, which removes BOTH injected styles outright (robust, no
-// hash to maintain). These allowlist entries cover the checklist + tenant receipt exports
-// that don't yet do that. Prefer the `onclone` approach for new exports.
+// The single hash below (pseudoelement reset) is content-independent + stable for the
+// pinned version. It remains ONLY for the tenant_app legacy receipt exports
+// (saveInvoiceImage etc.) which are class-dependent (`.receipt-card` / `.ta-preview-wrap`)
+// and therefore cannot onclone-strip without breaking their render. Prefer the `onclone`
+// approach (no hash) for any new or inline-only export. (§7-ZZ / §7-II)
 const STYLE_SRC_RUNTIME = [
-  "'sha256-o/aIZnrzFh03q9JH54Wr0UZbTwytXEgmeuG4ce8fRgI='", // cloned dashboard stylesheets (may drift)
   "'sha256-UP0QZg7irvSMvOBz9mH2PIIE28+57UiavRfeVea0l3g='", // pseudoelement reset (stable; harness-verified)
 ].join(' ');
 

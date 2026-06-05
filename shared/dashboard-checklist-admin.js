@@ -472,7 +472,22 @@
     tmp.innerHTML = src.innerHTML;
     document.body.appendChild(tmp);
     try {
-      const canvas = await window.html2canvas(tmp, { backgroundColor: '#ffffff', scale: 2, logging: false, useCORS: true });
+      // html2canvas clones the WHOLE dashboard to resolve styles → two CSP noises under the
+      // enforced policy: (1) it clones the tainted chartYears canvas → "tainted canvas"
+      // warning (ignoreElements skips all canvases; this printable has none of its own), and
+      // (2) it re-injects the cloned page <style> + a pseudoelement-reset <style> → blocked by
+      // style-src-elem. onclone strips <style>/<link> from the clone → 0 injected styles
+      // (harness-verified) → zero violations, and the checklist renders identically (content
+      // is inline-styled; only the few var(--text-muted) labels fall back to default text
+      // color). Same pattern as exportDepositReceipt — lets us drop the fragile, dashboard-
+      // style-coupled CSP hash from STYLE_SRC_RUNTIME (§7-ZZ / §7-II).
+      const canvas = await window.html2canvas(tmp, {
+        backgroundColor: '#ffffff', scale: 2, logging: false, useCORS: true,
+        ignoreElements: (el) => el.nodeName === 'CANVAS',
+        onclone: (clonedDoc) => {
+          clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach((n) => n.remove());
+        },
+      });
       const link = document.createElement('a');
       const ts = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
       link.href = canvas.toDataURL('image/png');
