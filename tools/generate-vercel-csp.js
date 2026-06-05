@@ -62,6 +62,19 @@ const STYLE_SRC_EXTERNAL = [
   'https://cdn.jsdelivr.net',
 ].join(' ');
 
+// html2canvas (v1.4.1, lazy-loaded for the PNG receipt/checklist exports) injects
+// two FIXED runtime <style> elements during render (clone/iframe reset — applied at
+// library init, NOT per-element, so they're content-independent + stable for the
+// pinned version). Without allowlisting them every PNG export floods the console with
+// `style-src-elem` violations (the PNG still renders — see the ensureHtml2Canvas note
+// in dashboard.html). Allowing the two SPECIFIC hashes is the CSP-correct fix — it does
+// NOT weaken the directive (unlike 'unsafe-inline'). Re-capture these from the console
+// if html2canvas is ever upgraded off 1.4.1.
+const STYLE_SRC_RUNTIME = [
+  "'sha256-o/aIZnrzFh03q9JH54Wr0UZbTwytXEgmeuG4ce8fRgI='",
+  "'sha256-UP0QZg7irVSMvOBz9mH2PIIE28+57UiavRfeVea0l3g='",
+].join(' ');
+
 const FONT_SRC = [
   "'self'",
   'data:',
@@ -106,8 +119,8 @@ const directives = [
   `default-src 'self' https: wss:`,
   `script-src 'self' ${scriptHashTokens} ${SCRIPT_SRC_EXTERNAL}`,
   `script-src-elem 'self' ${scriptHashTokens} ${SCRIPT_SRC_EXTERNAL}`,
-  `style-src 'self' ${styleHashTokens} ${STYLE_SRC_EXTERNAL}`,
-  `style-src-elem 'self' ${styleHashTokens} ${STYLE_SRC_EXTERNAL}`,
+  `style-src 'self' ${styleHashTokens} ${STYLE_SRC_EXTERNAL} ${STYLE_SRC_RUNTIME}`,
+  `style-src-elem 'self' ${styleHashTokens} ${STYLE_SRC_EXTERNAL} ${STYLE_SRC_RUNTIME}`,
   `style-src-attr 'unsafe-inline'`,
   `img-src ${IMG_SRC}`,
   `font-src ${FONT_SRC}`,
