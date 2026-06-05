@@ -405,80 +405,12 @@ function reconcileWithholding(year) {
 
 // ===== INCOME TAX CALCULATION =====
 
-/**
- * Calculate income tax for a period
- * Thai corporate tax rate: 15% standard rate
- * @param {number} month - Month number (1-12)
- * @param {number} year - Year (Gregorian)
- * @param {number} rate - Tax rate (default 15%)
- * @returns {Object} Tax calculation details
- */
-function calculateMonthlyIncomeTax(month, year, rate = 15) {
-  try {
-    const revenue = calculateMonthlyRevenue(month, year);
-    const expenses = calculateDeductibleExpenses(month, year);
-    const taxableIncome = Math.max(0, revenue - expenses);
-    const incomeTax = (taxableIncome * rate) / 100;
-    const withholding = calculateWithholdingTax(month, year);
-    const taxBalance = incomeTax - withholding; // Positive = amount owed, Negative = excess withholding
-
-    return {
-      month: month,
-      year: year,
-      revenue: revenue,
-      deductibleExpenses: expenses,
-      taxableIncome: taxableIncome,
-      taxRate: rate,
-      incomeTax: incomeTax,
-      withholdingTax: withholding,
-      taxBalance: taxBalance,
-      status: taxBalance > 0 ? 'OWED' : (taxBalance < 0 ? 'REFUND' : 'BALANCED')
-    };
-  } catch (error) {
-    console.error('❌ Error calculating income tax:', error);
-    return null;
-  }
-}
-
-
-
-/**
- * Calculate annual income tax (ภ.ป.ภ. 50 form)
- * @param {number} year - Year (Gregorian)
- * @param {number} rate - Tax rate (default 15%)
- * @returns {Object} Annual tax calculation
- */
-function calculateAnnualIncomeTax(year, rate = 15) {
-  try {
-    const totalRevenue = calculateAnnualRevenue(year);
-    const totalExpenses = calculateAnnualExpenses(year);
-    const taxableIncome = Math.max(0, totalRevenue - totalExpenses);
-    const incomeTax = (taxableIncome * rate) / 100;
-    const totalWithholding = calculateAnnualWithholdingTax(year);
-    const taxBalance = incomeTax - totalWithholding;
-
-    // Annual filing deadline: 20 March next year
-    const filingDeadline = `${year + 1}-03-20`;
-
-    return {
-      year: year,
-      revenue: totalRevenue,
-      deductibleExpenses: totalExpenses,
-      taxableIncome: taxableIncome,
-      taxRate: rate,
-      incomeTax: incomeTax,
-      withholdingTax: totalWithholding,
-      taxBalance: taxBalance,
-      refundAmount: taxBalance < 0 ? Math.abs(taxBalance) : 0,
-      owedAmount: taxBalance > 0 ? taxBalance : 0,
-      filingDeadline: filingDeadline,
-      formType: 'ภ.ป.ภ. 50'
-    };
-  } catch (error) {
-    console.error('❌ Error calculating annual income tax:', error);
-    return null;
-  }
-}
+// Income-tax calculation runs at runtime from tax-filing.html's personal-progressive
+// override: window.calculateMonthlyIncomeTax / window.calculateAnnualIncomeTax compute
+// ภ.ง.ด.90 (Thai personal income tax, 30% standard deduction) on the live VAT-exempt
+// residential-rental model. The former corporate 15% / VAT versions that used to live
+// here were removed — they were dead (shadowed by the override) and contradicted the
+// live model, which only created auditor/developer confusion.
 
 // ===== REPORT GENERATION FUNCTIONS =====
 
@@ -1106,14 +1038,6 @@ function initializeTaxFilingChecklist() {
         status: 'PENDING'
       },
       {
-        id: 'q1-return',
-        title: 'แบบ ป.พ.6 ไตรมาส 1',
-        description: 'Quarterly VAT return for Q1 (Jan-Mar)',
-        dueDate: `${currentYear}-04-20`,
-        type: 'QUARTERLY',
-        status: 'PENDING'
-      },
-      {
         id: 'monthly-apr',
         title: 'รายงานรายเดือน เมษายน',
         description: 'Monthly tax report for April',
@@ -1127,14 +1051,6 @@ function initializeTaxFilingChecklist() {
         description: 'Monthly tax report for May',
         dueDate: `${currentYear}-06-15`,
         type: 'MONTHLY',
-        status: 'PENDING'
-      },
-      {
-        id: 'q2-return',
-        title: 'แบบ ป.พ.6 ไตรมาส 2',
-        description: 'Quarterly VAT return for Q2 (Apr-Jun)',
-        dueDate: `${currentYear}-07-20`,
-        type: 'QUARTERLY',
         status: 'PENDING'
       },
       {
@@ -1154,14 +1070,6 @@ function initializeTaxFilingChecklist() {
         status: 'PENDING'
       },
       {
-        id: 'q3-return',
-        title: 'แบบ ป.พ.6 ไตรมาส 3',
-        description: 'Quarterly VAT return for Q3 (Jul-Sep)',
-        dueDate: `${currentYear}-10-20`,
-        type: 'QUARTERLY',
-        status: 'PENDING'
-      },
-      {
         id: 'monthly-oct',
         title: 'รายงานรายเดือน ตุลาคม',
         description: 'Monthly tax report for October',
@@ -1178,16 +1086,8 @@ function initializeTaxFilingChecklist() {
         status: 'PENDING'
       },
       {
-        id: 'q4-return',
-        title: 'แบบ ป.พ.6 ไตรมาส 4',
-        description: 'Quarterly VAT return for Q4 (Oct-Dec)',
-        dueDate: `${nextYear}-01-20`,
-        type: 'QUARTERLY',
-        status: 'PENDING'
-      },
-      {
         id: 'annual-return',
-        title: 'แบบ ภ.ป.ภ. 50',
+        title: 'แบบ ภ.ง.ด.90',
         description: `Annual income tax return for year ${currentYear}`,
         dueDate: `${nextYear}-03-20`,
         type: 'ANNUAL',
@@ -1397,8 +1297,6 @@ if (typeof module !== 'undefined' && module.exports) {
     calculateAnnualExpenses,
     calculateWithholdingTax,
     calculateAnnualWithholdingTax,
-    calculateMonthlyIncomeTax,
-    calculateAnnualIncomeTax,
     generateMonthlyTaxReport,
     reconcileWithholding
   };
