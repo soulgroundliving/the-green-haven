@@ -1416,6 +1416,22 @@ grep -rln "new FormData()" functions/ | xargs grep -L "Blob"        # FormData w
 ```
 Lock it with a unit test that captures the fetch `body` and asserts `body instanceof FormData` + `body.get('files') instanceof Blob` (see `verifyRefundSlip.test.js` test 29). **Still-affected (verify before any redeploy):** `verifySlip.js`, `verifyBookingSlip.js`. Family: §7-WW/AA/NN (deploy-time/runtime invariants the source doesn't reveal), §7-Y (data:/blob: vs CSP — sibling "the transport isn't what the code implies").
 
+### ZZ. Never transcribe a tool-produced hash/ID from a screenshot — capture it programmatically. And for html2canvas+CSP, strip the clone (`onclone`), don't chase the hash.
+
+Two lessons from one misfire (2026-06-06, deposit receipt `style-src-elem` console flood, PRs #271/#272/#273):
+
+**1. Opaque case-sensitive values (CSP hashes, base64, tokens, IDs) read off a low-res screenshot WILL eventually be misread.** #272 allowlisted html2canvas's injected-style hash as `sha256-UP0QZg7irVSMv…` (uppercase **V**) read from the user's console screenshot. The real hash is `sha256-UP0QZg7irvSMv…` (lowercase **v**). Base64 is case-sensitive → the hash never matched → the error persisted through a deploy, and the next screenshot looked identical (same misread). One wasted deploy cycle. **Rule:** to get a hash/ID a browser or library produces, reproduce it in a harness and compute it — never eyeball it. For an injected `<style>`, run the real library with `removeContainer:false`, read `iframe.contentDocument.querySelectorAll('style')`, and `crypto.subtle.digest('SHA-256', …)` each — that gives the exact byte-for-byte hash AND proves stability (run it 3× w/ different content: stable+content-independent ⇒ allowlistable; drifts ⇒ a hash can't fix it).
+
+**2. html2canvas under enforced CSP: `onclone`-strip the clone, don't allowlist its injected styles.** html2canvas clones the WHOLE document to resolve styles, then re-injects (a) the page's reformatted `<style>` blocks and (b) a pseudoelement-reset `<style>` into its render iframe — both hit `style-src-elem`. The page-styles hash **tracks the host page's inline CSS and drifts** whenever those change, so allowlisting it is fragile. The robust fix:
+```js
+html2canvas(el, {
+  ignoreElements: (n) => n.nodeName === 'CANVAS',                 // skip tainted page canvases (e.g. chartYears)
+  onclone: (doc) => doc.querySelectorAll('style, link[rel="stylesheet"]')
+                       .forEach(s => s.remove()),                  // removes BOTH injected styles ⇒ 0 violations
+});
+```
+Verified in a real-html2canvas harness: `onclone` strip ⇒ **0** injected `<style>` left in the iframe, and an all-inline-styled target (the receipt) renders identically (it never needed the page stylesheets). `exportDepositReceipt` uses this. The remaining `STYLE_SRC_RUNTIME` hashes in `generate-vercel-csp.js` are only a fallback for the checklist/tenant exports that don't yet `onclone` — port them to `onclone` and those hashes can go. The "real fix is a CSP-friendly library" note at `ensureHtml2Canvas` (dashboard.html) is superseded: `onclone` is the cheap real fix. Family: §7-RR/II (CSP kills styles silently — deployed-page-only), §feedback_empirical_check (read/compute, don't eyeball).
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
