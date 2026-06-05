@@ -80,7 +80,7 @@ After ANY correction from the user, decide where to log it:
 | Markup | Vanilla HTML | `tenant_app.html`, `dashboard.html`, `login.html`, `tax-filing.html` |
 | Styling | **Tailwind CSS v3** (pre-built, NOT CDN JIT) + custom CSS variables | `shared/tailwind.input.css` → `shared/tailwind.css` (built via `npm run tailwind:build`); brand tokens in `shared/brand.css` |
 | Logic | Vanilla JS modules (UMD-ish; `window.X = ...` exports) | `shared/*.js` (102 files incl. 27 `tenant-*.js` god-file extracts; verify with `ls shared/*.js \| wc -l`) |
-| Backend | **Firebase** v11 — Auth · Firestore · Realtime DB · Cloud Functions · Storage | `functions/` (Node CFs); rules in `firestore.rules`, `storage.rules`, `database.rules.json` |
+| Backend | **Firebase** v12 — Auth · Firestore · Realtime DB · Cloud Functions · Storage (client modular SDK `firebasejs/12.10.0` via CDN; `firebase-admin@13` + `firebase-functions@7` in `functions/`) | `functions/` (Node CFs); rules in `firestore.rules`, `storage.rules`, `database.rules.json` |
 | Hosting | **Vercel** (not Firebase Hosting) | `vercel.json`, `/api/*` serverless fns (e.g. `/api/config`) |
 | Build | `esbuild` minify + **content-hash** `shared`/`accounting` JS → `immutable` cache (renames + rewrites `<script src>` from a manifest; build-time verify-gate; Vercel-only, source keeps plain names) | `build.js` · `tools/asset-hash.js` |
 | Service Worker | Custom; auto-versioned from `VERCEL_GIT_COMMIT_SHA` | `service-worker.js` |
@@ -165,7 +165,7 @@ window.addEventListener('authReady', _subscribeX);
 const ref = window.firebaseRef(window.firebaseDatabase, 'bills/rooms/15');
 const snap = await window.firebaseGet(ref);
 
-// ❌ WRONG — firebase.database is undefined (v11 modular, no compat layer)
+// ❌ WRONG — firebase.database is undefined (v12 modular, no compat layer)
 await window.firebase.database().ref('bills').once('value');
 ```
 When in doubt: `grep "firebaseRef\|firebaseGet\|firebaseSet" dashboard.html` for the actual globals.
@@ -1424,7 +1424,7 @@ Lock it with a unit test that captures the fetch `body` and asserts `body instan
 
 - **⛔ Critical rules** → before touching any rule, auth, or LIFF code. Each entry is a real incident with its lesson.
 - **🏛️ System lifecycles** → "how does X work end-to-end". ~28 docs split into Core/Tenant-facing/Admin sections. Includes the recent Tier 1B/2D/3F/3I features (expense, deposit, building registry, checklist).
-- **🧭 Reference** → durable narrow-scope docs: Firebase SDK gotchas (admin + client v11 + functions v7), region split (SE1 vs SE3), `generateBillsOnMeterUpdate` frozen, brand OS, etc.
+- **🧭 Reference** → durable narrow-scope docs: Firebase SDK gotchas (admin + client v12 + functions v7), region split (SE1 vs SE3), `generateBillsOnMeterUpdate` frozen, brand OS, etc.
 - **🤝 Working style** → cross-project user preferences (`feedback_*.md`) including the new [decision protocol](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_decision_protocol.md). Apply to every project.
 - **🎯 Current state** → latest 2026-05-13 handoffs only. Older handoffs archived.
 - **🗄️ Archive** → superseded docs; do NOT rely on (kept for git-blame style traceability).
