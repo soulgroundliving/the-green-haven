@@ -2701,6 +2701,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   align-items:start;
   margin-bottom:1rem;
 }
+.ten-col{ display:flex; flex-direction:column; gap:1rem; min-width:0; }
 #dashTenantInsights .card{ max-height:calc(100vh - 270px); overflow-y:auto; }
 /* flat redesign: hairline cards (kill heavy shadow) */
 #dash-cat-tenants .card{ border:1px solid var(--border); box-shadow:none; border-radius:14px; padding:1rem 1.15rem; }
@@ -3386,13 +3387,17 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     </div>
     <div class="dash-sec-label">การเข้าพัก &amp; สุขภาพผู้เช่า</div>
     <div class="ten-layout">
-      <div class="card">
-        <div class="card-title" role="heading" aria-level="3">🚪 สถานะห้องพัก</div>
-        <div id="dashTenantStatus"></div>
+      <div class="ten-col">
+        <div class="card">
+          <div class="card-title" role="heading" aria-level="3">🚪 สถานะห้องพัก</div>
+          <div id="dashTenantStatus"></div>
+        </div>
+        <div id="dashBehavioralTenure"></div>
       </div>
-      <div id="dashTenantInsights"></div>
+      <div class="ten-col">
+        <div id="dashTenantInsights"></div>
+      </div>
     </div>
-    <div id="dashBehavioralTenure"></div>
   </div><!-- END ผู้เช่า -->
 
   <!-- ===== TAB 4: ปฏิบัติการ ===== -->
