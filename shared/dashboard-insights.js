@@ -256,6 +256,8 @@
     window._ins.community.renderStreakLeaderboard();
     // Phase 3.1 Behavioral Intelligence — community engagement trend (pointsLedger).
     if (window._ins.behavioralEngagement) window._ins.behavioralEngagement.renderEngagementTrend();
+    // Phase 3.1 Behavioral Intelligence — pet patterns & vaccine compliance (collectionGroup pets).
+    if (window._ins.behavioralPets) window._ins.behavioralPets.renderPetPatterns();
   }
   function initFinancialInsights() {
     if (_finInited) return;
@@ -314,6 +316,8 @@
     _opsInited = true;
     window._ins.operations.renderOperationsInsights();
     window._ins.operations.renderMeterSpike();
+    // Phase 3.1 Behavioral Intelligence — energy & water pattern (meter_data time-series).
+    if (window._ins.behavioralEnergy) window._ins.behavioralEnergy.renderEnergyTrend();
     window._ins.operations.renderProviderScore();
   }
   function refreshInsight(target) {
@@ -328,6 +332,8 @@
     }
     else if (target === 'behavioralTenure') { cacheClear('behavioral_archives'); window._ins.behavioralTenure.renderTenureInsights(); }
     else if (target === 'engagementTrend') { cacheClear('engagement_ledger'); window._ins.behavioralEngagement.renderEngagementTrend(); }
+    else if (target === 'energyPattern') { cacheClear('behavioral_energy'); window._ins.behavioralEnergy.renderEnergyTrend(); }
+    else if (target === 'petPatterns') { cacheClear('behavioral_pets'); window._ins.behavioralPets.renderPetPatterns(); }
     else if (target === 'operations') { cacheClear('ops_insights'); window._ins.operations.renderOperationsInsights(); }
     else if (target === 'meterSpike') { cacheClear('meter_spike'); window._ins.operations.renderMeterSpike(); }
     else if (target === 'providerScore') { window._ins.operations.renderProviderScore(); }
