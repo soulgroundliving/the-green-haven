@@ -2757,6 +2757,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
 /* analytics grid + lightened cards (kill the 3px top accent + heavy shadow → hairline) */
 .ops-analytics{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:start; }
+.ops-col{ display:flex; flex-direction:column; gap:1rem; min-width:0; }
 #dash-cat-operations .card{ border:1px solid var(--border); box-shadow:none; border-top:1px solid var(--border) !important; border-radius:14px; padding:1rem 1.15rem; }
 
 /* ── ชุมชน tab ── */
@@ -3399,10 +3400,14 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     </div>
     <div id="dashOpsComplaintsRow"></div>
     <div class="ops-analytics">
-      <div id="dashMeterSpike"></div>
-      <div id="dashEnergyPattern"></div>
-      <div id="dashRepairSeason"></div>
-      <div id="dashProviderScore"></div>
+      <div class="ops-col">
+        <div id="dashMeterSpike"></div>
+        <div id="dashRepairSeason"></div>
+        <div id="dashProviderScore"></div>
+      </div>
+      <div class="ops-col">
+        <div id="dashEnergyPattern"></div>
+      </div>
     </div>
   </div><!-- END ปฏิบัติการ -->
 
