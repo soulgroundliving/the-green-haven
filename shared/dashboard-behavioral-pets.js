@@ -4,9 +4,10 @@
  *
  * Reads `pets` via a Firestore collectionGroup (the authoritative store at
  * tenants/{building}/list/{roomId}/pets/{petId}) — the COMPLETE registry, not the
- * admin browser's localStorage. Surfaces three things the old localStorage widget
- * (updatePetAnalyticsWidget) can't: vaccine compliance (expired/expiring/ok),
- * the approval pipeline (pending vs approved), and pet penetration across rooms.
+ * admin browser's localStorage. Surfaces three things the removed localStorage
+ * widget (updatePetAnalyticsWidget, deleted in this PR) couldn't: vaccine
+ * compliance (expired/expiring/ok), the approval pipeline (pending vs approved),
+ * and pet penetration across rooms.
  *
  * One bounded collectionGroup read, cached; the occupied-room count for the
  * penetration % reuses the warmed 'tenants_all' cache (0 extra reads).
