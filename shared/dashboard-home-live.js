@@ -846,7 +846,6 @@ function updateDashboardLive(){
   updatePaymentStatusWidget(activeRooms, allBillsThisMonth);
   updateTenantStatusWidget(activeRooms);
   updateGamificationWidget();
-  updatePetAnalyticsWidget();
   updateComplaintsWidget();
   updateMaintenanceWidget();
 
@@ -1100,42 +1099,6 @@ function updateGamificationWidget() {
       </div>
       <span style="font-size:.78rem;font-weight:800;color:var(--green-dark);">${Number(t.pts)||0} pts</span>
     </div>`).join('');
-}
-
-function updatePetAnalyticsWidget() {
-  const el = document.getElementById('dashPetAnalytics');
-  const card = document.getElementById('dashPetAnalyticsCard');
-  if (!el) return;
-  const counts = {};
-  let total = 0;
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('tenant_pets_')) {
-      const pets = JSON.parse(localStorage.getItem(key) || '[]');
-      pets.filter(p => p.status === 'approved').forEach(p => {
-        const t = (p.type || 'other').toLowerCase();
-        counts[t] = (counts[t] || 0) + 1;
-        total++;
-      });
-    }
-  }
-  if (total === 0) {
-    el.innerHTML = '<div style="color:var(--text-muted);font-size:.82rem;">ยังไม่มีสัตว์เลี้ยงลงทะเบียน</div>';
-    return;
-  }
-  const emojis = { dog:'🐕', cat:'🐈', rabbit:'🐇', bird:'🐦', fish:'🐠', hamster:'🐹' };
-  el.innerHTML = Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([type, cnt]) => {
-    const pct = Math.round(cnt / total * 100);
-    const em = emojis[type] || '🐾';
-    return `<div style="margin-bottom:6px;">
-      <div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:2px;">
-        <span>${em} ${type}</span><span style="font-weight:700;">${cnt} ตัว</span>
-      </div>
-      <div style="background:var(--border);border-radius:4px;height:6px;">
-        <div style="background:var(--green);border-radius:4px;height:6px;width:${pct}%;transition:width .4s;"></div>
-      </div>
-    </div>`;
-  }).join('') + `<div style="font-size:.7rem;color:var(--text-muted);margin-top:4px;">รวม ${total} ตัว</div>`;
 }
 
 function updateNavBadge(){
