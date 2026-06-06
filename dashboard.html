@@ -2683,8 +2683,12 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 .fin-compact-table thead th{ padding:.28rem .5rem; font-size:.63rem; }
 .fin-compact-table tbody td{ padding:.25rem .5rem; }
 .fin-table-title{ font-size:.72rem; margin-bottom:.4rem; }
-/* financial tab compact card padding + row spacing */
-#dash-cat-financial .card{ padding:.8rem 1rem; }
+/* financial tab — flat redesign (match ปฏิบัติการ/ชุมชน/ผู้เช่า: hairline cards,
+   no heavy shadow, no accent stripe; colored .kpi-value text stays the semantic signal) */
+#dash-cat-financial .card{ padding:.8rem 1rem; border:1px solid var(--border); box-shadow:none; border-radius:14px; }
+#dash-cat-financial .card:hover{ box-shadow:none; }
+#dash-cat-financial .kpi-card{ border:1px solid var(--border); box-shadow:none; border-top:1px solid var(--border) !important; border-radius:14px; }
+#dash-cat-financial .kpi-card:hover{ transform:none; box-shadow:none; }
 #dash-cat-financial .fin-top-grid{ margin-bottom:.45rem; }
 #dash-cat-financial .fin-bottom-grid{ margin-bottom:.45rem; }
 #dash-cat-financial .card-title{ margin-bottom:.5rem; font-size:.78rem; }
