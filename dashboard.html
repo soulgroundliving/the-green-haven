@@ -2722,80 +2722,42 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 .ten-stat-value.c-red{ color:#dc2626; }
 .ten-stat-value.c-blue{ color:#2563eb; }
 
-/* ── ปฏิบัติการ tab ── */
-.ops-layout-v2{
-  display:grid;
-  grid-template-columns:1fr minmax(400px,460px);
-  gap:.6rem;
-  align-items:start;
-  min-width:0;
-}
-/* Ops tab — fit viewport height, no page scroll */
-#dash-cat-operations{
-  display:flex; flex-direction:column;
-  height:calc(100vh - 200px);
-  overflow:hidden;
-}
-#dash-cat-operations .dash-tab-header{ flex-shrink:0; }
-#dashOpsComplaintsRow{ flex-shrink:0; margin-bottom:.4rem; }
-.ops-layout-v2{ flex:1; min-height:0; }
-.ops-right-col{ height:100%; overflow-y:auto; }
-.ops-right-col > *{ flex-shrink:0; }
-#dash-cat-operations .ops-right-col .card{ overflow:visible; }
-.ops-layout-v2 > *{ min-width:0; }
-.ops-status-col{ display:flex; flex-direction:column; gap:.5rem; }
-.ops-right-col{ display:flex; flex-direction:column; gap:.5rem; }
-#dash-cat-operations .card{ padding:.8rem 1rem; }
-#dash-cat-operations .dash-tab-header{ margin-bottom:.75rem; padding-bottom:.65rem; }
-/* ── Operations Summary ── */
-.ops-board-hdr{ display:flex; align-items:center; justify-content:space-between; }
-.ops-pulse{ display:flex; align-items:center; gap:.4rem; font-size:.71rem; font-weight:600; padding:.32rem .65rem; border-radius:6px; margin:.4rem 0 .45rem; }
-.ops-pulse.ok{ background:rgba(15,118,110,.09); color:#0f766e; }
-.ops-pulse.warn{ background:rgba(245,158,11,.11); color:#b45309; }
-.ops-pulse.danger{ background:rgba(220,38,38,.09); color:#dc2626; }
-/* ── Operations v2 — 2-col grid + KPI cards ── */
-.ops2-grid{ display:grid; grid-template-columns:1fr 1fr; gap:.45rem; min-width:0; }
-.ops2-grid-section{ margin-top:.5rem; }
-.ops2-wide{ grid-column:1/-1; }
-.ops2-card{
-  background:var(--bg-card,#fff);
-  border-radius:.55rem;
-  border:1px solid var(--border);
-  border-top:3px solid var(--ops2-accent,var(--border));
-  padding:.7rem .85rem .6rem;
-  display:flex; flex-direction:column; gap:.3rem;
-}
-.ops2-card.tint-warn{ background:rgba(245,158,11,.04); }
-.ops2-card.tint-danger{ background:rgba(220,38,38,.03); }
-.ops2-hdr{ display:flex; align-items:flex-start; justify-content:space-between; gap:.4rem; }
-.ops2-title{ display:flex; align-items:center; gap:.28rem; font-size:.72rem; font-weight:700; color:var(--text-primary); flex:1; min-width:0; flex-wrap:wrap; }
-.ops2-title-icon{ font-size:.82rem; flex-shrink:0; }
-.ops2-sub{ font-size:.6rem; font-weight:400; color:var(--text-muted); }
-.ops2-badge{ font-size:.62rem; font-weight:700; padding:2px 8px; border-radius:99px; white-space:nowrap; flex-shrink:0; }
-.ops2-badge.ok{ background:rgba(15,118,110,.1); color:#0f766e; }
-.ops2-badge.warn{ background:rgba(245,158,11,.12); color:#b45309; }
-.ops2-badge.danger{ background:rgba(220,38,38,.1); color:#dc2626; }
-.ops2-badge.neutral{ background:var(--bg-muted,#f3f4f6); color:var(--text-muted); }
-.ops2-primary{ display:flex; align-items:baseline; gap:.28rem; padding:.1rem 0 0; }
-.ops2-big{ font-size:2rem; font-weight:800; line-height:1; letter-spacing:-.02em; }
-.ops2-big.red{ color:#dc2626; }
-.ops2-big.amber{ color:#d97706; }
-.ops2-big.green{ color:#0f766e; }
-.ops2-big.muted{ color:var(--text-muted); font-weight:500; }
-.ops2-plabel{ font-size:.6rem; color:var(--text-muted); }
-.ops2-divider{ border:none; border-top:1px solid var(--border); margin:.05rem 0; }
-.ops2-stats{ display:flex; gap:.9rem; }
-.ops2-stat{ display:flex; flex-direction:column; gap:1px; }
-.ops2-stat-v{ font-size:.82rem; font-weight:700; color:var(--text-secondary,#4b5563); }
-.ops2-stat-v.green{ color:#0f766e; }
-.ops2-stat-v.amber{ color:#d97706; }
-.ops2-stat-v.red{ color:#dc2626; }
-.ops2-stat-v.muted{ color:var(--text-muted); font-weight:500; }
-.ops2-stat-l{ font-size:.6rem; color:var(--text-muted); }
-.ops2-tags{ display:flex; flex-wrap:wrap; gap:3px; }
-.ops2-tag{ font-size:.56rem; padding:1px 6px; border-radius:3px; background:var(--bg-muted,#f3f4f6); color:var(--text-muted); }
-.ops2-tag.urgent{ background:#fee2e2; color:#b91c1c; }
-.ops-board-ft{ font-size:.68rem; color:var(--text-muted); text-align:right; margin-top:.35rem; }
+/* ── ปฏิบัติการ tab (redesigned — flat, hairline; no nested card-in-card) ── */
+#dash-cat-operations .dash-tab-header{ margin-bottom:.9rem; padding-bottom:.7rem; }
+
+/* health line — one calm inline row, not a heavy box */
+.ops-health{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.55rem .9rem; border-radius:10px; margin-bottom:1.4rem; }
+.ops-health.ok{ background:rgba(15,118,110,.07); }
+.ops-health.warn{ background:rgba(207,138,46,.10); }
+.ops-health.danger{ background:rgba(192,86,63,.10); }
+.ops-health-msg{ font-size:.84rem; font-weight:600; min-width:0; }
+.ops-health.ok .ops-health-msg{ color:#0f766e; }
+.ops-health.warn .ops-health-msg{ color:#9a6418; }
+.ops-health.danger .ops-health-msg{ color:#b03a22; }
+.ops-refresh{ font-size:.72rem; padding:3px 12px; background:var(--card,#fff); color:var(--text-muted); border:1px solid var(--border); border-radius:999px; cursor:pointer; font-family:inherit; flex-shrink:0; }
+
+/* small section label */
+.ops-sec-label{ font-size:.66rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text-muted); margin:0 0 .55rem .1rem; }
+
+/* QUEUE strip — ONE flat surface, hairline columns, big scannable numbers, no per-tile box */
+.ops-queue{ display:grid; grid-template-columns:repeat(5,1fr); background:var(--card,#fff); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:1.6rem; }
+.ops-q{ padding:1rem 1.05rem .95rem; min-width:0; }
+.ops-q + .ops-q{ border-left:1px solid var(--border); }
+.ops-q-head{ display:flex; align-items:center; gap:.4rem; margin-bottom:.65rem; }
+.ops-q-icon{ font-size:.95rem; flex-shrink:0; }
+.ops-q-name{ font-size:.76rem; font-weight:700; color:var(--text-secondary,#5c5b52); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ops-q-num{ font-size:2.4rem; font-weight:800; line-height:.95; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--border-strong,#cfccc2); }
+.ops-q-num.amber{ color:#cf8a2e; }
+.ops-q-num.red{ color:#c0563f; }
+.ops-q-unit{ font-size:.71rem; color:var(--text-muted); margin-top:.25rem; }
+.ops-q-meta{ font-size:.69rem; color:var(--text-secondary,#5c5b52); margin-top:.55rem; display:flex; flex-wrap:wrap; gap:.12rem .5rem; }
+.ops-q-meta .ok{ color:#0f766e; }
+.ops-q-meta .red{ color:#c0563f; }
+.ops-q-meta .sep{ color:var(--border-strong,#cfccc2); }
+
+/* analytics grid + lightened cards (kill the 3px top accent + heavy shadow → hairline) */
+.ops-analytics{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:start; }
+#dash-cat-operations .card{ border:1px solid var(--border); box-shadow:none; border-top:1px solid var(--border) !important; border-radius:14px; padding:1rem 1.15rem; }
 
 /* ── ชุมชน tab ── */
 #dashWellnessMatrix .card{ max-height:calc(100vh - 310px); overflow-y:auto; }
@@ -2806,7 +2768,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 #dash-cat-community .dash-2col{ gap:.6rem; margin-bottom:.6rem; }
 
 @media(max-width:900px){
-  .ten-layout,.ops-layout-v2{ grid-template-columns:1fr; }
+  .ten-layout,.ops-analytics{ grid-template-columns:1fr; }
 }
 
 /* ── Tab intro header (each tab) ── */
@@ -3436,14 +3398,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button class="dash-view-link" data-action="showPage" data-page="requests-approvals">ดูคำขอทั้งหมด →</button>
     </div>
     <div id="dashOpsComplaintsRow"></div>
-    <div class="ops-layout-v2">
-      <div id="dashMiniCardsCol"></div>
-      <div class="ops-right-col">
-        <div id="dashMeterSpike"></div>
-        <div id="dashEnergyPattern"></div>
-        <div id="dashRepairSeason"></div>
-        <div id="dashProviderScore"></div>
-      </div>
+    <div class="ops-analytics">
+      <div id="dashMeterSpike"></div>
+      <div id="dashEnergyPattern"></div>
+      <div id="dashRepairSeason"></div>
+      <div id="dashProviderScore"></div>
     </div>
   </div><!-- END ปฏิบัติการ -->
 

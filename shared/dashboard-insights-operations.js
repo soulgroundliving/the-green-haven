@@ -126,155 +126,72 @@
       });
       const totalLiff = lStatus.pending + lStatus.approved + lStatus.rejected;
 
-      // ── Ops v2 helpers ──
-      const accentColors = { ok: DashColors.TEAL, warn: '#d97706', danger: '#dc2626', neutral: `var(--border,${DashColors.BORDER_LIGHT})` };
-      const ops2Badge = (cls, text) => `<span class="ops2-badge ${cls}">${text}</span>`;
-      const ops2Stat = (val, cls, lbl) =>
-        `<div class="ops2-stat"><div class="ops2-stat-v ${cls}">${val}</div><div class="ops2-stat-l">${lbl}</div></div>`;
-      const ops2Card = ({ wide, accent, icon, title, sub, bigNum, bigCls, bigLabel, statsHTML, tagsHTML, badgeHTML }) =>
-        `<div class="ops2-card${wide ? ' ops2-wide' : ''}${accent === 'danger' ? ' tint-danger' : accent === 'warn' ? ' tint-warn' : ''}" style="--ops2-accent:${accentColors[accent]}">
-          <div class="ops2-hdr">
-            <div class="ops2-title"><span class="ops2-title-icon">${icon}</span>${title}${sub ? `<span class="ops2-sub">· ${sub}</span>` : ''}</div>
-            ${badgeHTML}
-          </div>
-          <div class="ops2-primary"><span class="ops2-big ${bigCls}">${bigNum}</span><span class="ops2-plabel">${bigLabel}</span></div>
-          <hr class="ops2-divider">
-          <div class="ops2-stats">${statsHTML}</div>
-          ${tagsHTML ? `<div class="ops2-tags">${tagsHTML}</div>` : ''}
-        </div>`;
-
-      // Overall health pulse
+      // ── Overall health pulse ──
       const hasUrgent = cStatus.open > 0 || mOverdue.length > 0;
       const hasPending = cStatus['in-progress'] > 0 || mStatus.pending > 0 || hStatus.pending > 0 || pStatus.pending > 0 || lStatus.pending > 0;
       const pulseClass = hasUrgent ? 'danger' : hasPending ? 'warn' : 'ok';
-      const urgentItems = [cStatus.open ? `Complaints open ${cStatus.open}` : '', mOverdue.length ? `งานค้าง ${mOverdue.length}` : ''].filter(Boolean);
+      const urgentBits = [cStatus.open ? `คำร้องเรียน ${cStatus.open}` : '', mOverdue.length ? `งานซ่อมค้าง ${mOverdue.length}` : ''].filter(Boolean);
+      const pendBits = [
+        mStatus.pending ? `ซ่อม ${mStatus.pending}` : '',
+        hStatus.pending ? `แม่บ้าน ${hStatus.pending}` : '',
+        pStatus.pending ? `สัตว์เลี้ยง ${pStatus.pending}` : '',
+        lStatus.pending ? `LINE ${lStatus.pending}` : '',
+        cStatus['in-progress'] ? `กำลังแก้ ${cStatus['in-progress']}` : ''
+      ].filter(Boolean);
       const pulseLabel = pulseClass === 'danger'
-        ? `⚠️ ต้องดำเนินการด่วน · ${urgentItems.join(' · ')}`
-        : pulseClass === 'warn' ? `⏳ มีรายการรอดำเนินการ`
-        : `✅ ทุกอย่างเรียบร้อย`;
+        ? `⚠️ ต้องดำเนินการด่วน — ${urgentBits.join(' · ')}`
+        : pulseClass === 'warn'
+        ? `⏳ มีรายการรอดำเนินการ — ${pendBits.join(' · ')}`
+        : '✅ ทุกอย่างเรียบร้อย — ไม่มีรายการค้างดำเนินการ';
 
-      // Per-card accent
-      const cAccent = cStatus.open > 0 ? 'danger' : cStatus['in-progress'] > 0 ? 'warn' : totalComplaints > 0 ? 'ok' : 'neutral';
-      const mAccent = mOverdue.length > 0 ? 'danger' : mStatus.pending > 0 ? 'warn' : totalMaint > 0 ? 'ok' : 'neutral';
-      const hAccent = hStatus.pending > 0 ? 'warn' : totalHouse > 0 ? 'ok' : 'neutral';
-      const pAccent = pStatus.pending > 0 ? 'warn' : 'neutral';
-      const lAccent = lStatus.pending > 0 ? 'warn' : 'neutral';
-
-      // Badges
-      const cBadge = cStatus.open > 0 ? ops2Badge('danger', '⚠️ Action Required')
-        : cStatus['in-progress'] > 0 ? ops2Badge('warn', '⏳ In Progress')
-        : totalComplaints > 0 ? ops2Badge('ok', '✅ Resolved') : ops2Badge('neutral', '—');
-      const mBadge = mOverdue.length > 0 ? ops2Badge('danger', `⏰ ค้าง ${mOverdue.length}`)
-        : mStatus.pending > 0 ? ops2Badge('warn', '⏳ Pending')
-        : totalMaint > 0 ? ops2Badge('ok', '✅ Done') : ops2Badge('neutral', '—');
-      const hBadge = hStatus.pending > 0 ? ops2Badge('warn', '⏳ Pending')
-        : totalHouse > 0 ? ops2Badge('ok', '✅ Done') : ops2Badge('neutral', '—');
-      const pBadge = pStatus.pending > 0 ? ops2Badge('warn', `⏳ รออนุมัติ ${pStatus.pending}`)
-        : ops2Badge('neutral', totalPets === 0 ? 'ยังไม่มีคำขอ' : '✅ ดำเนินการแล้ว');
-      const lBadge = lStatus.pending > 0 ? ops2Badge('warn', `⏳ รออนุมัติ ${lStatus.pending}`)
-        : ops2Badge('neutral', totalLiff === 0 ? 'ยังไม่มีคำขอ' : '✅ ดำเนินการแล้ว');
-
-      // Tags (Complaints only)
-      const cTagsHTML = topCats.slice(0, 5).map(([cat, n]) => `<span class="ops2-tag">${u.esc(cat)} ${n}</span>`).join('');
-      const mTagsHTML = mOverdue.slice(0, 4).map(m => `<span class="ops2-tag urgent">ห้อง ${u.esc(m.room)}</span>`).join('') +
-        (mOverdue.length > 4 ? `<span class="ops2-tag">+${mOverdue.length - 4}</span>` : '');
-
-      const complaintsCardHTML = ops2Card({ wide: false, accent: cAccent, icon: '⚠️', title: 'Complaints',
-        sub: avgResolve ? `90 วัน · เฉลี่ย ${avgResolve} วัน` : '90 วัน',
-        bigNum: cStatus.open, bigCls: cStatus.open > 0 ? 'red' : 'muted', bigLabel: 'Open now',
-        statsHTML: ops2Stat(cStatus['in-progress'], cStatus['in-progress'] > 0 ? 'amber' : 'muted', 'In Progress') +
-                   ops2Stat(cStatus.resolved, cStatus.resolved > 0 ? 'green' : 'muted', 'Resolved') +
-                   ops2Stat(totalComplaints, 'muted', 'Total'),
-        tagsHTML: cTagsHTML, badgeHTML: cBadge });
-
-      const opsCardsHTML = `
-        <div class="ops2-grid-section"><div class="ops2-grid">
-          ${ops2Card({ wide: false, accent: mAccent, icon: '🔧', title: 'Maintenance', sub: '',
-            bigNum: mStatus.pending, bigCls: mStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'Pending',
-            statsHTML: ops2Stat(mStatus.inprogress, mStatus.inprogress > 0 ? 'amber' : 'muted', 'In Progress') +
-                       ops2Stat(mStatus.done, mStatus.done > 0 ? 'green' : 'muted', 'Done') +
-                       (mOverdue.length ? ops2Stat(mOverdue.length, 'red', 'Overdue') : ''),
-            tagsHTML: mTagsHTML, badgeHTML: mBadge })}
-          ${ops2Card({ wide: false, accent: hAccent, icon: '🧹', title: 'Housekeeping', sub: '',
-            bigNum: hStatus.pending, bigCls: hStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'Pending',
-            statsHTML: ops2Stat(hStatus.inprogress, hStatus.inprogress > 0 ? 'amber' : 'muted', 'In Progress') +
-                       ops2Stat(hStatus.done, hStatus.done > 0 ? 'green' : 'muted', 'Done'),
-            tagsHTML: '', badgeHTML: hBadge })}
-          ${ops2Card({ wide: false, accent: pAccent, icon: '🐾', title: 'Pet Approvals', sub: '',
-            bigNum: pStatus.pending, bigCls: pStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'รออนุมัติ',
-            statsHTML: ops2Stat(pStatus.approved, pStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
-                       ops2Stat(pStatus.rejected, pStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
-            tagsHTML: '', badgeHTML: pBadge })}
-          ${ops2Card({ wide: false, accent: lAccent, icon: '🔗', title: 'LINE Requests', sub: '',
-            bigNum: lStatus.pending, bigCls: lStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'รออนุมัติ',
-            statsHTML: ops2Stat(lStatus.approved, lStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
-                       ops2Stat(lStatus.rejected, lStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
-            tagsHTML: '', badgeHTML: lBadge })}
-        </div></div>`;
-
-      if (complaintsRow && miniCardsCol) {
-        // Compact horizontal complaints card for full-width row (saves ~150px vs vertical)
-        const complaintsHorizHTML = `<div class="ops2-card${cAccent === 'danger' ? ' tint-danger' : cAccent === 'warn' ? ' tint-warn' : ''}" style="--ops2-accent:${accentColors[cAccent]};padding:.45rem .85rem;">
-          <div style="display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;min-width:0;">
-            <div style="display:flex;align-items:center;gap:.28rem;flex-shrink:0;">
-              <span style="font-size:.82rem;">⚠️</span>
-              <span style="font-size:.72rem;font-weight:700;color:var(--text-primary);">Complaints</span>
-              ${avgResolve ? `<span style="font-size:.6rem;color:var(--text-muted);">· เฉลี่ย ${avgResolve} วัน</span>` : ''}
-            </div>
-            ${cBadge}
-            <div style="display:flex;align-items:baseline;gap:.22rem;padding:0 .55rem;border-left:1px solid var(--border);flex-shrink:0;">
-              <span class="ops2-big ${cStatus.open > 0 ? 'red' : 'muted'}" style="font-size:1.5rem;line-height:1;">${cStatus.open}</span>
-              <span style="font-size:.6rem;color:var(--text-muted);">Open</span>
-            </div>
-            <div class="ops2-stats" style="padding:0 .55rem;border-left:1px solid var(--border);">
-              ${ops2Stat(cStatus['in-progress'], cStatus['in-progress'] > 0 ? 'amber' : 'muted', 'In Progress')}
-              ${ops2Stat(cStatus.resolved, cStatus.resolved > 0 ? 'green' : 'muted', 'Resolved')}
-              ${ops2Stat(totalComplaints, 'muted', 'Total')}
-            </div>
-            ${cTagsHTML ? `<div style="display:flex;flex-wrap:wrap;gap:.22rem;padding:0 .55rem;border-left:1px solid var(--border);">${cTagsHTML}</div>` : ''}
-          </div>
+      // ── Flat queue strip: 5 ops queues, ONE surface, hairline columns, no per-tile box ──
+      const qNumCls = (urgent, pending) => urgent ? 'red' : pending ? 'amber' : '';
+      const SEP = '<span class="sep">·</span>';
+      const qMeta = (parts) => { const s = parts.filter(Boolean).join(SEP); return s || '<span class="sep">—</span>'; };
+      const qCol = (icon, name, num, numCls, unit, metaHTML) =>
+        `<div class="ops-q">
+          <div class="ops-q-head"><span class="ops-q-icon">${icon}</span><span class="ops-q-name">${name}</span></div>
+          <div class="ops-q-num ${numCls}">${num}</div>
+          <div class="ops-q-unit">${unit}</div>
+          <div class="ops-q-meta">${metaHTML}</div>
         </div>`;
-        complaintsRow.innerHTML = `
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.28rem;">
-            <div class="ops-pulse ${pulseClass}" style="margin:0;">${pulseLabel}</div>
-            <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
-                    style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
-          </div>
-          ${complaintsHorizHTML}`;
-        miniCardsCol.innerHTML = `<div class="ops2-grid">
-          ${ops2Card({ wide: false, accent: mAccent, icon: '🔧', title: 'Maintenance', sub: '',
-            bigNum: mStatus.pending, bigCls: mStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'Pending',
-            statsHTML: ops2Stat(mStatus.inprogress, mStatus.inprogress > 0 ? 'amber' : 'muted', 'In Progress') +
-                       ops2Stat(mStatus.done, mStatus.done > 0 ? 'green' : 'muted', 'Done') +
-                       (mOverdue.length ? ops2Stat(mOverdue.length, 'red', 'Overdue') : ''),
-            tagsHTML: mTagsHTML, badgeHTML: mBadge })}
-          ${ops2Card({ wide: false, accent: hAccent, icon: '🧹', title: 'Housekeeping', sub: '',
-            bigNum: hStatus.pending, bigCls: hStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'Pending',
-            statsHTML: ops2Stat(hStatus.inprogress, hStatus.inprogress > 0 ? 'amber' : 'muted', 'In Progress') +
-                       ops2Stat(hStatus.done, hStatus.done > 0 ? 'green' : 'muted', 'Done'),
-            tagsHTML: '', badgeHTML: hBadge })}
-          ${ops2Card({ wide: false, accent: pAccent, icon: '🐾', title: 'Pet Approvals', sub: '',
-            bigNum: pStatus.pending, bigCls: pStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'รออนุมัติ',
-            statsHTML: ops2Stat(pStatus.approved, pStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
-                       ops2Stat(pStatus.rejected, pStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
-            tagsHTML: '', badgeHTML: pBadge })}
-          ${ops2Card({ wide: false, accent: lAccent, icon: '🔗', title: 'LINE Requests', sub: '',
-            bigNum: lStatus.pending, bigCls: lStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'รออนุมัติ',
-            statsHTML: ops2Stat(lStatus.approved, lStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
-                       ops2Stat(lStatus.rejected, lStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
-            tagsHTML: '', badgeHTML: lBadge })}
+
+      const queueHTML = `<div class="ops-sec-label">คิวงานที่ต้องดูแล</div>
+        <div class="ops-queue">
+          ${qCol('⚠️', 'คำร้องเรียน', cStatus.open, qNumCls(cStatus.open > 0, cStatus['in-progress'] > 0), 'เปิดอยู่', qMeta([
+            cStatus.resolved ? `<span class="ok">✓ ${cStatus.resolved} แก้แล้ว</span>` : '',
+            avgResolve ? `เฉลี่ย ${avgResolve} วัน` : (totalComplaints ? `${totalComplaints} ทั้งหมด` : '')
+          ]))}
+          ${qCol('🔧', 'ซ่อมบำรุง', mStatus.pending, qNumCls(mOverdue.length > 0, mStatus.pending > 0), 'รอดำเนินการ', qMeta([
+            mOverdue.length ? `<span class="red">ค้าง ${mOverdue.length}</span>` : '',
+            mStatus.inprogress ? `${mStatus.inprogress} กำลังทำ` : '',
+            mStatus.done ? `<span class="ok">✓ ${mStatus.done} เสร็จ</span>` : ''
+          ]))}
+          ${qCol('🧹', 'แม่บ้าน', hStatus.pending, qNumCls(false, hStatus.pending > 0), 'รอดำเนินการ', qMeta([
+            hStatus.inprogress ? `${hStatus.inprogress} กำลังทำ` : '',
+            hStatus.done ? `<span class="ok">✓ ${hStatus.done} เสร็จ</span>` : ''
+          ]))}
+          ${qCol('🐾', 'สัตว์เลี้ยง', pStatus.pending, qNumCls(false, pStatus.pending > 0), 'รออนุมัติ', qMeta([
+            pStatus.approved ? `<span class="ok">✓ ${pStatus.approved} อนุมัติ</span>` : '',
+            pStatus.rejected ? `${pStatus.rejected} ปฏิเสธ` : ''
+          ]))}
+          ${qCol('🔗', 'LINE', lStatus.pending, qNumCls(false, lStatus.pending > 0), 'รออนุมัติ', qMeta([
+            lStatus.approved ? `<span class="ok">✓ ${lStatus.approved} เชื่อมแล้ว</span>` : '',
+            lStatus.rejected ? `${lStatus.rejected} ปฏิเสธ` : ''
+          ]))}
         </div>`;
+
+      const summaryHTML = `<div class="ops-health ${pulseClass}">
+          <div class="ops-health-msg">${pulseLabel}</div>
+          <button class="ops-refresh" data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช">↻ refresh</button>
+        </div>
+        ${queueHTML}`;
+
+      if (complaintsRow) {
+        complaintsRow.innerHTML = summaryHTML;
+        if (miniCardsCol) miniCardsCol.innerHTML = '';
       } else {
-        container.innerHTML = `
-          <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">
-            <span>📋 Operations Summary</span>
-            <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
-                    style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
-          </div>
-          <div class="ops-pulse ${pulseClass}" style="margin-bottom:.45rem;">${pulseLabel}</div>
-          ${complaintsCardHTML}
-          ${opsCardsHTML}
-          <div class="ops-board-ft">${u.fmtCacheAge(Date.now())}</div>`;
+        container.innerHTML = summaryHTML;
       }
     } catch (e) {
       console.error('[insights] operations failed:', e);
