@@ -2696,27 +2696,29 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 /* ── ผู้เช่า tab ── */
 .ten-layout{
   display:grid;
-  grid-template-columns:290px 1fr;
-  gap:.6rem;
+  grid-template-columns:1fr 1fr;
+  gap:1rem;
   align-items:start;
+  margin-bottom:1rem;
 }
-.ten-left-col{ display:flex; flex-direction:column; gap:.45rem; }
 #dashTenantInsights .card{ max-height:calc(100vh - 270px); overflow-y:auto; }
-#dash-cat-tenants .card{ padding:.8rem 1rem; }
-#dash-cat-tenants .dash-tab-header{ margin-bottom:.75rem; padding-bottom:.65rem; }
-/* ── ผู้เช่า summary cards (stacked in left col) ── */
-.ten-summary-row{ display:flex; flex-direction:column; gap:.35rem; }
-.ten-stat-card{ display:flex; align-items:center; gap:.65rem; cursor:pointer; transition:box-shadow .15s,transform .1s; }
-.ten-stat-card:hover{ box-shadow:0 3px 12px rgba(0,0,0,.1); transform:translateY(-1px); }
+/* flat redesign: hairline cards (kill heavy shadow) */
+#dash-cat-tenants .card{ border:1px solid var(--border); box-shadow:none; border-radius:14px; padding:1rem 1.15rem; }
+#dash-cat-tenants .dash-tab-header{ margin-bottom:.9rem; padding-bottom:.7rem; }
+/* ── ผู้เช่า action KPI strip (flat hairline columns at top of tab) ── */
+.ten-summary-row{ display:grid; grid-template-columns:repeat(3,1fr); background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:1.6rem; }
+.ten-stat-card{ display:flex; align-items:center; gap:.7rem; cursor:pointer; padding:1rem 1.15rem; transition:background .15s; }
+.ten-stat-card + .ten-stat-card{ border-left:1px solid var(--border); }
+.ten-stat-card:hover{ background:var(--mist,#f0efe9); }
 /* tenant modal footer buttons — hover via CSS instead of onmouseover/onmouseout */
 [data-action="saveTenantInfo"]:hover{ transform:translateY(-2px); box-shadow:0 8px 24px rgba(45,134,83,.4) !important; }
 [data-action="archiveTenantOnMoveOut"]:hover{ background:#ffebee !important; border-color:#b71c1c !important; }
 [data-action="transitionToPlayer"]:hover{ background:#f0fdfa !important; border-color:#0f766e !important; }
 [data-action="revertTransitionToPlayer"]:hover{ background:#fff7ed !important; border-color:#c2410c !important; }
 [data-action="closeTenantModal"].year-tab,[data-action="closeTenantModal"]:not(.gh-btn):hover{ background:#d0d7e0 !important; }
-.ten-stat-icon{ font-size:1.3rem; flex-shrink:0; }
+.ten-stat-icon{ font-size:1.5rem; flex-shrink:0; }
 .ten-stat-body{ min-width:0; }
-.ten-stat-value{ font-size:1.3rem; font-weight:800; line-height:1; }
+.ten-stat-value{ font-size:1.9rem; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; }
 .ten-stat-label{ font-size:.61rem; color:var(--text-muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ten-stat-value.c-amber{ color:#d97706; }
 .ten-stat-value.c-red{ color:#dc2626; }
@@ -3358,35 +3360,35 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
       <button class="dash-view-link" data-action="showPage" data-page="tenant">ดูผู้เช่าทั้งหมด →</button>
     </div>
+    <div class="dash-sec-label">ต้องดำเนินการ</div>
+    <div class="ten-summary-row">
+      <div class="ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="leases">
+        <div class="ten-stat-icon">📋</div>
+        <div class="ten-stat-body">
+          <div class="ten-stat-value c-amber" id="tenSum-exp">—</div>
+          <div class="ten-stat-label">สัญญาใกล้หมด (30 วัน)</div>
+        </div>
+      </div>
+      <div class="ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="requests">
+        <div class="ten-stat-icon">📨</div>
+        <div class="ten-stat-body">
+          <div class="ten-stat-value" id="tenSum-req">—</div>
+          <div class="ten-stat-label">คำขอรอดำเนินการ</div>
+        </div>
+      </div>
+      <div class="ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="bookings">
+        <div class="ten-stat-icon">🗓️</div>
+        <div class="ten-stat-body">
+          <div class="ten-stat-value c-blue" id="tenSum-book">—</div>
+          <div class="ten-stat-label">การจองที่รอดำเนินการ</div>
+        </div>
+      </div>
+    </div>
+    <div class="dash-sec-label">การเข้าพัก &amp; สุขภาพผู้เช่า</div>
     <div class="ten-layout">
-      <div class="ten-left-col">
-        <div class="card">
-          <div class="card-title" role="heading" aria-level="3">สถานะห้องพัก</div>
-          <div id="dashTenantStatus"></div>
-        </div>
-        <div class="ten-summary-row">
-          <div class="card ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="leases">
-            <div class="ten-stat-icon">📋</div>
-            <div class="ten-stat-body">
-              <div class="ten-stat-value c-amber" id="tenSum-exp">—</div>
-              <div class="ten-stat-label">สัญญาใกล้หมด (30 วัน)</div>
-            </div>
-          </div>
-          <div class="card ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="requests">
-            <div class="ten-stat-icon">📨</div>
-            <div class="ten-stat-body">
-              <div class="ten-stat-value" id="tenSum-req">—</div>
-              <div class="ten-stat-label">คำขอรอดำเนินการ</div>
-            </div>
-          </div>
-          <div class="card ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="bookings">
-            <div class="ten-stat-icon">🗓️</div>
-            <div class="ten-stat-body">
-              <div class="ten-stat-value c-blue" id="tenSum-book">—</div>
-              <div class="ten-stat-label">การจองที่รอดำเนินการ</div>
-            </div>
-          </div>
-        </div>
+      <div class="card">
+        <div class="card-title" role="heading" aria-level="3">🚪 สถานะห้องพัก</div>
+        <div id="dashTenantStatus"></div>
       </div>
       <div id="dashTenantInsights"></div>
     </div>
