@@ -1149,6 +1149,53 @@ describe('pointsLedger — append-only points event log, admin-read-only (Core R
   });
 });
 
+describe('maintenanceArchive — closed-ticket archive, admin-read-only (Phase 3.1 peak-repair-season)', () => {
+  // Authenticated LIFF tenant — proves even a signed-in tenant has NO read access.
+  const LIFF_TENANT = (uid, room = '15', building = 'rooms') =>
+    testEnv.authenticatedContext(uid, {
+      room, building, firebase: { sign_in_provider: 'custom' }
+    });
+
+  const sampleArchive = {
+    building: 'rooms', roomId: '15', ticketId: 'T1', status: 'done',
+    category: 'electric', priority: 'normal', createdAtMs: 100, completedAtMs: 200,
+  };
+
+  it('admin can read a maintenanceArchive entry', async () => {
+    await seedDoc('maintenanceArchive/rooms_15_T1', sampleArchive);
+    await assertSucceeds(getDoc(
+      doc(EMAIL_ADMIN().firestore(), 'maintenanceArchive/rooms_15_T1')
+    ));
+  });
+
+  it('admin collection query over maintenanceArchive succeeds (seasonality analytics)', async () => {
+    await seedDoc('maintenanceArchive/rooms_15_T1', sampleArchive);
+    await assertSucceeds(getDocs(
+      query(collection(EMAIL_ADMIN().firestore(), 'maintenanceArchive'))
+    ));
+  });
+
+  it('tenant CANNOT read maintenanceArchive (admin-only)', async () => {
+    await seedDoc('maintenanceArchive/rooms_15_T1', sampleArchive);
+    const ctx = LIFF_TENANT('line:abc');
+    await assertFails(getDoc(doc(ctx.firestore(), 'maintenanceArchive/rooms_15_T1')));
+  });
+
+  it('unauth user CANNOT read maintenanceArchive', async () => {
+    await seedDoc('maintenanceArchive/rooms_15_T1', sampleArchive);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'maintenanceArchive/rooms_15_T1')));
+  });
+
+  it('client CANNOT create a maintenanceArchive entry (CF-only via Admin SDK)', async () => {
+    await assertFails(setDoc(
+      doc(EMAIL_ADMIN().firestore(), 'maintenanceArchive/forge'), sampleArchive
+    ));
+    await assertFails(setDoc(
+      doc(ANON().firestore(), 'maintenanceArchive/forge'), sampleArchive
+    ));
+  });
+});
+
 describe('actionAudit — immutable admin-action trail, admin-read-only (Core Readiness Phase 1.1)', () => {
   // Authenticated LIFF tenant — proves even a signed-in tenant has NO read access
   // (tenant self-view is not a v1 feature; admin-only).

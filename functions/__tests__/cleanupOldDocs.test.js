@@ -34,6 +34,12 @@ let batchCommitted = false;
 let rtdbState = {};
 let rtdbRemoveCount = 0;
 
+// Firestore .doc().set() captures (maintenanceArchive sweep): {collection,id,data,opts}
+let docSets = [];
+
+// Captured cleanupOldDocs module (for pure-helper exports like _ticketToArchiveDoc)
+let cleanupModule;
+
 // requireAdmin stub — returns decoded token or null
 let requireAdminStub;
 
@@ -43,6 +49,7 @@ function resetStubs() {
   batchCommitted = false;
   rtdbState = {};
   rtdbRemoveCount = 0;
+  docSets = [];
   requireAdminStub = async (_req, _res) => ({ uid: 'admin1', email: 'admin@test.com' });
 }
 resetStubs();
@@ -88,6 +95,10 @@ const fsInstance = {
           return makeSnap(docs);
         },
       }),
+    }),
+    // Used by maintenanceArchive sweep (collection().doc(id).set(data, opts))
+    doc: (id) => ({
+      set: async (data, opts) => { docSets.push({ collection: name, id, data, opts }); },
     }),
   }),
   batch: () => {
@@ -196,7 +207,7 @@ before(() => {
 
   // Clear any cached version before loading
   delete require.cache[require.resolve('../cleanupOldDocs.js')];
-  require('../cleanupOldDocs.js');
+  cleanupModule = require('../cleanupOldDocs.js');
 });
 
 after(() => {
@@ -626,5 +637,133 @@ describe('cleanupOldDocs HTTP', () => {
     assert.equal(res._status, 500);
     const body = res._body;
     assert.ok(body.error, 'error field must be present on 500 response');
+  });
+
+  it('POST success → response includes maintenanceArchive and archive ran', async () => {
+    fsState['rateLimits'] = [];
+    fsState['phoneOtpRateLimit'] = [];
+    fsState['liffUsers'] = [];
+    rtdbState = {
+      rooms: { '15': { 'T1': { status: 'done', completedAt: new Date(STALE_MAINT).toISOString() } } },
+    };
+    const req = makeReq({ method: 'POST' });
+    const res = makeRes();
+    await capturedHttpHandler(req, res);
+    assert.equal(res._status, 200);
+    assert.ok(res._body.maintenanceArchive, 'maintenanceArchive key present');
+    assert.equal(res._body.maintenanceArchive.archived, 1);
+    // archive ran BEFORE the delete (archive captured the ticket)
+    assert.equal(docSets.filter(s => s.collection === 'maintenanceArchive').length, 1);
+  });
+});
+
+// ── archiveMaintenanceScheduled ───────────────────────────────────────────────
+
+describe('archiveMaintenanceScheduled', () => {
+  it('handler is registered (captured at index 3)', () => {
+    assert.equal(typeof scheduledHandlers[3], 'function',
+      'fourth scheduled handler must be the maintenance archive handler');
+  });
+
+  it('empty RTDB → scanned=0, archived=0, no writes', async () => {
+    rtdbState = {};
+    const result = await scheduledHandlers[3]();
+    assert.equal(result.scanned, 0);
+    assert.equal(result.archived, 0);
+    assert.equal(docSets.length, 0);
+  });
+
+  it('closed ticket → archived to maintenanceArchive/{b}_{r}_{ticketId} (merge)', async () => {
+    rtdbState = {
+      rooms: { '15': { 'T1': {
+        status: 'done', category: 'electric', priority: 'high',
+        completedAt: new Date(STALE_MAINT).toISOString(),
+        createdAt: new Date(STALE_MAINT - 86400000).toISOString(),
+        description: 'ไฟดับ', beforePhoto: 'data:image/png;base64,AAAA',
+      } } },
+    };
+    const result = await scheduledHandlers[3]();
+    assert.equal(result.scanned, 1);
+    assert.equal(result.archived, 1);
+    assert.equal(docSets.length, 1);
+    const s = docSets[0];
+    assert.equal(s.collection, 'maintenanceArchive');
+    assert.equal(s.id, 'rooms_15_T1');
+    assert.equal(s.opts.merge, true);
+    assert.equal(s.data.category, 'electric');
+    assert.equal(s.data.completedAtMs, STALE_MAINT);
+    assert.equal(s.data.description, 'ไฟดับ');
+    assert.equal(s.data.archivedAt, 'ST'); // serverTimestamp stub
+    // base64 photo must NOT be copied into the archive
+    assert.equal('beforePhoto' in s.data, false);
+  });
+
+  it('open ticket (pending) → scanned but NOT archived', async () => {
+    rtdbState = { rooms: { '15': { 'T2': { status: 'pending', completedAt: new Date(STALE_MAINT).toISOString() } } } };
+    const result = await scheduledHandlers[3]();
+    assert.equal(result.scanned, 1);
+    assert.equal(result.archived, 0);
+    assert.equal(docSets.length, 0);
+  });
+
+  it('archives ALL closed tickets regardless of age (recent done is archived too)', async () => {
+    rtdbState = { rooms: { '15': { 'Trecent': { status: 'completed', completedAt: new Date(FRESH_MAINT).toISOString() } } } };
+    const result = await scheduledHandlers[3]();
+    assert.equal(result.archived, 1);
+  });
+
+  it('multi-building: closed tickets across both buildings archived', async () => {
+    rtdbState = {
+      rooms: { '15': { 'tA': { status: 'done', completedAt: new Date(STALE_MAINT).toISOString() } } },
+      nest:  { 'N1': { 'tB': { status: 'resolved', completedAt: new Date(FRESH_MAINT).toISOString() } } },
+    };
+    const result = await scheduledHandlers[3]();
+    assert.equal(result.scanned, 2);
+    assert.equal(result.archived, 2);
+    assert.equal(docSets.length, 2);
+    assert.deepEqual(docSets.map(s => s.id).sort(), ['nest_N1_tB', 'rooms_15_tA']);
+  });
+});
+
+// ── _ticketToArchiveDoc (pure helper) ─────────────────────────────────────────
+
+describe('_ticketToArchiveDoc', () => {
+  it('returns null for non-closed / invalid tickets', () => {
+    const f = cleanupModule._ticketToArchiveDoc;
+    assert.equal(f('rooms', '15', 'T', { status: 'pending' }), null);
+    assert.equal(f('rooms', '15', 'T', null), null);
+    assert.equal(f('rooms', '15', 'T', 'not-an-object'), null);
+    assert.equal(f('rooms', '15', 'T', {}), null);
+  });
+
+  it('maps closed ticket to lean doc, excludes base64 photo', () => {
+    const f = cleanupModule._ticketToArchiveDoc;
+    const d = f('rooms', '15', 'T1', {
+      status: 'done', category: 'water', priority: 'normal',
+      completedAt: '2026-05-01T00:00:00.000Z', createdAt: '2026-04-01T00:00:00.000Z',
+      beforePhoto: 'data:image/png;base64,ZZZZ', description: 'leak',
+    });
+    assert.equal(d.building, 'rooms');
+    assert.equal(d.ticketId, 'T1');
+    assert.equal(d.category, 'water');
+    assert.equal(d.completedAtMs, Date.parse('2026-05-01T00:00:00.000Z'));
+    assert.equal(d.createdAtMs, Date.parse('2026-04-01T00:00:00.000Z'));
+    assert.equal('beforePhoto' in d, false);
+  });
+
+  it('completedAt falls back to updatedAt; createdAt to submittedDate', () => {
+    const f = cleanupModule._ticketToArchiveDoc;
+    const d = f('rooms', '15', 'T2', {
+      status: 'resolved', updatedAt: '2026-05-10T00:00:00.000Z', submittedDate: '2026-04-10T00:00:00.000Z',
+    });
+    assert.equal(d.completedAtMs, Date.parse('2026-05-10T00:00:00.000Z'));
+    assert.equal(d.createdAtMs, Date.parse('2026-04-10T00:00:00.000Z'));
+  });
+
+  it('invalid/missing dates → null ms (not NaN)', () => {
+    const f = cleanupModule._ticketToArchiveDoc;
+    const d = f('rooms', '15', 'T3', { status: 'done', completedAt: 'not-a-date' });
+    assert.equal(d.completedAtMs, null);
+    assert.equal(d.createdAtMs, null);
   });
 });

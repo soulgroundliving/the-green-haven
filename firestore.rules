@@ -756,6 +756,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ===== MAINTENANCE ARCHIVE (Phase 3.1 — peak-repair-season analytics) =====
+    // maintenanceArchive/{building}_{roomId}_{ticketId} — lean, append-only copy of
+    // every CLOSED maintenance ticket, written server-side ONLY by
+    // archiveMaintenanceScheduled (cleanupOldDocs.js) BEFORE the 30-day RTDB purge
+    // deletes the live ticket. Preserves repair history (category, created/completed
+    // timestamps) for seasonality analytics. NO base64 photos. Admin-read; the CF
+    // writes via Admin SDK (bypasses rules), so client write is NEVER allowed.
+    match /maintenanceArchive/{archiveId} {
+      allow read:  if isAdmin();
+      allow write: if false;
+    }
+
     // ===== ACTION AUDIT (Core Readiness Phase 1.1) =====
     // actionAudit/{autoId} — immutable, server-side record of admin actions
     // (tenant edit, payment verify, meter-import approve, bill paid, …). Replaces

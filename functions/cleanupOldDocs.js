@@ -36,6 +36,17 @@
  *    but keeping rejections forever bloats the listener page that the
  *    dashboard subscribes to in real-time.
  *
+ * 4) archiveMaintenanceScheduled — daily 03:50 BKK (BEFORE sweep #2)
+ *    PRESERVES (does not delete) closed maintenance tickets. Idempotently
+ *    copies every RTDB /maintenance/{b}/{r}/{ticketId} whose status is
+ *    done|completed|resolved into Firestore /maintenanceArchive/{b}_{r}_{ticketId}
+ *    (lean analytics fields only — NEVER the base64 beforePhoto). Runs 20 min
+ *    before sweep #2 deletes the >30d ones, so the long-term repair history
+ *    (peak-repair-season analytics, Phase 3.1) survives the RTDB purge.
+ *    Archives ALL closed tickets each run (not just expiring ones) → a ticket
+ *    gets ~30 daily archive runs before deletion; misses are near-impossible.
+ *    The live RTDB still holds the recent <30d tickets, so union = complete.
+ *
  * Cost: each sweep reads ~10–100 docs/run, deletes maybe 0–10. CF
  * invocations are inside the free tier; Firestore deletes cost
  * $0.02/100k → ~$0/year at this scale.
@@ -56,6 +67,10 @@ const RATE_LIMITS_TTL_MS = 24 * 60 * 60 * 1000;          // 1 day
 const MAINTENANCE_DONE_TTL_MS = 30 * 24 * 60 * 60 * 1000;  // 30 days
 const LIFF_REJECTED_TTL_MS = 90 * 24 * 60 * 60 * 1000;     // 90 days
 const BATCH_SIZE = 500;
+
+// A maintenance ticket counts as "closed" (and therefore archivable) for these
+// statuses — same set the cleanup sweep treats as deletable.
+const MAINTENANCE_CLOSED_STATUSES = new Set(['done', 'completed', 'resolved']);
 
 // ============================================================
 // 1) rateLimits — daily delete > 1 day
@@ -197,8 +212,90 @@ exports.cleanupLiffUsersRejectedScheduled = functions
   });
 
 // ============================================================
-// HTTP — single endpoint that runs ALL three sweeps for manual testing
+// 4) maintenance archive — daily PRESERVE closed tickets before sweep #2 deletes
+// ============================================================
+
+// Firestore doc IDs cannot contain '/' (and a few other chars). Build a safe,
+// deterministic id so re-runs collapse onto the same archive doc (idempotent).
+function _archiveDocId(building, roomId, ticketId) {
+  const s = (x) => String(x == null ? '' : x).replace(/[\/.#$\[\]]/g, '_');
+  return `${s(building)}_${s(roomId)}_${s(ticketId)}`;
+}
+
+// PURE: map a raw RTDB ticket → a LEAN archive doc (analytics fields only).
+// Returns null when the ticket is not a closed ticket worth preserving. The
+// base64 `beforePhoto`/photo blobs are deliberately NOT copied (bloat + not
+// needed for seasonality analytics). Exported for unit tests.
+function _ticketToArchiveDoc(building, roomId, ticketId, t) {
+  if (!t || typeof t !== 'object') return null;
+  if (!MAINTENANCE_CLOSED_STATUSES.has(t.status)) return null;
+
+  const completedMs = t.completedAt ? new Date(t.completedAt).getTime()
+    : (t.updatedAt ? new Date(t.updatedAt).getTime() : NaN);
+  const createdMs = t.createdAt ? new Date(t.createdAt).getTime()
+    : (t.submittedDate ? new Date(t.submittedDate).getTime() : NaN);
+
+  return {
+    building: String(building),
+    roomId: String(roomId),
+    ticketId: String(ticketId),
+    status: String(t.status),
+    category: t.category ? String(t.category) : null,
+    priority: t.priority ? String(t.priority) : null,
+    createdAtMs: isFinite(createdMs) ? createdMs : null,
+    completedAtMs: isFinite(completedMs) ? completedMs : null,
+    // Short free-text kept for admin context (admin-only collection); capped so a
+    // pathological ticket can't bloat the doc. NO photos/base64.
+    description: t.description ? String(t.description).slice(0, 2000) : null,
+    workNotes: t.workNotes ? String(t.workNotes).slice(0, 2000) : null,
+  };
+}
+
+async function runMaintenanceArchive() {
+  let scanned = 0, archived = 0;
+  const ops = [];
+
+  const buildings = await getAllBuildings();
+  for (const building of buildings) {
+    const bldSnap = await rtdb.ref(`maintenance/${building}`).once('value');
+    const rooms = bldSnap.val() || {};
+
+    for (const roomId of Object.keys(rooms)) {
+      const tickets = rooms[roomId] || {};
+      for (const ticketId of Object.keys(tickets)) {
+        scanned++;
+        const doc = _ticketToArchiveDoc(building, roomId, ticketId, tickets[ticketId]);
+        if (!doc) continue;
+        const ref = firestore.collection('maintenanceArchive').doc(_archiveDocId(building, roomId, ticketId));
+        // merge so a re-archive refreshes completedAt/workNotes without dup; never deletes.
+        ops.push(ref.set({ ...doc, archivedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true })
+          .then(() => archived++)
+          .catch(e => console.warn(`archive ${building}/${roomId}/${ticketId}:`, e.message)));
+      }
+    }
+  }
+
+  await Promise.all(ops);
+  return { scanned, archived };
+}
+
+exports.archiveMaintenanceScheduled = functions
+  .region('asia-southeast1')
+  .runWith({ timeoutSeconds: 540, memory: '256MB' })
+  .pubsub.schedule('50 3 * * *')   // 03:50 BKK — 20 min BEFORE cleanupMaintenance (04:10)
+  .timeZone('Asia/Bangkok')
+  .onRun(async () => {
+    try { return await runMaintenanceArchive(); }
+    catch (e) { console.error('archiveMaintenance failed:', e); throw e; }
+  });
+
+// Exported for unit tests (pure helper).
+exports._ticketToArchiveDoc = _ticketToArchiveDoc;
+
+// ============================================================
+// HTTP — single endpoint that runs ALL sweeps for manual testing
 // POST https://asia-southeast1-<project>.cloudfunctions.net/cleanupOldDocs
+// (archive runs FIRST so the manual path also preserves before deleting)
 // ============================================================
 exports.cleanupOldDocs = functions
   .region('asia-southeast1')
@@ -217,12 +314,14 @@ exports.cleanupOldDocs = functions
     if (!decoded) return;
 
     try {
+      // Archive FIRST (preserve before any delete), then run the three cleanups.
+      const maintenanceArchive = await runMaintenanceArchive();
       const [rateLimits, maintenance, liffRejected] = await Promise.all([
         runRateLimitsCleanup(),
         runMaintenanceCleanup(),
         runLiffRejectedCleanup()
       ]);
-      return res.status(200).json({ success: true, rateLimits, maintenance, liffRejected });
+      return res.status(200).json({ success: true, maintenanceArchive, rateLimits, maintenance, liffRejected });
     } catch (e) {
       console.error('cleanupOldDocs HTTP failed:', e);
       return res.status(500).json({ error: e.message });
