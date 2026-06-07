@@ -1914,28 +1914,30 @@
         .mk-post-btn:active { transform: scale(0.985); }
         .mk-post-btn i { font-size: 0.85em; }
 
-        /* Category filter — native <select> (replaced the horizontal-scroll
-         * pill row 2026-06-07: compact one-liner, no scroll, scales as more
-         * categories are added). Custom chevron is a sibling <i> so no data:
-         * URL is needed under CSP. */
-        .mk-filter-wrap  { padding: 0 16px 14px; }
-        .mk-filter-field { position: relative; }
-        .mk-filter-select {
-            display: block; width: 100%;
-            appearance: none; -webkit-appearance: none;
-            padding: 11px 40px 11px 15px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border-base);
-            background: var(--surface-card);
-            color: var(--ink);
-            font-family: inherit; font-size: var(--fs-md); font-weight: 600;
-            cursor: pointer; touch-action: manipulation;
-            transition: border-color var(--dur-quick) var(--ease-quiet);
+        /* Category filter — icon-tile grid (replaced the dropdown 2026-06-07:
+         * the dropdown hid the categories behind a tap. 4-col / 2-row grid,
+         * single-select, all categories visible at a glance, no scroll). */
+        .mk-cat-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+            padding: 0 16px 14px;
         }
-        .mk-filter-select:focus-visible { outline: none; border-color: var(--primary-green); }
-        .mk-filter-chevron {
-            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
-            color: var(--pebble); font-size: var(--fs-sm); pointer-events: none;
+        .mk-cat-tile {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 10px 4px; border-radius: 14px; text-align: center;
+            border: 1px solid var(--border-base); background: var(--surface-card);
+            font-family: inherit; font-size: var(--fs-sm); font-weight: 600;
+            color: var(--muted); line-height: 1.15;
+            cursor: pointer; touch-action: manipulation;
+            transition: border-color var(--dur-quick) var(--ease-quiet),
+                        background var(--dur-quick) var(--ease-quiet),
+                        color var(--dur-quick) var(--ease-quiet);
+        }
+        .mk-cat-tile:active { transform: scale(0.95); }
+        .mk-cat-em { font-size: 1.5rem; line-height: 1; }
+        .mk-cat-tile-on {
+            border-color: var(--primary-green); background: var(--soft-green);
+            color: var(--brand-primary-text);
+            box-shadow: 0 2px 9px rgba(15, 118, 110, 0.14);
         }
 
         /* ── Grid card — whole surface tappable (role=button) ───────────── */
@@ -3553,22 +3555,17 @@
             </button>
         </div>
 
-        <!-- Category filter — native select (was a horizontal-scroll pill row).
-             Single-select; change → filterMarketSelect(el) → filterMarket(value). -->
-        <div class="mk-filter-wrap">
-            <div class="mk-filter-field">
-                <select id="market-filter-select" class="mk-filter-select"
-                    data-action-change="filterMarketSelect" aria-label="กรองตามหมวดหมู่">
-                    <option value="all">ทั้งหมด</option>
-                    <option value="item">🛍️ ของมือสอง</option>
-                    <option value="service">💅 บริการ</option>
-                    <option value="free">🎁 แจกฟรี</option>
-                    <option value="request">✋ อยากได้</option>
-                    <option value="skyhook">📦 Sky Hook</option>
-                    <option value="pet">🐾 สัตว์เลี้ยง</option>
-                </select>
-                <i class="fas fa-chevron-down mk-filter-chevron" aria-hidden="true"></i>
-            </div>
+        <!-- Category filter — icon-tile grid (was a horizontal-scroll pill row,
+             then briefly a dropdown). Single-select; tap → filterMarket(value, el)
+             via the data-action dispatcher, which highlights the tapped tile. -->
+        <div class="mk-cat-grid" role="group" aria-label="กรองตามหมวดหมู่">
+            <button type="button" class="mk-cat-tile mk-cat-tile-on" data-action="filterMarket" data-filter="all" aria-label="ทั้งหมด"><span class="mk-cat-em" aria-hidden="true">🛒</span>ทั้งหมด</button>
+            <button type="button" class="mk-cat-tile" data-action="filterMarket" data-filter="item" aria-label="ของมือสอง"><span class="mk-cat-em" aria-hidden="true">🛍️</span>มือสอง</button>
+            <button type="button" class="mk-cat-tile" data-action="filterMarket" data-filter="service" aria-label="บริการ"><span class="mk-cat-em" aria-hidden="true">💅</span>บริการ</button>
+            <button type="button" class="mk-cat-tile" data-action="filterMarket" data-filter="free" aria-label="แจกฟรี"><span class="mk-cat-em" aria-hidden="true">🎁</span>แจกฟรี</button>
+            <button type="button" class="mk-cat-tile" data-action="filterMarket" data-filter="request" aria-label="อยากได้"><span class="mk-cat-em" aria-hidden="true">✋</span>อยากได้</button>
+            <button type="button" class="mk-cat-tile" data-action="filterMarket" data-filter="skyhook" aria-label="Sky Hook"><span class="mk-cat-em" aria-hidden="true">📦</span>Sky&nbsp;Hook</button>
+            <button type="button" class="mk-cat-tile" data-action="filterMarket" data-filter="pet" aria-label="สัตว์เลี้ยง"><span class="mk-cat-em" aria-hidden="true">🐾</span>สัตว์เลี้ยง</button>
         </div>
 
         <div id="market-list-container" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 90px;">

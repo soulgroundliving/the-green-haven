@@ -367,16 +367,15 @@
         });
     }
 
-    function filterMarket(filter) {
+    function filterMarket(filter, el) {
         _marketFilter = filter;
+        // Single-select: highlight the tapped category tile (#mk-cat-grid).
+        document.querySelectorAll('.mk-cat-tile').forEach(t => {
+            t.classList.remove('mk-cat-tile-on');
+            t.removeAttribute('aria-current');
+        });
+        if (el) { el.classList.add('mk-cat-tile-on'); el.setAttribute('aria-current', 'true'); }
         renderMarketFeed();
-    }
-
-    // The category filter is a native <select> (replaced the horizontal-scroll
-    // pill row 2026-06-07). data-action-change="filterMarketSelect" routes here
-    // via the generic change dispatcher → window.filterMarketSelect(el, e).
-    function filterMarketSelect(el) {
-        if (el && typeof el.value === 'string') filterMarket(el.value);
     }
 
     // ── Sub-navigation (ตลาด / ข้อความ / ประกาศของฉัน) ──────────────────────
@@ -917,7 +916,6 @@
     window.renderMarketFeed             = renderMarketFeed;
     window.renderMyListings             = renderMyListings;
     window.filterMarket                 = filterMarket;
-    window.filterMarketSelect           = filterMarketSelect;
     window._syncMarketNav               = _syncMarketNav;
     window._showMarketTab               = _showMarketTab;
     window.openMarketDetail             = openMarketDetail;
