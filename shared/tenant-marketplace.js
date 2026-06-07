@@ -169,88 +169,91 @@
         container.textContent = '';
 
         if (filtered.length === 0) {
-            const empty = document.createElement('div');
-            empty.style.cssText = 'grid-column:1/-1;text-align:center;padding:40px 20px;color:#aaa;';
             const isFiltered = _marketFilter !== 'all';
-            empty.innerHTML = `<div class="ta-emoji-xl">🛒</div>
-                <div style="font-weight:600;color:#666;">${isFiltered ? 'ไม่มีประกาศในหมวดนี้' : 'ยังไม่มีประกาศ'}</div>
-                <div style="font-size:var(--fs-sm);margin-top:6px;">${isFiltered ? 'ลองดูหมวดอื่นครับ' : 'เป็นคนแรกที่ลงประกาศสิครับ!'}</div>`;
+            const empty = document.createElement('div');
+            empty.className = 'gh-empty-state';
+            empty.style.gridColumn = '1/-1';
+            // Reuse the brand muji empty-state (SVG + tokens) for consistency
+            // with the static pre-load state in tenant_app.html.
+            empty.innerHTML = `
+                <div class="gh-empty-state__illust">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                        <path d="M30 42 l4-12 h52 l4 12 v50 a4 4 0 0 1-4 4 h-52 a4 4 0 0 1-4-4 z"/>
+                        <path d="M48 42 v-8 a12 12 0 0 1 24 0 v8"/>
+                        <path d="M58 64 l-4 4 M62 60 l4 4 M60 56 v8"/>
+                    </svg>
+                </div>
+                <p class="gh-empty-state__title">${isFiltered ? 'ไม่มีประกาศในหมวดนี้' : 'ยังไม่มีใครลงประกาศ'}</p>
+                <p class="gh-empty-state__text">${isFiltered ? 'ลองดูหมวดอื่น หรือเป็นคนแรกที่ลงประกาศก็ได้นะ' : 'เป็นคนแรกของตึกสิครับ — ของที่ไม่ใช้ ขายต่อให้เพื่อนบ้านได้'}</p>`;
             container.appendChild(empty);
             renderMyListings();
             return;
         }
 
-        const catColors = {
-            item:    { bg: '#EFF6FF', text: '#3B82F6', label: '🛍️' },
-            service: { bg: '#FAF5FF', text: '#7C3AED', label: '💅' },
-            free:    { bg: '#F0FDF4', text: '#16A34A', label: '🎁' },
-            // Sprint 5 — Wishlist: tenant asking for help / item / service.
-            // Rose palette distinguishes "asking" from "free giveaway" (green).
-            request: { bg: '#FFF1F2', text: '#E11D48', label: '✋' }
+        // Category accent metadata — emoji + short Thai label + glyph color.
+        // Color is used ONLY for the small media chip text + tag chips
+        // (semantic, sparing) per the muji palette; card surfaces stay neutral.
+        const CAT = {
+            item:    { label: '🛍️', name: 'มือสอง',  text: '#3B82F6' },
+            service: { label: '💅', name: 'บริการ',   text: '#7C3AED' },
+            free:    { label: '🎁', name: 'แจกฟรี',   text: '#16A34A' },
+            // Sprint 5 — Wishlist: tenant asking, not selling. Rose distinguishes
+            // "asking" from "free giveaway" (green).
+            request: { label: '✋', name: 'อยากได้',  text: '#E11D48' }
         };
 
-        // Build full list as innerHTML — was 20 items × ~10 createElement +
-        // style.cssText writes (~200 style parses, 20-40ms). Now a single innerHTML
-        // assignment, with event delegation on the container for button clicks.
-        const myUid = window._authUid;
+        // Build the feed as one innerHTML pass (perf: single parse vs ~200 style
+        // writes). Each card is a role=button surface — the WHOLE card opens the
+        // detail modal, so there's no chunky per-card CTA button (the old
+        // "อ่านรายละเอียด" button wrapped to 3 lines in the narrow 2-col grid).
+        // Owner-only actions (close/delete) live inside the detail modal.
         const cards = filtered.map(item => {
-            const col = catColors[item.category] || catColors.item;
+            const cat       = CAT[item.category] || CAT.item;
             const isFree    = item.category === 'free';
             const isRequest = item.category === 'request';
-            // Sprint 5 — Wishlist: "อยากได้" badge replaces price chip on
-            // request posts (no monetary value — sender is asking, not selling).
+            // Sprint 5 — Wishlist: "อยากได้" replaces the price on request posts.
             const priceText = isFree ? 'ฟรี' : isRequest ? 'อยากได้' : '฿' + (item.price || 0);
-            const priceBg  = isFree ? '#F0FDF4' : isRequest ? '#FFF1F2' : '#FFF7ED';
-            const priceCol = isFree ? '#16A34A' : isRequest ? '#E11D48' : '#D97706';
-            const safeId   = _esc(item.id);
+            const priceMod  = isFree ? ' mk-price--free' : isRequest ? ' mk-price--ask' : '';
+            const safeId    = _esc(item.id);
             const safeTitle = _esc(item.title || '');
-            // Dual-read per CLAUDE.md §7-L: prefer Storage URL (new posts after
-            // S0.2), fall back to inline base64 (legacy posts). One stays valid
-            // until natural ~30d expiry; one-shot migration can come later.
-            const imgSrc = item.imageUrl || item.imageData || '';
-            const imageHtml = imgSrc
-                ? `<img src="${_esc(imgSrc)}" alt="${safeTitle}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`
-                : `<span style="font-size:2.2rem;">${col.label}</span>`;
+            // Dual-read per CLAUDE.md §7-L: prefer Storage URL (new posts), fall
+            // back to inline base64 (legacy posts) until natural ~30d expiry.
+            const imgSrc    = item.imageUrl || item.imageData || '';
+            const mediaInner = imgSrc
+                ? `<img src="${_esc(imgSrc)}" alt="${safeTitle}" loading="lazy">`
+                : `<span class="mk-card__media-emoji">${cat.label}</span>`;
             const roomHtml = (item.showRoom && item.room)
-                ? `<span style="font-size:var(--fs-xs);color:#888;">ห้อง ${_esc(item.room)}</span>`
+                ? `<span class="mk-room">ห้อง ${_esc(item.room)}</span>` : '';
+            // Sprint 3 + Sprint 4 tag chips — hidden when both flags are false.
+            const tagsHtml = (item.skyHookReady || item.isPetCategory)
+                ? `<div class="mk-tags">${item.skyHookReady ? '<span class="mk-tag" style="background:#EFF6FF;color:#3B82F6;">📦 Sky Hook</span>' : ''}${item.isPetCategory ? '<span class="mk-tag" style="background:#FDF4FF;color:#A855F7;">🐾 สัตว์เลี้ยง</span>' : ''}</div>`
                 : '';
-            // Unified CTA: every card opens detail modal. Owner-only actions
-            // (close, delete) moved INTO the detail modal — main feed no longer
-            // exposes destructive actions to confuse non-owners. Owners can still
-            // manage from "ประกาศของฉัน" section below for quick access.
-            const actionBtn = `<button type="button" class="btn-main" data-mkt-act="detail" data-mid="${safeId}" style="width:100%;padding:7px;font-size:var(--fs-xs);margin:0;touch-action:manipulation;">📖 อ่านรายละเอียด</button>`;
-            // Sprint 3 + Sprint 4 tag badges (small chips below price row).
-            // Hidden entirely when both flags are false so existing posts keep
-            // their current dense layout.
-            const tagsHtml = (item.skyHookReady || item.isPetCategory) ? `
-                    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
-                        ${item.skyHookReady  ? '<span style="font-size:10px;background:#EFF6FF;color:#3B82F6;padding:1px 6px;border-radius:6px;font-weight:600;">📦 Sky Hook</span>' : ''}
-                        ${item.isPetCategory ? '<span style="font-size:10px;background:#FDF4FF;color:#A855F7;padding:1px 6px;border-radius:6px;font-weight:600;">🐾 สัตว์เลี้ยง</span>' : ''}
-                    </div>` : '';
-            return `<div class="card" style="margin:0;padding:0;overflow:hidden;">
-                <div style="height:100px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">${imageHtml}</div>
-                <div class="u-p-10">
-                    <div style="font-weight:700;font-size:var(--fs-sm);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:6px;line-height:1.3;">${safeTitle}</div>
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                        <span style="background:${priceBg};color:${priceCol};font-weight:700;font-size:var(--fs-xs);padding:2px 8px;border-radius:6px;">${_esc(priceText)}</span>
-                        ${roomHtml}
-                    </div>${tagsHtml}
-                    ${actionBtn}
+            return `<div class="mk-card" role="button" tabindex="0" data-mkt-act="detail" data-mid="${safeId}" aria-label="${safeTitle}">
+                <div class="mk-card__media">${mediaInner}<span class="mk-chip" style="color:${cat.text};">${cat.label} ${cat.name}</span></div>
+                <div class="mk-card__body">
+                    <div class="mk-card__title">${safeTitle}</div>
+                    ${tagsHtml}
+                    <div class="mk-card__meta"><span class="mk-price${priceMod}">${_esc(priceText)}</span>${roomHtml}</div>
+                    <div class="mk-card__cta">ดูรายละเอียด <i class="fas fa-arrow-right"></i></div>
                 </div>
             </div>`;
         }).join('');
         container.innerHTML = cards;
 
-        // Single delegated listener for all buttons — replaces 20× onclick assignments
+        // Click + keyboard delegation — cards are role=button so Enter/Space
+        // must activate them too (§ a11y). One listener for the whole grid.
         if (!container._mktDelegated) {
-            container.addEventListener('click', (e) => {
-                const btn = e.target.closest('[data-mkt-act]');
-                if (!btn) return;
-                const id = btn.dataset.mid;
-                const act = btn.dataset.mktAct;
-                if (act === 'detail') {
-                    const it = _marketItems.find(i => i.id === id);
-                    if (it) openMarketDetail(it);
+            const _openCard = (el) => {
+                const card = el.closest('[data-mkt-act="detail"]');
+                if (!card) return;
+                const it = _marketItems.find(i => i.id === card.dataset.mid);
+                if (it) openMarketDetail(it);
+            };
+            container.addEventListener('click', (e) => _openCard(e.target));
+            container.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                    const card = e.target.closest('.mk-card[data-mkt-act]');
+                    if (card) { e.preventDefault(); _openCard(card); }
                 }
             });
             container._mktDelegated = true;
@@ -267,54 +270,81 @@
         if (!mine.length) { section.style.display = 'none'; return; }
         section.style.display = 'block';
         cont.textContent = '';
+
+        const catEmoji = { free: '🎁', service: '💅', request: '✋', item: '🛍️' };
+
         mine.forEach(item => {
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:10px 12px;border:1px solid #eee;';
+            const norm       = _normalizeMarketStatus(item.status);
+            const isClosed   = norm === 'COMPLETED';
+            const isReserved = norm === 'RESERVED';
+
+            const card = document.createElement('div');
+            card.className = 'mk-mine';
+
+            // ── head: thumbnail + info + status ──
+            const head = document.createElement('div');
+            head.className = 'mk-mine__head';
+
+            const thumb = document.createElement('div');
+            thumb.className = 'mk-mine__thumb';
+            const imgSrc = item.imageUrl || item.imageData || '';
+            if (imgSrc) {
+                const im = document.createElement('img');
+                im.src = imgSrc;
+                im.alt = item.title || '';
+                im.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                thumb.appendChild(im);
+            } else {
+                thumb.textContent = catEmoji[item.category] || catEmoji.item;
+            }
+            head.appendChild(thumb);
+
             const info = document.createElement('div');
-            info.style.cssText = 'flex:1;min-width:0;';
+            info.className = 'mk-mine__info';
             const t = document.createElement('div');
-            t.style.cssText = 'font-weight:700;font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            t.className = 'mk-mine__title';
             t.textContent = item.title || '';
             const sub = document.createElement('div');
-            sub.style.cssText = 'font-size:var(--fs-xs);color:#888;';
-            sub.textContent = (item.category === 'free' ? 'แจกฟรี' : item.category === 'request' ? 'อยากได้' : '฿' + (item.price || 0)) + (item.showRoom && item.room ? ' · ห้อง ' + item.room : '');
+            sub.className = 'mk-mine__sub';
+            sub.textContent = (item.category === 'free' ? 'แจกฟรี' : item.category === 'request' ? 'อยากได้' : '฿' + (item.price || 0))
+                + (item.showRoom && item.room ? ' · ห้อง ' + item.room : '');
+            const status = document.createElement('div');
+            status.className = 'mk-mine__status';
+            const dot = document.createElement('span');
+            dot.className = 'mk-mine__dot';
+            dot.style.background = isClosed ? '#9ca3af' : isReserved ? '#d97706' : '#16a34a';
+            const stxt = document.createElement('span');
+            stxt.style.color = isClosed ? 'var(--muted)' : isReserved ? '#b45309' : 'var(--ok-text)';
+            stxt.textContent = isClosed ? 'ปิดแล้ว' : isReserved ? 'มีคนจอง' : 'เปิดอยู่';
+            status.appendChild(dot);
+            status.appendChild(stxt);
             info.appendChild(t);
             info.appendChild(sub);
-            const statusBadge = document.createElement('div');
-            statusBadge.style.cssText = 'font-size:var(--fs-xs);color:#888;margin-top:2px;';
-            const _normStatus = _normalizeMarketStatus(item.status);
-            statusBadge.textContent = _normStatus === 'COMPLETED' ? '🔒 ปิดแล้ว'
-                : _normStatus === 'RESERVED' ? '⏳ จองแล้ว'
-                : '✅ เปิดอยู่';
-            info.appendChild(statusBadge);
-            const btns = document.createElement('div');
-            btns.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
-            if (_normStatus === 'COMPLETED') {
-                const reopenBtn = document.createElement('button');
-                reopenBtn.style.cssText = 'padding:4px 10px;background:#dcfce7;color:#166534;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
-                reopenBtn.textContent = 'เปิดใหม่';
-                reopenBtn.onclick = () => _reopenMarketItem(item.id);
-                btns.appendChild(reopenBtn);
-            } else {
-                const closeBtn = document.createElement('button');
-                closeBtn.style.cssText = 'padding:4px 10px;background:#fef9c3;color:#92400e;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
-                closeBtn.textContent = 'ปิด';
-                closeBtn.onclick = () => markMarketClosed(item.id);
-                btns.appendChild(closeBtn);
-            }
-            const editBtn = document.createElement('button');
-            editBtn.style.cssText = 'padding:4px 10px;background:#e0f2fe;color:#075985;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
-            editBtn.textContent = 'แก้ไข';
-            editBtn.onclick = () => editMarketItem(item);
-            btns.appendChild(editBtn);
-            const delBtn = document.createElement('button');
-            delBtn.style.cssText = 'padding:4px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
-            delBtn.textContent = 'ลบ';
-            delBtn.onclick = () => deleteMarketItem(item.id);
-            btns.appendChild(delBtn);
-            row.appendChild(info);
-            row.appendChild(btns);
-            cont.appendChild(row);
+            info.appendChild(status);
+            head.appendChild(info);
+            card.appendChild(head);
+
+            // ── action row: [ปิด / เปิดใหม่] · [แก้ไข] · [ลบ] — full-width pills.
+            // Colors kept distinct + saturated per #295 (delete must read as
+            // danger). innerHTML is static label markup only (no user data).
+            const actions = document.createElement('div');
+            actions.className = 'mk-mine__actions';
+            const mkBtn = (cls, html, fn) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'mk-act ' + cls;
+                b.innerHTML = html;
+                b.addEventListener('click', fn);
+                return b;
+            };
+            actions.appendChild(isClosed
+                ? mkBtn('mk-act--reopen', '<i class="fas fa-rotate-right"></i> เปิดใหม่', () => _reopenMarketItem(item.id))
+                : mkBtn('mk-act--close',  '<i class="fas fa-circle-check"></i> ปิด',     () => markMarketClosed(item.id)));
+            actions.appendChild(mkBtn('mk-act--edit', '<i class="fas fa-pen"></i> แก้ไข', () => editMarketItem(item)));
+            actions.appendChild(mkBtn('mk-act--del',  '<i class="fas fa-trash-can"></i> ลบ', () => deleteMarketItem(item.id)));
+            card.appendChild(actions);
+
+            cont.appendChild(card);
         });
     }
 
