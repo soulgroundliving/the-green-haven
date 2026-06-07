@@ -13,7 +13,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { computeReputation, REPUTATION_CONSTANTS: C } = require('../_reputation');
+const { computeReputation, reputationTier, REPUTATION_CONSTANTS: C } = require('../_reputation');
 
 // Fixed "now" so every relative date is reproducible.
 const NOW = Date.parse('2026-06-07T00:00:00.000Z');
@@ -218,5 +218,54 @@ describe('computeReputation — robustness', () => {
     assert.equal(asISO.factors.tenureScore, 100);
     assert.equal(asDate.factors.tenureScore, 100);
     assert.equal(asTs.factors.tenureScore, 100);
+  });
+});
+
+// ── Tenant-facing tier enum (Phase 3.2a v1.x) ────────────────────────────────
+
+describe('reputationTier — tenant-facing enum', () => {
+  it('provisional flag wins regardless of score', () => {
+    assert.equal(reputationTier(100, true), 'provisional');
+    assert.equal(reputationTier(0, true), 'provisional');
+    assert.equal(reputationTier(75, true), 'provisional');
+  });
+
+  it('maps score bands to admin-aligned keys (80/60/40)', () => {
+    assert.equal(reputationTier(95, false), 'high');
+    assert.equal(reputationTier(70, false), 'good');
+    assert.equal(reputationTier(50, false), 'fair');
+    assert.equal(reputationTier(10, false), 'low');
+  });
+
+  it('boundaries are inclusive at 80 / 60 / 40', () => {
+    assert.equal(reputationTier(80, false), 'high');
+    assert.equal(reputationTier(79, false), 'good');
+    assert.equal(reputationTier(60, false), 'good');
+    assert.equal(reputationTier(59, false), 'fair');
+    assert.equal(reputationTier(40, false), 'fair');
+    assert.equal(reputationTier(39, false), 'low');
+  });
+
+  it('non-finite / null score → low (never throws)', () => {
+    assert.equal(reputationTier(null, false), 'low');
+    assert.equal(reputationTier(undefined, false), 'low');
+    assert.equal(reputationTier(NaN, false), 'low');
+  });
+
+  it('omitted provisional arg treated as falsy', () => {
+    assert.equal(reputationTier(85), 'high');
+    assert.equal(reputationTier(20), 'low');
+  });
+
+  it('integrates with computeReputation output (provisional tenant → provisional tier)', () => {
+    const r = computeReputation({ bills: [], moveInDate: monthsAgo(5), complaints: [], now: NOW });
+    assert.equal(r.provisional, true);
+    assert.equal(reputationTier(r.reputation, r.provisional), 'provisional');
+  });
+
+  it('integrates with computeReputation output (strong tenant → high tier)', () => {
+    const r = computeReputation({ bills: [ON_TIME(), ON_TIME()], moveInDate: OLD_MOVE_IN, complaints: [], now: NOW });
+    assert.equal(r.reputation, 100);
+    assert.equal(reputationTier(r.reputation, r.provisional), 'high');
   });
 });

@@ -4,6 +4,69 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-07) — Roadmap Phase 3.2a v1.x: **Tenant-visible Reputation** (tier badge + consent gate, quest-page) · ⏳ AWAITING APPROVAL (Plan-First)
+
+**Scope:** expose the admin-only 3.2a Reputation (the server-computed `trustScores/{tenantId}`, shipped #286/#287) to the **active tenant** in `tenant_app.html` as a **positive-framed TIER BADGE** (no raw number, no factor breakdown), gated behind an **explicit PDPA consent**, on the **quest-page** (gamification profile). First tenant-facing Trust surface → activates the blueprint's Emotional-Lock-in moat (Core Metric 3). Builds on the existing sweep CF + write-locked doc — does NOT recompute anything client-side (§6 tamper-proof preserved).
+
+**Owner decisions (locked 2026-06-07):**
+- **Exposure = TIER LABEL ONLY** — 🌱/🌿/⭐/💎 positive ladder; never the 0–100 number or raw factors (avoids credit-score anxiety + "ทำไมคะแนนหนูต่ำ" support load; the only live tenant is `26 provisional`). → server mirrors a tier ENUM onto a tenant-readable field; client maps enum→display.
+- **PDPA = explicit CONSENT GATE before the badge renders** (mirror the checklist `consents/` pattern) — heavier than disclosure-only, most defensive. Plus DSR export + privacy-policy disclosure.
+- **Placement = quest-page** (`#profile-rewards-card` neighbour) — already gamification-themed.
+
+**Why Plan-First (CLAUDE.md §1):** touches `firestore.rules` (tamper-proof protected-field) + 3–4 CFs (sweep mirror, exportMyData, consent recorder) + new tenant module + tenant_app.html + privacy.html + tests + 2 lifecycle docs ≈ 11 files; security/rules + PDPA change; not single-revert (rules + CF deploy). All three thresholds met. PDPA template: [lifecycle_pdpa_checklist.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\lifecycle_pdpa_checklist.md).
+
+### Verified infra (grep-grounded 2026-06-07 — §7-H/T)
+- **Claims carry `tenantId`** — `liffSignIn.js:193,207` mints `{room,building,tenantId}` (tenant) + `:128` `{role:'player',tenantId}` (player). So tenant-self rules on `request.auth.token.tenantId` work.
+- **Mirror target is already tenant-readable** — `tenants/{building}/list/{roomId}` read allows `resource.data.linkedAuthUid == request.auth.uid` (`firestore.rules:367`); tenant doc is ALREADY loaded by `TenantFirebaseSync.loadLease()` (`tenant-firebase-sync.js:68`) — same path the deposit badge piggybacks (`tenant-render.js:248` reads `depositStatus`). → **no new subscription, no read-rule change.**
+- **⚠️ TAMPER HOLE — must fix:** `tenants/{b}/list/{r}` UPDATE rule (`firestore.rules:375-379`) lets a self-owned tenant write any field NOT in `hasAny(['gamification','rentAmount','building','roomId','tenantId'])`. `reputationTier` is absent → a tenant could set their own tier via devtools, breaking §6. **Must add `'reputationTier'` to that protected block (+rules test).**
+- **Consent infra exists** — `consents/{tenantId}_{purpose}` `read: own(authUid|tenantId claim); write: if false` (`firestore.rules:727-732`, CF-only); writer precedent `recordChecklistConsent` (`index.js:240`). New purpose `reputation_v1` is auto-covered by the existing rule (keyed by `{docId}`) → **no consent-rule change, just a CF**.
+- **DSR export** `exportMyData.js:92-154` exports 9 sources; `trustScores` ABSENT → add it.
+- **Admin tier thresholds** `dashboard-reputation.js:32-34` = `>=80 ดีเยี่ยม · >=60 ดี · >=40 พอใช้` (+below). Reuse these boundaries for the tenant enum (one mental model); kinder labels for the tenant face.
+- **trustScores doc** = `{tenantId,building,roomId,reputation,provisional,factors{...},computedAt}` (server-write-only, `firestore.rules:778` admin-read) — sweep `runTrustScoreSweep()` in `computeTrustScoresScheduled.js` (05:40 daily) + `recomputeTrustScores` callable already batch-write it.
+
+### Tier ladder (proposed default — owner-tunable, brand pass per design-q#2)
+CF maps `reputation`+`provisional` → enum (thresholds reuse admin 80/60/40); client maps enum → display. **Bottom collapses into one gentle growth state — never show a "low" judgment.**
+
+| enum | when | tenant face (label · emoji) |
+|------|------|------------------------------|
+| `provisional` | `provisional:true` (0 ratable bills) | กำลังสร้างคะแนน · 🌱 |
+| `building` | score < 40 | กำลังสร้างคะแนน · 🌱 (same gentle state) |
+| `fair` | 40–59 | กำลังไปได้ดี · 🌿 |
+| `good` | 60–79 | ดี · ⭐ |
+| `great` | 80–100 | ดีเยี่ยม · 💎 |
+
+### Build — PR1 (server + rules, owner-deploy-gated) ✅ BUILT 2026-06-07 (gates green; ⏳ owner deploy)
+- [x] **`functions/_reputation.js`** — pure `reputationTier(reputation, provisional)` → `'provisional'|'high'|'good'|'fair'|'low'`; bounds named `TIER_BOUND_HIGH/GOOD/FAIR` (80/60/40, reuse admin) + exported in `REPUTATION_CONSTANTS`. +7 unit tests.
+- [x] **`functions/computeTrustScoresScheduled.js`** — sweep now `batch.set(tDoc.ref, { reputationTier }, {merge:true})` in the SAME batch as the trustScores write (2 ops/tenant, BATCH_LIMIT safe). +2 sweep tests (mirror tier-only no-leak; provisional). Active tenants only.
+- [x] **`firestore.rules`** — `'reputationTier'` added to the `tenants/{b}/list/{r}` update protected `hasAny([...])`. +1 rules test (linked tenant DENIED to fake tier; admin test extended to set it). §6 tamper-proof.
+- [x] **`functions/exportMyData.js`** — `trustScore` = `trustScores/{tenantId}` added to DSR payload. +2 tests (present / null).
+- [x] **Consent recorder (D2 → REUSE)** — `recordChecklistConsent` already had `VALID_PURPOSES`; added `'reputation_v1'` (no new CF, no consents-rule change). +1 test. JSDoc updated.
+- [x] Gate: `node --check` (4 files) · **functions 1967/0** · **rules 289/0** (emulator) · **verify:memory GREEN** (README rules-count 273→274). No CSP/HTML touched.
+
+### Build — PR2 (frontend, auto-merge + Vercel; off fresh main AFTER PR1 deploy — NOT stacked)
+- [ ] **`shared/tenant-reputation.js`** (NEW) — render a muji tier card from `reputationTier` on the loaded tenant doc; pure `tierDisplay(enum)` → `{label,emoji,color}` lookup (presentation only, no thresholds) + unit tests. Consent-gated: if no `consents/{tenantId}_reputation_v1` (read own row) AND no localStorage `rep_consent_v1` → render the consent prompt instead; on ยินยอม → call consent CF + set localStorage + reveal tier. §7-N error → muted state, never spinner. *Why: tier-only display; consent gate before reveal; no raw number reaches the client.*
+- [ ] **`tenant_app.html`** — `#tenant-reputation-card` mount under `#profile-rewards-card` (quest-page); external `<script src>` after the gamification module (§7-PP load order); invoke from the existing `_onLiffClaimsReady`/gamification-load path (§7-A/U claim guard — needs `_taTenant`/tenantId present). *No inline `<style>`/`<script>` edit → no CSP hash regen (verify §7-II pre-commit).*
+- [ ] **`shared/components.css`** — tier-card styles (§7-RR: static CSS, never `createElement('style')`).
+- [ ] **`privacy.html`** — disclosure: §1 "ข้อมูลที่เราเก็บรวบรวม" (computed reputation), §2 purpose, §5 retention line (text-only edit → no CSP regen). *Why: PDPA transparency even with the consent gate.*
+- [ ] Gate: `test:shared` · node render-smoke · static-harness screenshot (provisional + each tier + consent-prompt + consented states) · mojibake clean (§7-TT) · no CSP drift (§7-II) · verify:memory.
+- [ ] **Live-verify on real LINE** (§7-A/U/J — admin preview can't prove claim-gated tenant reads): open as a real tenant → consent prompt → ยินยอม → tier renders; reopen → no re-prompt; confirm raw number/factors NOT in the readable doc/devtools.
+
+### Decisions to settle at build (named)
+- **D1 — tier labels/thresholds:** ship the table above as default; flag to owner for a brand pass (muji tone). Thresholds reuse admin 80/60/40.
+- **D2 — consent CF:** prefer generalizing `recordChecklistConsent(purpose)` (DRY) vs new `recordReputationConsent` — decide after reading the existing CF; either way `consents` rule unchanged.
+- **D3 — mirror location:** `tenants/{b}/list/{r}.reputationTier` for active tenants (piggyback existing read) **[REC]**; player (people/) tier deferred with the rest of player-facing trust.
+
+### Guardrails
+§6 (trust ≠ points; server-computed; **tamper-proof** — hence the protected-field rule) · §7-NN (consent = callable, sweep = scheduled; no Firestore trigger) · §7-A/U (claim-gated; tier read piggybacks the claim-loaded tenant doc) · §7-T (single writer for `reputationTier`; grep writer+reader before/after) · §7-I (no auto-write; consent is an explicit tenant tap) · §7-RR (CSS in components.css) · §7-II (avoid inline edits; pre-commit verifies no hash drift) · §7-PP (script load order) · §7-N (read error → UI state) · §7-J (no new index — piggyback) · PDPA = consent ledger + DSR + privacy disclosure ([lifecycle_pdpa_checklist.md]) · CF+rules deploy = **OWNER-CONFIRMED before merge** (CI auto-deploys CFs; rules not single-revert); PR2 frontend auto-merge per [[feedback_auto_merge_prs]]. Don't stack (build PR1 → owner deploy → PR2 off fresh main).
+
+### Out of scope (named, not dropped)
+- Raw score / factor breakdown to tenant (tier-only by decision) · player-facing (people/) tier · Resident Rank 3.2c · Kindness/Verified-Helper 3.2b · v2 engagement dimension (pointsLedger ~Aug) · tenant-triggered recompute (server schedule + admin button own it).
+
+### Review (append after execution)
+_(pending)_
+
+---
+
 ## ✅ SHIPPED + LIVE-VERIFIED (2026-06-07) — Roadmap Phase 3.2a: Reputation Score v1 · PR1 server #286 + PR2 card #287 merged + deployed (rules + CFs live) · prod live-verify DONE (Chrome MCP: N101→26 provisional, all layers proven)
 
 **Scope:** Trust System sub-phase 3.2a v1 — a **server-computed, admin-only** Reputation score (0–100) per tenant from 3 back-historical signals: payment punctuality + lease tenure + complaint-free record. Design doc: [phase-3.2-trust-system-plan.md](phase-3.2-trust-system-plan.md). First Trust primitive — the blueprint's retention moat (Core Metric 3, emotional lock-in) + gate for future FinTech/Verified-Helper revenue. NOT blocked by pointsLedger accrual (that's only the v2 engagement dimension); the 3 v1 signals all have back-history today.

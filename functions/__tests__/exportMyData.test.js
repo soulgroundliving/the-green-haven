@@ -15,6 +15,7 @@ let leaseDocs;      // keyed by `${building}/${leaseId}`
 let liffUserDocs;   // keyed by lineUserId
 let collectionGroupResults;
 let rtdbValues;     // keyed by full path
+let trustScoreDocs; // keyed by tenantId
 
 function resetStubs() {
   tenantDocs = {};
@@ -23,6 +24,7 @@ function resetStubs() {
   liffUserDocs = {};
   collectionGroupResults = { checklistInstances: [], consents: [] };
   rtdbValues = {};
+  trustScoreDocs = {};
 }
 resetStubs();
 
@@ -86,6 +88,13 @@ Module._load = function (id, parent, ...rest) {
           return {
             where: () => ({
               get: async () => ({ docs: collectionGroupResults.consents }),
+            }),
+          };
+        }
+        if (name === 'trustScores') {
+          return {
+            doc: (id) => ({
+              get: async () => ({ exists: id in trustScoreDocs, data: () => trustScoreDocs[id] }),
             }),
           };
         }
@@ -173,6 +182,19 @@ describe('exportMyData — auth gate', () => {
       () => handler({}, { auth: null }),
       (e) => e.code === 'unauthenticated',
     );
+  });
+
+  it('includes the tenant\'s trustScore (reputation) in the DSR export — PDPA §30 derived data', async () => {
+    tenantDocs['rooms/15'] = { name: 'T15', tenantId: 't-15' };
+    trustScoreDocs['t-15'] = { reputation: 72, provisional: false, factors: { tenureScore: 50 } };
+    const r = await handler({}, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
+    assert.deepEqual(r.trustScore, { reputation: 72, provisional: false, factors: { tenureScore: 50 } });
+  });
+
+  it('trustScore is null when the tenant has no reputation doc yet', async () => {
+    tenantDocs['rooms/15'] = { name: 'T15', tenantId: 't-15' };
+    const r = await handler({}, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
+    assert.equal(r.trustScore, null);
   });
 
   it('export payload sanitises liffIdToken from liffUser', async () => {

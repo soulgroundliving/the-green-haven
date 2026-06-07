@@ -74,7 +74,11 @@ Module._load = function (id, parent, ...rest) {
             doc: (building) => ({
               collection: () => ({
                 get: async () => ({
-                  docs: (world.tenantsByBuilding[building] || []).map((t) => ({ id: t.roomId, data: () => t })),
+                  // each doc carries a .ref so the sweep can batch.set the tier
+                  // mirror onto the roster doc (tenants/{b}/list/{roomId})
+                  docs: (world.tenantsByBuilding[building] || []).map((t) => ({
+                    id: t.roomId, ref: { _col: 'tenants', _id: t.roomId }, data: () => t,
+                  })),
                 }),
               }),
             }),
@@ -86,7 +90,7 @@ Module._load = function (id, parent, ...rest) {
         throw new Error(`unexpected collection(${name})`);
       },
       batch: () => ({
-        set: (ref, data) => writes.push({ id: ref._id, data }),
+        set: (ref, data) => writes.push({ col: ref._col, id: ref._id, data }),
         commit: async () => { commits++; },
       }),
     };
@@ -112,7 +116,8 @@ Module._load = function (id, parent, ...rest) {
 
 const { runTrustScoreSweep, computeTrustScoresScheduled } = require('../computeTrustScoresScheduled');
 
-const byId = (id) => writes.find((w) => w.id === id);
+const byId = (id) => writes.find((w) => w.col === 'trustScores' && w.id === id);
+const byMirror = (roomId) => writes.find((w) => w.col === 'tenants' && w.id === roomId);
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -155,7 +160,7 @@ describe('runTrustScoreSweep', () => {
 
     assert.equal(summary.scored, 1);
     assert.equal(summary.skippedVacant, 2);
-    assert.equal(writes.length, 1);
+    assert.equal(writes.filter((w) => w.col === 'trustScores').length, 1); // 1 score (+1 tier mirror)
     assert.ok(byId('t15'));
   });
 
@@ -205,6 +210,34 @@ describe('runTrustScoreSweep', () => {
     assert.equal(summary.scored, 2);
     assert.deepEqual(summary.buildings, [{ building: 'rooms', written: 1 }, { building: 'nest', written: 1 }]);
     assert.ok(byId('t15') && byId('tA1'));
+  });
+
+  it('mirrors the tier enum onto the tenant roster doc — tier-only, no leak (v1.x)', async () => {
+    world.billsByBuilding = { rooms: { '15': {
+      b1: { status: 'paid', dueDate: '2026-05-05', paidAt: Date.parse('2026-05-03Z') },
+    } } };
+    world.leasesByBuilding = { rooms: [{ roomId: '15', status: 'active', moveInDate: monthsAgo(30) }] };
+    world.tenantsByBuilding = { rooms: [{ roomId: '15', tenantId: 't15', status: 'active' }] };
+
+    await runTrustScoreSweep({ nowMs: NOW });
+
+    // trustScores doc keeps the full number + factors (admin-only)…
+    assert.equal(byId('t15').data.reputation, 100);
+    // …the tenant roster doc gets ONLY the coarse tier enum (no number/factors leak).
+    const mirror = byMirror('15');
+    assert.ok(mirror, 'wrote reputationTier onto tenants/rooms/list/15');
+    assert.equal(mirror.data.reputationTier, 'high');
+    assert.deepEqual(Object.keys(mirror.data), ['reputationTier']);
+  });
+
+  it('mirrors a provisional (0-bill) tenant as the provisional tier', async () => {
+    world.leasesByBuilding = { rooms: [{ roomId: '20', status: 'active', moveInDate: monthsAgo(5) }] };
+    world.tenantsByBuilding = { rooms: [{ roomId: '20', tenantId: 't20', status: 'active' }] };
+
+    await runTrustScoreSweep({ nowMs: NOW });
+
+    assert.equal(byId('t20').data.provisional, true);
+    assert.equal(byMirror('20').data.reputationTier, 'provisional');
   });
 
   it('exposes the scheduled CF as a callable handler', () => {
