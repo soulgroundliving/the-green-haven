@@ -35,10 +35,13 @@ window.showPage = function showPage(id, element) {
         console.error('[nav] showPage: page not found:', targetId);
     }
 
-    // Hide nav bar on world-map, show everywhere else
+    // Hide nav bar on full-screen sub-pages (world-map + marketplace); show on the 5 bottom-nav pages.
+    // 'marketplace' was dropped in the god-file refactor (§7-QQ) → the bottom nav bled onto the
+    // marketplace overlay with a stale "Quiz" active state. tenant_app.html:3369 (id="marketplace")
+    // + the comment at :3367 document that showPage MUST hide it here.
     const navBar = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
     if (navBar) {
-        navBar.style.display = (id === 'world-map' || (target && target.id === 'world-map-page')) ? 'none' : 'flex';
+        navBar.style.display = (id === 'world-map' || id === 'marketplace' || (target && target.id === 'world-map-page')) ? 'none' : 'flex';
     }
 
     // Update active nav-item highlight when element is passed
