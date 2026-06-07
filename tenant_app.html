@@ -2027,6 +2027,32 @@
         .mk-act--edit   { background: #e0f2fe; color: #075985; }
         .mk-act--del    { background: #fee2e2; color: #dc2626; }
 
+        /* ── Marketplace sub-nav bar (ตลาด / ข้อความ / ประกาศของฉัน) ───────
+         * A section-local bottom nav. It replaces the main bottom nav, which
+         * showPage() already hides for the marketplace pages. Uses brand tokens
+         * so dark mode adapts; safe-area padding for the iPhone home indicator. */
+        .market-nav-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            display: flex; justify-content: space-around;
+            background: var(--white);
+            padding: 9px 0 calc(9px + env(safe-area-inset-bottom));
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -4px 22px rgba(0, 0, 0, 0.06);
+            z-index: 1000;
+        }
+        .market-nav-item {
+            flex: 1; position: relative;
+            display: flex; flex-direction: column; align-items: center; gap: 3px;
+            background: transparent; border: none; font-family: inherit;
+            min-height: 48px; padding: 4px 0;
+            color: var(--pebble); font-size: var(--fs-sm); font-weight: 500;
+            cursor: pointer; touch-action: manipulation;
+            transition: color var(--dur-quick) var(--ease-quiet);
+        }
+        .market-nav-item i { font-size: var(--fs-lg); }
+        .market-nav-item:active { transform: scale(0.94); }
+        .market-nav-active { color: var(--primary-green); font-weight: 700; }
+
         .cat-radio-pill {
             flex: 1; text-align: center; padding: 9px 4px; border-radius: 10px;
             border: 1.5px solid #e5e7eb; background: #fff;
@@ -3508,12 +3534,7 @@
                 <h1 class="ta-card-title">ชุมชน 🛒</h1>
                 <p style="margin:4px 0 0; font-size:var(--fs-sm); color:var(--text-muted);">ตลาดของชุมชน — ของมือสอง บริการ และของแจกฟรี</p>
             </div>
-            <button type="button" data-action="showSubPage" data-page="market-chat-list-page" aria-label="ข้อความ"
-                style="position:relative; width:36px; height:36px; background:var(--soft-green); border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; touch-action:manipulation;">
-                <i class="fas fa-comment-dots u-color-green" ></i>
-                <span id="market-chat-unread-badge"
-                    style="display:none; position:absolute; top:-3px; right:-3px; min-width:18px; height:18px; padding:0 5px; background:#dc2626; color:#fff; font-size:10px; font-weight:700; border-radius:9px; line-height:18px; text-align:center;"></span>
-            </button>
+            <!-- Chat moved to the #market-nav-bar "ข้อความ" tab (2026-06-07). -->
         </div>
 
         <div id="marketplace-section">
@@ -3536,7 +3557,7 @@
             <button class="market-pill" data-filter="pet" data-action="filterMarket">🐾 สัตว์เลี้ยง</button>
         </div>
 
-        <div id="market-list-container" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 8px;">
+        <div id="market-list-container" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 90px;">
             <div id="market-empty-state" class="gh-empty-state" style="grid-column:1/-1;">
                 <div class="gh-empty-state__illust">
                     <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -3555,11 +3576,22 @@
             </div>
         </div>
 
-        <div id="my-listings-section" style="display:none; padding:0 16px 16px;">
-            <div class="section-title" style="padding:0; margin-bottom:8px;"><span>ประกาศของฉัน</span></div>
-            <div id="my-listings-container" class="ta-grid-gap-8"></div>
-        </div>
         </div><!-- /marketplace-section -->
+    </div>
+
+    <!-- Marketplace tab 3 — "ประกาศของฉัน". Moved out of the feed 2026-06-07
+         per user request; now its own #market-nav-bar tab. renderMyListings()
+         fills #my-listings-container (called from renderMarketFeed on every
+         snapshot + _syncMarketNav when the tab opens). -->
+    <div id="market-mine-page" class="page u-bg-base">
+        <div class="app-bar" style="display:flex; align-items:center; gap:12px; padding-bottom:18px;">
+            <h1 class="ta-card-title u-flex-1">📦 ประกาศของฉัน</h1>
+            <button type="button" data-action="showSubPage" data-page="add-market-page" aria-label="ลงประกาศใหม่"
+                style="display:flex; align-items:center; gap:5px; padding:8px 14px; background:var(--soft-green); color:var(--brand-primary-text); border:none; border-radius:var(--radius-pill); font-family:inherit; font-weight:700; font-size:var(--fs-sm); cursor:pointer; touch-action:manipulation; flex-shrink:0;">
+                <i class="fas fa-plus"></i> ลงประกาศ
+            </button>
+        </div>
+        <div id="my-listings-container" class="ta-grid-gap-8" style="padding:0 16px 90px;"></div>
     </div>
 
     <div id="usage" class="page">
@@ -4449,16 +4481,14 @@
     <!-- Sprint 1 — Privacy-First Chat: list of 1:1 conversations the
          current user is a participant in. Populated by _subscribeChatList. -->
     <div id="market-chat-list-page" class="page u-bg-base" >
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 18px;">
-            <div class="ta-icon-circle-touch"
-                data-action="goBackToMarketplace">
-                <i class="fas fa-chevron-left u-color-green" ></i>
-            </div>
+        <!-- Back chevron removed 2026-06-07 — #market-nav-bar is the navigator
+             for the marketplace section; this is the "ข้อความ" tab. -->
+        <div class="app-bar" style="display:flex; align-items:center; gap:12px; padding-bottom:18px;">
             <h1 class="ta-card-title">
                 💬 ข้อความ
             </h1>
         </div>
-        <div id="market-chat-list-container">
+        <div id="market-chat-list-container" style="padding-bottom:90px;">
             <div id="market-chat-list-empty" class="gh-empty-state">
                 <div class="gh-empty-state__illust">
                     <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -5327,6 +5357,25 @@
     </div>
 
     </main>
+    <!-- Marketplace sub-navigation (ตลาด / ข้อความ / ประกาศของฉัน). Hidden by
+         default; _syncMarketNav (shared/tenant-marketplace.js, called from
+         showPage/showSubPage) shows it only on the 3 marketplace pages and
+         hides it the moment the user navigates away. Tabs route via the
+         catch-all dispatcher → window._showMarketTab(el) reads data-tab. -->
+    <nav class="market-nav-bar u-init-hide" id="market-nav-bar" role="navigation" aria-label="เมนูตลาดชุมชน">
+        <button type="button" class="market-nav-item market-nav-active" aria-current="page" data-action="_showMarketTab" data-tab="feed" aria-label="ตลาด">
+            <i class="fas fa-store" aria-hidden="true"></i>ตลาด
+        </button>
+        <button type="button" class="market-nav-item" data-action="_showMarketTab" data-tab="chat" aria-label="ข้อความ">
+            <i class="fas fa-comment-dots" aria-hidden="true"></i>ข้อความ
+            <span id="market-chat-unread-badge" aria-live="polite"
+                style="display:none; position:absolute; top:1px; left:calc(50% + 7px); min-width:16px; height:16px; padding:0 4px; background:var(--alert); color:#fff; font-size:10px; font-weight:700; border-radius:8px; line-height:16px; text-align:center;"></span>
+        </button>
+        <button type="button" class="market-nav-item" data-action="_showMarketTab" data-tab="mine" aria-label="ประกาศของฉัน">
+            <i class="fas fa-tag" aria-hidden="true"></i>ประกาศของฉัน
+        </button>
+    </nav>
+
     <nav class="nav-bar u-init-hide" id="main-nav-bar"  role="navigation" aria-label="เมนูหลัก">
         <button type="button" class="nav-item active" aria-current="page" aria-label="หน้าหลัก" data-action="showPage--updateNavActiveIndex" data-page="home" data-nav-index="0"><i class="fas fa-home" aria-hidden="true"></i>หน้าหลัก</button>
         <button type="button" class="nav-item u-pos-rel" aria-label="บริการ" data-action="showPage--updateNavActiveIndex" data-page="services" data-nav-index="1" >

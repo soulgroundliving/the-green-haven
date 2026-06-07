@@ -44,6 +44,10 @@ window.showPage = function showPage(id, element) {
         navBar.style.display = (id === 'world-map' || id === 'marketplace' || (target && target.id === 'world-map-page')) ? 'none' : 'flex';
     }
 
+    // Marketplace sub-nav (#market-nav-bar) — shown only on the 3 marketplace
+    // pages; hidden everywhere else. Defined in shared/tenant-marketplace.js.
+    if (typeof window._syncMarketNav === 'function') window._syncMarketNav(target ? target.id : null);
+
     // Update active nav-item highlight when element is passed
     if (element) {
         document.querySelectorAll('.nav-item').forEach(nav => { nav.classList.remove('active'); nav.removeAttribute('aria-current'); });
@@ -77,6 +81,11 @@ window.showSubPage = function showSubPage(id) {
     // Hide nav bar for sub-pages
     const navBar = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
     if (navBar) navBar.style.display = 'none';
+
+    // Marketplace sub-nav (#market-nav-bar): market-chat-list-page and
+    // market-mine-page are sub-pages that SHOULD keep the bar; everything else
+    // (active chat, post form, …) hides it. _syncMarketNav decides per target.
+    if (typeof window._syncMarketNav === 'function') window._syncMarketNav(target ? target.id : null);
 
     // Optional render hooks (guarded — may not be loaded yet)
     if (id === 'elec_usage' && typeof window.renderElecUsage === 'function') window.renderElecUsage();

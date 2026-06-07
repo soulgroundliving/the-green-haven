@@ -263,13 +263,32 @@
     }
 
     function renderMyListings() {
-        const section = document.getElementById('my-listings-section');
         const cont = document.getElementById('my-listings-container');
-        if (!section || !cont) return;
+        if (!cont) return;
         const mine = _marketItems.filter(i => i.ownerUid === window._authUid);
-        if (!mine.length) { section.style.display = 'none'; return; }
-        section.style.display = 'block';
         cont.textContent = '';
+
+        // "ประกาศของฉัน" is its own marketplace-nav tab now (#market-mine-page),
+        // so an empty result renders an empty state in-place rather than hiding
+        // a section embedded in the feed.
+        if (!mine.length) {
+            const empty = document.createElement('div');
+            empty.className = 'gh-empty-state';
+            empty.innerHTML = `
+                <div class="gh-empty-state__illust">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                        <path d="M30 42 l4-12 h52 l4 12 v50 a4 4 0 0 1-4 4 h-52 a4 4 0 0 1-4-4 z"/>
+                        <path d="M48 42 v-8 a12 12 0 0 1 24 0 v8"/>
+                    </svg>
+                </div>
+                <p class="gh-empty-state__title">ยังไม่มีประกาศของคุณ</p>
+                <p class="gh-empty-state__text">กด "ลงประกาศ" เพื่อขาย แจก หรือขอของจากเพื่อนบ้านในตึก</p>
+                <div class="gh-empty-state__action">
+                    <button type="button" class="gh-btn gh-btn--primary gh-btn--small" data-action="showSubPage" data-page="add-market-page">✨ ลงประกาศแรกของฉัน</button>
+                </div>`;
+            cont.appendChild(empty);
+            return;
+        }
 
         const catEmoji = { free: '🎁', service: '💅', request: '✋', item: '🛍️' };
 
@@ -353,6 +372,42 @@
         document.querySelectorAll('.market-pill').forEach(p => p.classList.remove('market-pill-active'));
         if (btn) btn.classList.add('market-pill-active');
         renderMarketFeed();
+    }
+
+    // ── Sub-navigation (ตลาด / ข้อความ / ประกาศของฉัน) ──────────────────────
+    // The marketplace has its own bottom nav (#market-nav-bar). It is shown only
+    // on these 3 pages and hidden everywhere else. _syncMarketNav is called from
+    // showPage/showSubPage (tenant-navigation.js) on EVERY navigation, so the bar
+    // disappears the instant the user leaves the marketplace section (e.g. opens
+    // an active chat, the post form, or the world map).
+    const _MARKET_NAV_PAGES = { 'marketplace': 0, 'market-chat-list-page': 1, 'market-mine-page': 2 };
+
+    function _syncMarketNav(targetId) {
+        const bar = document.getElementById('market-nav-bar');
+        if (!bar) return;
+        const idx = _MARKET_NAV_PAGES[targetId];
+        if (idx === undefined) { bar.style.display = 'none'; return; }
+        bar.style.display = 'flex';
+        bar.querySelectorAll('.market-nav-item').forEach((b, i) => {
+            const on = i === idx;
+            b.classList.toggle('market-nav-active', on);
+            if (on) b.setAttribute('aria-current', 'page');
+            else b.removeAttribute('aria-current');
+        });
+        // Refresh the owner's listings on tab open (the page was hidden, so it
+        // missed any snapshot updates that didn't repaint it).
+        if (targetId === 'market-mine-page') renderMyListings();
+    }
+
+    // data-action="_showMarketTab" routes here via the catch-all dispatcher,
+    // which calls window._showMarketTab(el, e). Tab id is read off data-tab.
+    // Active state + bar visibility are then set by _syncMarketNav, which fires
+    // from inside showPage/showSubPage — so this only triggers the navigation.
+    function _showMarketTab(el) {
+        const tab = (el && el.dataset && el.dataset.tab) || 'feed';
+        if (tab === 'chat' && window.showSubPage) window.showSubPage('market-chat-list-page');
+        else if (tab === 'mine' && window.showSubPage) window.showSubPage('market-mine-page');
+        else if (window.showPage) window.showPage('marketplace');
     }
 
     // ── Detail modal ───────────────────────────────────────────────────────
@@ -857,6 +912,8 @@
     window.renderMarketFeed             = renderMarketFeed;
     window.renderMyListings             = renderMyListings;
     window.filterMarket                 = filterMarket;
+    window._syncMarketNav               = _syncMarketNav;
+    window._showMarketTab               = _showMarketTab;
     window.openMarketDetail             = openMarketDetail;
     window.contactSeller                = contactSeller;
     window.markMarketClosed             = markMarketClosed;
