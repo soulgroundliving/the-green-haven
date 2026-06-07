@@ -223,9 +223,9 @@ One surface per PR behind `validate.yml`; tests with/before the change. Client-o
   - *Alt considered:* flat top-level `depositSettlements/{…}` — more decoupled but +1 listener/collection; rejected as heavier for now.
 
 ### Steps
-- [ ] **1.** Stamp `tenantId` on the deposit doc (seed writes `t.tenantId||''`; `_saveDepositReturn` preserves). — *join key for "which tenancy".*
-- [ ] **2.** Tenant-aware new-cycle reset in `_seedDepositsFromTenants`: existing doc whose stored `tenantId` is non-empty AND ≠ current AND status==`returned` → archive into `history/`, then reset main doc to fresh `holding` for the new tenant. Same/legacy-empty tenantId → current skip (no spurious archive). — *makes turnover create a new cycle while preserving the old.* **Heavy guard — only on confirmed mismatch (must never wipe a live holding).**
-- [ ] **3.** `firestore.rules` for `deposits/{b}_{r}/history/{id}` (admin read+write, accountant read) + `test:rules` cases. — *new path is default-deny.*
+- [x] **1.** Stamp `tenantId` on the deposit doc (seed writes `t.tenantId||''`; `_saveDepositReturn` preserves). — *join key for "which tenancy".* ✅ #260 (`dashboard-deposits-admin.js:533`).
+- [x] **2.** Tenant-aware new-cycle reset — shipped as `_reconcileDepositForRoom` (per-room, self-healing): a settled doc whose stored `tenantId` ≠ current → archive into `history/{settlementId}` FIRST, then reset main doc to fresh `holding` with `historyCount++`. Legacy-empty tenantId → backfill only (no spurious archive). ✅ #260 (`dashboard-deposits-admin.js:111-159`).
+- [x] **3.** `firestore.rules` `match /history/{settlementId}` (admin read+write, accountant read) + 12 `test:rules` cases. ✅ #260 (`firestore.rules:844`). **⚠️ Open (owner): `firebase deploy --only firestore:rules` not yet run — history reads degrade silently (try/catch) until deployed.**
 - [x] **4.** Gallery "ดูประวัติ (N)": `showDepositEvidence` shows current first, then collapsible past settlements (each its own sub-gallery, labelled tenant + returnedAt) from `history/`. — *the actual cross-tenant compare surface.* ✅ #265 (2026-06-05).
 - [x] **5.** Legacy degrades cleanly (§7-L): existing returned docs render as the single current settlement; first turnover after ship starts history. No backfill. ✅ (no `historyCount` → no button; verified no-history harness case).
 - [x] **6.** Update `lifecycle_deposit_management.md` (schema + Flow + Key Files) + `npm run verify:memory`. ✅ (#260 steps 1-3 + #265 step 4).
