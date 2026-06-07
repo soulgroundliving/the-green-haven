@@ -790,3 +790,72 @@ body.gh-tour-open {
 .page-legal-footer a:hover,
 .page-legal-footer a:focus-visible { text-decoration: underline; outline: none; }
 .page-legal-footer .sep { margin: 0 8px; opacity: 0.5; }
+
+/* ── Tenant Reputation tier badge (Trust 3.2a v1.x) ───────────────────────────
+   Rendered by shared/tenant-reputation.js into #tenant-reputation-card on the
+   quest-page (under #profile-rewards-card). Static CSS — never an injected
+   <style> (§7-RR). Muji, positive-framed: a soft accent per tier, no harsh
+   "low" colour (provisional/low collapse into the gentle 🌱 seed state). */
+.rep-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border-subtle, #ebe9e2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  text-align: left;
+}
+.rep-card__emoji { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+.rep-card__body { min-width: 0; }
+.rep-card__eyebrow {
+  margin: 0 0 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #8a8f98);
+}
+.rep-card__label { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text, #2c2c2c); }
+.rep-card__sub { margin: 2px 0 0; font-size: var(--fs-sm, 0.82rem); color: var(--text-muted, #8a8f98); line-height: 1.4; }
+
+/* Per-tier left accent + tint (kept gentle — muji). */
+.rep-card--great { background: linear-gradient(180deg, #f0fbf6 0%, var(--card, #fff) 70%); border-color: #bfe6d2; }
+.rep-card--great .rep-card__label { color: var(--green-dark, #1a5c38); }
+.rep-card--good  { background: linear-gradient(180deg, #fdf8ec 0%, var(--card, #fff) 70%); border-color: #ecd9a8; }
+.rep-card--good  .rep-card__label { color: #9a6b12; }
+.rep-card--fair  { background: linear-gradient(180deg, #f3faf0 0%, var(--card, #fff) 70%); border-color: #d3e8c5; }
+.rep-card--fair  .rep-card__label { color: var(--green, #2d8653); }
+.rep-card--seed  { background: var(--green-pale, #eef5ee); border-color: #dde8dd; }
+.rep-card--seed  .rep-card__label { color: var(--green-dark, #3a5a44); }
+.rep-card--muted { background: var(--card, #fff); border-style: dashed; }
+.rep-card--muted .rep-card__label { color: var(--text-muted, #8a8f98); font-weight: 700; }
+
+/* Consent prompt (shown until the tenant opts in). Column layout. */
+.rep-card--consent { display: block; padding: 18px; }
+.rep-consent__head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.98rem; font-weight: 800; color: var(--text, #2c2c2c);
+  margin-bottom: 8px;
+}
+.rep-consent__text { margin: 0 0 14px; font-size: var(--fs-sm, 0.85rem); line-height: 1.65; color: var(--text-muted, #5f6670); }
+.rep-consent__accept {
+  width: 100%; padding: 12px;
+  background: var(--green, #2d8653); color: #fff;
+  border: none; border-radius: 14px;
+  font-family: inherit; font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; transition: transform 0.12s ease, background-color 0.2s ease;
+}
+.rep-consent__accept:hover { background: var(--green-dark, #1a5c38); }
+.rep-consent__accept:active { transform: scale(0.97); }
+.rep-consent__accept:disabled { opacity: 0.6; cursor: default; }
+.rep-consent__foot { display: flex; justify-content: center; gap: 14px; margin-top: 12px; }
+.rep-consent__later, .rep-consent__privacy {
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: var(--fs-sm, 0.8rem);
+  color: var(--text-muted, #8a8f98); padding: 4px 2px;
+}
+.rep-consent__privacy { color: var(--green, #2d8653); text-decoration: underline; }
+.rep-consent__later:hover, .rep-consent__privacy:hover { opacity: 0.75; }

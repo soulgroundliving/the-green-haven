@@ -128,6 +128,7 @@
     <script src="./shared/tenant-cleaning.js" defer></script>
     <script src="./shared/tenant-data-export.js" defer></script>
     <script src="./shared/tenant-consent.js" defer></script>
+    <script src="./shared/tenant-reputation.js" defer></script>
     <script src="./shared/tenant-quiz.js" defer></script>
     <script src="./shared/tenant-maintenance.js" defer></script>
     <script src="./shared/tenant-pets.js" defer></script>
@@ -3753,6 +3754,10 @@
                     🎁 เข้าสู่ Rewards Shop
                 </button>
             </div>
+            <!-- Reputation tier badge (Trust 3.2a v1.x). Rendered by
+                 shared/tenant-reputation.js once LIFF claims are ready, gated
+                 behind an explicit PDPA consent. Empty until then. -->
+            <div id="tenant-reputation-card"></div>
         </div>
 
         <!-- Achievements Tab -->
