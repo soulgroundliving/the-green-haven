@@ -4,7 +4,7 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-06) — Roadmap Phase 3.2a: Reputation Score v1 · ✅ PR1 SERVER BUILT (gates green) · ⏳ AWAITING OWNER MERGE/DEPLOY · PR2 card next
+## ✅ SHIPPED (2026-06-07) — Roadmap Phase 3.2a: Reputation Score v1 · PR1 server #286 + PR2 card #287 merged + deployed (rules + CFs live) · ⏳ owner prod-admin live-verify only
 
 **Scope:** Trust System sub-phase 3.2a v1 — a **server-computed, admin-only** Reputation score (0–100) per tenant from 3 back-historical signals: payment punctuality + lease tenure + complaint-free record. Design doc: [phase-3.2-trust-system-plan.md](phase-3.2-trust-system-plan.md). First Trust primitive — the blueprint's retention moat (Core Metric 3, emotional lock-in) + gate for future FinTech/Verified-Helper revenue. NOT blocked by pointsLedger accrual (that's only the v2 engagement dimension); the 3 v1 signals all have back-history today.
 
@@ -45,15 +45,15 @@
 - [x] `firestore.rules` — `match /trustScores/{tenantId} { allow read: if isAdmin(); allow write: if false; }` (mirrors `pointsLedger`/`actionAudit`). 7 cases in `firestore.rules.test.js`. **Rules suite 288/288 GREEN (emulator).**
 - [x] `firestore.indexes.json` — **no change needed**: v1 iterates by known keys; card reads full `trustScores` (admin query) + sorts client-side. No composite `where+orderBy`. (Revisit if the card adds one.)
 
-**Phase 4 — admin dashboard card (read-only) [PR2]**
-- [ ] `shared/dashboard-reputation.js` — "คะแนนความน่าเชื่อถือ (Reputation)" card in the **ผู้เช่า tab**: tenant list sorted by reputation + score chip + factor breakdown + `provisional` badge. Reads `trustScores/*` (admin rule). `_ins.utils` pattern; `errorHTML` on failure (§7-N).
-- [ ] `dashboard.html` — mount + `<script src>` after `dashboard-insights.js` (§7-PP); CSS in `shared/components.css` NOT inline/injected (§7-RR); flat-card style matching the now-flattened ผู้เช่า tab; inline edit → regen CSP (§7-II).
+**Phase 4 — admin dashboard card (read-only) [PR2]** ✅ #287
+- [x] `shared/dashboard-reputation.js` — "🏅 คะแนนความน่าเชื่อถือ" card in the **ผู้เช่า tab** (left `ten-col`): tenants ranked by reputation, tier-coloured score chip + factor breakdown + `ชั่วคราว` provisional badge + KPI strip + empty state. Reads `trustScores/*`; `_ins.utils` pattern; `errorHTML` on failure (§7-N). Pure `repTier`/`computeRepStats` + 7 unit tests.
+- [x] `dashboard.html` — `#dashReputation` mount + `<script>` after `dashboard-insights.js` (§7-PP). **No new CSS** (reuses `.card` + inline-style like every sibling card → §7-RR satisfied, no injected `<style>`); **no inline edit → no CSP drift** (§7-II, pre-commit confirmed in-sync). Plus a `⟳ คำนวณใหม่` button → deployed `recomputeTrustScores` callable (§7-I explicit click).
 
-**Phase 5 — deploy + verify + docs (spans both PRs)**
-- [ ] Deploy server PR (OWNER-CONFIRMED — CF/rules auto-deploy via CI on merge per [lifecycle_deploy_functions_ci]; NOT single-revert). Verify branch/worktree + `firebase use`=prod first (MEMORY critical rule).
-- [ ] Trigger `recomputeTrustScores` once → inspect real `trustScores/*` vs hand-computed (§7-J live-data verify, not empty-collection).
-- [ ] Live-verify the admin card on Vercel (Chrome MCP prod admin) — real scores, sort + breakdown correct.
-- [ ] New `lifecycle_trust_reputation.md` (formula · sources · CF · rule · doc shape · Verification grep block) + MEMORY.md index + bump `lifecycle_scheduled_jobs` 12→13. `npm run verify:memory` green.
+**Phase 5 — deploy + verify + docs (spans both PRs)** ✅ (live-verify owner-pending)
+- [x] Server PR deployed — rules deployed by owner (`firebase deploy --only firestore:rules`), CFs auto-deployed via CI (run 27086277817 ✅; `firebase functions:list` shows both, SE1 node22). PR1 #286 + PR2 #287 merged to main.
+- [x] §7-J live-data verify — `tools/preview-trust-scores.js` (READ-ONLY, ADC) ran on prod: 1 active tenant (nest/N101) → reputation **26** provisional, factors resolve (tenure 4.5mo, no moveInDate flags). Formula correct on real data. (The WRITE happens via owner's `⟳ คำนวณใหม่` button or the 05:40 schedule — not auto-written, §7-I.)
+- [x] Card verified via static harness (full + empty states screenshot). **⬜ owner: prod-admin live-verify** (Insights → ผู้เช่า → card → click ⟳ to populate).
+- [x] `lifecycle_trust_reputation.md` + `lifecycle_scheduled_jobs` (13 jobs + 05:40) + `feature_state_canonical` (24 registry CFs) + MEMORY.md + README counts. `npm run verify:memory` green.
 
 ### Guardrails (§6 + project)
 Trust ≠ points (never read `points`) · server-computed only · callable not trigger (§7-NN) · admin auth gate on callable · grep writer+reader for `trustScores`/`paidAt`/`moveInDate`/complaint before use (§7-T) · index READY before query (§7-J) · CSS in components.css (§7-RR) · CSP regen on inline edit (§7-II) · **CF + rules deploy = OWNER-CONFIRMED before merge** (CI auto-deploys on merge; rules+CF not single-revert — unlike the pure-frontend redesign PRs which I auto-merge). PDPA tenant-facing deferred (admin-only v1) — noted in lifecycle doc for when tenant-visible lands.
@@ -67,7 +67,8 @@ Trust ≠ points (never read `points`) · server-computed only · callable not t
 - **PR1 (server) — ✅ BUILT + all gates GREEN, ⏳ NOT merged/deployed (owner-gated).** 6 files: `_reputation.js` (pure core), `computeTrustScoresScheduled.js` + `recomputeTrustScores.js` (CFs), 3 test files; +`index.js` wiring, +`firestore.rules` match, +`firestore.rules.test.js` cases. Gates: `node --check` all clean · **functions suite 1955/0** · **rules suite 288/0 (emulator)** · verify:memory GREEN · no CSP/HTML touched. Architecture exactly as planned (server-computed, callable-not-trigger §7-NN, write-locked rule, trust≠points §6).
   - **Plan deltas (grep-grounded at build):** (1) complaints live in **Firestore** `complaints` top-level (`complaintAndGamification.js:98`), not RTDB — sweep reads FS with a streak-cap-bounded `where createdAt >=` (single-field, no index). (2) tests go in `functions/__tests__/` per repo convention. (3) doc carries `tenantId/building/roomId` identity context (single writer → no §7-T drift) beyond the planned `reputation/factors/provisional/computedAt`.
   - **⏳ Open (owner — the only gate left for PR1):** merge the PR → CI `deploy-functions.yml` auto-deploys the 2 CFs + you deploy `firestore:rules` (branch-checked prod). Merge == deploy (not single-revert) → needs your go-ahead. Then trigger `recomputeTrustScores` once + inspect real `trustScores/*` (§7-J live-data verify).
-- **PR2 (admin card, Phase 4) — not started.** Sequential: needs PR1 deployed + a recompute run so the card has real data to render + live-verify.
+- **PR2 (admin card, Phase 4) — ✅ MERGED #287 (`9e89c34`).** `shared/dashboard-reputation.js` in the ผู้เช่า tab — ranked tenant list (tier-coloured chip + factor breakdown + provisional badge), KPI strip, empty state, `⟳ คำนวณใหม่` → `recomputeTrustScores` callable. Wired via `dashboard-insights.js` (render + refresh + recomputeTrust action). Pure `repTier`/`computeRepStats` + 7 tests (TDD caught two `Number(null)===0` bugs). Gates: shared **461/0** · CSP no drift · static-harness screenshot (full+empty) · pre-commit green. Pure frontend → auto-merged + Vercel-deployed. **⏳ Open (owner):** prod-admin live-verify + click ⟳ to populate `trustScores/*` (currently empty until first recompute / 05:40 schedule).
+- **Whole Phase 3.2a v1 = ✅ SHIPPED end-to-end (2026-06-07):** PR1 server (#286) + PR2 card (#287), rules + CFs deployed, formula live-verified read-only. Next sub-phases (deferred, design doc `tasks/phase-3.2-trust-system-plan.md`): tenant-visible v1.x (claim-gated badge + PDPA) · v2 engagement dim (pointsLedger ~Aug) · 3.2b Kindness/Verified-Helper · 3.2c Resident Rank.
 - **Memory:** new `lifecycle_trust_reputation.md` + `lifecycle_scheduled_jobs` (+05:40 row) + MEMORY.md index — written same session (CLAUDE.md §8).
 
 ---
