@@ -1452,7 +1452,7 @@ fs.query(coll, fs.where('building','==',b), fs.where('roomId','==',r))
 ```bash
 grep -rnE "\.limit\([0-9]+\)" shared/*.js | grep -iv orderBy   # bare caps, audit each
 ```
-Known siblings (admin-side, all-rooms `meter_data` scans — NOT fixed with the tenant bug, need orderBy+index or redesign since removing the cap = unbounded all-rooms scan): `dashboard-home-live.js:121 limit(120)` (~690 docs → under-fetches recent), `dashboard-extra.js:723 limit(500)`, `dashboard-behavioral-energy.js:122` + `dashboard-insights-operations.js:222 limit(5000)` (safe for now; warns at cap). Family: §7-N (composite index for ordered queries), §7-D/E (BillStore room/year traps), §7-K (defined ≠ wired — here "fetched ≠ all fetched").
+Known siblings (admin-side, all-rooms `meter_data` scans) — **FIXED `d89b7cd` (2026-06-07)**: `dashboard-extra.js` (setupMeterDataListener watch), `dashboard-behavioral-energy.js` (trend), `dashboard-insights-operations.js` (spike) now scope by `where('year', 'in', [curBE-1, curBE, …string variants])` instead of a bare `limit(N)` — a single-field `in` is served by the automatic index (no composite, §7-N-safe), stays bounded, and always includes the NEWEST months (the cap dropped them). `dashboard-home-live.js limit(120)` deliberately left AS-IS with a KNOWN-LIMITATION comment: it reads a legacy per-building `data.rooms` shape that's already fallback-only AND broken on current flat data, so the cap isn't the real bug — a flat-shape rewrite of that aggregator is (out of scope). ⚠️ admin-dashboard live-verify still pending. Family: §7-N (composite index for ordered queries), §7-D/E (BillStore room/year traps), §7-K (defined ≠ wired — here "fetched ≠ all fetched").
 
 ---
 
