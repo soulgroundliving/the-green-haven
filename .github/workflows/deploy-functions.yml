@@ -162,7 +162,14 @@ jobs:
         # current Node version. See: CLAUDE.md §7-NN + generate_bills_cf_frozen.md
         run: |
           FROZEN="generateBillsOnMeterUpdate"
-          CF_LIST=$(grep -oP '^exports\.\K\w+' functions/index.js \
+          # Match `exports.X = ...` even when INDENTED inside a try/if optional-module
+          # guard (verifySlip, notifyLiffRequest, notifyLiffStatusChange are exported
+          # that way). The old '^exports\.' anchor required column-0, so those 3 CFs
+          # were silently dropped from every deploy — a pushed fix to verifySlip.js
+          # reported "success" while prod kept running stale code. The '\s*' includes
+          # them. ('//' comment lines never match: after ^\s* they start with '/').
+          CF_LIST=$(grep -oP '^\s*exports\.\K\w+' functions/index.js \
+            | sort -u \
             | grep -v "^${FROZEN}$" \
             | sed 's/^/functions:/' \
             | paste -sd,)
