@@ -1,5 +1,5 @@
 /* shared/tenant-usage-chart.js
- * 12-month Usage Chart (elec + water tab toggle, tap-for-detail) —
+ * 6-month Usage Chart (elec + water tab toggle, tap-for-detail) —
  * extracted from tenant_app.html for maintainability.
  *
  * Dependencies:
@@ -30,7 +30,7 @@
         const taBills = window._tenantAppBills || [];
         if (Array.isArray(taBills) && taBills.length) {
             const out = [];
-            taBills.slice(0, 12).forEach(b => {
+            taBills.slice(0, 6).forEach(b => {
                 const mr = b.meterReadings?.[key];
                 if (!mr) return;
                 const ch = b.charges?.[key];
@@ -57,7 +57,7 @@
             }
         }
         if (!source.length) return [];
-        return source.slice(0, 12).map(m => {
+        return source.slice(0, 6).map(m => {
             const units = Math.max(0, type === 'elec' ? (m.eNew - m.eOld) : (m.wNew - m.wOld));
             return {
                 month: m.monthKey,
@@ -69,7 +69,7 @@
         });
     }
 
-    // ===== 12-month Usage Chart (combined elec+water, tab toggle, tap-for-detail) =====
+    // ===== 6-month Usage Chart (combined elec+water, tab toggle, tap-for-detail) =====
     function switchUsageChartTab(type) {
         _usageChartType = type;
         document.querySelectorAll('.usage-chart-tab').forEach(btn => {
