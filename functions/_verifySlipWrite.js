@@ -97,12 +97,15 @@ async function markBillPaidInRTDB(slipData, params, receiptNo = null) {
     const updates = {};
     let matched = 0;
     let paidBillId = null;
+    let sawCurrentMonth = false;   // any bill (paid OR unpaid) already exists for the slip month
     Object.keys(bills).forEach(billId => {
       const b = bills[billId];
-      if (!b || b.status === 'paid') return;
+      if (!b) return;
       const by = Number(b.year); const bm = Number(b.month);
       const byBE = by < 2400 ? 2500 + (by % 100) : by;
       if (byBE === billYearBE && bm === billMonth) {
+        sawCurrentMonth = true;
+        if (b.status === 'paid') return;   // month already settled — nothing to mark
         updates[`${billId}/status`] = 'paid';
         updates[`${billId}/paidAt`] = Date.now();
         updates[`${billId}/paidVia`] = 'tenant_app_slipok';
@@ -120,19 +123,24 @@ async function markBillPaidInRTDB(slipData, params, receiptNo = null) {
     // The current month's bill is SYNTHESIZED client-side from meter_data
     // (invoice `SYNTH-…`) and has NO RTDB doc — generateBillsOnMeterUpdate (the
     // CF that used to create bills on meter write) is frozen + SE3-Eventarc-dead.
-    // So a valid slip for the current month matches no existing bill
-    // (matched===0) and would silently leave it "รอชำระ". When the client flags
-    // the bill as synthetic, create the REAL RTDB bill marked paid so tenant +
-    // admin views agree (RTDB = SoT). Guards: ONLY the current BKK month (no
-    // back-dating), never overwrite an existing paid bill, deterministic id so a
-    // re-pay merges instead of duplicating. Field shape mirrors a real bill
-    // (year as "BE4" string, totalCharge) per §7-E.
-    if (matched === 0 && params.synthetic === true) {
+    // So a valid slip for the current month matches no existing bill and would
+    // silently leave it "รอชำระ". Create the REAL RTDB bill marked paid so tenant
+    // + admin views agree (RTDB = SoT).
+    //
+    // Gate is SERVER-SIDE (robust to §7-MM: a stale-cached frontend may NOT send
+    // the `synthetic` flag, so we must NOT depend on it): materialize when NO bill
+    // at all exists for the slip's BKK month (`!sawCurrentMonth`) AND it is the
+    // current BKK month (no back/forward-dating) AND the slip already passed the
+    // amount check upstream. The client's `charges`/`meterReadings` decorate the
+    // breakdown when present (fresh frontend) else null. Deterministic id so a
+    // re-pay merges; never overwrite a paid doc. Field shape mirrors a real bill
+    // (year "BE4" string, totalCharge) per §7-E.
+    const _nowBkk = new Date(Date.now() + BKK_OFFSET_MS);
+    const _curYM = (_nowBkk.getUTCFullYear() + 543) * 100 + (_nowBkk.getUTCMonth() + 1);
+    const _billYM = billYearBE * 100 + billMonth;
+    if (matched === 0 && !sawCurrentMonth && _billYM === _curYM) {
       try {
-        const nowBkk = new Date(Date.now() + BKK_OFFSET_MS);
-        const curYM = (nowBkk.getUTCFullYear() + 543) * 100 + (nowBkk.getUTCMonth() + 1);
-        const billYM = billYearBE * 100 + billMonth;
-        if (billYM === curYM) {
+        {
           const mm = String(billMonth).padStart(2, '0');
           const newBillId = `TGH-${billYearBE}${mm}-${room}`;   // deterministic (matches generateBills format)
           const billRef = ref.child(newBillId);

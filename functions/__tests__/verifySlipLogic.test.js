@@ -269,37 +269,37 @@ describe('computePaymentTier — Nest gamification point tiers', () => {
 // Guards: current BKK month only · synthetic-flagged only · never when a real bill
 // already matched · never overwrite an existing paid doc · deterministic id.
 
-function shouldMaterializeSynthBill({ matched, synthetic, billYM, curYM, existingStatus }) {
-  if (matched > 0) return false;            // a real bill already matched the month
-  if (synthetic !== true) return false;     // only the client-flagged synth path
-  if (billYM !== curYM) return false;       // current BKK month only (no back/forward-dating)
-  if (existingStatus === 'paid') return false; // never overwrite a paid doc
-  return true;
+function shouldMaterializeSynthBill({ matched, sawCurrentMonth, billYM, curYM }) {
+  if (matched > 0) return false;        // an unpaid bill already matched + got marked
+  if (sawCurrentMonth) return false;    // a bill (paid OR unpaid, any id) already exists for the month
+  if (billYM !== curYM) return false;   // current BKK month only (no back/forward-dating)
+  return true;                          // server-side gate — no `synthetic` flag needed (§7-MM robust)
 }
 function synthMaterializedBillId(billYearBE, billMonth, room) {
   return `TGH-${billYearBE}${String(billMonth).padStart(2, '0')}-${room}`;
 }
 
-describe('shouldMaterializeSynthBill — Option B synth-materialize gating', () => {
+describe('shouldMaterializeSynthBill — Option B synth-materialize gating (server-side)', () => {
   const cur = 256906;  // มิ.ย. 2569 = current BE year*100+month
 
-  it('synth + current month + no existing bill → materialize', () => {
-    assert.equal(shouldMaterializeSynthBill({ matched: 0, synthetic: true, billYM: cur, curYM: cur }), true);
+  it('current month + no bill exists at all → materialize (no synthetic flag needed)', () => {
+    assert.equal(shouldMaterializeSynthBill({ matched: 0, sawCurrentMonth: false, billYM: cur, curYM: cur }), true);
+  });
+  it('robust to §7-MM stale frontend: gating ignores any client flag, decides from server signals', () => {
+    // a stale-cached client sends no `synthetic`/`charges`; this still materializes
+    assert.equal(shouldMaterializeSynthBill({ matched: 0, sawCurrentMonth: false, billYM: cur, curYM: cur }), true);
   });
   it('past month → never materialize (no back-dating)', () => {
-    assert.equal(shouldMaterializeSynthBill({ matched: 0, synthetic: true, billYM: 256905, curYM: cur }), false);
+    assert.equal(shouldMaterializeSynthBill({ matched: 0, sawCurrentMonth: false, billYM: 256905, curYM: cur }), false);
   });
   it('future month → never materialize', () => {
-    assert.equal(shouldMaterializeSynthBill({ matched: 0, synthetic: true, billYM: 256907, curYM: cur }), false);
+    assert.equal(shouldMaterializeSynthBill({ matched: 0, sawCurrentMonth: false, billYM: 256907, curYM: cur }), false);
   });
-  it('not flagged synthetic → never materialize (real bills use the normal match path)', () => {
-    assert.equal(shouldMaterializeSynthBill({ matched: 0, synthetic: false, billYM: cur, curYM: cur }), false);
+  it('a paid bill (different id) already exists for the month → no duplicate', () => {
+    assert.equal(shouldMaterializeSynthBill({ matched: 0, sawCurrentMonth: true, billYM: cur, curYM: cur }), false);
   });
-  it('an existing bill already matched → no duplicate materialize', () => {
-    assert.equal(shouldMaterializeSynthBill({ matched: 1, synthetic: true, billYM: cur, curYM: cur }), false);
-  });
-  it('existing paid doc → never overwrite', () => {
-    assert.equal(shouldMaterializeSynthBill({ matched: 0, synthetic: true, billYM: cur, curYM: cur, existingStatus: 'paid' }), false);
+  it('an unpaid bill matched + got marked → no materialize', () => {
+    assert.equal(shouldMaterializeSynthBill({ matched: 1, sawCurrentMonth: true, billYM: cur, curYM: cur }), false);
   });
 });
 
