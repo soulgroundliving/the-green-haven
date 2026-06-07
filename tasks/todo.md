@@ -4,7 +4,75 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-06) — Roadmap Phase 3.1: Behavioral Intelligence · ⏳ AWAITING APPROVAL (Plan-First)
+## ▶▶▶ ACTIVE PLAN (2026-06-06) — Roadmap Phase 3.2a: Reputation Score v1 · ✅ PR1 SERVER BUILT (gates green) · ⏳ AWAITING OWNER MERGE/DEPLOY · PR2 card next
+
+**Scope:** Trust System sub-phase 3.2a v1 — a **server-computed, admin-only** Reputation score (0–100) per tenant from 3 back-historical signals: payment punctuality + lease tenure + complaint-free record. Design doc: [phase-3.2-trust-system-plan.md](phase-3.2-trust-system-plan.md). First Trust primitive — the blueprint's retention moat (Core Metric 3, emotional lock-in) + gate for future FinTech/Verified-Helper revenue. NOT blocked by pointsLedger accrual (that's only the v2 engagement dimension); the 3 v1 signals all have back-history today.
+
+**Owner decisions (locked 2026-06-06):**
+- **Visibility = ADMIN-ONLY v1** — validate the formula before exposing. No tenant badge / claim-gate / tenant-facing PDPA yet (those land when tenant-visible v1.x ships).
+- **Weighting = payment 60% · tenure 25% · complaint-free 15%** — payment dominates (blueprint / accountant / investor lens).
+
+**Why Plan-First (CLAUDE.md §1):** new Firestore collection (`trustScores/`) + new security rule + new scheduled CF + admin callable + dashboard card + tests + lifecycle doc ≈ 10 files; schema+rules change; multi-session; not single-revert. All three thresholds met.
+
+### Verified data sources (grep, 2026-06-06 — §7-H/T)
+- **Payment punctuality:** RTDB bills carry `paidAt` (epoch ms — `verifySlip.js:349`, `_verifySlipWrite.js:106`) + `dueDate` (persisted ISO, immutable — `dashboard-aging.js:16`) + `status` ∈ {paid,refunded,void,…} (`dashboard-aging.js:75`). On-time = `paidAt <= dueDate`. ⚠️ bills paid without a slip (cash / mark-paid / paid-from-deposit) may lack `paidAt` → excluded from the ratio (honest metric, count logged).
+- **Tenure:** `leases/{b}/list/{leaseId}.moveInDate` (ISO; fallback `startDate`) — `lease-config.js:82,238`. tenureMonths = now − moveInDate.
+- **Complaint-free:** complaints carry `createdAt` (`complaintAndGamification.js:99`). complaintFreeMonths = now − most-recent complaint (else tenure start).
+- **Roster + key:** `people/` SSoT + `tenants/{b}/list/{r}`; trust doc id = `tenantId`.
+- **NOT in v1:** `pointsLedger` engagement-consistency = data-gated v2 (~2026-08+). `points` balance NEVER feeds trust (§6: trust ≠ spendable points).
+
+### Architecture — scheduled CF writes, admin reads (mirrors redeemReward server-authority + actionAudit immutability)
+**Why a CF, not client-on-read (unlike 3.1):** trust MUST be tamper-proof/server-computed (§6 — the moat collapses if the client can influence it) and derives from RTDB bills + FS leases + RTDB complaints across ALL tenants (too heavy + sensitive for in-browser). Firestore triggers can't watch SE3 (§7-NN) → **daily scheduled CF** + an **admin on-demand callable**, both sharing one pure helper.
+- `trustScores/{tenantId}` — server-write-only: `{ reputation:0–100, factors:{ paymentScore, tenureScore, complaintScore, onTimeRatio, onTimeBills, lateBills, tenureMonths, complaintFreeMonths }, provisional:bool, computedAt }`. Rule `read: if isAdmin(); write: if false;`. v1 writes ONLY reputation+factors — no kindness/rank/verifiedHelper fields yet (3.2b/c add them; avoids §7-T drift).
+- **Formula** (each factor → 0–100, then weighted; all thresholds are named constants tunable at review):
+  - paymentScore = onTimeBills / (onTimeBills + lateBills) × 100; late = (paid & paidAt>dueDate) OR (unpaid & now>dueDate); exclude refunded/void/no-timestamp. 0 ratable bills → paymentScore=null + `provisional:true` + reweight survivors.
+  - tenureScore = min(tenureMonths / 24, 1) × 100.
+  - complaintScore = min(complaintFreeMonths / 12, 1) × 100.
+  - reputation = round(0.60·payment + 0.25·tenure + 0.15·complaint); provisional → renormalize weights over present factors.
+
+### Build steps (checkable; PR1 = server, PR2 = admin card — sequential, card needs the data to exist)
+
+**Phase 1 — compute core (pure, TDD first)** ✅
+- [x] `functions/_reputation.js` — pure `computeReputation({bills, moveInDate, complaints, now})` → `{reputation, factors, provisional}`. No I/O. Defensive `_ms` coerces epoch/ISO/Date/Firestore-Timestamp.
+- [x] `functions/__tests__/_reputation.test.js` (repo convention = tests in `__tests__/`, not colocated) — 24 table-driven cases (all-on-time→100 · all-late→0 · 2/3→66.7 · 0-bills→provisional+reweight · tenure 0/12/24/30 · complaint recent/none · 60/25/15 math · no-paidAt/refunded/void excluded · ISO/Date/Timestamp inputs). **24/24 GREEN.**
+
+**Phase 2 — server wiring (CF) [PR1]** ✅
+- [x] `functions/computeTrustScoresScheduled.js` — daily scheduled CF (SE1, **05:40 BKK `40 5 * * *`** — confirmed free, between cleanupPlayers 05:00 & lease 08:00). Shared `runTrustScoreSweep()`: per building reads bills(RTDB)/active-leases(FS `moveInDate`)/roster(FS, occupancy gate) + one bounded `complaints` read → `_reputation` → chunked batch-write `trustScores/*`. Idempotent. **Plan correction:** complaints are **Firestore** `complaints` (top-level, `createdAt` ISO, `building`+`room`), NOT RTDB.
+- [x] `functions/recomputeTrustScores.js` — admin `onCall` (SE1, §7-NN not a trigger): delegates to shared `runTrustScoreSweep` ("refresh now"). Gate `context.auth.token.admin === true`.
+- [x] Registered both in `functions/index.js` (TRUST SYSTEM section). CF tests: sweep (6 cases — occupancy gate, provisional, multi-building, doc shape) + callable (4 cases — auth gates + delegation). **10/10 GREEN.**
+
+**Phase 3 — rules + index [PR1]** ✅
+- [x] `firestore.rules` — `match /trustScores/{tenantId} { allow read: if isAdmin(); allow write: if false; }` (mirrors `pointsLedger`/`actionAudit`). 7 cases in `firestore.rules.test.js`. **Rules suite 288/288 GREEN (emulator).**
+- [x] `firestore.indexes.json` — **no change needed**: v1 iterates by known keys; card reads full `trustScores` (admin query) + sorts client-side. No composite `where+orderBy`. (Revisit if the card adds one.)
+
+**Phase 4 — admin dashboard card (read-only) [PR2]**
+- [ ] `shared/dashboard-reputation.js` — "คะแนนความน่าเชื่อถือ (Reputation)" card in the **ผู้เช่า tab**: tenant list sorted by reputation + score chip + factor breakdown + `provisional` badge. Reads `trustScores/*` (admin rule). `_ins.utils` pattern; `errorHTML` on failure (§7-N).
+- [ ] `dashboard.html` — mount + `<script src>` after `dashboard-insights.js` (§7-PP); CSS in `shared/components.css` NOT inline/injected (§7-RR); flat-card style matching the now-flattened ผู้เช่า tab; inline edit → regen CSP (§7-II).
+
+**Phase 5 — deploy + verify + docs (spans both PRs)**
+- [ ] Deploy server PR (OWNER-CONFIRMED — CF/rules auto-deploy via CI on merge per [lifecycle_deploy_functions_ci]; NOT single-revert). Verify branch/worktree + `firebase use`=prod first (MEMORY critical rule).
+- [ ] Trigger `recomputeTrustScores` once → inspect real `trustScores/*` vs hand-computed (§7-J live-data verify, not empty-collection).
+- [ ] Live-verify the admin card on Vercel (Chrome MCP prod admin) — real scores, sort + breakdown correct.
+- [ ] New `lifecycle_trust_reputation.md` (formula · sources · CF · rule · doc shape · Verification grep block) + MEMORY.md index + bump `lifecycle_scheduled_jobs` 12→13. `npm run verify:memory` green.
+
+### Guardrails (§6 + project)
+Trust ≠ points (never read `points`) · server-computed only · callable not trigger (§7-NN) · admin auth gate on callable · grep writer+reader for `trustScores`/`paidAt`/`moveInDate`/complaint before use (§7-T) · index READY before query (§7-J) · CSS in components.css (§7-RR) · CSP regen on inline edit (§7-II) · **CF + rules deploy = OWNER-CONFIRMED before merge** (CI auto-deploys on merge; rules+CF not single-revert — unlike the pure-frontend redesign PRs which I auto-merge). PDPA tenant-facing deferred (admin-only v1) — noted in lifecycle doc for when tenant-visible lands.
+
+### Open for owner — RESOLVED 2026-06-07
+- ✅ **Constants owner-reviewed + kept (don't re-ask):** tenure cap **24mo** · complaint-clean cap **12mo** · payment grace **0 days** (strict). Named in `_reputation.js` `REPUTATION_CONSTANTS`; re-tune only if the real score distribution warrants.
+- ✅ Scheduled slot 05:40 BKK — confirmed free (only 05:00 cleanupPlayers nearby).
+- Weights 60/25/15 — owner-locked earlier.
+
+### Review (append after execution)
+- **PR1 (server) — ✅ BUILT + all gates GREEN, ⏳ NOT merged/deployed (owner-gated).** 6 files: `_reputation.js` (pure core), `computeTrustScoresScheduled.js` + `recomputeTrustScores.js` (CFs), 3 test files; +`index.js` wiring, +`firestore.rules` match, +`firestore.rules.test.js` cases. Gates: `node --check` all clean · **functions suite 1955/0** · **rules suite 288/0 (emulator)** · verify:memory GREEN · no CSP/HTML touched. Architecture exactly as planned (server-computed, callable-not-trigger §7-NN, write-locked rule, trust≠points §6).
+  - **Plan deltas (grep-grounded at build):** (1) complaints live in **Firestore** `complaints` top-level (`complaintAndGamification.js:98`), not RTDB — sweep reads FS with a streak-cap-bounded `where createdAt >=` (single-field, no index). (2) tests go in `functions/__tests__/` per repo convention. (3) doc carries `tenantId/building/roomId` identity context (single writer → no §7-T drift) beyond the planned `reputation/factors/provisional/computedAt`.
+  - **⏳ Open (owner — the only gate left for PR1):** merge the PR → CI `deploy-functions.yml` auto-deploys the 2 CFs + you deploy `firestore:rules` (branch-checked prod). Merge == deploy (not single-revert) → needs your go-ahead. Then trigger `recomputeTrustScores` once + inspect real `trustScores/*` (§7-J live-data verify).
+- **PR2 (admin card, Phase 4) — not started.** Sequential: needs PR1 deployed + a recompute run so the card has real data to render + live-verify.
+- **Memory:** new `lifecycle_trust_reputation.md` + `lifecycle_scheduled_jobs` (+05:40 row) + MEMORY.md index — written same session (CLAUDE.md §8).
+
+---
+
+## ✅ COMPLETE (2026-06-06) — Roadmap Phase 3.1: Behavioral Intelligence (PRs #268 tenure · engagement · #278 peak-repair)
 
 **Scope:** roadmap Phase 3.1 "Behavioral Intelligence" — admin analytics that read the historical substrate Phase 0 created. **Re-scoped after evidence (3 Explore agents, file:line):** the roadmap's premise "skeleton not greenfield" UNDERSTATES it — **15 analytics signals already ship** (7 OLD `ins-*` in People→Insights via `dashboard-owner-insights.js`; 8 NEW `dash*` across 5 tabs via `dashboard-insights{,-community,-financial,-tenant,-operations}.js`). So v1 = build only what's **genuinely new AND green-data**, extend (not duplicate) what exists, defer what's blocked — with reasons.
 
