@@ -1432,6 +1432,28 @@ html2canvas(el, {
 ```
 Verified in a real-html2canvas harness: `onclone` strip ⇒ **0** injected `<style>` left in the iframe, and an all-inline-styled target (the receipt) renders identically (it never needed the page stylesheets). `exportDepositReceipt` **and `exportChecklistPng`** use this (#274). With both dashboard exports onclone-stripping, the fragile dashboard-coupled `o/aIZnrz` cloned-stylesheet hash had no remaining consumer and was **removed** from `STYLE_SRC_RUNTIME`; only the stable `UP0QZg` pseudoelement-reset hash stays — for the class-dependent tenant_app legacy exports (`saveInvoiceImage`/`downloadBillTemplate`, which pull `.receipt-card`/`.ta-preview-wrap` class CSS, so onclone-strip would break their render — leave them on the hash). The "real fix is a CSP-friendly library" note at `ensureHtml2Canvas` (dashboard.html) is superseded: `onclone` is the cheap real fix. Family: §7-RR/II (CSP kills styles silently — deployed-page-only), §feedback_empirical_check (read/compute, don't eyeball).
 
+### AAA. Unordered Firestore `limit()` returns the OLDEST docs — a row cap silently drops the NEWEST rows
+
+`getDocs(query(coll, where(...), limit(N)))` with **no `orderBy`** returns docs in Firestore's default `__name__` (document-ID) **ascending** order. When the collection has more matching docs than `N`, the cap keeps the LOWEST doc IDs and drops the rest — so if doc IDs sort chronologically-ascending, the **newest** rows are exactly what gets dropped.
+
+Incident 2026-06-07: the tenant usage/bills page (`shared/tenant-meter.js`) read `meter_data` via `where(building) + where(roomId) + limit(24)` with no `orderBy`. meter_data IDs are `rooms_{BE2yr}_{month}_{room}` → `rooms_67_*` (2024) < `rooms_68_*` (2025) < `rooms_69_*` (2026). Once a room had >24 monthly rows (>2 yr of history), `limit(24)` returned only 2024+2025 and dropped ALL of 2026 — so the just-uploaded latest month never reached the client synth (`synthesizeFromMeter`) and the newest bill silently vanished from the tenant view. **Recurring monthly**, worsening as rows accumulate. Verified live: the exact query returned 24 docs with `has_any_2026:false`; June meter (`rooms_69_6_15`) existed but was never fetched.
+
+**Rule:** any `limit()` on a growing collection MUST pair with an `orderBy` that puts the rows you want FIRST (usually `orderBy(<chrono field>, 'desc')`). If a desc `orderBy` would need a composite index you can't readily deploy (§7-N — verified `failed-precondition` here) and the query is already tightly scoped (one room by equality filters → naturally bounded, one doc/month), **drop the limit** and sort + filter in JS — never keep an unordered cap.
+
+```js
+// ❌ unordered cap → silently drops the newest rows once count > 24
+fs.query(coll, fs.where('building','==',b), fs.where('roomId','==',r), fs.limit(24))
+// ✅ one-room scope is bounded → fetch all, sort + boundary-filter in JS (no index)
+fs.query(coll, fs.where('building','==',b), fs.where('roomId','==',r))
+// ✅ or for an unbounded scan: orderBy(<newest> desc) + limit + composite index (§7-N)
+```
+
+**Detection — every growing-collection read with a bare `limit()`:**
+```bash
+grep -rnE "\.limit\([0-9]+\)" shared/*.js | grep -iv orderBy   # bare caps, audit each
+```
+Known siblings (admin-side, all-rooms `meter_data` scans — NOT fixed with the tenant bug, need orderBy+index or redesign since removing the cap = unbounded all-rooms scan): `dashboard-home-live.js:121 limit(120)` (~690 docs → under-fetches recent), `dashboard-extra.js:723 limit(500)`, `dashboard-behavioral-energy.js:122` + `dashboard-insights-operations.js:222 limit(5000)` (safe for now; warns at cap). Family: §7-N (composite index for ordered queries), §7-D/E (BillStore room/year traps), §7-K (defined ≠ wired — here "fetched ≠ all fetched").
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
