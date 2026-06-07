@@ -1894,32 +1894,12 @@
          * the only hardcoded values are the owner-action pastel chips (kept
          * deliberately per #295 — clear, distinct affordances). */
 
-        /* Post CTA — "create new" dashed affordance, calm not loud.
-         * rgba teal (not color-mix) so the dashed border still renders in
-         * older LINE LIFF WebViews that lack color-mix() support. */
-        .mk-post-btn {
-            width: 100%;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            padding: 13px 16px;
-            border-radius: var(--radius-md);
-            border: 1.5px dashed rgba(15, 118, 110, 0.40);
-            background: var(--soft-green);
-            color: var(--brand-primary-text);
-            font-family: inherit; font-weight: 700; font-size: var(--fs-md);
-            cursor: pointer; touch-action: manipulation;
-            transition: transform var(--dur-instant) var(--ease-quiet),
-                        filter var(--dur-quick) var(--ease-quiet);
-        }
-        .mk-post-btn:hover { filter: brightness(0.97); }
-        .mk-post-btn:active { transform: scale(0.985); }
-        .mk-post-btn i { font-size: 0.85em; }
-
         /* Category filter — icon-tile grid (replaced the dropdown 2026-06-07:
          * the dropdown hid the categories behind a tap. 4-col / 2-row grid,
          * single-select, all categories visible at a glance, no scroll). */
         .mk-cat-grid {
             display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-            padding: 0 16px 14px;
+            padding: 14px 16px;
         }
         .mk-cat-tile {
             display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -3546,14 +3526,9 @@
         </div>
 
         <div id="marketplace-section">
-        <!-- Post CTA is the primary action; it replaces the old "Marketplace 🛒"
-             section heading, which duplicated the app-bar title "ชุมชน 🛒". -->
-        <div style="padding:8px 16px 12px;">
-            <button type="button" id="market-post-trigger" class="mk-post-btn"
-                data-action="showSubPage" data-page="add-market-page">
-                <i class="fas fa-plus"></i> ลงประกาศ — ขาย · แจก · ขอ
-            </button>
-        </div>
+        <!-- "ลงประกาศ" CTA removed from the feed 2026-06-07 (redundant — it lives
+             on the "ประกาศของฉัน" nav tab, and in the empty-state CTA below when
+             the feed has no posts yet). -->
 
         <!-- Category filter — icon-tile grid (was a horizontal-scroll pill row,
              then briefly a dropdown). Single-select; tap → filterMarket(value, el)
