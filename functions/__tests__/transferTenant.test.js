@@ -503,6 +503,9 @@ describe('transferTenant — S3 (variation mode batch)', () => {
     // Lease pointer same as old
     assert.equal(data.activeContractId, seed.oldLeaseId);
     assert.equal(data.lease.leaseId, seed.oldLeaseId);
+    // §7-BBB: .lease.moveInDate must be carried (not left undefined) so the tenant_app
+    // meter/bill boundary keys off a real occupancy date, never a stale/future contractStart.
+    assert.equal(data.lease.moveInDate, '2026-02-21T00:00:00.000Z');
     // Location updated to new room
     assert.equal(data.building, 'rooms');
     assert.equal(data.roomId, '17');

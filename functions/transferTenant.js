@@ -598,6 +598,14 @@ async function _runVariationMode(input, callerUid, callerEmail, firestore) {
     lease: {
       leaseId,
       status: 'active',
+      // §7-BBB: the tenant_app meter/bill boundary (BillStore.tenantBoundaryYM) reads
+      // .lease.moveInDate FIRST and only falls back to .startDate. Carry a genuine
+      // occupancy date here — prefer the old lease's moveInDate, else the transfer
+      // effective date — so the boundary never falls through to a stale/future
+      // contractStart. Without this, a future contractStart (e.g. 2027-01-21) became the
+      // startDate, the boundary landed in the future, every current meter row was hidden,
+      // and the synthesized current-month bill never rendered. (Incident 2026-06-07: ห้อง15→13.)
+      moveInDate: String(oldLeaseData.moveInDate || effectiveIso || ''),
       startDate: String(oldLeaseData.contractStart || oldLeaseData.moveInDate || ''),
       endDate: oldEndDate.toISOString(),
       contractPath: carriedDocPath,
