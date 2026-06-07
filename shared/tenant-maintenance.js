@@ -428,4 +428,11 @@
     window.setSeverity                  = setSeverity;
     window.submitComplaint              = submitComplaint;
     window.loadComplaints               = loadComplaints;
+    // Shared image util — also used by shared/tenant-marketplace.js via
+    // window.compressImage(File, maxW, maxH, q). It was a tenant_app.html inline
+    // global before the god-file refactor moved it into this IIFE, which dropped
+    // it from window (§7-QQ) and silently broke marketplace image upload
+    // (window.compressImage was undefined → threw → swallowed by try/catch).
+    // Keep this export; do not make compressImage IIFE-private again.
+    window.compressImage                = compressImage;
 })();

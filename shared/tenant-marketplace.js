@@ -284,7 +284,7 @@
                 <p class="gh-empty-state__title">ยังไม่มีประกาศของคุณ</p>
                 <p class="gh-empty-state__text">กด "ลงประกาศ" เพื่อขาย แจก หรือขอของจากเพื่อนบ้านในตึก</p>
                 <div class="gh-empty-state__action">
-                    <button type="button" class="gh-btn gh-btn--primary gh-btn--small" data-action="showSubPage" data-page="add-market-page">✨ ลงประกาศแรกของฉัน</button>
+                    <button type="button" class="gh-btn gh-btn--primary gh-btn--small" data-action="openNewMarketItem">✨ ลงประกาศแรกของฉัน</button>
                 </div>`;
             cont.appendChild(empty);
             return;
@@ -728,6 +728,35 @@
         }
     }
 
+    // Open the add-market form as a BLANK new post. The "+ ลงประกาศ" entry points
+    // (the ประกาศของฉัน tab button + empty-state CTAs) route here so a lingering
+    // edit state — _marketEditingId, "แก้ไขประกาศ" labels, and pre-filled fields
+    // left over from a CANCELLED edit (goBackToMarketplace doesn't reset) — never
+    // leaks into a new post. Without this, tapping "ลงประกาศ" after editing once
+    // re-opened the form in edit mode. editMarketItem() is the ONLY path that
+    // intentionally enters edit mode.
+    function openNewMarketItem() {
+        _marketEditingId = null;
+        _marketImageData = null;
+        ['market-title', 'market-price', 'market-desc'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
+        });
+        document.querySelectorAll('input[name="mcat"]').forEach(r => { r.checked = r.value === 'item'; });
+        ['market-skyhook', 'market-pet'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.checked = false;
+        });
+        const showRoomEl = document.getElementById('market-show-room');
+        if (showRoomEl) showRoomEl.checked = true;
+        _onMarketCatChange();
+        const prev = document.getElementById('market-image-preview');
+        const ph   = document.getElementById('market-image-placeholder');
+        if (prev) { prev.style.display = 'none'; prev.src = ''; }
+        if (ph) ph.style.display = '';
+        _resetMarketFormToCreateMode();   // labels + placeholder content + edit id
+        if (typeof window.showSubPage === 'function') window.showSubPage('add-market-page');
+        else if (typeof window.showPage === 'function') window.showPage('add-market-page');
+    }
+
     async function deleteMarketItem(id) {
         const _delOk = await window.GhModal.confirm({
             title: 'ลบประกาศ',
@@ -923,6 +952,7 @@
     window.markMarketClosed             = markMarketClosed;
     window.editMarketItem               = editMarketItem;
     window._resetMarketFormToCreateMode = _resetMarketFormToCreateMode;
+    window.openNewMarketItem            = openNewMarketItem;
     window.deleteMarketItem             = deleteMarketItem;
     window._initMarketImageUpload       = _initMarketImageUpload;
     window._onMarketCatChange           = _onMarketCatChange;
