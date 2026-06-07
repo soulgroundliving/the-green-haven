@@ -30,6 +30,7 @@ let lastTxWrites = null;         // captures the last receipt-tx writes [{coll,i
 let logAddCalled = false;
 let authSoTThrow = null;     // null = authorized; Error = throw (permission-denied etc.)
 let getValidBuildingsThrow = false;  // true = getValidBuildings throws (unexpected error path)
+let capturedFetchOpts = null;        // last opts passed to global fetch (§7-YY body-shape assertion)
 
 // Configurable behaviour for non-blocking side effects
 let markBillPaidShouldThrow = false;
@@ -37,6 +38,7 @@ let recordPaymentShouldThrow = false;
 
 function resetStubs() {
   slipOkResponse = null;
+  capturedFetchOpts = null;
   runTransactionResult = true;
   verifiedSlipExists = false;
   counterDocSeq = null;
@@ -162,16 +164,18 @@ const adminStub = {
   storage: () => ({ bucket: () => ({ file: () => ({ save: async () => {} }) }) }),
 };
 
-// ── fetch stub ────────────────────────────────────────────────────────────────
+// ── fetch stub (captures opts for the §7-YY body-shape regression) ────────────
 
 const fetchStub = async (_url, _opts) => {
+  capturedFetchOpts = _opts;
   if (slipOkResponse !== null) return slipOkResponse;
   return makeSlipOkOk();
 };
 
-// ── FormData stub ─────────────────────────────────────────────────────────────
-
-const FormDataStub = class { append() {} };
+// ── NO form-data stub (§7-YY) ─────────────────────────────────────────────────
+// callSlipOKAPI builds the body with the GLOBAL FormData + Blob. We intentionally
+// do NOT intercept require('form-data') below — if a future edit re-adds it, the
+// body stops being a global FormData and the §7-YY regression test fails.
 
 // ── firebase-functions/v1 stub ────────────────────────────────────────────────
 
@@ -231,7 +235,6 @@ Module._load = function (request, parent, isMain) {
   if (request === 'firebase-admin') return adminStub;
   if (request === 'firebase-functions/v1') return functionsStub;
   if (request === 'firebase-functions/params') return paramStub;
-  if (request === 'form-data') return FormDataStub;
   if (request === './_authSoT') return authSoTStub;
   if (request === './_billFlex') return billFlexStub;
   if (request === './buildingRegistry') return {
@@ -407,6 +410,22 @@ describe('verifySlip — callable handler', () => {
       const result = await handler(validData, makeCtx());
       assert.equal(result.retryable, true);
       assert.equal(result.code, 'scb_delay');
+    });
+
+    // §7-YY regression: the SlipOK request body MUST be a spec-compliant GLOBAL
+    // FormData carrying the slip as a Blob. The `form-data` npm package serializes
+    // to "[object FormData]" under Node 22 undici fetch → SlipOK 400 "missing
+    // data/files/url". This locks the global-FormData + Blob construction and the
+    // absence of a hand-set Content-Type (undici must derive the boundary).
+    it('sends the slip as a global FormData with a Blob files entry, no Content-Type (§7-YY)', async () => {
+      await handler(validData, makeCtx());
+      const body = capturedFetchOpts && capturedFetchOpts.body;
+      assert.ok(body instanceof FormData, 'fetch body must be a global FormData (not the form-data pkg / a string)');
+      const filePart = body.get('files');
+      assert.ok(filePart instanceof Blob, 'the "files" entry must be a Blob (real bytes, not "[object FormData]")');
+      assert.ok(filePart.size > 100, 'the Blob must carry the actual slip bytes');
+      const headerKeys = Object.keys((capturedFetchOpts && capturedFetchOpts.headers) || {}).map((k) => k.toLowerCase());
+      assert.ok(!headerKeys.includes('content-type'), 'must NOT hand-set Content-Type (undici derives the boundary)');
     });
   });
 
