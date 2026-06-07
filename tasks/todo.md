@@ -58,9 +58,10 @@
 ### Guardrails (§6 + project)
 Trust ≠ points (never read `points`) · server-computed only · callable not trigger (§7-NN) · admin auth gate on callable · grep writer+reader for `trustScores`/`paidAt`/`moveInDate`/complaint before use (§7-T) · index READY before query (§7-J) · CSS in components.css (§7-RR) · CSP regen on inline edit (§7-II) · **CF + rules deploy = OWNER-CONFIRMED before merge** (CI auto-deploys on merge; rules+CF not single-revert — unlike the pure-frontend redesign PRs which I auto-merge). PDPA tenant-facing deferred (admin-only v1) — noted in lifecycle doc for when tenant-visible lands.
 
-### Open for owner (non-blocking — defaults chosen, adjust at review)
-- Tenure max 24mo · complaint-clean max 12mo · payment grace 0 days — tune after seeing real distribution (all named constants in `_reputation.js` `REPUTATION_CONSTANTS`).
-- Scheduled slot 05:40 BKK — ✅ confirmed free (only 05:00 cleanupPlayers nearby).
+### Open for owner — RESOLVED 2026-06-07
+- ✅ **Constants owner-reviewed + kept (don't re-ask):** tenure cap **24mo** · complaint-clean cap **12mo** · payment grace **0 days** (strict). Named in `_reputation.js` `REPUTATION_CONSTANTS`; re-tune only if the real score distribution warrants.
+- ✅ Scheduled slot 05:40 BKK — confirmed free (only 05:00 cleanupPlayers nearby).
+- Weights 60/25/15 — owner-locked earlier.
 
 ### Review (append after execution)
 - **PR1 (server) — ✅ BUILT + all gates GREEN, ⏳ NOT merged/deployed (owner-gated).** 6 files: `_reputation.js` (pure core), `computeTrustScoresScheduled.js` + `recomputeTrustScores.js` (CFs), 3 test files; +`index.js` wiring, +`firestore.rules` match, +`firestore.rules.test.js` cases. Gates: `node --check` all clean · **functions suite 1955/0** · **rules suite 288/0 (emulator)** · verify:memory GREEN · no CSP/HTML touched. Architecture exactly as planned (server-computed, callable-not-trigger §7-NN, write-locked rule, trust≠points §6).
