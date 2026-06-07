@@ -262,3 +262,55 @@ describe('computePaymentTier — Nest gamification point tiers', () => {
     assert.equal(t.status, 'late');
   });
 });
+
+// ── Tests: synth-materialize gating (Option B, 2026-06-08) ────────────────────
+// Mirrors the materialize decision + deterministic id added to markBillPaidInRTDB
+// so a tenant paying the CURRENT (synthesized, no-RTDB-doc) month flips to paid.
+// Guards: current BKK month only · synthetic-flagged only · never when a real bill
+// already matched · never overwrite an existing paid doc · deterministic id.
+
+function shouldMaterializeSynthBill({ matched, synthetic, billYM, curYM, existingStatus }) {
+  if (matched > 0) return false;            // a real bill already matched the month
+  if (synthetic !== true) return false;     // only the client-flagged synth path
+  if (billYM !== curYM) return false;       // current BKK month only (no back/forward-dating)
+  if (existingStatus === 'paid') return false; // never overwrite a paid doc
+  return true;
+}
+function synthMaterializedBillId(billYearBE, billMonth, room) {
+  return `TGH-${billYearBE}${String(billMonth).padStart(2, '0')}-${room}`;
+}
+
+describe('shouldMaterializeSynthBill — Option B synth-materialize gating', () => {
+  const cur = 256906;  // มิ.ย. 2569 = current BE year*100+month
+
+  it('synth + current month + no existing bill → materialize', () => {
+    assert.equal(shouldMaterializeSynthBill({ matched: 0, synthetic: true, billYM: cur, curYM: cur }), true);
+  });
+  it('past month → never materialize (no back-dating)', () => {
+    assert.equal(shouldMaterializeSynthBill({ matched: 0, synthetic: true, billYM: 256905, curYM: cur }), false);
+  });
+  it('future month → never materialize', () => {
+    assert.equal(shouldMaterializeSynthBill({ matched: 0, synthetic: true, billYM: 256907, curYM: cur }), false);
+  });
+  it('not flagged synthetic → never materialize (real bills use the normal match path)', () => {
+    assert.equal(shouldMaterializeSynthBill({ matched: 0, synthetic: false, billYM: cur, curYM: cur }), false);
+  });
+  it('an existing bill already matched → no duplicate materialize', () => {
+    assert.equal(shouldMaterializeSynthBill({ matched: 1, synthetic: true, billYM: cur, curYM: cur }), false);
+  });
+  it('existing paid doc → never overwrite', () => {
+    assert.equal(shouldMaterializeSynthBill({ matched: 0, synthetic: true, billYM: cur, curYM: cur, existingStatus: 'paid' }), false);
+  });
+});
+
+describe('synthMaterializedBillId — deterministic id (re-pay merges, never dups)', () => {
+  it('builds TGH-{BE4}{MM}-{room}', () => {
+    assert.equal(synthMaterializedBillId(2569, 6, '13'), 'TGH-256906-13');
+  });
+  it('zero-pads single-digit month', () => {
+    assert.equal(synthMaterializedBillId(2569, 4, '13'), 'TGH-256904-13');
+  });
+  it('is stable across calls for the same month+room (idempotent)', () => {
+    assert.equal(synthMaterializedBillId(2570, 12, '7'), synthMaterializedBillId(2570, 12, '7'));
+  });
+});

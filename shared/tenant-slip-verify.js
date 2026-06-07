@@ -93,8 +93,19 @@
             // from the old admin-only requireAdmin gate). §7-R: bound the LIFF wire
             // call with Promise.race (httpsCallable's built-in timeout is 70s).
             const callVerify = window.firebase.functions.httpsCallable('verifySlip');
+            const _bill = window._taCurrentBill || {};
             const callRes = await Promise.race([
-                callVerify({ file: window._slipBase64, expectedAmount: total, building: _taBuilding, room: _taRoom }),
+                callVerify({
+                    file: window._slipBase64, expectedAmount: total, building: _taBuilding, room: _taRoom,
+                    // Option B: when this month's bill is synthesized (no RTDB doc yet — the
+                    // bill-creation CF is frozen), hand the breakdown to verifySlip so it can
+                    // materialize the REAL paid bill. Slip amount stays the enforced check.
+                    synthetic: _bill.synthetic === true,
+                    billMonth: _bill.month, billYear: _bill.year,
+                    totalAmount: total,
+                    charges: _bill.charges || null,
+                    meterReadings: _bill.meterReadings || null,
+                }),
                 new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 35000))
             ]);
             const result = callRes.data;

@@ -77,7 +77,7 @@ async function saveVerifiedSlip(slipData, params) {
  * Also writes a payments/{b}/{r}/{pushId} audit record for reconciliation.
  * Non-blocking — caller should wrap in try/catch.
  */
-async function markBillPaidInRTDB(slipData, params) {
+async function markBillPaidInRTDB(slipData, params, receiptNo = null) {
   try {
     const rtdb = admin.database();
     const buildingRaw = params.building === 'nest' ? 'nest' : 'rooms';
@@ -96,6 +96,7 @@ async function markBillPaidInRTDB(slipData, params) {
     const bills = snap.val() || {};
     const updates = {};
     let matched = 0;
+    let paidBillId = null;
     Object.keys(bills).forEach(billId => {
       const b = bills[billId];
       if (!b || b.status === 'paid') return;
@@ -106,12 +107,83 @@ async function markBillPaidInRTDB(slipData, params) {
         updates[`${billId}/paidAt`] = Date.now();
         updates[`${billId}/paidVia`] = 'tenant_app_slipok';
         updates[`${billId}/paidRef`] = slipData.transactionId || '';
+        if (!paidBillId) paidBillId = billId;
         matched++;
       }
     });
     if (matched > 0) {
       await ref.update(updates);
       console.info(`💸 RTDB bill(s) marked paid: ${buildingRaw}/${room} × ${matched} (${billMonth}/${billYearBE})`);
+    }
+
+    // ===== MATERIALIZE A SYNTHESIZED CURRENT-MONTH BILL (Option B, 2026-06-08) =====
+    // The current month's bill is SYNTHESIZED client-side from meter_data
+    // (invoice `SYNTH-…`) and has NO RTDB doc — generateBillsOnMeterUpdate (the
+    // CF that used to create bills on meter write) is frozen + SE3-Eventarc-dead.
+    // So a valid slip for the current month matches no existing bill
+    // (matched===0) and would silently leave it "รอชำระ". When the client flags
+    // the bill as synthetic, create the REAL RTDB bill marked paid so tenant +
+    // admin views agree (RTDB = SoT). Guards: ONLY the current BKK month (no
+    // back-dating), never overwrite an existing paid bill, deterministic id so a
+    // re-pay merges instead of duplicating. Field shape mirrors a real bill
+    // (year as "BE4" string, totalCharge) per §7-E.
+    if (matched === 0 && params.synthetic === true) {
+      try {
+        const nowBkk = new Date(Date.now() + BKK_OFFSET_MS);
+        const curYM = (nowBkk.getUTCFullYear() + 543) * 100 + (nowBkk.getUTCMonth() + 1);
+        const billYM = billYearBE * 100 + billMonth;
+        if (billYM === curYM) {
+          const mm = String(billMonth).padStart(2, '0');
+          const newBillId = `TGH-${billYearBE}${mm}-${room}`;   // deterministic (matches generateBills format)
+          const billRef = ref.child(newBillId);
+          const existing = (await billRef.once('value')).val();
+          const total = Number(params.totalAmount ?? params.expectedAmount ?? slipData.amount) || 0;
+          if (!existing) {
+            const nowIso2 = new Date().toISOString();
+            await billRef.set({
+              billId: newBillId,
+              building: buildingRaw,
+              room,
+              month: billMonth,
+              year: String(billYearBE),          // "2569" string — §7-E RTDB-bill format
+              status: 'paid',
+              totalCharge: total,
+              totalAmount: total,
+              charges: params.charges || null,
+              meterReadings: params.meterReadings || null,
+              paidVia: 'tenant_app_slipok',
+              paidAt: Date.now(),
+              paidRef: slipData.transactionId || '',
+              slipVerified: true,
+              receiptNo: receiptNo || null,
+              billDate: nowIso2,
+              createdAt: nowIso2,
+              materializedFromSynth: true,
+              source: 'cf:verifySlip',
+              note: 'ออกบิล+ชำระอัตโนมัติจากสลิป (materialized from synthesized meter bill)',
+            });
+            paidBillId = newBillId;
+            matched = 1;
+            console.info(`🧾 Materialized synth bill as paid: ${buildingRaw}/${room}/${newBillId} ฿${total}`);
+          } else if (existing.status !== 'paid') {
+            // Doc appeared between synth render and pay (admin issued / race) but unpaid → mark paid.
+            await billRef.update({
+              status: 'paid',
+              paidAt: Date.now(),
+              paidVia: 'tenant_app_slipok',
+              paidRef: slipData.transactionId || '',
+              receiptNo: receiptNo || existing.receiptNo || null,
+            });
+            paidBillId = newBillId;
+            matched = 1;
+            console.info(`💸 Existing current-month bill marked paid: ${buildingRaw}/${room}/${newBillId}`);
+          } else {
+            paidBillId = newBillId;  // already paid (double-submit) — leave as-is
+          }
+        }
+      } catch (matErr) {
+        console.error('⚠️ markBillPaidInRTDB: synth materialize failed:', matErr?.message);
+      }
     }
 
     // Mirror payment record into payments/{b}/{r}/{pushId} for admin
@@ -128,12 +200,9 @@ async function markBillPaidInRTDB(slipData, params) {
     // downstream readers (TenantFirebaseSync.loadPaymentHistory, dashboard
     // reconciliation) see consistent records pre- and post-migration.
     try {
-      const firstMatchedBillId = matched > 0
-        ? Object.keys(updates).find(k => k.endsWith('/status'))?.split('/')[0] || null
-        : null;
       const nowIso = new Date().toISOString();
       await rtdb.ref(`payments/${buildingRaw}/${room}`).push({
-        billId: firstMatchedBillId,
+        billId: paidBillId,
         month: billMonth,
         year: billYearBE,
         amount: Number(slipData.amount) || 0,

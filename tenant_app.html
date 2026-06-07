@@ -5995,12 +5995,13 @@
                 if (typeof toast === 'function') toast('บิลนี้ชำระเรียบร้อยแล้ว — ไม่ต้องจ่ายซ้ำ', 'info');
                 return;
             }
-            // Guard against paying synthetic bills (auto-calculated from meter, not yet issued by admin)
-            // Paying these creates orphan RTDB stubs that show as "฿0 จ่ายแล้ว" duplicates.
-            if (_taCurrentBill.synthetic) {
-                if (typeof toast === 'function') toast('บิลนี้ยังเป็นการคำนวณล่วงหน้า รอแอดมินออกบิลอย่างเป็นทางการก่อน', 'warning');
-                return;
-            }
+            // Synthetic (current-month, meter-derived) bills used to be blocked here.
+            // As of 2026-06-08 (Option B) verifySlip MATERIALIZES the real paid bill
+            // server-side when handed the `synthetic` flag (tenant-slip-verify.js →
+            // _verifySlipWrite.js). So let the optimistic local update proceed; the RTDB
+            // subscription then delivers the canonical paid bill and synth dedup removes
+            // this twin. No client RTDB writes happen here (localStorage + in-memory
+            // only), so there's no orphan-stub risk the old guard feared.
             const billId = _taCurrentBill.id||_taCurrentBill.billId||`${_taCurrentBill.year}-${String(_taCurrentBill.month).padStart(2,'0')}`;
             const record = {
                 billId,

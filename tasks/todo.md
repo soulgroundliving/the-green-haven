@@ -4,6 +4,42 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-08) — Tenant can pay the CURRENT (synth) month via SlipOK & have it marked paid · ⏳ AWAITING APPROVAL (Plan-First)
+
+> Surfaced while fixing the SlipOK slip-verification bug chain (form-data → CI-deploy-regex → API key/branch → data:URL prefix — all SHIPPED & live-verified, admin+tenant ✅). Paying the **current month** still shows "รอชำระ" → separate billing-lifecycle gap below.
+
+### Problem (verified via code + RTDB read + 2 Explore agents)
+- Current-month bill is **synthesized client-side** (`SYNTH-rooms-13-202606`) by `synthesizeFromMeter` ([shared/billing-system.js:1045](shared/billing-system.js:1045)); never a real RTDB doc under `bills/{b}/{r}`.
+- `generateBillsOnMeterUpdate` (used to create RTDB bills on meter write) is **FROZEN + SE3-region-dead** (never fires) → nothing auto-creates RTDB bills. `notifyTenantOnMeterUpload` issues the invoice number but does **not** create the bill.
+- `verifySlip`→`_verifySlipWrite.js:92-114` flips only **existing** RTDB bills to paid; synth month = no doc = nothing marked, no `payments/` push.
+- `synthesizeFromMeter` sets current month `status:'pending'` ([billing-system.js:1080](shared/billing-system.js:1080)) and never checks a payment record → re-renders "รอชำระ" every load. Explicit client guard refuses synth payment at [tenant_app.html:6000](tenant_app.html:6000).
+- Confirmed live: RTDB `bills/rooms/13` = only TGH-256904(เม.ย.,paid)+TGH-256905(พ.ค.,paid); no มิ.ย.
+
+### Open product question (confirm before build)
+**Should a tenant pay the current month directly the moment the meter is in (synth), with NO separate admin "ออกบิล" step?** User's testing implies **YES** (this plan assumes YES). If instead "admin must issue the official bill first", the fix is different — say so & I re-plan.
+
+### Options
+- **A read-side only** (synth checks payments/ → show paid): ❌ leaves `bills/` without the doc → ADMIN view still unpaid → tenant/admin disagree.
+- **B materialize-on-payment in `verifySlip` — RECOMMENDED:** valid slip + no existing bill → **create the real RTDB bill `status:'paid'`** from the synth breakdown the client already holds. ✅ fixes tenant+admin (RTDB=SoT), contained to the actual payment (one bill, slip-amount-validated), reuses receipt/`payments/` writes.
+- **C materialize-on-meter-upload** (`notifyTenantOnMeterUpload` creates the bill, restore frozen-CF via §7-NN callable): root-cause fix for ALL months but biggest blast radius (every room/upload, idempotency+§7-BBB-boundary+admin-semantics) → queue as **follow-up** after B.
+
+### Recommended: Option B — checklist
+- [ ] **Client** [tenant-slip-verify.js:97](shared/tenant-slip-verify.js:97): also send `billMonth`, `billYear`, `charges`, `totalAmount`, `synthetic:true` to `verifySlip` (slip `amount` stays the enforced check; breakdown is for receipt/record only).
+- [ ] **CF** `functions/_verifySlipWrite.js`: when no existing unpaid bill matches the slip month AND request carries a synthetic **current-month** bill → create `bills/{b}/{r}/{billId}` with **deterministic** id `TGH-{BE-yymm}-{room}` (match April/May, NOT `SYNTH-`), `status:'paid'`,`paidAt`,`paidVia:'tenant_app_slipok'`,`paidRef`,`charges`,`meterReadings`,`totalAmount`; then existing `payments/` push + RCP receipt fire.
+- [ ] **Idempotency/safety:** deterministic id → re-pay merges never dups; pre-check not already `paid`; never overwrite a paid bill; only `billYM === currentYM` (no back-dating).
+- [ ] **Client guard** [tenant_app.html:6000](tenant_app.html:6000): let the synth current-month path proceed; RTDB subscription delivers canonical paid bill (synth dedup removes twin).
+- [ ] **Tests** `functions/__tests__/verifySlip.test.js`: synth+valid slip → creates paid bill (deterministic id); existing paid → not overwritten/dup'd; past synth → NOT materialized.
+- [ ] **Docs:** update `billing_monthly_flow.md`; new §7 anti-pattern (existing-bill-only writer can't mark synth paid).
+
+### Risk / verify
+- Production write gated by valid SlipOK verify + slip-amount match, tenant-initiated (no auto-click §7-I). Deterministic id + paid-check guard dup/overwrite.
+- Verify live (Vercel): tenant pays current month → "ตรวจสอบสำเร็จ" → usage/payment shows paid; reload still paid; RTDB `bills/rooms/13/TGH-256906-13` exists `status:paid`; admin dashboard shows มิ.ย. paid.
+
+### Why
+Current-month bill is synth-only because RTDB-bill creation is frozen; `verifySlip` marks only existing bills. Option B makes the bill **real & paid at the slip-validated payment moment** → tenant+admin agree, smallest safe blast radius. C (meter-upload materialize) is the deeper follow-up.
+
+---
+
 ## ▶▶▶ ACTIVE PLAN (2026-06-07) — Roadmap Phase 3.2a v1.x: **Tenant-visible Reputation** (tier badge + consent gate, quest-page) · ⏳ AWAITING APPROVAL (Plan-First)
 
 **Scope:** expose the admin-only 3.2a Reputation (the server-computed `trustScores/{tenantId}`, shipped #286/#287) to the **active tenant** in `tenant_app.html` as a **positive-framed TIER BADGE** (no raw number, no factor breakdown), gated behind an **explicit PDPA consent**, on the **quest-page** (gamification profile). First tenant-facing Trust surface → activates the blueprint's Emotional-Lock-in moat (Core Metric 3). Builds on the existing sweep CF + write-locked doc — does NOT recompute anything client-side (§6 tamper-proof preserved).
