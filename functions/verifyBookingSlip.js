@@ -30,7 +30,10 @@
 const functions = require('firebase-functions/v1');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
-const FormData = require('form-data');
+// §7-YY: do NOT require('form-data') — the Node 22 undici global fetch can't
+// serialize that package's instance (it stringifies to "[object FormData]" →
+// sent as text/plain ~17 bytes → SlipOK 400). callSlipOKAPI builds the body
+// with the global FormData + Blob instead, which undici emits as real multipart.
 
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
@@ -99,13 +102,17 @@ async function callSlipOKAPI(fileBuffer) {
   if (fileBuffer[0] === 0x89 && fileBuffer[1] === 0x50) { mimeType = 'image/png'; ext = 'png'; }
   else if (fileBuffer[0] === 0x47 && fileBuffer[1] === 0x49) { mimeType = 'image/gif'; ext = 'gif'; }
   else if (fileBuffer[0] === 0x52 && fileBuffer[1] === 0x49) { mimeType = 'image/webp'; ext = 'webp'; }
-  form.append('files', fileBuffer, { filename: `slip.${ext}`, contentType: mimeType });
+  // §7-YY: global FormData + Blob (NOT the form-data pkg) so undici sends real
+  // multipart. Do NOT set Content-Type — undici derives the boundary.
+  form.append('files', new Blob([fileBuffer], { type: mimeType }), `slip.${ext}`);
 
   const response = await fetch(SLIPOK_API_URL.value(), {
     method: 'POST',
     headers: { 'x-authorization': SLIPOK_API_KEY.value() },
     body: form,
-    timeout: 30_000,
+    // §7-YY: undici ignores the node-fetch `timeout` option (silent no-op);
+    // AbortSignal.timeout actually aborts a hung request after 30s.
+    signal: AbortSignal.timeout(30_000),
   });
   const text = await response.text();
   if (!response.ok) {

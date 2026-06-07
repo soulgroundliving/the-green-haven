@@ -21,6 +21,7 @@ let storageUploadShouldThrow;
 let bookingUpdateArgs;
 let verifiedSlipCreateArgs;
 let slipOkFetchCalled;
+let capturedFetchOpts = null;        // last opts passed to global fetch (§7-YY body-shape assertion)
 
 function resetStubs() {
   slipOkApiResponse = {
@@ -45,6 +46,7 @@ function resetStubs() {
   bookingUpdateArgs = null;
   verifiedSlipCreateArgs = null;
   slipOkFetchCalled = false;
+  capturedFetchOpts = null;
 }
 resetStubs();
 
@@ -118,12 +120,14 @@ const adminStub = {
 
 const fetchStub = async (url, opts) => {
   slipOkFetchCalled = true;
+  capturedFetchOpts = opts;
   return slipOkApiResponse;
 };
 
-const FormDataStub = class {
-  append() {}
-};
+// ── NO form-data stub (§7-YY) ─────────────────────────────────────────────────
+// callSlipOKAPI builds the body with the GLOBAL FormData + Blob. We intentionally
+// do NOT intercept require('form-data') below — if a future edit re-adds it, the
+// body stops being a global FormData and the §7-YY regression test fails.
 
 const HttpsError = class extends Error {
   constructor(code, msg) { super(msg); this.code = code; }
@@ -150,7 +154,6 @@ Module._load = function (req, parent, isMain) {
   if (req === 'firebase-admin') return adminStub;
   if (req === 'firebase-functions/v1') return functionsStub;
   if (req === 'firebase-functions/params') return paramStub;
-  if (req === 'form-data') return FormDataStub;
   return _origLoad.call(this, req, parent, isMain);
 };
 
@@ -434,6 +437,23 @@ describe('verifyBookingSlip — SlipOK API call', () => {
     assert.equal(result.retryable, true);
     assert.equal(result.code, 'scb_delay');
     assert.ok(result.retryAfterSec > 0);
+  });
+
+  // §7-YY regression: the SlipOK request body MUST be a spec-compliant GLOBAL
+  // FormData carrying the slip as a Blob. The `form-data` npm package serializes
+  // to "[object FormData]" under Node 22 undici fetch → SlipOK 400 "missing
+  // data/files/url". This locks the global-FormData + Blob construction and the
+  // absence of a hand-set Content-Type (undici must derive the boundary).
+  it('25. sends the slip as a global FormData with a Blob files entry, no Content-Type (§7-YY)', async () => {
+    seedBooking();
+    await handler(validData, prospectCtx);
+    const body = capturedFetchOpts && capturedFetchOpts.body;
+    assert.ok(body instanceof FormData, 'fetch body must be a global FormData (not the form-data pkg / a string)');
+    const filePart = body.get('files');
+    assert.ok(filePart instanceof Blob, 'the "files" entry must be a Blob (real bytes, not "[object FormData]")');
+    assert.ok(filePart.size > 100, 'the Blob must carry the actual slip bytes');
+    const headerKeys = Object.keys((capturedFetchOpts && capturedFetchOpts.headers) || {}).map((k) => k.toLowerCase());
+    assert.ok(!headerKeys.includes('content-type'), 'must NOT hand-set Content-Type (undici derives the boundary)');
   });
 
   it('25. SCB delay — message includes ไทยพาณิชย์ → retryable shape', async () => {
