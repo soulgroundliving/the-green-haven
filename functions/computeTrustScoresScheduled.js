@@ -1,0 +1,192 @@
+/**
+ * computeTrustScoresScheduled — daily recompute of every active tenant's
+ * Reputation score → write-locked `trustScores/{tenantId}` (Roadmap Phase 3.2a v1).
+ *
+ * WHY a server CF, not client-on-read (unlike the Phase 3.1 behavioural cards):
+ * trust MUST be tamper-proof / server-computed (CLAUDE.md §6 — the retention moat
+ * collapses if the client can influence its own score) and it derives from RTDB
+ * bills + Firestore leases + Firestore complaints across ALL tenants (too heavy +
+ * too sensitive for the browser). Project Firestore lives in SE3 where Eventarc
+ * triggers can't deploy (§7-NN) → a daily SCHEDULED sweep + an admin on-demand
+ * callable (recomputeTrustScores.js), both sharing the pure `_reputation` core.
+ *
+ * Trust ≠ points (§6): this never reads the spendable `points` balance — only
+ * verifiable events (paid bills, lease tenure, complaint record).
+ *
+ * Data gathered per building (a handful of reads each — cheap at this scale):
+ *   - bills    RTDB  `bills/{building}/{room}/{billId}`  (status / dueDate / paidAt)
+ *   - tenure   FS    `leases/{building}/list` where status==active → moveInDate
+ *   - roster   FS    `tenants/{building}/list`            (tenantId + occupancy gate)
+ *   - complaints FS  `complaints` (top-level, bounded by a streak-cap cutoff)
+ *
+ * Doc shape (server-write-only — rule `write: if false`):
+ *   trustScores/{tenantId} = {
+ *     tenantId, building, roomId,            // identity context (single writer → no §7-T drift)
+ *     reputation: 0–100,
+ *     provisional: bool,                     // true when 0 ratable bills (payment reweighted out)
+ *     factors: { paymentScore, tenureScore, complaintScore, onTimeRatio,
+ *                onTimeBills, lateBills, tenureMonths, complaintFreeMonths },
+ *     computedAt: serverTimestamp,
+ *   }
+ *
+ * Idempotent: each run overwrites with `.set()` → last-write-wins, deterministic
+ * for the same data + day. Schedule: 05:40 BKK — after cleanupPlayers (05:00),
+ * before remindLeaseExpiry (08:00); clear of the 02:00–04:20 backup/cleanup window.
+ *
+ * Region: asia-southeast1.
+ */
+
+const functions = require('firebase-functions/v1');
+const admin = require('firebase-admin');
+
+if (!admin.apps.length) admin.initializeApp();
+const rtdb = admin.database();
+const firestore = admin.firestore();
+
+const { getAllBuildings } = require('./buildingRegistry');
+const { computeReputation, REPUTATION_CONSTANTS } = require('./_reputation');
+
+const { MONTH_MS, COMPLAINT_CLEAN_MAX_MONTHS } = REPUTATION_CONSTANTS;
+
+// Firestore batches cap at 500 ops — flush before then. At ~60 tenants one batch
+// suffices, but chunking keeps the sweep correct as the roster grows.
+const BATCH_LIMIT = 400;
+
+/**
+ * Gather signals across all buildings, compute each active tenant's reputation
+ * via the pure core, and batch-write `trustScores/*`. Shared by the scheduled CF
+ * and the admin recompute callable.
+ *
+ * @param {object} [opts]
+ * @param {number} [opts.nowMs] injected "now" (defaults to Date.now()) — lets the
+ *                              sweep stay deterministic under test.
+ * @returns {Promise<object>} summary { scored, skippedVacant, provisional,
+ *                              complaintsScanned, buildings:[{building,written}], errors }
+ */
+async function runTrustScoreSweep({ nowMs } = {}) {
+  const now = Number.isFinite(nowMs) ? nowMs : Date.now();
+  const summary = { scored: 0, skippedVacant: 0, provisional: 0, complaintsScanned: 0, buildings: [], errors: 0 };
+
+  // — complaints: one bounded read (single-field range, ISO-string compare, like
+  //   complaintAndGamification.js:99 → no composite index). A complaint older than
+  //   COMPLAINT_CLEAN_MAX_MONTHS yields the max complaint score whether it's counted
+  //   or falls back to tenure-start, so the cutoff is correctness-preserving + cheap.
+  const complaintsByRoom = new Map(); // `${building}_${room}` → [{ createdAt }]
+  const cutoffISO = new Date(now - (COMPLAINT_CLEAN_MAX_MONTHS + 1) * MONTH_MS).toISOString();
+  try {
+    const cSnap = await firestore.collection('complaints').where('createdAt', '>=', cutoffISO).get();
+    cSnap.forEach((d) => {
+      const c = d.data() || {};
+      if (!c.building || c.room == null) return;
+      const key = `${c.building}_${c.room}`;
+      if (!complaintsByRoom.has(key)) complaintsByRoom.set(key, []);
+      complaintsByRoom.get(key).push({ createdAt: c.createdAt });
+      summary.complaintsScanned++;
+    });
+  } catch (e) {
+    // Non-fatal: scores still compute, just without the complaint signal this run.
+    console.warn('[computeTrustScores] complaints read failed — scores omit complaint signal:', e && e.message);
+    summary.errors++;
+  }
+
+  const buildings = await getAllBuildings();
+  let batch = firestore.batch();
+  let pending = 0;
+  const flush = async () => { if (pending > 0) { await batch.commit(); batch = firestore.batch(); pending = 0; } };
+
+  for (const building of buildings) {
+    let written = 0;
+
+    // bills (RTDB) — one read for the whole building
+    let billsByRoom = {};
+    try {
+      const bSnap = await rtdb.ref(`bills/${building}`).once('value');
+      billsByRoom = bSnap.val() || {};
+    } catch (e) {
+      console.warn(`[computeTrustScores] bills read failed for ${building}:`, e && e.message);
+      summary.errors++;
+    }
+
+    // active leases → moveInDate per room (one query)
+    const moveInByRoom = new Map();
+    try {
+      const lSnap = await firestore.collection(`leases/${building}/list`).where('status', '==', 'active').get();
+      lSnap.forEach((d) => {
+        const L = d.data() || {};
+        if (L.roomId == null) return;
+        moveInByRoom.set(String(L.roomId), L.moveInDate || L.startDate || L.contractStart || null);
+      });
+    } catch (e) {
+      console.warn(`[computeTrustScores] leases read failed for ${building}:`, e && e.message);
+      summary.errors++;
+    }
+
+    // tenant roster (occupancy gate)
+    let tSnap;
+    try {
+      tSnap = await firestore.collection('tenants').doc(building).collection('list').get();
+    } catch (e) {
+      console.warn(`[computeTrustScores] tenants read failed for ${building}:`, e && e.message);
+      summary.errors++;
+      summary.buildings.push({ building, written: 0 });
+      continue;
+    }
+
+    for (const tDoc of tSnap.docs) {
+      const roomId = tDoc.id;
+      const td = tDoc.data() || {};
+      // Occupancy gate — trust is a tenant signal; vacant / unlinked rooms are skipped
+      // (mirrors the complaint-free award guard in complaintAndGamification.js).
+      if (!td.tenantId || td.status === 'vacant') { summary.skippedVacant++; continue; }
+
+      const roomNode = billsByRoom[roomId];
+      const roomBills = roomNode && typeof roomNode === 'object' ? Object.values(roomNode) : [];
+      const moveInDate = moveInByRoom.get(String(roomId)) || td.moveInDate || td.leaseStart || null;
+      const complaints = complaintsByRoom.get(`${building}_${roomId}`) || [];
+
+      const result = computeReputation({ bills: roomBills, moveInDate, complaints, now });
+      if (result.provisional) summary.provisional++;
+
+      const ref = firestore.collection('trustScores').doc(String(td.tenantId));
+      batch.set(ref, {
+        tenantId: String(td.tenantId),
+        building,
+        roomId: String(roomId),
+        reputation: result.reputation,
+        provisional: result.provisional,
+        factors: result.factors,
+        computedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      pending++; summary.scored++; written++;
+      if (pending >= BATCH_LIMIT) await flush();
+    }
+
+    summary.buildings.push({ building, written });
+  }
+
+  await flush();
+  return summary;
+}
+
+// ============================================================
+// Scheduled — daily 05:40 BKK
+// ============================================================
+exports.computeTrustScoresScheduled = functions
+  .region('asia-southeast1')
+  .runWith({ timeoutSeconds: 540, memory: '256MB' })
+  .pubsub.schedule('40 5 * * *')
+  .timeZone('Asia/Bangkok')
+  .onRun(async () => {
+    try {
+      const summary = await runTrustScoreSweep();
+      console.log('[computeTrustScores] swept:', JSON.stringify(summary));
+      return null;
+    } catch (e) {
+      console.error('computeTrustScoresScheduled failed:', e);
+      throw e;
+    }
+  });
+
+// Exported for the admin recompute callable + unit tests. NOT registered in
+// index.js, so it is never deployed as its own Cloud Function.
+exports.runTrustScoreSweep = runTrustScoreSweep;

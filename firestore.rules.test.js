@@ -1196,6 +1196,61 @@ describe('maintenanceArchive — closed-ticket archive, admin-read-only (Phase 3
   });
 });
 
+describe('trustScores — server-computed reputation, admin-read-only, CF-write-only (Roadmap Phase 3.2a)', () => {
+  // LIFF tenant whose tenantId claim matches the doc id — proves even the SUBJECT
+  // of the score has NO read access in admin-only v1 (tenant self-view is deferred).
+  const LIFF_WITH_TENANT_ID = (uid, tenantId, room = '15', building = 'rooms') =>
+    testEnv.authenticatedContext(uid, {
+      tenantId, room, building,
+      firebase: { sign_in_provider: 'custom' }
+    });
+
+  const sampleTrust = {
+    tenantId: 'TENANT_X', building: 'rooms', roomId: '15',
+    reputation: 82, provisional: false,
+    factors: {
+      paymentScore: 100, tenureScore: 50, complaintScore: 100, onTimeRatio: 1,
+      onTimeBills: 6, lateBills: 0, tenureMonths: 12, complaintFreeMonths: 18,
+    },
+  };
+
+  it('admin can read a trustScores doc', async () => {
+    await seedDoc('trustScores/TENANT_X', sampleTrust);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'trustScores/TENANT_X')));
+  });
+
+  it('admin collection query over trustScores succeeds (the dashboard reputation card)', async () => {
+    await seedDoc('trustScores/TENANT_X', sampleTrust);
+    await assertSucceeds(getDocs(query(collection(EMAIL_ADMIN().firestore(), 'trustScores'))));
+  });
+
+  it('tenant CANNOT read trustScores — even their own (admin-only v1)', async () => {
+    await seedDoc('trustScores/TENANT_OWN', { ...sampleTrust, tenantId: 'TENANT_OWN' });
+    const ctx = LIFF_WITH_TENANT_ID('line:abc', 'TENANT_OWN');
+    await assertFails(getDoc(doc(ctx.firestore(), 'trustScores/TENANT_OWN')));
+  });
+
+  it('unauth user CANNOT read any trustScores doc', async () => {
+    await seedDoc('trustScores/TENANT_X', sampleTrust);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'trustScores/TENANT_X')));
+  });
+
+  it('client CANNOT create a trustScores doc (CF / Admin-SDK only)', async () => {
+    await assertFails(setDoc(doc(EMAIL_ADMIN().firestore(), 'trustScores/forge'), sampleTrust));
+    await assertFails(setDoc(doc(ANON().firestore(), 'trustScores/forge'), sampleTrust));
+  });
+
+  it('admin CANNOT update an existing trustScores doc (server-computed — never client-writable)', async () => {
+    await seedDoc('trustScores/TENANT_X', sampleTrust);
+    await assertFails(updateDoc(doc(EMAIL_ADMIN().firestore(), 'trustScores/TENANT_X'), { reputation: 100 }));
+  });
+
+  it('admin CANNOT delete a trustScores doc', async () => {
+    await seedDoc('trustScores/TENANT_X', sampleTrust);
+    await assertFails(deleteDoc(doc(EMAIL_ADMIN().firestore(), 'trustScores/TENANT_X')));
+  });
+});
+
 describe('actionAudit — immutable admin-action trail, admin-read-only (Core Readiness Phase 1.1)', () => {
   // Authenticated LIFF tenant — proves even a signed-in tenant has NO read access
   // (tenant self-view is not a v1 feature; admin-only).

@@ -768,6 +768,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ===== TRUST SCORES (Roadmap Phase 3.2a — Reputation, admin-only v1) =====
+    // trustScores/{tenantId} — server-computed, tamper-proof reputation (0–100) +
+    // factor breakdown, written ONLY by computeTrustScoresScheduled (daily) and the
+    // recomputeTrustScores admin callable via the Admin SDK (bypasses rules). The
+    // moat collapses if a tenant can influence their own score (§6), so client write
+    // is NEVER allowed. Admin-read for the dashboard card; tenant self-view is a
+    // deferred tenant-visible-v1.x feature (add a claim-traced read clause then).
+    match /trustScores/{tenantId} {
+      allow read:  if isAdmin();
+      allow write: if false;
+    }
+
     // ===== ACTION AUDIT (Core Readiness Phase 1.1) =====
     // actionAudit/{autoId} — immutable, server-side record of admin actions
     // (tenant edit, payment verify, meter-import approve, bill paid, …). Replaces

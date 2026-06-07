@@ -200,6 +200,17 @@ exports.refundBill = require('./refundBill').refundBill;
 // The deployed CF is deleted via `firebase functions:delete verifyRefundSlip`.)
 
 // ═══════════════════════════════════════════════════════════════════════════
+// TRUST SYSTEM — Reputation score (Roadmap Phase 3.2a v1, admin-only)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Server-computed, tamper-proof reputation (0–100) per active tenant from payment
+// punctuality + lease tenure + complaint-free record → write-locked trustScores/.
+// Daily sweep (05:40 BKK) + admin on-demand recompute. §7-NN: callable, not a
+// Firestore trigger (project Firestore is SE3). Trust ≠ spendable points (§6).
+exports.computeTrustScoresScheduled = require('./computeTrustScoresScheduled').computeTrustScoresScheduled;
+exports.recomputeTrustScores        = require('./recomputeTrustScores').recomputeTrustScores;
+
+// ═══════════════════════════════════════════════════════════════════════════
 // ANNOUNCEMENTS — unified notice/event/banner (C4 — replaces broadcastMessages)
 // ═══════════════════════════════════════════════════════════════════════════
 
