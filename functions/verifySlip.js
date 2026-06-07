@@ -177,7 +177,9 @@ async function callSlipOKAPI(fileBuffer) {
     const response = await fetch(SLIPOK_API_URL.value(), {
       method: 'POST',
       headers: {
-        'x-authorization': SLIPOK_API_KEY.value()
+        // .trim() guards against a trailing newline/space pasted into the secret
+        // (a common cause of SlipOK 401 "Authorization Header ไม่ถูกต้อง").
+        'x-authorization': SLIPOK_API_KEY.value().trim()
       },
       body: form,
       // §7-YY: undici ignores the node-fetch `timeout` option (it was a silent
@@ -191,7 +193,12 @@ async function callSlipOKAPI(fileBuffer) {
     // (see line below + caller's catch).
 
     if (!response.ok) {
-      console.warn(`📡 SlipOK ${response.status}:`, responseText.slice(0, 300));
+      // Diagnostic for auth/config failures — NO secret value leaked, only the
+      // branch-id tail + key length (raw/trimmed) so 401s can be told apart:
+      // keyLen raw≠trimmed → whitespace; branch tail ≠ expected → wrong store.
+      const _b = (SLIPOK_API_URL.value().split('/').pop() || '').slice(-4);
+      const _k = SLIPOK_API_KEY.value();
+      console.warn(`📡 SlipOK ${response.status} | branch …${_b} | keyLen ${_k.length}/${_k.trim().length}:`, responseText.slice(0, 300));
       throw new Error(`SlipOK API returned ${response.status}: ${responseText.slice(0, 300)}`);
     }
 

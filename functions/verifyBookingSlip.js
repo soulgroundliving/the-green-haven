@@ -108,7 +108,7 @@ async function callSlipOKAPI(fileBuffer) {
 
   const response = await fetch(SLIPOK_API_URL.value(), {
     method: 'POST',
-    headers: { 'x-authorization': SLIPOK_API_KEY.value() },
+    headers: { 'x-authorization': SLIPOK_API_KEY.value().trim() }, // .trim(): guard pasted-secret whitespace → 401
     body: form,
     // §7-YY: undici ignores the node-fetch `timeout` option (silent no-op);
     // AbortSignal.timeout actually aborts a hung request after 30s.
