@@ -47,11 +47,19 @@
         try {
             const fs = window.firebase.firestoreFunctions;
             const db = window.firebase.firestore();
+            // No limit(): an unordered Firestore limit() returns docs in default
+            // doc-ID-ASCENDING order, and meter_data IDs sort year-ascending
+            // (rooms_67_* < rooms_68_* < rooms_69_*). A row cap therefore drops the
+            // NEWEST months once a room has more rows than the cap — was limit(24), so
+            // any room with >2yr of readings lost ALL of 2026 (incl the latest bill),
+            // hiding it from the tenant. orderBy(yearMonth desc)+limit would need a
+            // composite index (verified failed-precondition). This query is already
+            // scoped to ONE room by two equality filters → naturally bounded (one doc
+            // per month); we sort + lease-boundary-filter in JS below. (§7-AAA)
             const q = fs.query(
                 fs.collection(db, 'meter_data'),
                 fs.where('building', '==', _taBuilding),
-                fs.where('roomId', '==', String(_taRoom)),
-                fs.limit(24)
+                fs.where('roomId', '==', String(_taRoom))
             );
             const snap = await fs.getDocs(q);
             _meterHistoryCache = snap.docs.map(d => {
