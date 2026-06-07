@@ -83,7 +83,10 @@
 
 /* Danger — destructive actions */
 .gh-btn--danger {
-  background: var(--alert);
+  /* Literal fallback: the LIFF WKWebView intermittently fails to resolve a custom
+     property on a rapidly re-inserted node (open→delete→reopen modal in a row),
+     painting the delete button transparent ("ไม่มีสี"). The fallback keeps it red. */
+  background: var(--alert, #dc2626);
   color: var(--surface-card);
 }
 .gh-btn--danger:hover:not(:disabled) {
