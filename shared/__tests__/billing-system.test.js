@@ -488,6 +488,16 @@ describe('BillStore.filterByTenantBoundary', () => {
     assert.equal(out.length, 2);
   });
 
+  test('future move-in/start date never hides current data (transfer-carried future contractStart)', () => {
+    // Regression for 2026-06-07: a variation-mode transfer carried a future contractStart
+    // into .lease.startDate with no moveInDate → boundary in the future hid every reading
+    // → the synthesized current-month bill never rendered. A future boundary must be a
+    // no-op, never a total blackout. '2099-01-01' is unambiguously future regardless of run date.
+    const items = [{ ym: 202604 }, { ym: 202605 }, { ym: 202606 }];
+    const out = BillStore.filterByTenantBoundary(items, getYM, { startDate: '2099-01-01' });
+    assert.equal(out.length, 3);
+  });
+
   test('empty / non-array input is safe', () => {
     const a = BillStore.filterByTenantBoundary([], getYM, {});
     const b = BillStore.filterByTenantBoundary(null, getYM, {});

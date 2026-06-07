@@ -1454,6 +1454,25 @@ grep -rnE "\.limit\([0-9]+\)" shared/*.js | grep -iv orderBy   # bare caps, audi
 ```
 Known siblings (admin-side, all-rooms `meter_data` scans) — **FIXED `d89b7cd` (2026-06-07)**: `dashboard-extra.js` (setupMeterDataListener watch), `dashboard-behavioral-energy.js` (trend), `dashboard-insights-operations.js` (spike) now scope by `where('year', 'in', [curBE-1, curBE, …string variants])` instead of a bare `limit(N)` — a single-field `in` is served by the automatic index (no composite, §7-N-safe), stays bounded, and always includes the NEWEST months (the cap dropped them). `dashboard-home-live.js limit(120)` deliberately left AS-IS with a KNOWN-LIMITATION comment: it reads a legacy per-building `data.rooms` shape that's already fallback-only AND broken on current flat data, so the cap isn't the real bug — a flat-shape rewrite of that aggregator is (out of scope). ✅ **Data layer PROVEN 2026-06-07** via `tools/verify-meter-year-scope.js` (read-only REST runQuery of the EXACT fixed `where('year','in',…)` against prod): 690 meter_data docs; `year` is **integer 2-digit BE** (67/68/69 — confirms the §7-E assumption the `in`-scope depends on); the watch's old `limit(500)` was **actively** dropping the 190 newest docs incl. all of June (690 > 500 → not latent, it was live-broken — exactly the "live-refresh ดึงเดือนล่าสุด" symptom); the fixed query returns 414 docs and **includes `rooms_69_6_13`** (current month, 23 docs). Render code (`snap.forEach`) was untouched by the fix, so no render-regression risk. Residual = **visual** card-render only (auth-gated → owner): Dashboard → **ปฏิบัติการ** tab → `#dashEnergyPattern` (⚡ แนวโน้มการใช้ไฟ–น้ำ, latest bar = มิ.ย.) + `#dashMeterSpike`. Family: §7-N (composite index for ordered queries), §7-D/E (BillStore room/year traps), §7-K (defined ≠ wired — here "fetched ≠ all fetched").
 
+### BBB. Lifecycle CFs that write an embedded `.lease` subobject the tenant app reads MUST carry `moveInDate` — a future/missing boundary date hides ALL current meter rows + starves the synthesized current-month bill
+
+The tenant_app's per-room meter/bill boundary (`BillStore.tenantBoundaryYM`) reads `_taLease.moveInDate` FIRST, then falls back to `_taLease.startDate`. `filterByTenantBoundary` then hides every meter row whose `year*100+month < boundary`. So if a lifecycle CF populates the tenant doc's `.lease` subobject with a `startDate` but **no** `moveInDate`, and that startDate is in the FUTURE (e.g. a junk/renewal `contractStart`), the boundary lands in the future → EVERY current meter row is hidden → the current-month bill (which is **synthesized from meter_data**, not a real RTDB bill until paid — see `synthesizeFromMeter`) is never generated → the tenant sees only older *real* bills.
+
+Incident 2026-06-07: real transfer ห้อง15→ห้อง13 (variation mode). `_runVariationMode` wrote `.lease.startDate = oldLeaseData.contractStart` (=`2027-01-21`, a junk future test date) and did NOT carry `moveInDate` (novation mode DID, via `effectiveIso`). So `tenantBoundaryYM` = 202701 → all of room 13's 2026 meter rows hidden → the มิ.ย. bill never synthesized → tenant saw พ.ค. as latest. The lease DOC itself had a sane `moveInDate=2026-01-21` that the variation writer never propagated into the subobject the tenant app reads. NOT §7-AAA (limit) — that was already fixed; ห้อง 15 showed มิ.ย. fine. Confirmed via read-only REST: room 13 meter complete (`rooms_69_6_13` present), RTDB `bills/rooms/13` had only เม.ย.+พ.ค. real bills.
+
+Two-layer fix:
+1. **Client defensive guard** (`filterByTenantBoundary`): a boundary in the FUTURE (> current YYYYMM) → skip filtering entirely. A tenant must ALWAYS see their current-month bill regardless of lease-date quality. (Time-robust: keyed on the wall clock, not a hardcoded month.)
+2. **CF correctness** (`_runVariationMode`): carry `moveInDate: String(oldLeaseData.moveInDate || effectiveIso || '')` into the `.lease` subobject so the boundary never falls through to a stale/future startDate. (Needs `firebase deploy --only functions:transferTenant`.)
+
+Detection:
+```bash
+# Any CF that writes a `.lease` subobject the tenant app reads — each must include moveInDate
+grep -n "lease: {" functions/*.js
+# Tenant-app boundary readers (must tolerate a bad/future date → no total blackout):
+grep -rn "tenantBoundaryYM\|filterByTenantBoundary" shared/billing-system.js
+```
+Family: §7-T (two writers / one reader — field-name/value drift), §7-DD (lifecycle CF must update every sibling reader falls through to), §7-L (code-only cleanup ≠ data migrated — here the lease DOC had the right value, the subobject didn't), §7-AAA (different root, same symptom "latest month doesn't show").
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md

@@ -1007,6 +1007,19 @@ class BillStore {
     if (!Array.isArray(items) || !items.length) return items || [];
     const boundary = BillStore.tenantBoundaryYM(lease);
     if (!boundary) return items;
+    // A boundary in the FUTURE is nonsensical for a room that already has meter
+    // readings + bills. It happens when a transfer carries a future contractStart
+    // into the tenant doc's .lease.startDate with no moveInDate — the boundary then
+    // hides EVERY current reading, so the synthesized current-month bill never renders.
+    // A tenant must always be able to see their current-month bill, so treat a future
+    // boundary as "no reliable move-in date" and skip filtering.
+    // (Incident 2026-06-07: tenant transferred ห้อง15→ห้อง13 by variation mode; the new
+    //  .lease.startDate was 2027-01-21 with no moveInDate → all 2026 rows hidden → the
+    //  มิ.ย. bill never appeared. The lease doc itself had a sane moveInDate=2026-01-21
+    //  that the variation writer didn't carry into the subobject the tenant app reads.)
+    const now = new Date();
+    const currentYM = now.getFullYear() * 100 + (now.getMonth() + 1);
+    if (boundary > currentYM) return items;
     return items.filter(it => {
       const ym = getYM(it);
       return !ym || ym >= boundary;
