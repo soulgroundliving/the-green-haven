@@ -2,7 +2,10 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- Zoom-lock INTENTIONAL (owner UX): kills iOS focus-zoom on inputs + pinch-zoom in the LIFF webview.
+       Re-added after the #91 a11y audit removed it (#80 lock → #91 regression → owner re-requested 2026-06-07).
+       WCAG 1.4.4 tradeoff accepted by owner — do NOT strip maximum-scale/user-scalable without asking. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>จองห้อง — Nature Haven</title>
 
   <!-- ===== PWA: install + offline support ===== -->
