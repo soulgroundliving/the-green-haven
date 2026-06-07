@@ -25,7 +25,6 @@
   'use strict';
 
   const WINDOW_MONTHS = 6;   // trailing months shown in the trend
-  const READ_LIMIT = 5000;   // bound the meter_data read (mirrors meter-spike)
 
   const TH_MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
                   'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -118,11 +117,17 @@
       throw new Error('Firestore ยังไม่พร้อม');
     }
     const db = window.firebase.firestore();
-    const { collection, getDocs, query, limit } = window.firebase.firestoreFunctions;
-    const snap = await getDocs(query(collection(db, 'meter_data'), limit(READ_LIMIT)));
-    if (snap.size >= READ_LIMIT) {
-      console.warn(`[behavioral-energy] meter_data read hit the ${READ_LIMIT} cap — older months may be excluded this render.`);
-    }
+    const { collection, getDocs, query, where } = window.firebase.firestoreFunctions;
+    // §7-AAA: a bare limit() on meter_data returns docs in doc-ID-ASCENDING order
+    // (rooms_67_* < _68_* < _69_*), so a row cap silently drops the NEWEST months once
+    // the collection outgrows it. This card only needs the trailing WINDOW_MONTHS, so
+    // scope the read to the current + previous 2-digit-BE year instead (§7-E: meter_data
+    // `year` is 2-digit BE, e.g. 69). A single-field `in` is served by the automatic
+    // index — no composite index, no unordered cap. String variants are defensive in
+    // case any legacy doc stored `year` as a string.
+    const _curBE = new Date().getFullYear() - 1957;            // 2026 → 69
+    const _yearScope = [_curBE - 1, _curBE, String(_curBE - 1), String(_curBE)];
+    const snap = await getDocs(query(collection(db, 'meter_data'), where('year', 'in', _yearScope)));
     const readings = [];
     snap.forEach(d => {
       const data = d.data() || {};

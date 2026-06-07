@@ -711,16 +711,22 @@ function setupMeterDataListener() {
   }
 
   const db = window.firebase.firestore();
-  const { collection, onSnapshot, query, limit } = window.firebase.firestoreFunctions;
+  const { collection, onSnapshot, query, where } = window.firebase.firestoreFunctions;
 
   try {
     // meter_data grows per room × month × year (can reach thousands of docs). This
-    // callback only pings updateDashboardLive() — it never reads the snapshot payload —
-    // so cap the watch with limit() to avoid replaying the entire collection on every
-    // admin open and fanning out on every meter write. Other triggers (per-building
-    // watch in billing-system.js, the import flow) keep the dashboard refresh covered.
+    // callback only pings updateDashboardLive() — it never reads the snapshot payload.
+    // §7-AAA: a bare limit() watch returns docs doc-ID-ASCENDING (oldest first), so it
+    // would watch the OLDEST N docs and miss the NEWEST writes (this month's meters) —
+    // the very changes that warrant a refresh. Scope the watch to the current + previous
+    // 2-digit-BE year instead (§7-E: `year` is 2-digit BE): bounded like the old cap, but
+    // now firing on the writes that matter. Single-field `in` uses the automatic index —
+    // no composite index. (billing-system.js keeps a per-building unbounded watch as the
+    // primary refresh path; this is the secondary ping.)
+    const _curBE = new Date().getFullYear() - 1957;            // 2026 → 69
+    const _yearScope = [_curBE - 1, _curBE, String(_curBE - 1), String(_curBE)];
     const meterUnsubscribe = onSnapshot(
-      query(collection(db, 'meter_data'), limit(500)),
+      query(collection(db, 'meter_data'), where('year', 'in', _yearScope)),
       (snapshot) => {
         updateDashboardLive();
       },

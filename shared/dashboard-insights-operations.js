@@ -218,8 +218,16 @@
         if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions)
           throw new Error('Firestore ยังไม่พร้อม');
         const db = window.firebase.firestore();
-        const { collection, getDocs, query, limit } = window.firebase.firestoreFunctions;
-        const snap = await getDocs(query(collection(db, 'meter_data'), limit(5000)));
+        const { collection, getDocs, query, where } = window.firebase.firestoreFunctions;
+        // §7-AAA: a bare limit() on meter_data returns docs doc-ID-ASCENDING (oldest
+        // first), so a cap silently drops the NEWEST months — exactly the readings the
+        // spike check (latest vs prior-3 median) needs. Scope to the current + previous
+        // 2-digit-BE year instead (§7-E: `year` is 2-digit BE). Single-field `in` uses
+        // the automatic index — no composite index, no unordered cap. String variants
+        // are defensive against any legacy string-typed `year`.
+        const _curBE = new Date().getFullYear() - 1957;            // 2026 → 69
+        const _yearScope = [_curBE - 1, _curBE, String(_curBE - 1), String(_curBE)];
+        const snap = await getDocs(query(collection(db, 'meter_data'), where('year', 'in', _yearScope)));
 
         const byRoom = {};
         snap.forEach(d => {

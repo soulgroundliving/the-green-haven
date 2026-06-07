@@ -117,7 +117,18 @@ async function loadDashboardDataFromFirebase() {
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
 
-    // Query all meter_data documents from both buildings (capped at 120 = 5yr × 2 buildings × 12mo)
+    // KNOWN LIMITATION — documented, intentionally left as-is (§7-AAA decision 2026-06-07).
+    // This aggregator reads a LEGACY per-building-per-month shape (`data.yearMonth` + a
+    // `data.rooms` map, used below). The canonical writer (meter-unified.js saveMeterReading)
+    // now writes FLAT per-room docs {building,roomId,year,month,eNew,eOld,wNew,wOld} with NO
+    // `data.rooms` — so on current data the electric/water aggregate is always 0 and rent is
+    // over-counted (added once per room-doc sharing a month). It is harmless today because the
+    // result is FALLBACK-ONLY: initDashboardCharts (below) uses HISTORICAL_DATA when present and
+    // only falls back here when HISTORICAL_DATA is empty.
+    // The unordered limit(120) IS the §7-AAA anti-pattern (doc-ID-ASCENDING → drops the NEWEST
+    // months once meter_data exceeds 120 docs), but fixing the cap alone would NOT make the
+    // output correct — the shape mismatch dominates. The real fix is a flat-shape rewrite of this
+    // aggregator (out of scope here); the cap is left untouched until that lands.
     const meterDocsSnapshot = await fs.getDocs(fs.query(fs.collection(db, 'meter_data'), fs.limit(120)));
 
     // Initialize data structure
