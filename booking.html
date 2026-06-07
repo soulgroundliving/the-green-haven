@@ -2166,6 +2166,13 @@
   function _setRecoveryBanner(title, sub, onClick) {
     const banner = document.getElementById('recoveryBanner');
     if (!banner) return;
+    // DIAGNOSTIC surface only — every caller is a failure/empty restore path
+    // ("no pending booking", "hold expired", "can't verify"), never an actionable
+    // "tap to pay" state (the happy path restores straight to Step 3 without this
+    // banner). For a normal user those are EXPECTED states, and the sub line leaks
+    // internals (uid, status=locked, firebase/auth flags, error codes). Show only in
+    // debug builds (?debug=1, §7-GG); the diagnostics still flow to _dlog + the panel.
+    if (!_debugOn) { banner.classList.add('hide'); return; }
     const t = document.getElementById('recoveryBannerTitle');
     const s = document.getElementById('recoveryBannerSub');
     if (t) t.textContent = title;
