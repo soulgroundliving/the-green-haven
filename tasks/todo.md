@@ -44,12 +44,12 @@ CF maps `reputation`+`provisional` → enum (thresholds reuse admin 80/60/40); c
 - [x] Gate: `node --check` (4 files) · **functions 1967/0** · **rules 289/0** (emulator) · **verify:memory GREEN** (README rules-count 273→274). No CSP/HTML touched.
 
 ### Build — PR2 (frontend, auto-merge + Vercel; off fresh main AFTER PR1 deploy — NOT stacked)
-- [ ] **`shared/tenant-reputation.js`** (NEW) — render a muji tier card from `reputationTier` on the loaded tenant doc; pure `tierDisplay(enum)` → `{label,emoji,color}` lookup (presentation only, no thresholds) + unit tests. Consent-gated: if no `consents/{tenantId}_reputation_v1` (read own row) AND no localStorage `rep_consent_v1` → render the consent prompt instead; on ยินยอม → call consent CF + set localStorage + reveal tier. §7-N error → muted state, never spinner. *Why: tier-only display; consent gate before reveal; no raw number reaches the client.*
-- [ ] **`tenant_app.html`** — `#tenant-reputation-card` mount under `#profile-rewards-card` (quest-page); external `<script src>` after the gamification module (§7-PP load order); invoke from the existing `_onLiffClaimsReady`/gamification-load path (§7-A/U claim guard — needs `_taTenant`/tenantId present). *No inline `<style>`/`<script>` edit → no CSP hash regen (verify §7-II pre-commit).*
-- [ ] **`shared/components.css`** — tier-card styles (§7-RR: static CSS, never `createElement('style')`).
-- [ ] **`privacy.html`** — disclosure: §1 "ข้อมูลที่เราเก็บรวบรวม" (computed reputation), §2 purpose, §5 retention line (text-only edit → no CSP regen). *Why: PDPA transparency even with the consent gate.*
-- [ ] Gate: `test:shared` · node render-smoke · static-harness screenshot (provisional + each tier + consent-prompt + consented states) · mojibake clean (§7-TT) · no CSP drift (§7-II) · verify:memory.
-- [ ] **Live-verify on real LINE** (§7-A/U/J — admin preview can't prove claim-gated tenant reads): open as a real tenant → consent prompt → ยินยอม → tier renders; reopen → no re-prompt; confirm raw number/factors NOT in the readable doc/devtools.
+- [x] **`shared/tenant-reputation.js`** (NEW, #289) — self-wired card; own getDoc roster read (tenantId+reputationTier, NOT piggyback — decoupled, no race); pure `tierDisplay(enum)` collapsing provisional/low/unknown→🌱; consent gate localStorage `rep_consent_v1` + own-read `consents/{tenantId}_reputation_v1` (non-existent→permission-denied caught as not-consented); on ยินยอม → optimistic reveal + fire-forget `recordChecklistConsent({purpose:'reputation_v1'})`; §7-N read-fail→muted. 16 tests.
+- [x] **`tenant_app.html`** (#289) — `#tenant-reputation-card` mount under `#profile-rewards-card`; external `<script src>` next to tenant-consent.js (any defer-order safe — depends only on `_onLiffClaimsReady`/firebase/`_tenantApp*`). No inline edit → **CSP no-drift confirmed by pre-commit §G**.
+- [x] **`shared/components.css`** (#289) — static `.rep-card*` + `.rep-consent__*` tier styles (§7-RR).
+- [x] **`privacy.html`** (#289) — reputation disclosure in §1 (computed data) / §2 (purpose) / §5 (retention). Text-only, no CSP regen.
+- [x] Gate: **test:shared 477/477** · node --check · **static-harness preview-MCP screenshot — 6 states (consent/seed/fair/good/great/muted) all render, 0 console errors** · mojibake clean (§7-TT) · CSP no-drift (§7-II §G) · verify:memory GREEN.
+- [ ] **Live-verify on real LINE — OWNER STEP** (§7-A/U/J — admin preview can't prove claim-gated tenant reads): open as a real tenant → consent prompt → ยินยอม → tier renders; reopen → no re-prompt; confirm raw number/factors NOT in the readable doc/devtools. *(Cannot be done from this environment — no LINE/tenant device.)*
 
 ### Decisions to settle at build (named)
 - **D1 — tier labels/thresholds:** ship the table above as default; flag to owner for a brand pass (muji tone). Thresholds reuse admin 80/60/40.
@@ -62,8 +62,18 @@ CF maps `reputation`+`provisional` → enum (thresholds reuse admin 80/60/40); c
 ### Out of scope (named, not dropped)
 - Raw score / factor breakdown to tenant (tier-only by decision) · player-facing (people/) tier · Resident Rank 3.2c · Kindness/Verified-Helper 3.2b · v2 engagement dimension (pointsLedger ~Aug) · tenant-triggered recompute (server schedule + admin button own it).
 
-### Review (append after execution)
-_(pending)_
+### Review (2026-06-07)
+
+**Shipped:** Phase 3.2a v1.x tenant-visible Reputation, both PRs.
+- PR1 server [#288] — `reputationTier()` enum + sweep mirror onto `tenants/{b}/list/{r}.reputationTier` + protected-field rule (§6) + `reputation_v1` consent (reused CF) + DSR `trustScore`. Merged + deployed prod SE1.
+- PR2 frontend [#289] — `shared/tenant-reputation.js` (self-wired §7-A/U, own getDoc, consent gate, pure `tierDisplay()`), `.rep-card*` in `components.css` (§7-RR), `#tenant-reputation-card` mount + `<script src>` in `tenant_app.html` (no CSP drift §7-II), `privacy.html` disclosure, 16 tests (suite 477/477). Merged (squash, auto-merge per [[feedback_auto_merge_prs]]) + Vercel-deployed. 6 card states harness-verified via preview MCP.
+
+**Decisions settled:** D1 — shipped the default tier ladder (🌱 provisional+low / 🌿 fair / ⭐ good / 💎 high); owner brand-tone pass still open if desired. D2 — REUSED `recordChecklistConsent(purpose)` (DRY, no new CF). D3 — mirror on `tenants/{b}/list/{r}.reputationTier` (active tenants); player/`people/` tier deferred. Build note: chose an **own getDoc** for the roster read (not piggybacking `_taTenant`) — fully decoupled, no dependency on tenant-render timing/`_raw`.
+
+**Deferred / follow-ups:**
+- **Owner real-LINE live-verify** (the one open box above) — cannot run from this environment.
+- Player-facing (`people/`) tier, v2 engagement dimension (pointsLedger ~Aug), 3.2b/c Kindness/Verified-Helper/Resident-Rank — all out-of-scope, named above, untouched.
+- Mirror field is empty until the next 05:40 sweep or an admin ⟳; the only live tenant (provisional) renders the gentle 🌱 seed state — intentional, not a bug.
 
 ---
 
