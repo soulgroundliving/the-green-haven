@@ -660,7 +660,13 @@ exports.verifySlip = functions
       // ===== CONVERT BASE64 TO BUFFER =====
       let fileBuffer;
       try {
-        fileBuffer = Buffer.from(file, 'base64');
+        // Tolerate a full data: URL. The tenant path (tenant-slip-verify.js) sends
+        // FileReader.readAsDataURL output verbatim: "data:image/jpeg;base64,<payload>".
+        // The admin path strips the prefix client-side (.split(',')[1]). Decoding the
+        // "data:…;base64," prefix as base64 corrupts the bytes → SlipOK 400 code 1005
+        // "ไฟล์ไม่ใช่ไฟล์ภาพ". Strip the prefix here so every caller is covered.
+        const b64 = file.startsWith('data:') ? file.slice(file.indexOf(',') + 1) : file;
+        fileBuffer = Buffer.from(b64, 'base64');
       } catch (error) {
         throw new HttpsError('invalid-argument', 'Invalid base64 encoding');
       }
