@@ -175,4 +175,12 @@ describe('recordChecklistConsent', () => {
     assert.equal(consentWrites[0].payload.room, '15');
     assert.equal(consentWrites[0].payload.building, 'rooms');
   });
+
+  it('reputation_v1 purpose → records consent to show the reputation tier (Phase 3.2a v1.x)', async () => {
+    const r = await handler({ purpose: 'reputation_v1' }, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
+    assert.equal(r.recorded, true);
+    assert.equal(consentWrites.length, 1);
+    assert.equal(consentWrites[0].id, 't-15_reputation_v1');
+    assert.equal(consentWrites[0].payload.purpose, 'reputation_v1');
+  });
 });

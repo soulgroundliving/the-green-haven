@@ -41,6 +41,15 @@ const TENURE_MAX_MONTHS = 24;          // 2yr tenure → full tenure score
 const COMPLAINT_CLEAN_MAX_MONTHS = 12; // 1yr complaint-free → full complaint score
 const PAYMENT_GRACE_DAYS = 0;          // days after dueDate still counted on-time
 
+// Tenant-facing tier cut points (Phase 3.2a v1.x). Reuse the admin card's
+// 80/60/40 boundaries (shared/dashboard-reputation.js repTier) so admin + tenant
+// share ONE mental model. The CF writes only the resulting ENUM to the
+// tenant-readable doc; the client maps enum→label/emoji, so the raw 0–100 number
+// never reaches the tenant (decision 2026-06-07: tier-only).
+const TIER_BOUND_HIGH = 80;            // ≥80 → 'high'
+const TIER_BOUND_GOOD = 60;            // ≥60 → 'good'
+const TIER_BOUND_FAIR = 40;            // ≥40 → 'fair'; <40 → 'low'
+
 // Bill statuses that carry no punctuality signal → excluded from the ratio.
 const NON_RATABLE_STATUSES = new Set(['refunded', 'void', 'voided', 'cancelled', 'canceled']);
 
@@ -196,11 +205,40 @@ function computeReputation({ bills, moveInDate, complaints, now } = {}) {
   };
 }
 
+/**
+ * Map a reputation result to a coarse TIER enum for the tenant-facing badge
+ * (Phase 3.2a v1.x). The tenant sees ONLY this enum (the client maps it to a
+ * positive label/emoji) — never the raw 0–100 number or the factor breakdown
+ * (decision 2026-06-07: tier-only, avoids credit-score anxiety + support load).
+ * Computed server-side and mirrored onto the tenant-readable roster doc so the
+ * tier stays tamper-proof (§6) — same rationale as the score itself.
+ *
+ * Enum aligns with the admin card keys (dashboard-reputation.js repTier:
+ * high/good/fair/low) + a distinct 'provisional' for the 0-ratable-bills case.
+ * The client collapses provisional + low into one gentle "กำลังสร้างคะแนน" face,
+ * but the enum keeps them distinct for analytics.
+ *
+ * @param {number}  reputation    0–100 score from computeReputation
+ * @param {boolean} [provisional] true when the score is provisional (0 ratable bills)
+ * @returns {('provisional'|'high'|'good'|'fair'|'low')} tier enum
+ */
+function reputationTier(reputation, provisional) {
+  if (provisional) return 'provisional';
+  const s = Number(reputation);
+  if (!Number.isFinite(s)) return 'low';
+  if (s >= TIER_BOUND_HIGH) return 'high';
+  if (s >= TIER_BOUND_GOOD) return 'good';
+  if (s >= TIER_BOUND_FAIR) return 'fair';
+  return 'low';
+}
+
 module.exports = {
   computeReputation,
+  reputationTier,
   REPUTATION_CONSTANTS: {
     WEIGHT_PAYMENT, WEIGHT_TENURE, WEIGHT_COMPLAINT,
     TENURE_MAX_MONTHS, COMPLAINT_CLEAN_MAX_MONTHS, PAYMENT_GRACE_DAYS,
+    TIER_BOUND_HIGH, TIER_BOUND_GOOD, TIER_BOUND_FAIR,
     DAY_MS, MONTH_MS,
   },
 };

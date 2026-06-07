@@ -12,9 +12,11 @@
  *       admin / managedBuildings / claim match / tenantId-sot / linkedAuthUid-sot.
  *       Building/room is resolved via claims, then people-doc fallback,
  *       so the consent write survives §7-Z claim-strip windows.
- * Input:  { purpose: 'checklist_v1' | 'account_v1', noticeVersion: 'v1' }
- *         account_v1 = whole-app PDPA acceptance (privacy notice + ToS),
- *         recorded once on tenant first-run (shared/tenant-consent.js).
+ * Input:  { purpose: 'checklist_v1' | 'account_v1' | 'reputation_v1', noticeVersion: 'v1' }
+ *         account_v1    = whole-app PDPA acceptance (privacy notice + ToS),
+ *                         recorded once on tenant first-run (shared/tenant-consent.js).
+ *         reputation_v1 = explicit consent to be shown the server-computed
+ *                         Reputation tier badge (Phase 3.2a v1.x, tenant-reputation.js).
  * Returns: { recorded: true, consentedAt }
  */
 const functions = require('firebase-functions/v1');
@@ -24,7 +26,7 @@ const { resolveTenantClaims, assertTenantAccess } = require('./_authSoT');
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
-const VALID_PURPOSES = new Set(['checklist_v1', 'account_v1']);
+const VALID_PURPOSES = new Set(['checklist_v1', 'account_v1', 'reputation_v1']);
 
 exports.recordChecklistConsent = functions
   .region('asia-southeast1')

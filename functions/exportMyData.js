@@ -145,6 +145,15 @@ exports.exportMyData = functions
       }
     }
 
+    // ---- trustScores (derived reputation — PDPA §30 derived personal data) ----
+    // Server-computed reliability score keyed by tenantId. Included so the data
+    // subject can see what the platform derived about them (Phase 3.2a v1.x).
+    let trustScore = null;
+    if (effectiveTenantId) {
+      const tsSnap = await firestore.collection('trustScores').doc(effectiveTenantId).get().catch(() => null);
+      trustScore = _safeData(tsSnap);
+    }
+
     // ---- RTDB: complaints, maintenance, bills ----
     const db = admin.database();
     const [complaints, maintenance, bills] = await Promise.all([
@@ -167,6 +176,7 @@ exports.exportMyData = functions
       liffUser:           liffUserData,
       checklistInstances,
       consents,
+      trustScore,
       complaints,
       maintenance,
       bills,

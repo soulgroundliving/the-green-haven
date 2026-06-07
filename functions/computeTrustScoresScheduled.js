@@ -44,7 +44,7 @@ const rtdb = admin.database();
 const firestore = admin.firestore();
 
 const { getAllBuildings } = require('./buildingRegistry');
-const { computeReputation, REPUTATION_CONSTANTS } = require('./_reputation');
+const { computeReputation, reputationTier, REPUTATION_CONSTANTS } = require('./_reputation');
 
 const { MONTH_MS, COMPLAINT_CLEAN_MAX_MONTHS } = REPUTATION_CONSTANTS;
 
@@ -157,7 +157,16 @@ async function runTrustScoreSweep({ nowMs } = {}) {
         factors: result.factors,
         computedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      pending++; summary.scored++; written++;
+
+      // Mirror the coarse tier ENUM onto the tenant-readable roster doc (Phase
+      // 3.2a v1.x). The tenant_app badge reads `reputationTier` off the tenant
+      // doc it already loads (TenantFirebaseSync.loadLease) — no new subscription,
+      // no trustScores read-rule change. Tier-only: the raw number + factors stay
+      // in the admin-only trustScores doc. Same batch = single writer (§7-T); the
+      // rules protected-field block forbids the tenant from writing it (§6).
+      batch.set(tDoc.ref, { reputationTier: reputationTier(result.reputation, result.provisional) }, { merge: true });
+
+      pending += 2; summary.scored++; written++;   // 2 ops: trustScores + tenant-doc mirror
       if (pending >= BATCH_LIMIT) await flush();
     }
 
