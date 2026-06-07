@@ -1914,22 +1914,28 @@
         .mk-post-btn:active { transform: scale(0.985); }
         .mk-post-btn i { font-size: 0.85em; }
 
-        /* Filter pills — calm rest state, teal-filled active with whisper shadow */
-        .market-pill {
-            flex-shrink: 0; padding: 7px 15px; border-radius: var(--radius-pill);
-            border: 1px solid var(--border-base); background: var(--surface-card);
-            font-family: inherit; font-size: var(--fs-sm); font-weight: 500;
-            color: var(--muted); white-space: nowrap;
+        /* Category filter — native <select> (replaced the horizontal-scroll
+         * pill row 2026-06-07: compact one-liner, no scroll, scales as more
+         * categories are added). Custom chevron is a sibling <i> so no data:
+         * URL is needed under CSP. */
+        .mk-filter-wrap  { padding: 0 16px 14px; }
+        .mk-filter-field { position: relative; }
+        .mk-filter-select {
+            display: block; width: 100%;
+            appearance: none; -webkit-appearance: none;
+            padding: 11px 40px 11px 15px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-base);
+            background: var(--surface-card);
+            color: var(--ink);
+            font-family: inherit; font-size: var(--fs-md); font-weight: 600;
             cursor: pointer; touch-action: manipulation;
-            transition: background var(--dur-quick) var(--ease-quiet),
-                        color var(--dur-quick) var(--ease-quiet),
-                        border-color var(--dur-quick) var(--ease-quiet);
+            transition: border-color var(--dur-quick) var(--ease-quiet);
         }
-        .market-pill:active { transform: scale(0.95); }
-        .market-pill-active {
-            background: var(--primary-green); color: #fff; font-weight: 600;
-            border-color: var(--primary-green);
-            box-shadow: 0 2px 9px rgba(15, 118, 110, 0.22);
+        .mk-filter-select:focus-visible { outline: none; border-color: var(--primary-green); }
+        .mk-filter-chevron {
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            color: var(--pebble); font-size: var(--fs-sm); pointer-events: none;
         }
 
         /* ── Grid card — whole surface tappable (role=button) ───────────── */
@@ -3547,14 +3553,22 @@
             </button>
         </div>
 
-        <div id="market-filter-pills" style="display:flex; gap:8px; padding:0 16px 14px; overflow-x:auto; -webkit-overflow-scrolling:touch;">
-            <button class="market-pill market-pill-active" data-filter="all" data-action="filterMarket">ทั้งหมด</button>
-            <button class="market-pill" data-filter="item" data-action="filterMarket">🛍️ ของมือสอง</button>
-            <button class="market-pill" data-filter="service" data-action="filterMarket">💅 บริการ</button>
-            <button class="market-pill" data-filter="free" data-action="filterMarket">🎁 แจกฟรี</button>
-            <button class="market-pill" data-filter="request" data-action="filterMarket">✋ อยากได้</button>
-            <button class="market-pill" data-filter="skyhook" data-action="filterMarket">📦 Sky Hook</button>
-            <button class="market-pill" data-filter="pet" data-action="filterMarket">🐾 สัตว์เลี้ยง</button>
+        <!-- Category filter — native select (was a horizontal-scroll pill row).
+             Single-select; change → filterMarketSelect(el) → filterMarket(value). -->
+        <div class="mk-filter-wrap">
+            <div class="mk-filter-field">
+                <select id="market-filter-select" class="mk-filter-select"
+                    data-action-change="filterMarketSelect" aria-label="กรองตามหมวดหมู่">
+                    <option value="all">ทั้งหมด</option>
+                    <option value="item">🛍️ ของมือสอง</option>
+                    <option value="service">💅 บริการ</option>
+                    <option value="free">🎁 แจกฟรี</option>
+                    <option value="request">✋ อยากได้</option>
+                    <option value="skyhook">📦 Sky Hook</option>
+                    <option value="pet">🐾 สัตว์เลี้ยง</option>
+                </select>
+                <i class="fas fa-chevron-down mk-filter-chevron" aria-hidden="true"></i>
+            </div>
         </div>
 
         <div id="market-list-container" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 90px;">
