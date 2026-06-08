@@ -145,11 +145,15 @@
     if (kind === 'mine') {
       if (r.status === 'open') return cat + 'รอเพื่อนบ้านรับ…';
       if (r.status === 'accepted') return '✅ ' + _who(r.helperBuilding, r.helperRoom) + ' กำลังช่วย';
-      if (r.status === 'done') return 'ขอบคุณแล้ว · ' + (_praise(r) || 'เสร็จสิ้น');
+      if (r.status === 'done') {
+        // Show WHICH room helped (the requester forgets after it's done — owner ask).
+        const helper = (r.helperBuilding && r.helperRoom) ? _who(r.helperBuilding, r.helperRoom) : '';
+        return (helper ? 'ขอบคุณ ' + helper : 'ขอบคุณแล้ว') + ' · ' + (_praise(r) || 'เสร็จสิ้น');
+      }
     }
     if (kind === 'jobs') {
       if (r.status === 'accepted') return cat + 'คุณกำลังช่วย ' + _who(r.building, r.room) + ' — รอผู้ขอยืนยัน';
-      if (r.status === 'done') return (_praise(r) ? 'ได้รับคำชม: ' + _praise(r) + ' · ' : '') + '+20 แต้มน้ำใจ 💚';
+      if (r.status === 'done') return 'ช่วย ' + _who(r.building, r.room) + ' · ' + (_praise(r) ? 'ได้รับคำชม: ' + _praise(r) + ' · ' : '') + '+20 แต้มน้ำใจ 💚';
     }
     return cat;
   }
