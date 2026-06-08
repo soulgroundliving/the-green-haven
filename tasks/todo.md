@@ -84,8 +84,10 @@ peer-verify (#2 Helper-lifecycle prerequisite) · #6 Kindness score (sums these 
   - **#298 (`03f27f5`)** tenant checklist made REAL-TIME — `onSnapshot('quests')` (new quest instant) + own `onSnapshot(tenant doc)` state + optimistic claim lock (replaced getDocs-once + eco-snapshot piggyback that left new quests invisible + claimed cards stale).
   - **#299 (`f494192`)** **§7-HH rule fix** — points/state didn't display because the tenant couldn't READ their own doc (`tenants/{b}/list/{r}` read gated on `linkedAuthUid`, EMPTY on the slim N101 doc). Added a **claim-based self-read path** (`token.room==roomId && token.building==building`, the assertTenantAccess model). REST-verified the award ALWAYS landed server-side (points 1→11, ledger row). Rules 300/0, deployed.
   - **#300 (`7610d46`)** cap-exceeded was MIS-LABELED "รับเควสนี้ไปแล้ว" (cap msg "รับเควสครบโควต้า" contains "รับเควส" → matched the already-claimed regex first). Now shows the server's real Thai message + admin warns when a `self` quest's points exceed its cap.
-- **Cap decision (owner):** keep default `selfDailyCap=10`; owner sets the per-quest "เพดาน self" field (already in the admin modal) for higher-value self quests. Cap = per-day TOTAL across self claims, read from the claimed quest.
-- **Open:** owner real-LINE final pass. Energy-auto + weekly + player UI deferred (roadmap #1 / Out-of-scope).
+  - **#301 (`8db929b`)** self **uncapped by default** — the default-10 + shared per-day total blocked every self quest after one claim (and a `selfDailyCap=1`, reward-20 quest was permanently unclaimable). Now blank `selfDailyCap` = unlimited (once/day via idempotency); owner sets a ceiling only if wanted. CF redeployed.
+  - **#302 (`aee332d`)** admin quest-form polish — required `*` markers + legend, icon `<select>` dropdown, per-field `.quest-hint` helper text (static CSS, §7-RR).
+- **✅ Owner-verified on real LINE:** create→appears-instantly · claim→points rise · delete works (catalog emptied). Core loop confirmed. `admin`-approve flow = nice-to-have left to owner.
+- **Deferred:** energy-auto · weekly cadence · player UI (roadmap #1 / Out-of-scope).
 
 ---
 
