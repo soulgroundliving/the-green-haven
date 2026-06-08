@@ -232,3 +232,55 @@ describe('dashboard-bill.js — getBuildingInfo', () => {
     assert.ok(info.displayName && info.displayName.length > 0);
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// PaymentStore — BillStore merge (§7-T reader fix: ออกบิล grid honors RTDB bill paid)
+// ────────────────────────────────────────────────────────────────────────────
+describe('dashboard-bill.js — PaymentStore BillStore merge', () => {
+  function withBillStore(cache) {
+    const sb = loadBill();
+    sb.window.BillStore = { _cache: cache };
+    return sb.window.PaymentStore;
+  }
+  // The live June ห้อง13 case: RTDB bill paid, NO verifiedSlips doc.
+  const JUNE_13_PAID = { rooms: { '13': { 'TGH-256906-13': { status: 'paid', year: 2569, month: 6, totalCharge: 2020, paidAt: 1780857710703 } } } };
+
+  test('listForMonth merges an RTDB-bill-paid room when verifiedSlips has none', () => {
+    const ps = withBillStore(JUNE_13_PAID);
+    const map = ps.listForMonth(2569, 6, 'rooms');
+    assert.equal(map['13']?.status, 'paid');
+    assert.equal(map['13']?.amount, 2020);
+    assert.equal(map['13']?.fromBill, true);
+  });
+
+  test('isPaid honors the RTDB bill status when building is passed', () => {
+    const ps = withBillStore(JUNE_13_PAID);
+    assert.equal(ps.isPaid('rooms', '13', 2569, 6), true);
+    assert.equal(ps.isPaid('rooms', '13', 2569, 5), false); // different month
+    assert.equal(ps.isPaid('rooms', '99', 2569, 6), false); // no bill for room
+  });
+
+  test('a non-paid (pending) RTDB bill is NOT counted paid', () => {
+    const ps = withBillStore({ rooms: { '14': { 'TGH-256906-14': { status: 'pending', year: 2569, month: 6, totalCharge: 1500 } } } });
+    assert.equal(ps.listForMonth(2569, 6, 'rooms')['14'], undefined);
+    assert.equal(ps.isPaid('rooms', '14', 2569, 6), false);
+  });
+
+  test('back-compat: no building arg → no BillStore merge (unchanged behavior)', () => {
+    const ps = withBillStore(JUNE_13_PAID);
+    assert.equal(ps.listForMonth(2569, 6)['13'], undefined);
+  });
+
+  test('normalizes a string/2-digit bill year to BE before matching', () => {
+    const ps = withBillStore({ rooms: { '13': { 'TGH-256906-13': { status: 'paid', year: '2569', month: 6, totalCharge: 2020 } } } });
+    assert.equal(ps.listForMonth(2569, 6, 'rooms')['13']?.status, 'paid');
+  });
+
+  test('no-throw + empty when BillStore is absent', () => {
+    const sb = loadBill();   // no window.BillStore set
+    // (Object.keys, not deepEqual({}) — the sandbox realm's {} has a different
+    //  prototype than this test realm's, which strict deepEqual would reject.)
+    assert.equal(Object.keys(sb.window.PaymentStore.listForMonth(2569, 6, 'rooms')).length, 0);
+    assert.equal(sb.window.PaymentStore.isPaid('rooms', '13', 2569, 6), false);
+  });
+});

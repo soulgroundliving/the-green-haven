@@ -122,7 +122,7 @@ function renderRoomGrid(){
   const rooms    = typeof getActiveRoomsWithMetadata==='function'
     ? getActiveRoomsWithMetadata(bldgInfo.firebaseBuilding, bldgInfo.metadataArray)
     : [];
-  const paidMap  = typeof PaymentStore!=='undefined' ? PaymentStore.listForMonth(year, month) : {};
+  const paidMap  = typeof PaymentStore!=='undefined' ? PaymentStore.listForMonth(year, month, bldgInfo.firebaseBuilding) : {};
   const activeId = document.getElementById('f-room')?.value || '';
 
   // Tenant name lookup
@@ -174,7 +174,7 @@ function _goToNextUnpaidRoom(){
   const bldgInfo = getBuildingInfo(window.currentBuilding);
   const rooms    = typeof getActiveRoomsWithMetadata==='function'
     ? getActiveRoomsWithMetadata(bldgInfo.firebaseBuilding, bldgInfo.metadataArray) : [];
-  const paidMap  = typeof PaymentStore!=='undefined' ? PaymentStore.listForMonth(year, month) : {};
+  const paidMap  = typeof PaymentStore!=='undefined' ? PaymentStore.listForMonth(year, month, bldgInfo.firebaseBuilding) : {};
   const currentId= document.getElementById('f-room')?.value||'';
   const currentIdx = rooms.findIndex(r=>r.id===currentId);
   // Search from current+1, then wrap around

@@ -520,21 +520,61 @@ window.PaymentStore = window.PaymentStore || (function(){
     try { return JSON.parse(localStorage.getItem('payment_status')||'{}'); }
     catch(e) { return {}; }
   }
+  // §7-T reader-fix (2026-06-08): the RTDB bill's own status:'paid' is the canonical
+  // paid signal post-Option-C. verifiedSlips may be ABSENT while the bill IS paid —
+  // e.g. a backfilled bill (tools/backfill-synth-bills.js) or a slip whose verifiedSlips
+  // write failed (the old userId bug). Without this, the ออกบิล grid (reads verifiedSlips)
+  // showed a tenant-paid room as ⏳ while the tenant app + home dashboard widget (both read
+  // BillStore RTDB) showed ✅. Mirror those: merge BillStore-paid rooms as a low-precedence
+  // fallback so all admin views agree. Returns { room: {status:'paid', amount, ...} }.
+  function _billStorePaidForMonth(building, year, month) {
+    const out = {};
+    try {
+      const byBuilding = window.BillStore?._cache?.[building];
+      if (!byBuilding) return out;
+      const beYear = Number(year) < 2400 ? Number(year) + 543 : Number(year);
+      const m = Number(month);
+      for (const room of Object.keys(byBuilding)) {
+        const bills = byBuilding[room] || {};
+        for (const billId of Object.keys(bills)) {
+          const b = bills[billId];
+          if (!b || String(b.status).toLowerCase() !== 'paid') continue;
+          const by = Number(b.year) < 2400 ? Number(b.year) + 543 : Number(b.year);
+          if (by === beYear && Number(b.month) === m) {
+            out[String(room)] = {
+              status: 'paid',
+              amount: Number(b.totalCharge ?? b.totalAmount) || 0,
+              date: b.paidAt ? new Date(b.paidAt).toISOString() : null,
+              receiptNo: b.receiptNo || b.paidRef || null,
+              fromBill: true, billId,
+            };
+            break;
+          }
+        }
+      }
+    } catch(e) { /* BillStore not ready — verifiedSlips/legacy still apply */ }
+    return out;
+  }
   function isPaid(building, room, year, month) {
     const k = _key(year, month);
     const r = String(room);
     if (cache[k]?.[r]?.status === 'paid') return true;
-    const legacy = _readLegacy();
-    return legacy[k]?.[r]?.status === 'paid';
+    if (_readLegacy()[k]?.[r]?.status === 'paid') return true;
+    if (building && _billStorePaidForMonth(building, year, month)[r]) return true;
+    return false;
   }
   function getSlip(building, room, year, month) {
     const k = _key(year, month);
     const r = String(room);
-    return cache[k]?.[r] || _readLegacy()[k]?.[r] || null;
+    return cache[k]?.[r] || _readLegacy()[k]?.[r]
+      || (building ? _billStorePaidForMonth(building, year, month)[r] : null) || null;
   }
-  function listForMonth(year, month) {
+  // `building` optional + last for back-compat. When provided, BillStore-paid rooms
+  // are merged at LOWEST precedence (verifiedSlips/legacy win — they carry slip detail).
+  function listForMonth(year, month, building) {
     const k = _key(year, month);
-    return { ...(_readLegacy()[k] || {}), ...(cache[k] || {}) };
+    const billPaid = building ? _billStorePaidForMonth(building, year, month) : {};
+    return { ...billPaid, ...(_readLegacy()[k] || {}), ...(cache[k] || {}) };
   }
   function onChange(fn) {
     listeners.add(fn);
