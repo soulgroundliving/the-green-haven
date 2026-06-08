@@ -26,12 +26,17 @@
   let _wired = false;       // static controls wired once
   const _busy = new Set();  // requestIds with an in-flight action
   const _confirmCancel = new Set(); // requestIds armed for a 2-tap cancel
-  let _ratingFor = null;    // requestId currently being rated
-  let _ratingStars = 0;
+  let _ratingFor = null;    // requestId currently being thanked
+  const _selectedTags = new Set();
 
   const CAT_LABEL = {
     lifting: '📦 ยกของ', errand: '🏃 ธุระ', petcare: '🐾 สัตว์เลี้ยง',
     tech: '🔧 อุปกรณ์', other: '📝 อื่น ๆ',
+  };
+  // Appreciation tag labels — MIRROR functions/_helpRequestEngine.js APPRECIATION_LABELS.
+  const TAG_LABEL = {
+    kind: '💚 ใจดีมาก', fast: '⚡ รวดเร็วทันใจ', extra: '✨ ช่วยเกินคาด',
+    friendly: '😊 เป็นกันเอง', trusty: '🤝 ไว้ใจได้',
   };
 
   function _fs() { const f = window.firebase; return (f && f.firestoreFunctions) ? f.firestoreFunctions : null; }
@@ -118,6 +123,12 @@
       main.appendChild(det);
     }
     main.appendChild(sub);
+    if (r.status === 'done' && r.ratingNote) {
+      const note = document.createElement('p');
+      note.className = 'help-card__note';
+      note.textContent = '💬 ' + r.ratingNote;   // the thank-you message — surfaced to the helper
+      main.appendChild(note);
+    }
 
     const side = document.createElement('div');
     side.className = 'help-card__side';
@@ -134,11 +145,11 @@
     if (kind === 'mine') {
       if (r.status === 'open') return cat + 'รอเพื่อนบ้านรับ…';
       if (r.status === 'accepted') return '✅ ' + _who(r.helperBuilding, r.helperRoom) + ' กำลังช่วย';
-      if (r.status === 'done') return 'เสร็จแล้ว · ' + _stars(r.rating);
+      if (r.status === 'done') return 'ขอบคุณแล้ว · ' + (_praise(r) || 'เสร็จสิ้น');
     }
     if (kind === 'jobs') {
       if (r.status === 'accepted') return cat + 'คุณกำลังช่วย ' + _who(r.building, r.room) + ' — รอผู้ขอยืนยัน';
-      if (r.status === 'done') return 'เสร็จแล้ว · ' + _stars(r.rating) + ' · +20 แต้มน้ำใจ 💚';
+      if (r.status === 'done') return (_praise(r) ? 'ได้รับคำชม: ' + _praise(r) + ' · ' : '') + '+20 แต้มน้ำใจ 💚';
     }
     return cat;
   }
@@ -146,6 +157,14 @@
   function _stars(n) {
     const s = Math.max(0, Math.min(5, Number(n) || 0));
     return s ? '⭐'.repeat(s) : '—';
+  }
+
+  // The appreciation shown on a done card: warm tags (new) or a legacy star count.
+  function _praise(r) {
+    if (Array.isArray(r.appreciationTags) && r.appreciationTags.length) {
+      return r.appreciationTags.map(k => TAG_LABEL[k] || k).join('  ');
+    }
+    return r.rating ? _stars(r.rating) : '';
   }
 
   function _btn(label, cls, handler) {
@@ -261,8 +280,8 @@
   // ── Rating modal (complete) ────────────────────────────────────────────────
   function _openRating(r) {
     _ratingFor = r.id;
-    _ratingStars = 0;
-    _paintStars();
+    _selectedTags.clear();
+    _paintTags();
     const note = document.getElementById('help-rating-note');
     if (note) note.value = '';
     const modal = document.getElementById('help-rating-modal');
@@ -275,19 +294,19 @@
     if (modal) { modal.style.display = 'none'; modal.classList.add('u-hidden'); }
   }
 
-  function _paintStars() {
-    const wrap = document.getElementById('help-rating-stars');
-    if (!wrap) return;
-    Array.prototype.forEach.call(wrap.children, (star, i) => {
-      star.textContent = i < _ratingStars ? '★' : '☆';
-      star.classList.toggle('is-on', i < _ratingStars);
-    });
+  function _paintTags() {
+    const wrap = document.getElementById('help-appreciation-tags');
+    if (wrap) {
+      Array.prototype.forEach.call(wrap.children, chip => {
+        chip.classList.toggle('is-on', _selectedTags.has(chip.dataset.tag));
+      });
+    }
     const ok = document.getElementById('help-rating-confirm');
-    if (ok) ok.disabled = _ratingStars < 1;
+    if (ok) ok.disabled = _selectedTags.size < 1;
   }
 
   async function _confirmRating() {
-    if (!_ratingFor || _ratingStars < 1) return;
+    if (!_ratingFor || _selectedTags.size < 1) return;
     const fns = _fns();
     if (!fns) { _toast('ระบบยังไม่พร้อม', 'error'); return; }
     const id = _ratingFor;
@@ -297,16 +316,16 @@
     _busy.add(id);
     try {
       await fns.httpsCallable('completeHelpRequest')({
-        requestId: id, rating: _ratingStars,
+        requestId: id, appreciationTags: [..._selectedTags],
         ratingNote: (note && note.value || '').trim() || undefined,
       });
       _closeRating();
-      _toast('ขอบคุณ! ส่งดาวให้ผู้ช่วยแล้ว 💚', 'success');
+      _toast('ส่งคำขอบคุณให้ผู้ช่วยแล้ว 💚', 'success');
     } catch (e) {
-      _toast(_errMsg(e, 'ยืนยันไม่สำเร็จ กรุณาลองใหม่'), 'error');
+      _toast(_errMsg(e, 'ส่งไม่สำเร็จ กรุณาลองใหม่'), 'error');
     } finally {
       _busy.delete(id);
-      if (ok) { ok.textContent = 'ยืนยัน'; ok.disabled = false; }
+      if (ok) { ok.textContent = 'ส่งคำขอบคุณ'; ok.disabled = false; }
       _render();
     }
   }
@@ -338,10 +357,14 @@
     on('help-post-submit', 'click', _post);
     on('help-rating-confirm', 'click', _confirmRating);
     on('help-rating-cancel', 'click', _closeRating);
-    const stars = document.getElementById('help-rating-stars');
-    if (stars) {
-      Array.prototype.forEach.call(stars.children, (star, i) => {
-        star.addEventListener('click', () => { _ratingStars = i + 1; _paintStars(); });
+    const tags = document.getElementById('help-appreciation-tags');
+    if (tags) {
+      Array.prototype.forEach.call(tags.children, chip => {
+        chip.addEventListener('click', () => {
+          const k = chip.dataset.tag;
+          if (_selectedTags.has(k)) _selectedTags.delete(k); else _selectedTags.add(k);
+          _paintTags();
+        });
       });
     }
   }

@@ -950,14 +950,22 @@ body.gh-tour-open {
   font-size: 0.82rem; color: var(--text-muted, #8a8f98);
   border: 1px dashed var(--border-subtle, #ebe9e2); border-radius: 14px;
 }
-/* Rating modal star picker (#help-rating-stars). */
-.help-stars { display: flex; gap: 6px; justify-content: center; margin: 4px 0 12px; }
-.help-stars > span {
-  font-size: 2rem; line-height: 1; cursor: pointer; color: #d9d4c7;
-  transition: transform 0.1s ease, color 0.15s ease; user-select: none;
+/* Appreciation tag picker (#help-appreciation-tags) — warm "thank-you" chips that
+   replaced the cold star rating. Hardcoded light (cards are always #fff, §7-W). */
+.help-tag-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.help-tag {
+  padding: 7px 12px; border-radius: 999px;
+  border: 1.5px solid var(--border-subtle, #ebe9e2); background: #fff;
+  font-family: inherit; font-size: 0.8rem; font-weight: 600; color: #5a6b66;
+  cursor: pointer; transition: transform 0.1s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
-.help-stars > span.is-on { color: #f5b301; }
-.help-stars > span:active { transform: scale(1.2); }
+.help-tag:active { transform: scale(0.96); }
+.help-tag.is-on { background: #e3f1ea; color: #0d5c4e; border-color: var(--green, #0f766e); }
+/* The thank-you note shown on a done card (the helper reads what they earned). */
+.help-card__note {
+  margin: 6px 0 0; font-size: 0.78rem; color: #5a6b66;
+  background: #f4f7f5; border-radius: 8px; padding: 6px 10px; line-height: 1.4;
+}
 
 /* Admin quest-form field hint (dashboard #questEditModal). */
 .quest-hint {

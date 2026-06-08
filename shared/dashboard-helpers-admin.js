@@ -22,10 +22,21 @@ const HELP_STATUS_LABEL = {
 const HELP_CAT_LABEL = {
   lifting: 'ยกของ', errand: 'ธุระ', petcare: 'สัตว์เลี้ยง', tech: 'อุปกรณ์', other: 'อื่น ๆ',
 };
+// Appreciation tag labels — MIRROR functions/_helpRequestEngine.js APPRECIATION_LABELS.
+const HELP_TAG_LABEL = {
+  kind: '💚 ใจดีมาก', fast: '⚡ รวดเร็วทันใจ', extra: '✨ ช่วยเกินคาด',
+  friendly: '😊 เป็นกันเอง', trusty: '🤝 ไว้ใจได้',
+};
 
 function _hEsc(s) { return String(s == null ? '' : s); }
 function _hWho(building, room) { return building && room ? ((building === 'nest' ? 'Nest ' : 'ห้อง ') + room) : '—'; }
 function _hStars(n) { const s = Math.max(0, Math.min(5, Number(n) || 0)); return s ? '⭐'.repeat(s) : '—'; }
+function _hPraise(r) {
+  if (Array.isArray(r.appreciationTags) && r.appreciationTags.length) {
+    return r.appreciationTags.map(k => HELP_TAG_LABEL[k] || k).join(' ');
+  }
+  return r.rating ? _hStars(r.rating) : '—';   // legacy fallback
+}
 function _hMs(ts) {
   if (!ts) return 0;
   if (typeof ts.toMillis === 'function') return ts.toMillis();
@@ -51,7 +62,7 @@ function loadHelpersAdmin() {
   }, err => {
     console.warn('[helpers-admin] onSnapshot failed:', err);
     const t = document.getElementById('helpersAdminTable');
-    if (t) t.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#b00020;padding:20px;">โหลดไม่สำเร็จ: ${_hEsc(err.message)}</td></tr>`;
+    if (t) t.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#b00020;padding:20px;">โหลดไม่สำเร็จ: ${_hEsc(err.message)}</td></tr>`;
   });
 }
 
@@ -66,7 +77,7 @@ function renderHelpersAdminTable() {
   tbody.innerHTML = '';
   if (!_helpersAdminCache.length) {
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">ยังไม่มีคำขอช่วยเหลือ</td>';
+    tr.innerHTML = '<td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">ยังไม่มีคำขอช่วยเหลือ</td>';
     tbody.appendChild(tr);
     return;
   }
@@ -81,13 +92,27 @@ function renderHelpersAdminTable() {
       tag.textContent = HELP_CAT_LABEL[r.category];
       titleTd.appendChild(tag);
     }
+    if (r.status === 'done') {
+      const praise = _hPraise(r);
+      if (praise && praise !== '—') {
+        const pr = document.createElement('div');
+        pr.style.cssText = 'font-size:.76rem;color:var(--green-dark);margin-top:2px;';
+        pr.textContent = '🙏 ' + praise;
+        titleTd.appendChild(pr);
+      }
+      if (r.ratingNote) {
+        const nt = document.createElement('div');
+        nt.style.cssText = 'font-size:.76rem;color:var(--text-muted);font-style:italic;margin-top:2px;';
+        nt.textContent = '💬 ' + _hEsc(r.ratingNote);
+        titleTd.appendChild(nt);
+      }
+    }
     tr.appendChild(titleTd);
     tr.appendChild(td(r.helperUid ? _hWho(r.helperBuilding, r.helperRoom) : '—', true));
     const stTd = document.createElement('td');
     stTd.style.cssText = 'font-size:.82rem;font-weight:600;';
     stTd.textContent = HELP_STATUS_LABEL[r.status] || r.status || '—';
     tr.appendChild(stTd);
-    tr.appendChild(td(_hStars(r.rating), true));
     tr.appendChild(td(_hWhen(r.createdAt), true));
     const actTd = document.createElement('td');
     if (r.status === 'open' || r.status === 'accepted') {
