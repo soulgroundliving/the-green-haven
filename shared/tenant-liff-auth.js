@@ -249,6 +249,12 @@ function _setupApprovalStatusListener() {
             ref,
             snap => {
                 if (!snap || !snap.exists || !snap.exists()) return;
+                // §7-KK: the FIRST snapshot can be served from the local Firestore cache, which
+                // may hold a STALE status from a prior session — e.g. 'approved' cached from before
+                // an unlink. Acting on a cached 'approved' would location.reload() → re-init → the
+                // cache replays 'approved' → reload … a full-page reload loop every ~5s (link→unlink→
+                // relink→rejected hits exactly this). Only ever act on a SERVER-confirmed snapshot.
+                if (snap.metadata && snap.metadata.fromCache) return;
                 const status = snap.data()?.status;
                 if (status === 'approved') {
                     if (window._approvalReloadStarted) return;   // guard double-fire (snapshot can tick twice)
