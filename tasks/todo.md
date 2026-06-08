@@ -4,7 +4,7 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-08) — Meaning Layer **#2: Helper-request lifecycle** · ⏳ AWAITING APPROVAL (Plan-First)
+## ✅ SHIPPED (2026-06-09) — Meaning Layer **#2: Helper-request lifecycle** · PR #303 server + #304 UI
 
 > Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#2 · 🔴 buildable now** — next in order after #1 Community Quests (✅ shipped #296–#302). Neighbor posts a help request → another tenant accepts → requester confirms-done + rates → **helper earns peer-confirmed kindness points**. Captures the job-history + ratings that **#7 Verified Helper** aggregates and feeds the **#6 Kindness score** (helper side). Mirrors the #1 quests architecture exactly: pure engine + per-transition callables + CF-only-write records + `pointsLedger` capture.
 
@@ -83,6 +83,14 @@ match /helpRequests/{id} {
 
 ### Out of scope (named, not dropped)
 helper-release (accepted→open re-list) · auto-expire stale open requests · photo proof · two-way rating (helper rates requester) · #3 Community-requests board (next ตัว — reuses this lifecycle wholesale) · #6 Kindness score (sums `help_completed` after accrual) · #7 Verified Helper (aggregates these jobs + ratings).
+
+### Review (2026-06-09) — SHIPPED + DEPLOYED end-to-end
+- **PR1 #303 (`e132b04`)** server — merged + **deployed to prod** (4 callables `post`/`accept`/`complete`/`cancel` live SE1 nodejs22, verified `firebase functions:list`; rules deployed). Pure `_helpRequestEngine` + `pointsLedger source:'help_completed'`. Staging deploy gated the merge (de-risk §7-WW). **49 new tests** (engine + 4 callables + ledger); functions 2125/0, rules emulator 306/0, README synced 101→106 / 282→288.
+- **PR2 #304 (`c06ab04`)** UI — merged → Vercel. Tenant `#helper-board` sub-page (`tenant-helpers.js`, 3 live sections, ONE `where building==` snapshot §7-J) + admin "น้ำใจ" monitor (`dashboard-helpers-admin.js`). test:shared 484/0; no CSP drift; mojibake clean.
+- **§7-W catch (PR2):** static-harness preview screenshot exposed `var(--green-pale)` flipping near-black in dark mode (it's `--brand-primary-soft`, not pale) while cards stay `#fff` → count/ghost/badge chips dark-on-white. Fixed to hardcoded light values + re-screenshot confirmed.
+- **§7-B catch (PR2):** pre-commit hook blocked a compat `firebase.auth().currentUser` fallback in `_uid()` → switched to `window._authUid` (canonical, §7-BB).
+- **Owner decisions (locked, all REC):** requester confirms+rates (peer-confirmed) · LINE push IN (accept→requester, complete→helper, reuses existing secret §7-WW-safe) · helper reward 20 · admin monitor IN.
+- **Open:** owner real-LINE live-verify (board is LIFF-auth-gated — post→accept→complete loop + admin cancel). Lifecycle: [[lifecycle_helper_requests]].
 
 ---
 

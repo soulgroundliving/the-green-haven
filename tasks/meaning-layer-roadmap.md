@@ -19,14 +19,14 @@
 
 ---
 
-## Status (2 shipped · 15 pending)
+## Status (3 shipped · 14 pending)
 
 | # | ตัว | Pillar | Status |
 |---|-----|--------|--------|
 | 0 | Reputation score v1 | Trust | ✅ SHIPPED (#288/#289) |
 | 1 | Community Quests engine | Trust | ✅ SHIPPED (server #296 + UI) |
-| 2 | Helper-request lifecycle | Trust | 🔴 buildable now |
-| 3 | Community requests board | Micro-Econ | 🔴 buildable now |
+| 2 | Helper-request lifecycle | Trust | ✅ SHIPPED (#303 server + #304 UI) |
+| 3 | Community requests board | Micro-Econ | 🔴 buildable now ⭐ NEXT |
 | 4 | Food sharing feed | Micro-Econ | 🔴 buildable now |
 | 5 | Trade history memory | Micro-Econ | 🔴 buildable now |
 | 6 | Kindness score | Trust | 🟡 gated on #1–5 accrual |
@@ -73,7 +73,8 @@
 **Value:** standalone engagement + behavior change NOW; **the capture primitive that #6 Kindness sums.** Highest unlock-per-effort.
 **Guardrails:** anti-gaming — peer/auto-verified completion only, cap per-day quest credit; §7-NN callable; §7-T grep `pointsLedger` readers before adding the `source` value.
 
-### 2 — Helper-request lifecycle · 🔴 buildable now
+### 2 — Helper-request lifecycle · ✅ SHIPPED 2026-06-09 (PR #303 server `e132b04` + #304 UI `c06ab04`)
+**Shipped:** `helpRequests/{id}` board (open→accepted→done + cancelled); 4 transition callables (post/accept/complete/cancel, SE1, §7-NN) + pure `_helpRequestEngine`; building-scoped read rule (CF-only write); `pointsLedger source:'help_completed'` (+20 peer-confirmed → feeds #6/#7); tenant `#helper-board` sub-page (`tenant-helpers.js`, 3 live sections) + admin "น้ำใจ" monitor (`dashboard-helpers-admin.js`). Owner decisions baked: requester confirms+rates · LINE push IN · reward 20 · admin monitor IN. CFs verified `firebase functions:list`; rules deployed. **Open:** owner real-LINE live-verify (board is LIFF-auth-gated). Lifecycle: [[lifecycle_helper_requests]].
 **What:** neighbor asks for help → another accepts → completes → **peer rating**.
 **Captures (proposed):** `helpRequests/{id}` { requesterUid, building, room, title, status: open→accepted→done, helperUid, rating, createdAt } (§7-T status-enum writer/reader). One callable per transition.
 **Depends / Reuses:** request/notification pattern (maintenance + announcements precedent); LINE notify infra.
