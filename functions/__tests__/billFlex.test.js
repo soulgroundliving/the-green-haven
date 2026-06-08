@@ -157,9 +157,14 @@ describe('buildReceiptFlex', () => {
     assert.ok(msg.altText.includes('เรียบร้อย'));
   });
 
-  it('header is green #2d8653', () => {
+  it('header is a green gradient (เขียวสด) with a solid fallback, distinct from blue', () => {
     const msg = buildReceiptFlex(bill, {});
-    assert.equal(msg.contents.header.backgroundColor, '#2d8653');
+    const h = msg.contents.header;
+    assert.equal(h.background?.type, 'linearGradient');
+    assert.equal(h.background.startColor, '#2EA85C');
+    assert.equal(h.background.endColor, '#0F5132');
+    assert.equal(h.backgroundColor, '#2d8653', 'solid green fallback for non-gradient clients');
+    assert.notEqual(h.backgroundColor, '#0288D1', 'must NOT be the invoice blue');
   });
 
   it('receipt ref falls back to the legacy per-render RCP- ref when no receiptNo given', () => {

@@ -255,11 +255,16 @@ function buildReceiptFlex(bill, opts = {}) {
   const bubble = {
     type: 'bubble',
     header: {
-      type: 'box', layout: 'vertical', backgroundColor: '#2d8653', paddingAll: '16px',
+      // Fresh green gradient (เขียวสด · หรู) — mirrors the bill's premium look while
+      // staying green (distinct from the blue invoice). backgroundColor is the solid
+      // fallback for clients that don't render gradients.
+      type: 'box', layout: 'vertical', paddingAll: '16px',
+      backgroundColor: '#2d8653',
+      background: { type: 'linearGradient', angle: '135deg', startColor: '#2EA85C', endColor: '#0F5132' },
       contents: [
         { type: 'text', text: 'ใบเสร็จรับเงิน', color: '#ffffff', weight: 'bold', size: 'xl' },
         { type: 'text', text: `${nameLabel} • เดือน ${monthLabel}`,
-          color: '#c8e6c9', size: 'sm', margin: 'xs' }
+          color: '#E8F5E9', size: 'sm', margin: 'xs' }
       ]
     },
     body: {
