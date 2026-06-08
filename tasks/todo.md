@@ -4,7 +4,89 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-08) — Meaning Layer **#1: Community Quests engine** (daily checklist · fuller engine) · ⏳ AWAITING APPROVAL (Plan-First)
+## ▶▶▶ ACTIVE PLAN (2026-06-08) — Meaning Layer **#2: Helper-request lifecycle** · ⏳ AWAITING APPROVAL (Plan-First)
+
+> Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#2 · 🔴 buildable now** — next in order after #1 Community Quests (✅ shipped #296–#302). Neighbor posts a help request → another tenant accepts → requester confirms-done + rates → **helper earns peer-confirmed kindness points**. Captures the job-history + ratings that **#7 Verified Helper** aggregates and feeds the **#6 Kindness score** (helper side). Mirrors the #1 quests architecture exactly: pure engine + per-transition callables + CF-only-write records + `pointsLedger` capture.
+
+### Why Plan-First (CLAUDE.md §1 — all three thresholds)
+New `helpRequests/` collection + **4 transition callables** + `firestore.rules` (building-scoped read / CF-only write) + `pointsLedger 'help_completed'` source + LINE-notify wiring + tenant board UI + (light) admin monitor + tests + lifecycle doc ≈ **12–14 files**; schema+security+architectural; CF+rules deploy = not single-revert; 2+ valid models (completion authority · LINE in/out). Touches the live gamification balance (helper award) → **money-of-points path (§7-I)**.
+
+### State machine — `open → accepted → done` (+ `cancelled`); ONE callable per transition (§7-NN)
+| Callable | Transition | Driver (auth gate) | Key writes |
+|---|---|---|---|
+| `postHelpRequest` | — → `open` | any tenant (`requesterUid = auth.uid`, anti-spoof) | create doc; rate-limit 5/day (`_rateLimit.js`) |
+| `acceptHelpRequest` | `open → accepted` | a **different** tenant (`helperUid = auth.uid`, ≠ requester) | tx-guard `status===open` (atomic single-winner); notify requester |
+| `completeHelpRequest` | `accepted → done` + rating | **requester only** (`auth.uid === requesterUid`) | rating 1–5; **award helper** points + `pointsLedger`; notify helper |
+| `cancelHelpRequest` | `open\|accepted → cancelled` | requester only | terminal; no award |
+
+**Completion authority = requester (peer-confirmed).** The helper never self-marks done → kindness credit is honest (§6 "never self-claim"; mirrors quests `admin`-verify). **[FORK 1]**
+
+### Data model — `helpRequests/{auto-id}` (top-level Firestore)
+`{ requesterUid, requesterTenantId, requesterName, building, room, title, detail?, category?, status:'open'|'accepted'|'done'|'cancelled', helperUid?, helperTenantId?, helperName?, rating?(1–5), ratingNote?, createdAt, acceptedAt?, completedAt?, cancelledAt? }`
+- Names denormalized for display (**PDPA**: visible within building only — read gate below).
+- §7-T: single writer (CF/admin SDK); readers = tenant board + admin monitor + future #7 aggregator.
+
+### Rules (`firestore.rules`) — building-scoped read, CF-only write
+```
+match /helpRequests/{id} {
+  allow read:  if isAdmin() || (isSignedIn() && request.auth.token.building == resource.data.building);
+  allow write: if false;   // every transition via callable (admin SDK)
+}
+```
+- Tenant token carries `building` claim (confirmed live: quests #299 `token.building` self-read). Building-scoped → a Nest tenant never sees rooms' requests; admin sees all.
+- **No composite index (§7-J/N):** tenant board = ONE `onSnapshot(where building == myBuilding)` (single-field, auto-indexed) → client buckets by status + (mine / helper / others). Same "no new index" win as #1.
+
+### pointsLedger capture (feeds #6 Kindness)
+- Add `'help_completed'` to `VALID_SOURCES` ([_pointsLedger.js:41](functions/_pointsLedger.js#L41)) — the roadmap's named kindness source (`source ∈ {quest, food_share, giveaway, help_completed}`).
+- `completeHelpRequest` tx: bump helper's `tenants/{hb}/list/{hr}.gamification.points` + `appendPointsLedger({ tenantId: helperTenantId, source:'help_completed', discriminator: requestId, refId: requestId, points: HELPER_REWARD, balanceAfter, by: requesterUid })` — atomic, idempotent by `requestId` (one award per request). **[FORK 3: reward 10/20/30, REC 20]**
+- `SOURCE_LABEL.help_completed = 'น้ำใจ'` ([dashboard-behavioral-engagement.js:29](shared/dashboard-behavioral-engagement.js#L29)) — graceful fallback, §7-T.
+
+### Verified reuse (Explore, file:line — §7-H/K/O/AA)
+- **§7-O/AA greenfield confirmed:** `grep helpRequest|helperUid` → only roadmap + trust-plan docs, **no code**. Nothing orphaned to wire.
+- **Pure engine:** clone `_questEngine.js` (179 LOC) → `_helpRequestEngine.js` (transition guards `canAccept/canComplete/canCancel`, `isValidStatus/Category/Rating`, `HELPER_REWARD_POINTS`).
+- **Callable:** clone `claimQuest.js` (region SE1, `functions.https.onCall`, auth gate, `assertTenantAccess` from `_authSoT`, `runTransaction`, `appendPointsLedger`). §7-NN callable not trigger.
+- **Atomic accept:** `runTransaction` re-reads `status===open` inside the tx (single-winner; loser → `failed-precondition` "มีคนรับไปแล้ว"). Mirrors the booking atomic-lock.
+- **LINE notify:** `pushAndRetry(...)` ([_notifyHelper.js:50](functions/_notifyHelper.js#L50)) + liffUsers lookup (`where building/room/status==approved`) + `_lineRetry` queue; idempotencyKey `help-{requestId}-{transition}-{userId}`. Mirrors `notifyMaintenanceTenant.js`; best-effort/non-blocking (re-uses the EXISTING LINE secret — no new defineSecret, §7-WW-safe). **[FORK 2]**
+- **Tenant board UI:** clone `tenant-maintenance.js` IIFE (board precedent) + `tenant-quests.js` optimistic-callable; self-wire `_onLiffClaimsReady` + `_taBuilding/_taRoom` (§7-A/U/BB); new sub-page via `showSubPage`.
+- **Admin monitor:** clone `dashboard-requests-admin.js` read-only onSnapshot list + cancel-abusive. **[FORK 4: REC light-included]**
+
+### Build — PR1 (server + rules + tests; owner-deploy-gated, NOT stacked)
+- [ ] `functions/_pointsLedger.js` — add `'help_completed'` to `VALID_SOURCES` (+comment; test 7→8).
+- [ ] `functions/_helpRequestEngine.js` (NEW, pure) — transition guards + validators + `HELPER_REWARD_POINTS`.
+- [ ] `functions/postHelpRequest.js` (NEW callable SE1) — tenant gate (`assertTenantAccess`), `requesterUid=auth.uid`, rate-limit 5/day, title validate.
+- [ ] `functions/acceptHelpRequest.js` (NEW callable SE1) — tx `status===open` guard, helper≠requester; notify requester [FORK2].
+- [ ] `functions/completeHelpRequest.js` (NEW callable SE1) — requester-only, rating 1–5, award helper + ledger (tx); notify helper [FORK2].
+- [ ] `functions/cancelHelpRequest.js` (NEW callable SE1) — requester-only → cancelled.
+- [ ] `functions/index.js` — register 4 callables column-0 (§7-CCC/SS · §7-NN).
+- [ ] `firestore.rules` — `helpRequests/{id}` block + rule tests (building-scoped read · write false).
+- [ ] `functions/__tests__/_helpRequestEngine.test.js` (NEW) + callable integration tests (mirror quest tests).
+- [ ] `shared/dashboard-behavioral-engagement.js` — `SOURCE_LABEL.help_completed`.
+- [ ] Gate: `node --check` · functions tests green · rules emulator green · `verify:memory` · mojibake (§7-TT) · pre-commit.
+- [ ] **OWNER:** merge → CI auto-deploys 4 callables + `firebase deploy --only firestore:rules`.
+
+### Build — PR2 (tenant board + admin monitor; off main AFTER PR1 deploy)
+- [ ] `shared/tenant-helpers.js` (NEW) — board: post form + open list (others' → accept) + "คำขอของฉัน" (status · complete+rate · cancel) + "งานที่รับ" (jobs accepted); optimistic callables (§7-I); `_onLiffClaimsReady` guard.
+- [ ] `tenant_app.html` — `<script src tenant-helpers.js>` (§7-PP order) + new sub-page "ช่วยเหลือเพื่อนบ้าน" + nav entry.
+- [ ] `shared/dashboard-helpers-admin.js` (NEW, light) — read-only monitor + cancel-abusive (§7-I explicit click).
+- [ ] `dashboard.html` — monitor tab/panel + script + hub wires.
+- [ ] `shared/components.css` — static `.help-card*` (§7-RR).
+- [ ] Gate: test:shared green · static-harness preview-MCP screenshot (board states) · no CSP drift (§7-II) · mojibake.
+
+### Guardrails (§7 + §6)
+§6 kindness integrity (peer-confirmed award only, server-authoritative) · §7-NN callables not triggers · §7-I no auto-click on accept/complete · §7-A/U/BB tenant claim-gated · §7-T pointsLedger writer+reader · §7-J no composite index (single-field board query) · §7-N read-error muted · §7-RR static CSS · §7-II CSP no-drift · §7-PP/QQ/CC script order + window export · anti-spoof (requesterUid/helperUid = auth.uid server-side) · rate-limit post · PDPA building-scoped read · **CF+rules deploy OWNER-CONFIRMED** · don't stack ([[feedback_stacked_pr_squash_merge]]).
+
+### Owner decisions (LOCKED 2026-06-08 — all REC)
+1. **Completion authority = requester confirms-and-rates** (peer-confirmed; helper never self-marks done → honest kindness capture).
+2. **LINE push IN v1** — accept→requester · complete→helper (reuse existing LINE secret + pushAndRetry, best-effort/non-blocking).
+3. **Helper reward = 20 pts** per completed help (`HELPER_REWARD_POINTS`).
+4. **Admin monitor IN v1** — light read-only + cancel-abusive (PR2).
+
+### Out of scope (named, not dropped)
+helper-release (accepted→open re-list) · auto-expire stale open requests · photo proof · two-way rating (helper rates requester) · #3 Community-requests board (next ตัว — reuses this lifecycle wholesale) · #6 Kindness score (sums `help_completed` after accrual) · #7 Verified Helper (aggregates these jobs + ratings).
+
+---
+
+## ✅ SHIPPED (2026-06-08) — Meaning Layer **#1: Community Quests engine** (daily checklist · fuller engine) · #296–#302
 
 > Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#1 · ⭐ START HERE**. #0 Reputation shipped (#288/#289). Owner directives (2026-06-08): verify model = **"quest ให้เค้ากดรับเมื่อมี checklist ให้ทำในแต่ละวัน"** (daily tap-to-claim checklist) · scope = **fuller engine now**.
 
