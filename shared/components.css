@@ -913,6 +913,12 @@ body.gh-tour-open {
   background: #e3f1ea; color: #0d5c4e;
   border-radius: 999px; padding: 1px 9px; font-size: 0.74rem; font-weight: 700;
 }
+/* "น้ำใจของฉัน" summary banner — gives the earned kindness points a visible home. */
+.help-kindness {
+  margin: 0 0 16px; padding: 12px 14px;
+  background: #e3f1ea; color: #0d5c4e; border: 1px solid #c5e3d5;
+  border-radius: 14px; font-size: 0.86rem; font-weight: 700; text-align: center;
+}
 .help-card {
   display: flex; justify-content: space-between; gap: 12px;
   padding: 12px 14px; margin: 0 0 10px;
