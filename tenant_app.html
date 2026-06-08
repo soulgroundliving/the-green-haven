@@ -128,6 +128,7 @@
     <script src="./shared/tenant-standard-clean-modal.js" defer></script>
     <script src="./shared/tenant-leaderboard.js" defer></script>
     <script src="./shared/tenant-quests.js" defer></script>
+    <script src="./shared/tenant-helpers.js" defer></script>
     <script src="./shared/tenant-daily-bonus.js" defer></script>
     <script src="./shared/tenant-cleaning.js" defer></script>
     <script src="./shared/tenant-data-export.js" defer></script>
@@ -3838,6 +3839,71 @@
                 <div data-action="showSubPage" data-page="complaint" style="background:#F0F4FF; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
                     <div class="ta-stat-val">💬</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:#003D99;">ร้องเรียน</div>
+                </div>
+                <div data-action="showSubPage" data-page="helper-board" style="background:#EEFBF3; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                    <div class="ta-stat-val">🤝</div>
+                    <div style="font-weight:700; font-size:var(--fs-sm); color:#1a5c38;">ช่วยเหลือเพื่อนบ้าน</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Helper board (Meaning Layer #2) — neighbor-to-neighbor help requests -->
+    <div id="helper-board" class="page">
+        <div class="app-bar ta-page-top">
+            <div class="ta-icon-circle" data-action="goBackToProfile">
+                <i class="fas fa-chevron-left u-color-green"></i>
+            </div>
+            <h1 class="ta-card-title">ช่วยเหลือเพื่อนบ้าน</h1>
+        </div>
+
+        <div style="padding:0 16px;">
+            <button type="button" id="help-post-toggle" class="btn-main" style="width:100%; margin-bottom:12px;">+ โพสต์ขอความช่วยเหลือ</button>
+
+            <div id="help-post-form" class="card u-hidden" style="margin-bottom:16px;">
+                <label class="ta-field-label">ต้องการให้ช่วยอะไร? *</label>
+                <input type="text" id="help-post-title" maxlength="80" placeholder="เช่น ช่วยยกของขึ้นห้อง, ช่วยรดน้ำต้นไม้" style="width:100%; margin-bottom:10px;">
+                <label class="ta-field-label">หมวด (ไม่บังคับ)</label>
+                <select id="help-post-category" style="width:100%; margin-bottom:10px;">
+                    <option value="">— เลือกหมวด —</option>
+                    <option value="lifting">📦 ยกของ</option>
+                    <option value="errand">🏃 ธุระ</option>
+                    <option value="petcare">🐾 สัตว์เลี้ยง</option>
+                    <option value="tech">🔧 อุปกรณ์</option>
+                    <option value="other">📝 อื่น ๆ</option>
+                </select>
+                <label class="ta-field-label">รายละเอียดเพิ่มเติม (ไม่บังคับ)</label>
+                <textarea id="help-post-detail" maxlength="500" rows="2" placeholder="บอกรายละเอียด เช่น เวลา สถานที่ ..." style="width:100%; margin-bottom:12px;"></textarea>
+                <button type="button" id="help-post-submit" class="btn-main" style="width:100%;">โพสต์คำขอ</button>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section__head">🤝 เปิดรับ <span class="help-section__count" id="help-open-count">0</span></div>
+                <div id="help-open-list"><div class="help-empty">กำลังโหลด…</div></div>
+            </div>
+            <div class="help-section">
+                <div class="help-section__head">📩 คำขอของฉัน <span class="help-section__count" id="help-mine-count">0</span></div>
+                <div id="help-mine-list"><div class="help-empty">—</div></div>
+            </div>
+            <div class="help-section">
+                <div class="help-section__head">💚 งานที่ฉันรับ <span class="help-section__count" id="help-jobs-count">0</span></div>
+                <div id="help-jobs-list"><div class="help-empty">—</div></div>
+            </div>
+        </div>
+
+        <!-- Rating modal (requester confirms-done + rates) -->
+        <div id="help-rating-modal" role="dialog" aria-modal="true" aria-labelledby="help-rating-title"
+             style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:120; align-items:center; justify-content:center; padding:20px;">
+            <div style="background:#fff; border-radius:16px; padding:1.5rem; width:100%; max-width:360px;">
+                <h2 id="help-rating-title" style="margin:0 0 4px; font-size:1.05rem; font-weight:700;">ยืนยันว่าช่วยเสร็จแล้ว</h2>
+                <p style="margin:0 0 8px; font-size:.82rem; color:var(--text-muted,#8a8f98);">ให้ดาวขอบคุณผู้ช่วย — ผู้ช่วยจะได้รับ +20 แต้มน้ำใจ</p>
+                <div class="help-stars" id="help-rating-stars">
+                    <span>☆</span><span>☆</span><span>☆</span><span>☆</span><span>☆</span>
+                </div>
+                <textarea id="help-rating-note" maxlength="280" rows="2" placeholder="ฝากข้อความขอบคุณ (ไม่บังคับ)" style="width:100%; margin-bottom:12px;"></textarea>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" id="help-rating-cancel" class="btn-secondary" style="flex:1;">ยกเลิก</button>
+                    <button type="button" id="help-rating-confirm" class="btn-main" style="flex:1;" disabled>ยืนยัน</button>
                 </div>
             </div>
         </div>
