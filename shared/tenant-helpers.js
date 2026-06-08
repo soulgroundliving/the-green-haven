@@ -6,7 +6,7 @@
  * requester confirms-done + rates 1-5 → the helper earns peer-confirmed kindness
  * points (server-side, completeHelpRequest). Three live sections:
  *   • เปิดรับ      — others' open requests → "รับช่วย" (acceptHelpRequest)
- *   • คำขอของฉัน   — my requests: open→cancel · accepted→ยืนยัน+ดาว / cancel · done→⭐
+ *   • คำขอของฉัน   — my requests: open→cancel · accepted→ยืนยัน+ขอบคุณ / cancel · done→tags+note
  *   • งานที่ฉันรับ  — requests I accepted: accepted→รอผู้ขอยืนยัน · done→+แต้ม
  *
  * ONE onSnapshot(`where building == myBuilding`) — single-field, auto-indexed
@@ -183,7 +183,7 @@
     if (kind === 'mine') {
       if (r.status === 'open') return [_cancelBtn(r)];
       if (r.status === 'accepted') return [
-        _btn('ยืนยัน + ให้ดาว', 'help-btn--done', () => _openRating(r)),
+        _btn('ยืนยัน + ขอบคุณ', 'help-btn--done', () => _openRating(r)),
         _cancelBtn(r),
       ];
       return []; // done — sub-line shows the rating
