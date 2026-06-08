@@ -77,8 +77,15 @@ Tenant tap writes ledger + balance. Anti-gaming: per-day `questClaims` idempoten
 ### Out of scope (named, not dropped)
 peer-verify (#2 Helper-lifecycle prerequisite) · #6 Kindness score (sums these quest events after ~weeks accrual) · weekly/seasonal rotation beyond the cadence field · photo-proof storage for `admin` claims (text note v1; photo a fast follow if owner wants).
 
-### Review (append after execution)
-_(pending approval + build)_
+### Review (2026-06-08) — SHIPPED end-to-end
+- **PR1 #296 (`dcbec48`)** server + rules + 2 callables — merged + deployed (CFs live SE1, rules deployed). 61 quest tests, rules 298/0.
+- **PR2 #297 (`c3eb13c`)** admin เควส tab (catalog + review queue) + tenant checklist — merged + Vercel. test:shared 484/0, 5-state harness.
+- **Live-test fixes (real LINE, N101):**
+  - **#298 (`03f27f5`)** tenant checklist made REAL-TIME — `onSnapshot('quests')` (new quest instant) + own `onSnapshot(tenant doc)` state + optimistic claim lock (replaced getDocs-once + eco-snapshot piggyback that left new quests invisible + claimed cards stale).
+  - **#299 (`f494192`)** **§7-HH rule fix** — points/state didn't display because the tenant couldn't READ their own doc (`tenants/{b}/list/{r}` read gated on `linkedAuthUid`, EMPTY on the slim N101 doc). Added a **claim-based self-read path** (`token.room==roomId && token.building==building`, the assertTenantAccess model). REST-verified the award ALWAYS landed server-side (points 1→11, ledger row). Rules 300/0, deployed.
+  - **#300 (`7610d46`)** cap-exceeded was MIS-LABELED "รับเควสนี้ไปแล้ว" (cap msg "รับเควสครบโควต้า" contains "รับเควส" → matched the already-claimed regex first). Now shows the server's real Thai message + admin warns when a `self` quest's points exceed its cap.
+- **Cap decision (owner):** keep default `selfDailyCap=10`; owner sets the per-quest "เพดาน self" field (already in the admin modal) for higher-value self quests. Cap = per-day TOTAL across self claims, read from the claimed quest.
+- **Open:** owner real-LINE final pass. Energy-auto + weekly + player UI deferred (roadmap #1 / Out-of-scope).
 
 ---
 
