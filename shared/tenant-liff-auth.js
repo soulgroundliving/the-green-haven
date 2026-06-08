@@ -219,6 +219,55 @@ function _setupUnlinkStatusListener() {
     }
 }
 
+// S5 detector: pending → approved (real-time auto-connect — owner request: no manual refresh).
+// While the link request is pending, watch our own liffUsers doc. The read rule
+// (request.auth.uid == 'line:'+userId) is satisfied here: the user is signed in as
+// line:Uxxx — they just wrote this very doc to create the request. The moment the admin
+// flips status to 'approved', reload: init re-runs, liffSignIn now succeeds (CF mints +
+// persists claims §7-Z, force-refreshes the ID token §7-HH) and the app renders connected.
+// Reload is the robust path vs re-running signOut→signInWithCustomToken in-place (which
+// re-enters the §7-HH anon-race). Best-effort: a permission-denied (no line:Uxxx session)
+// just resets the flag and leaves the manual "ตรวจสอบอีกครั้ง" button working — no regression.
+function _setupApprovalStatusListener() {
+    if (window._approvalStatusListenerSet) return;       // idempotency (§7-V/§7-U)
+    if (!window._lineUserId) return;
+    if (!window.firebase?.firestore) return;
+    const fs = window.firebase.firestoreFunctions;
+    if (!fs?.onSnapshot || !fs?.doc || !fs?.collection) return;
+    if (typeof window._approvalStatusUnsub === 'function') {
+        try { window._approvalStatusUnsub(); } catch (_) {}
+        window._approvalStatusUnsub = null;
+    }
+    try {
+        const db = window.firebase.firestore();
+        const ref = fs.doc(fs.collection(db, 'liffUsers'), window._lineUserId);
+        window._approvalStatusListenerSet = true;
+        window._approvalStatusUnsub = fs.onSnapshot(
+            ref,
+            snap => {
+                if (!snap || !snap.exists || !snap.exists()) return;
+                if (snap.data()?.status !== 'approved') return;
+                if (window._approvalReloadStarted) return;   // guard double-fire (snapshot can tick twice)
+                window._approvalReloadStarted = true;
+                console.info('✅ liffUsers approved — auto-connecting (reload)');
+                try { window._approvalStatusUnsub && window._approvalStatusUnsub(); } catch (_) {}
+                try { if (typeof toast === 'function') toast('✅ อนุมัติแล้ว — กำลังเชื่อมต่อ...', 'success'); } catch (_) {}
+                setTimeout(() => { try { location.reload(); } catch (_) {} }, 900);
+            },
+            err => {
+                console.warn('[approvalStatus] subscribe failed:', err?.message || err);
+                if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                    window._approvalStatusListenerSet = false;
+                    window._approvalStatusUnsub = null;
+                }
+            }
+        );
+    } catch (e) {
+        console.warn('[approvalStatus] setup threw:', e?.message || e);
+        window._approvalStatusListenerSet = false;
+    }
+}
+
 // S3 detector: claims stripped mid-session.
 // unlinkLiffUser CF calls setCustomUserClaims({}) + revokeRefreshTokens —
 // forces the SDK to fetch a fresh ID token. When the refreshed token has
@@ -560,6 +609,7 @@ async function initLiffAndLink() {
             showLiffLinkStatus(result.status);
         }
         document.getElementById('app-loading-splash')?.remove();
+        _setupApprovalStatusListener();   // returning pending user → auto-connect on approval (no manual refresh)
     }
     return result;
 }
@@ -610,6 +660,7 @@ async function submitLiffLinkRequest() {
             }
         });
         showLiffLinkStatus('pending');
+        _setupApprovalStatusListener();   // auto-connect the moment admin approves (real-time, no manual refresh)
         toast('✅ ส่งคำขอเรียบร้อย รอ admin อนุมัติ', 'success');
     } catch (e) {
         toast('❌ บันทึกไม่สำเร็จ: ' + e.message, 'error');
@@ -767,6 +818,7 @@ async function submitRelinkRequest() {
             sessionStorage.removeItem('user');
         } catch(_) {}
         showLiffLinkStatus('pending');
+        _setupApprovalStatusListener();   // auto-connect the moment admin approves (real-time, no manual refresh)
         toast('✅ ส่งคำขอเรียบร้อย รอ admin อนุมัติ', 'success');
     } catch (e) {
         const aborted = e?.name === 'AbortError' || /aborted/i.test(e?.message || '');
