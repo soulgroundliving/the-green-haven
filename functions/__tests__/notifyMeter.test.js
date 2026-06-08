@@ -16,6 +16,8 @@ const assert = require('node:assert/strict');
 // ── stub state (reset per test) ────────────────────────────────────────────────
 let stubState = {};
 let docUpdates = {};
+let rtdbStore = {};   // seeded RTDB reads: { 'bills/rooms/15': {...}, ... }
+let rtdbWrites = [];  // captured RTDB writes: [{ path, op:'set'|'update', value }]
 
 function makeSnap(exists, data) {
   return { exists, data: () => data || {} };
@@ -23,6 +25,8 @@ function makeSnap(exists, data) {
 
 function resetStubs(overrides = {}) {
   docUpdates = {};
+  rtdbStore = {};
+  rtdbWrites = [];
   stubState = {
     meterExists: true,
     meterData: {
@@ -31,6 +35,7 @@ function resetStubs(overrides = {}) {
       notifiedAt: null, lastNotifiedSignature: null
     },
     tenantName: 'สมชาย',
+    tenantLease: undefined,   // Option C §7-BBB boundary source (lease.moveInDate)
     liffUsers: [{ id: 'Uabc123' }],
     lineToken: 'test-token',
     fetchCalls: [],
@@ -66,13 +71,18 @@ Module._load = function (id, parent, ...rest) {
           doc: () => ({
             collection: () => ({
               doc: () => ({
-                get: async () => makeSnap(!!stubState.tenantName, { name: stubState.tenantName })
+                get: async () => makeSnap(!!stubState.tenantName, { name: stubState.tenantName, lease: stubState.tenantLease })
               })
             })
           })
         };
         return { doc: () => ({ get: async () => makeSnap(false, {}), update: async () => {} }) };
-      }
+      },
+      // Minimal tx so issueInvoiceNo mints a number (fresh counter) instead of throwing.
+      runTransaction: async (fn) => fn({
+        get: async () => ({ exists: false, data: () => ({}) }),
+        set: () => {},
+      }),
     });
     firestoreFn.FieldValue = { serverTimestamp: () => '__ts__' };
 
@@ -80,15 +90,16 @@ Module._load = function (id, parent, ...rest) {
       apps: { length: 1 },
       initializeApp: () => {},
       database: () => {
-        // ref() supports the Option C bill-write path (writeBillOnIssue →
-        // writeCanonicalBillIdempotent uses roomRef.once + roomRef.child().set/update).
-        const ref = () => ({
-          once: async () => ({ val: () => null }),
-          child: () => ref(),
-          set: async () => {},
-          update: async () => {},
+        // Store-backed ref so the Option C bill-write path (writeBillOnIssue →
+        // writeCanonicalBillIdempotent: roomRef.once + roomRef.child().set/update)
+        // is observable. Seed reads via rtdbStore, assert writes via rtdbWrites.
+        const makeRef = (path) => ({
+          once: async () => ({ val: () => (path in rtdbStore ? rtdbStore[path] : null) }),
+          child: (id) => makeRef(path + '/' + id),
+          set: async (v) => { rtdbStore[path] = v; rtdbWrites.push({ path, op: 'set', value: v }); },
+          update: async (v) => { rtdbStore[path] = { ...(rtdbStore[path] || {}), ...v }; rtdbWrites.push({ path, op: 'update', value: v }); },
         });
-        return { ref };
+        return { ref: makeRef };
       },
       firestore: firestoreFn
     };
@@ -274,5 +285,54 @@ describe('notifyTenantOnMeterUpload — notifyOne integration', () => {
     );
     assert.equal(result.count, 2);
     assert.equal(result.results.length, 2);
+  });
+});
+
+// ── Option C — meter-approve creates the canonical 'pending' bill ──────────────
+// INTEGRATION test: the REAL notifyTenantOnMeterUpload + the REAL _billWrite
+// (NOT stubbed) writing to a captured mock RTDB. This proves the meter-approve
+// path end-to-end without waiting for a live admin meter import. (The companion
+// verifySlip materialize covers the PAYMENT path; this covers ISSUANCE.)
+describe('Option C — canonical bill write (real _billWrite, integration)', () => {
+  beforeEach(() => resetStubs());
+
+  it('writes a pending RTDB bill with computed charges when the month has none', async () => {
+    const result = await notifyTenantOnMeterUpload(makeRequest({ docId: 'rooms_68_4_15' }));
+    assert.equal(result.results[0].bill, 'created', 'per-doc result reports the bill action');
+    const w = rtdbWrites.find(x => x.op === 'set' && x.path === 'bills/rooms/15/TGH-256804-15');
+    assert.ok(w, 'a canonical bill must be written to bills/rooms/15/TGH-256804-15');
+    const bill = w.value;
+    assert.equal(bill.status, 'pending');          // §7-T: canonical unpaid value
+    assert.equal(bill.billId, 'TGH-256804-15');
+    assert.equal(bill.year, 2568);
+    assert.equal(bill.month, 4);
+    assert.equal(bill.generatedBy, 'meter_upload_cf');
+    assert.ok(bill.charges, 'has charges');
+    assert.equal(bill.meterReadings.electric.units, 50);  // 150 - 100
+  });
+
+  it('does NOT overwrite an existing PAID bill for that month (legacy suffixed id)', async () => {
+    rtdbStore['bills/rooms/15'] = {
+      'TGH-256804-15-9999': { status: 'paid', year: 2568, month: 4, totalCharge: 5000 },
+    };
+    await notifyTenantOnMeterUpload(makeRequest({ docId: 'rooms_68_4_15' }));
+    const w = rtdbWrites.find(x => x.op === 'set' && x.path.startsWith('bills/rooms/15/'));
+    assert.equal(w, undefined, 'existing paid bill preserved — no duplicate created');
+  });
+
+  it('skips the bill for a month before move-in (§7-BBB) but still notifies', async () => {
+    // meter month 2568-04 = CE 2025-04; move-in 2025-06 (past vs now) → skip the write
+    resetStubs({ tenantLease: { moveInDate: '2025-06-01' } });
+    const result = await notifyTenantOnMeterUpload(makeRequest({ docId: 'rooms_68_4_15' }));
+    const w = rtdbWrites.find(x => x.op === 'set' && x.path.startsWith('bills/rooms/15/'));
+    assert.equal(w, undefined, 'no bill written before move-in');
+    assert.equal(result.pushed, 1, 'LINE notify still proceeds (bill write is additive)');
+  });
+
+  it('a future move-in boundary does NOT block the bill (renewal-term leak, §7-BBB)', async () => {
+    resetStubs({ tenantLease: { moveInDate: '2099-01-01' } });
+    await notifyTenantOnMeterUpload(makeRequest({ docId: 'rooms_68_4_15' }));
+    const w = rtdbWrites.find(x => x.op === 'set' && x.path === 'bills/rooms/15/TGH-256804-15');
+    assert.ok(w, 'future boundary ignored — bill still created');
   });
 });
