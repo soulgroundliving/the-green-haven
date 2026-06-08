@@ -129,14 +129,13 @@ async function saveQuest() {
     window.ghAlert('กรุณากรอกชื่อเควสและแต้มรางวัล (>0)', { title: 'ข้อมูลไม่ครบ' });
     return;
   }
-  // Guard: a `self` quest worth more than the per-day cap can never be claimed
-  // (selfCapCheck blocks it). Warn the admin so they don't ship an unclaimable quest.
+  // Guard: only when an explicit self cap is SET and it's lower than the reward
+  // (then the quest can never be claimed). Blank cap = uncapped → no warning.
   if (verifyMode === 'self') {
     const capRaw = parseInt(g('questEditCap').value, 10);
-    const effCap = capRaw > 0 ? capRaw : 10;
-    if (rewardPoints > effCap) {
+    if (capRaw > 0 && rewardPoints > capRaw) {
       const ok = await window.ghConfirm(
-        `เควสแบบ self ให้ ${rewardPoints} แต้ม แต่เพดานรวมต่อวันคือ ${effCap} แต้ม — ลูกบ้านจะกดรับไม่ได้ (เกินเพดาน). แนะนำ: ลดแต้ม ≤ ${effCap} · เพิ่มช่อง "เพดาน self" · หรือใช้โหมด admin/auto สำหรับเควสแต้มสูง. ยืนยันบันทึกต่อ?`,
+        `ตั้งเพดาน self ไว้ ${capRaw} แต้ม/วัน แต่เควสให้ ${rewardPoints} แต้ม — ลูกบ้านจะกดรับไม่ได้ (เกินเพดาน). แนะนำ: เว้นเพดานว่าง (ไม่จำกัด) · ตั้งเพดาน ≥ ${rewardPoints} · หรือลดแต้ม. ยืนยันบันทึกต่อ?`,
         { danger: true });
       if (!ok) return;
     }

@@ -111,9 +111,9 @@ describe('claimQuest — self mode', () => {
     assert.equal(writtenLedger.length, 1, 'no second award');
   });
 
-  it('blocks when the per-day self cap is exceeded', async () => {
+  it('blocks when an explicit per-day self cap is exceeded', async () => {
     seedTenant('rooms', '15', { points: 0, questDay: TODAY, questSelfToday: 9 });
-    seedQuest('q1', { verifyMode: 'self', rewardPoints: 3 }); // 9+3 = 12 > 10 (default cap)
+    seedQuest('q1', { verifyMode: 'self', rewardPoints: 3, selfDailyCap: 10 }); // 9+3 = 12 > 10
     await assert.rejects(
       () => handler({ building: 'rooms', roomId: '15', questId: 'q1' }, ctx({ room: '15', building: 'rooms' })),
       (e) => e.code === 'resource-exhausted',
