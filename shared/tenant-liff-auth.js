@@ -219,15 +219,18 @@ function _setupUnlinkStatusListener() {
     }
 }
 
-// S5 detector: pending → approved (real-time auto-connect — owner request: no manual refresh).
+// S5 detector: real-time admin decision (approve OR reject) — owner request: no manual refresh.
 // While the link request is pending, watch our own liffUsers doc. The read rule
 // (request.auth.uid == 'line:'+userId) is satisfied here: the user is signed in as
-// line:Uxxx — they just wrote this very doc to create the request. The moment the admin
-// flips status to 'approved', reload: init re-runs, liffSignIn now succeeds (CF mints +
-// persists claims §7-Z, force-refreshes the ID token §7-HH) and the app renders connected.
-// Reload is the robust path vs re-running signOut→signInWithCustomToken in-place (which
-// re-enters the §7-HH anon-race). Best-effort: a permission-denied (no line:Uxxx session)
-// just resets the flag and leaves the manual "ตรวจสอบอีกครั้ง" button working — no regression.
+// line:Uxxx — they just wrote this very doc to create the request.
+//   • status → 'approved': reload. init re-runs, liffSignIn now succeeds (CF mints + persists
+//     claims §7-Z, force-refreshes the ID token §7-HH) and the app renders connected. Reload is
+//     the robust path vs re-running signOut→signInWithCustomToken in-place (re-enters §7-HH race).
+//   • status → 'rejected': swap the pending overlay to the rejected one (✉️ ส่งคำขอใหม่) IN PLACE —
+//     no reload, since reject grants no claims/auth change. The listener stays alive so a later
+//     resend→approve still auto-connects.
+// Best-effort: a permission-denied (no line:Uxxx session) resets the flag — the user can still
+// reopen the LIFF to see the right state. The listener spans the whole pending↔rejected lifecycle.
 function _setupApprovalStatusListener() {
     if (window._approvalStatusListenerSet) return;       // idempotency (§7-V/§7-U)
     if (!window._lineUserId) return;
@@ -246,13 +249,27 @@ function _setupApprovalStatusListener() {
             ref,
             snap => {
                 if (!snap || !snap.exists || !snap.exists()) return;
-                if (snap.data()?.status !== 'approved') return;
-                if (window._approvalReloadStarted) return;   // guard double-fire (snapshot can tick twice)
-                window._approvalReloadStarted = true;
-                console.info('✅ liffUsers approved — auto-connecting (reload)');
-                try { window._approvalStatusUnsub && window._approvalStatusUnsub(); } catch (_) {}
-                try { if (typeof toast === 'function') toast('✅ อนุมัติแล้ว — กำลังเชื่อมต่อ...', 'success'); } catch (_) {}
-                setTimeout(() => { try { location.reload(); } catch (_) {} }, 900);
+                const status = snap.data()?.status;
+                if (status === 'approved') {
+                    if (window._approvalReloadStarted) return;   // guard double-fire (snapshot can tick twice)
+                    window._approvalReloadStarted = true;
+                    console.info('✅ liffUsers approved — auto-connecting (reload)');
+                    try { window._approvalStatusUnsub && window._approvalStatusUnsub(); } catch (_) {}
+                    try { if (typeof toast === 'function') toast('✅ อนุมัติแล้ว — กำลังเชื่อมต่อ...', 'success'); } catch (_) {}
+                    setTimeout(() => { try { location.reload(); } catch (_) {} }, 900);
+                } else if (status === 'rejected') {
+                    // Real-time reject: swap pending → rejected overlay in place (no reload, no
+                    // auth change). Guard avoids redundant re-render on repeat ticks; reset to
+                    // 'pending' below lets a re-reject (after resend) re-render.
+                    if (window._lineLinkStatus === 'rejected') return;
+                    window._lineLinkStatus = 'rejected';
+                    console.info('❌ liffUsers rejected — showing rejected status (real-time)');
+                    if (typeof showLiffLinkStatus === 'function') showLiffLinkStatus('rejected');
+                } else if (status === 'pending') {
+                    // Resend (showRelinkForm) flipped us back to pending — clear the rejected
+                    // latch so a subsequent admin reject re-renders the rejected overlay.
+                    window._lineLinkStatus = 'pending';
+                }
             },
             err => {
                 console.warn('[approvalStatus] subscribe failed:', err?.message || err);
