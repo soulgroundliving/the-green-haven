@@ -840,13 +840,17 @@ function showLiffLinkStatus(status) {
     const icon = status === 'rejected' ? '❌' : '⏳';
     const title = status === 'rejected' ? 'คำขอถูกปฏิเสธ' : 'รอ admin อนุมัติ';
     const detail = status === 'rejected'
-        ? 'กรุณาติดต่อ admin โดยตรงหรือส่งคำขอใหม่'
+        ? 'กรุณาติดต่อ admin โดยตรง หรือกดส่งคำขอใหม่ด้านล่าง'
         : 'เมื่ออนุมัติแล้วจะเข้าใช้งานได้อัตโนมัติ กรุณารอสักครู่';
-    // Rejected path → showRelinkForm (CF write); doc already exists so a
-    // direct client setDoc would be blocked by the liffUsers update rule.
+    // Rejected → "ส่งคำขอใหม่" (showRelinkForm CF write; the liffUsers doc already exists in
+    // a terminal state, so a direct client setDoc is blocked by the update rule). Icon ✉️ (send),
+    // not 🔄 (which read as refresh). Pending → NO button: the approval listener
+    // (_setupApprovalStatusListener) auto-connects the moment admin approves, so a manual
+    // "ตรวจสอบอีกครั้ง"/refresh tap is unnecessary (owner request). Fallback if the listener
+    // can't subscribe: close + reopen the LIFF (the LINE approval push guides this).
     const actionBtn = status === 'rejected'
-        ? '<button data-action="showRelinkForm" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">🔄 ส่งคำขอใหม่</button>'
-        : '<button data-action="reloadPage" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">🔄 ตรวจสอบอีกครั้ง</button>';
+        ? '<button data-action="showRelinkForm" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">✉️ ส่งคำขอใหม่</button>'
+        : '';
     box.innerHTML = `<div style="font-size:var(--fs-lg);margin-bottom:1rem;">${icon}</div>
         <div style="font-weight:800;font-size:var(--fs-lg);margin-bottom:.5rem;">${title}</div>
         <div style="font-size:var(--fs-md);color:var(--text-muted);max-width:320px;margin:0 auto 1.2rem;">${detail}</div>
