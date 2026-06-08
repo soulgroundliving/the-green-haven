@@ -132,18 +132,9 @@ describe('evaluateAutoSignal', () => {
     assert.equal(evaluateAutoSignal({ autoSignal: 'login_streak', autoThreshold: 3 }, { dailyStreak: 2 }).satisfied, false);
   });
 
-  it('energy_month_saver — satisfied when current <= previous', () => {
-    assert.equal(evaluateAutoSignal({ autoSignal: 'energy_month_saver' }, { currentKwh: 90, previousKwh: 100 }).satisfied, true);
-    assert.equal(evaluateAutoSignal({ autoSignal: 'energy_month_saver' }, { currentKwh: 110, previousKwh: 100 }).satisfied, false);
-  });
-  it('energy_month_saver — factor threshold (e.g. must cut 10%)', () => {
-    const q = { autoSignal: 'energy_month_saver', autoThreshold: 0.9 };
-    assert.equal(evaluateAutoSignal(q, { currentKwh: 90, previousKwh: 100 }).satisfied, true);  // 90 <= 90
-    assert.equal(evaluateAutoSignal(q, { currentKwh: 95, previousKwh: 100 }).satisfied, false); // 95 > 90
-  });
-  it('energy_month_saver — missing meter data → not satisfied', () => {
+  it('unknown / removed signal (e.g. energy) → not satisfied', () => {
+    // energy_month_saver was cut from v1 — it now falls through to unknown-signal.
     assert.equal(evaluateAutoSignal({ autoSignal: 'energy_month_saver' }, {}).satisfied, false);
-    assert.equal(evaluateAutoSignal({ autoSignal: 'energy_month_saver' }, {}).reason, 'no-meter-data');
   });
 
   it('unknown signal → not satisfied', () => {
@@ -163,15 +154,15 @@ describe('selfCapCheck', () => {
   });
 
   it('allows exactly at the cap', () => {
-    const r = selfCapCheck({ questDay: today, questSelfToday: 17, today, reward: 3 });
+    const r = selfCapCheck({ questDay: today, questSelfToday: 7, today, reward: 3 });
     assert.equal(r.allowed, true);
-    assert.equal(r.newTotal, 20);
+    assert.equal(r.newTotal, 10);
   });
 
   it('blocks when over the cap', () => {
-    const r = selfCapCheck({ questDay: today, questSelfToday: 19, today, reward: 3 });
+    const r = selfCapCheck({ questDay: today, questSelfToday: 9, today, reward: 3 });
     assert.equal(r.allowed, false);
-    assert.equal(r.newTotal, 22);
+    assert.equal(r.newTotal, 12);
   });
 
   it('resets the running total when the stamped day rolled over', () => {
@@ -198,7 +189,8 @@ describe('validators', () => {
     assert.equal(isValidVerifyMode('peer'), false);
   });
   it('autoSignal', () => {
-    for (const s of ['checkin_today', 'login_streak', 'energy_month_saver']) assert.equal(isValidAutoSignal(s), true);
+    for (const s of ['checkin_today', 'login_streak']) assert.equal(isValidAutoSignal(s), true);
+    assert.equal(isValidAutoSignal('energy_month_saver'), false); // cut from v1
     assert.equal(isValidAutoSignal('telepathy'), false);
   });
 });

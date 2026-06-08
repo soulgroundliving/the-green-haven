@@ -12,7 +12,7 @@
  *   cadence:       'daily' | 'weekly' | 'once',   // how often a tenant can earn it
  *   verifyMode:    'auto'  | 'self'   | 'admin',  // how a tap-to-claim resolves
  *   rewardPoints:  number (>0),
- *   autoSignal?:   'checkin_today' | 'login_streak' | 'energy_month_saver',
+ *   autoSignal?:   'checkin_today' | 'login_streak',  // v1 auto signals
  *   autoThreshold?: number,                       // signal-specific threshold
  *   startDate?:    ISO string | null,             // availability window (optional)
  *   endDate?:      ISO string | null,
@@ -30,12 +30,12 @@
 
 'use strict';
 
-const DEFAULT_SELF_DAILY_CAP = 20;
+const DEFAULT_SELF_DAILY_CAP = 10;
 const DEFAULT_LOGIN_STREAK_THRESHOLD = 7;
 
 const VALID_CADENCE = new Set(['daily', 'weekly', 'once']);
 const VALID_VERIFY_MODE = new Set(['auto', 'self', 'admin']);
-const VALID_AUTO_SIGNAL = new Set(['checkin_today', 'login_streak', 'energy_month_saver']);
+const VALID_AUTO_SIGNAL = new Set(['checkin_today', 'login_streak']);
 
 // Claim statuses that mean "this period is already earned" (no re-claim).
 const CLAIMED_STATUSES = new Set(['self', 'auto', 'approved']);
@@ -131,16 +131,6 @@ function evaluateAutoSignal(quest, signalData) {
       ? Number(quest.autoThreshold) : DEFAULT_LOGIN_STREAK_THRESHOLD;
     const have = Number(sd.dailyStreak) || 0;
     return { satisfied: have >= need, reason: `streak ${have} vs need ${need}` };
-  }
-
-  if (sig === 'energy_month_saver') {
-    const cur = Number(sd.currentKwh);
-    const prev = Number(sd.previousKwh);
-    if (!Number.isFinite(cur) || !Number.isFinite(prev)) {
-      return { satisfied: false, reason: 'no-meter-data' };
-    }
-    const factor = Number.isFinite(Number(quest.autoThreshold)) ? Number(quest.autoThreshold) : 1;
-    return { satisfied: cur <= prev * factor, reason: `cur ${cur} vs prev ${prev}x${factor}` };
   }
 
   return { satisfied: false, reason: 'unknown-signal' };

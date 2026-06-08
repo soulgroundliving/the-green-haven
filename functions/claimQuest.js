@@ -4,8 +4,8 @@
  * ONE unified tap-to-claim entry point; the quest's `verifyMode` decides what a
  * tap does (all server-authoritative — the client never sends a point value):
  *   - 'self'  → award immediately; idempotent per period + per-tenant daily cap.
- *   - 'auto'  → server RE-DERIVES the signal (login streak / check-in / monthly
- *               meter use) and awards only if satisfied. Tamper-proof.
+ *   - 'auto'  → server RE-DERIVES the signal (login streak / daily check-in) and
+ *               awards only if satisfied. Tamper-proof.
  *   - 'admin' → write a `pending` claim, NO award; the owner approves later via
  *               reviewQuestClaim. The honest feed for #6 Kindness.
  *
@@ -36,45 +36,11 @@ function bkkDateString(d) {
 }
 
 /**
- * Electric units used (eNew-eOld) for this room's current vs previous month,
- * read from meter_data/{building}_{BE2yr}_{month}_{roomId} (§7-E: year is a
- * 2-digit BE integer; §7-AAA: month is unpadded). Returns {} on any gap so the
- * engine reports 'no-meter-data' and the quest simply stays unclaimable.
- */
-async function _fetchEnergySignal(building, roomId, now) {
-  if (!building || !roomId) return {};
-  const ceYear = Number(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok', year: 'numeric' }));
-  const month = Number(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok', month: 'numeric' }));
-  const be2 = (ceYear + 543) % 100;
-  const prevMonth = month === 1 ? 12 : month - 1;
-  const prevBe2 = month === 1 ? (be2 + 99) % 100 : be2; // 1 BE-year back, mod 100
-  const curId = `${building}_${be2}_${month}_${roomId}`;
-  const prevId = `${building}_${prevBe2}_${prevMonth}_${roomId}`;
-  try {
-    const [curSnap, prevSnap] = await Promise.all([
-      firestore.collection('meter_data').doc(curId).get(),
-      firestore.collection('meter_data').doc(prevId).get(),
-    ]);
-    if (!curSnap.exists || !prevSnap.exists) return {};
-    const c = curSnap.data() || {};
-    const p = prevSnap.data() || {};
-    const currentKwh = Number(c.eNew) - Number(c.eOld);
-    const previousKwh = Number(p.eNew) - Number(p.eOld);
-    if (!Number.isFinite(currentKwh) || !Number.isFinite(previousKwh)) return {};
-    return { currentKwh, previousKwh };
-  } catch (e) {
-    console.warn('[claimQuest] energy signal read failed:', e && e.message);
-    return {};
-  }
-}
-
-/**
  * The award/claim transaction, shared by the tenant + player paths.
  * @param {DocumentReference} ref   tenants/{b}/list/{r} OR people/{tenantId}
  * @param {object} identity         { tenantId?, building, roomId } (building/roomId null for players)
- * @param {object} energySignal     pre-fetched { currentKwh, previousKwh } or {}
  */
-async function _runClaim({ ref, identity, questId, quest, note, energySignal, context, now }) {
+async function _runClaim({ ref, identity, questId, quest, note, context, now }) {
   const today = bkkDateString(now);
   const periodKey = periodKeyFor(quest, now);
   const reward = Math.max(0, Math.floor(Number(quest.rewardPoints) || 0));
@@ -123,7 +89,6 @@ async function _runClaim({ ref, identity, questId, quest, note, energySignal, co
       const signalData = {
         checkedInToday: g.lastDailyClaim === today,
         dailyStreak: Number(g.dailyStreak) || 0,
-        ...energySignal,
       };
       const verdict = evaluateAutoSignal(quest, signalData);
       if (!verdict.satisfied) {
@@ -225,7 +190,7 @@ exports.claimQuest = functions.region('asia-southeast1').https.onCall(async (dat
       return await _runClaim({
         ref: firestore.collection('people').doc(String(reqTenantId)),
         identity: { tenantId: String(reqTenantId), building: null, roomId: null },
-        questId: String(questId), quest, note, energySignal: {}, context, now,
+        questId: String(questId), quest, note, context, now,
       });
     } catch (error) {
       if (error instanceof functions.https.HttpsError) throw error;
@@ -250,15 +215,11 @@ exports.claimQuest = functions.region('asia-southeast1').https.onCall(async (dat
     HttpsError: functions.https.HttpsError,
   });
 
-  const energySignal = (quest.verifyMode === 'auto' && quest.autoSignal === 'energy_month_saver')
-    ? await _fetchEnergySignal(canonicalBuilding, String(roomId), now)
-    : {};
-
   try {
     return await _runClaim({
       ref: firestore.collection('tenants').doc(canonicalBuilding).collection('list').doc(String(roomId)),
       identity: { building: canonicalBuilding, roomId: String(roomId) },
-      questId: String(questId), quest, note, energySignal, context, now,
+      questId: String(questId), quest, note, context, now,
     });
   } catch (error) {
     if (error instanceof functions.https.HttpsError) throw error;

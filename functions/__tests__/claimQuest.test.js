@@ -7,11 +7,11 @@ const { describe, it, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { periodKeyFor, bkkDateString } = require('../_questEngine');
 
-let tenantDocs, peopleDocs, questDocs, meterDocs, claimDocs;
+let tenantDocs, peopleDocs, questDocs, claimDocs;
 let lastUpdate, writtenClaims, writtenLedger;
 
 function resetStubs() {
-  tenantDocs = {}; peopleDocs = {}; questDocs = {}; meterDocs = {}; claimDocs = {};
+  tenantDocs = {}; peopleDocs = {}; questDocs = {}; claimDocs = {};
   lastUpdate = null; writtenClaims = []; writtenLedger = [];
 }
 resetStubs();
@@ -25,7 +25,6 @@ Module._load = function (id, parent, ...rest) {
     const firestoreFn = () => ({
       collection: (name) => {
         if (name === 'quests') return { doc: (qid) => ({ get: async () => ({ exists: qid in questDocs, data: () => questDocs[qid] }) }) };
-        if (name === 'meter_data') return { doc: (mid) => ({ get: async () => ({ exists: mid in meterDocs, data: () => meterDocs[mid] }) }) };
         if (name === 'tenants') {
           return { doc: (b) => ({ collection: () => ({ doc: (r) => ({ _kind: 'tenant', _key: `${b}/${r}`, get: async () => ({ exists: `${b}/${r}` in tenantDocs, data: () => tenantDocs[`${b}/${r}`] }) }) }) }) };
         }
@@ -113,8 +112,8 @@ describe('claimQuest — self mode', () => {
   });
 
   it('blocks when the per-day self cap is exceeded', async () => {
-    seedTenant('rooms', '15', { points: 0, questDay: TODAY, questSelfToday: 19 });
-    seedQuest('q1', { verifyMode: 'self', rewardPoints: 3 }); // 19+3 = 22 > 20
+    seedTenant('rooms', '15', { points: 0, questDay: TODAY, questSelfToday: 9 });
+    seedQuest('q1', { verifyMode: 'self', rewardPoints: 3 }); // 9+3 = 12 > 10 (default cap)
     await assert.rejects(
       () => handler({ building: 'rooms', roomId: '15', questId: 'q1' }, ctx({ room: '15', building: 'rooms' })),
       (e) => e.code === 'resource-exhausted',
@@ -157,30 +156,6 @@ describe('claimQuest — auto mode', () => {
     seedQuest('q3', { verifyMode: 'auto', autoSignal: 'login_streak', autoThreshold: 7, rewardPoints: 10 });
     const r = await handler({ building: 'rooms', roomId: '15', questId: 'q3' }, ctx({ room: '15', building: 'rooms' }));
     assert.equal(r.pointsAfter, 10);
-  });
-
-  it('energy_month_saver satisfied from meter_data → awards', async () => {
-    seedTenant('nest', '101', { points: 0 });
-    seedQuest('q4', { verifyMode: 'auto', autoSignal: 'energy_month_saver', rewardPoints: 10 });
-    const ceY = Number(NOW.toLocaleString('en-US', { timeZone: 'Asia/Bangkok', year: 'numeric' }));
-    const mo = Number(NOW.toLocaleString('en-US', { timeZone: 'Asia/Bangkok', month: 'numeric' }));
-    const be2 = (ceY + 543) % 100;
-    const pMo = mo === 1 ? 12 : mo - 1;
-    const pBe2 = mo === 1 ? (be2 + 99) % 100 : be2;
-    meterDocs[`nest_${be2}_${mo}_101`] = { eOld: 100, eNew: 150 };  // 50 units now
-    meterDocs[`nest_${pBe2}_${pMo}_101`] = { eOld: 0, eNew: 100 };  // 100 units prev
-    const r = await handler({ building: 'nest', roomId: '101', questId: 'q4' }, ctx({ room: '101', building: 'nest' }));
-    assert.equal(r.status, 'auto');
-    assert.equal(r.pointsAfter, 10);
-  });
-
-  it('energy_month_saver with no meter data → failed-precondition', async () => {
-    seedTenant('nest', '101', { points: 0 });
-    seedQuest('q4', { verifyMode: 'auto', autoSignal: 'energy_month_saver', rewardPoints: 10 });
-    await assert.rejects(
-      () => handler({ building: 'nest', roomId: '101', questId: 'q4' }, ctx({ room: '101', building: 'nest' })),
-      (e) => e.code === 'failed-precondition',
-    );
   });
 });
 
