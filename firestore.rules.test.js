@@ -405,7 +405,7 @@ describe('complaints — any auth creates, only admin modifies/deletes', () => {
 describe('admin-only collections — anon tenant denied write', () => {
   // announcements/a1 removed (C4 S3): allow write: if false — CF-only, tested in announcements block
   // communityEvents/e1 removed (C4 S3): collection decommissioned, default deny applies
-  for (const path of ['rewards/r1', 'system/cfg', 'wellness_articles/w1',
+  for (const path of ['rewards/r1', 'quests/q1', 'system/cfg', 'wellness_articles/w1',
                       'communityDocuments/d1', 'historicalRevenue/2569',
                       'meter_data/m1', 'leases/rooms/list/L1', 'buildings/b1']) {
     it(`anon tenant CANNOT write ${path}`, async () => {
@@ -422,7 +422,7 @@ describe('public-read content — unauth user can read', () => {
   // requires signed-in + audience match. See `announcements — audience-filtered`
   // describe block below.
   // communityEvents/e1 removed (C4 S3): collection decommissioned, default deny = no public read
-  for (const path of ['communityDocuments/d1', 'wellness_articles/w1']) {
+  for (const path of ['communityDocuments/d1', 'wellness_articles/w1', 'quests/q1']) {
     it(`unauthenticated user CAN read ${path}`, async () => {
       await seedDoc(path);
       await assertSucceeds(getDoc(doc(UNAUTH().firestore(), path)));
@@ -1158,6 +1158,52 @@ describe('pointsLedger — append-only points event log, admin-read-only (Core R
     await assertFails(deleteDoc(
       doc(EMAIL_ADMIN().firestore(), 'pointsLedger/daily_login__TENANT_X__2026-06-02')
     ));
+  });
+});
+
+describe('questClaims — quest claim fence + admin review queue, admin-read / CF-write-only (Meaning Layer #1)', () => {
+  // LIFF tenant with tenantId claim — proves even the claim's owner has NO client
+  // read access (the tenant checklist reads gamification.questsToday, not here).
+  const LIFF_WITH_TENANT_ID = (uid, tenantId, room = '15', building = 'rooms') =>
+    testEnv.authenticatedContext(uid, {
+      tenantId, room, building, firebase: { sign_in_provider: 'custom' }
+    });
+  const CLAIM_ID = 'q1__rooms_15__2026-06-08';
+  const sampleClaim = {
+    questId: 'q1', tenantId: 'rooms_15', building: 'rooms', roomId: '15',
+    status: 'pending', periodKey: '2026-06-08', points: 30,
+  };
+
+  it('admin CAN read a quest claim (review queue)', async () => {
+    await seedDoc(`questClaims/${CLAIM_ID}`, sampleClaim);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), `questClaims/${CLAIM_ID}`)));
+  });
+
+  it('admin collection query over questClaims succeeds (pending review queue)', async () => {
+    await seedDoc(`questClaims/${CLAIM_ID}`, sampleClaim);
+    await assertSucceeds(getDocs(query(collection(EMAIL_ADMIN().firestore(), 'questClaims'))));
+  });
+
+  it('tenant (even the claim owner) CANNOT read questClaims', async () => {
+    await seedDoc(`questClaims/${CLAIM_ID}`, sampleClaim);
+    const ctx = LIFF_WITH_TENANT_ID('line:abc', 'rooms_15');
+    await assertFails(getDoc(doc(ctx.firestore(), `questClaims/${CLAIM_ID}`)));
+  });
+
+  it('unauth user CANNOT read questClaims', async () => {
+    await seedDoc(`questClaims/${CLAIM_ID}`, sampleClaim);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), `questClaims/${CLAIM_ID}`)));
+  });
+
+  it('client (even admin SDK via client) CANNOT write questClaims (CF-only)', async () => {
+    await assertFails(setDoc(doc(EMAIL_ADMIN().firestore(), 'questClaims/forge'), sampleClaim));
+    await assertFails(setDoc(doc(ANON().firestore(), 'questClaims/forge'), sampleClaim));
+  });
+
+  it('admin CANNOT update/delete a quest claim from the client (CF-only)', async () => {
+    await seedDoc(`questClaims/${CLAIM_ID}`, sampleClaim);
+    await assertFails(updateDoc(doc(EMAIL_ADMIN().firestore(), `questClaims/${CLAIM_ID}`), { status: 'approved' }));
+    await assertFails(deleteDoc(doc(EMAIL_ADMIN().firestore(), `questClaims/${CLAIM_ID}`)));
   });
 });
 

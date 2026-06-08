@@ -1,0 +1,189 @@
+# Meaning Layer Roadmap — "ทำทั้งหมด ทีละตัว"
+
+**Created:** 2026-06-08
+**Source:** `proptech_unicorn_living_os_blueprint.pdf` — **Phase 2: The Meaning Layer (Community & Emotional Architecture)** — "เปลี่ยนตึกคอนกรีต ให้กลายเป็นระบบนิเวศแห่งความผูกพัน เพื่อลดอัตราการย้ายออก"
+**Basis:** gap analysis 2026-06-08 (blueprint vs live code). Of ~17 Meaning-Layer sub-features, **only Reputation v1 has real data**; ~14 have **no capture flow yet** (the actions aren't recorded → the scores can't be computed).
+**Companion docs:** [phase-3.2-trust-system-plan.md](phase-3.2-trust-system-plan.md) (Trust detail) · [core-readiness-roadmap.md](core-readiness-roadmap.md) (Phase 0–3.1 — DONE)
+
+> **Working principle** ([[feedback_decision_protocol]] 2026-06-08): we build the **whole** Meaning Layer, **one ตัว at a time**, sustainably. This doc is the **order**, not a menu to pick a subset from. **Flip the checkbox + cite the PR the same session a ตัว ships** (mirror `core-readiness-roadmap.md` discipline — §7-K doc-drift).
+
+---
+
+## หลักความยั่งยืน (sustainability principles — apply to every ตัว)
+
+1. **แต่ละตัว = 1 PR ที่ ship เองได้ + มีคุณค่าในตัว.** No big-bang, nothing half-wired. Behind `validate.yml`; tests for the surface ship with it.
+2. **Capture before Score.** Build the data-capture flow before the metric that consumes it — several scores read the same capture, so the primitive comes first to avoid rework.
+3. **Reuse, don't reinvent.** Every pet/economy/memory feature has an existing pattern to extend (verified paths in each ตัว below).
+4. **Respect data-readiness gates.** A score is only as honest as its accrued data — some ตัว must wait weeks for capture to fill (like Reputation v1 only worked because bills/leases already existed).
+5. **No breadth sweeps.** One surface per PR ([[feedback_score_instability_breadth_trap]]; the §7-SS/RR/QQ/TT incidents were all self-inflicted by mass edits).
+
+---
+
+## Status (1 shipped · 16 pending)
+
+| # | ตัว | Pillar | Status |
+|---|-----|--------|--------|
+| 0 | Reputation score v1 | Trust | ✅ SHIPPED (#288/#289) |
+| 1 | Community Quests engine | Trust | 🔴 buildable now |
+| 2 | Helper-request lifecycle | Trust | 🔴 buildable now |
+| 3 | Community requests board | Micro-Econ | 🔴 buildable now |
+| 4 | Food sharing feed | Micro-Econ | 🔴 buildable now |
+| 5 | Trade history memory | Micro-Econ | 🔴 buildable now |
+| 6 | Kindness score | Trust | 🟡 gated on #1–5 accrual |
+| 7 | Verified Helper | Trust | 🟡 gated on #2 job history |
+| 8 | Resident Rank | Trust | 🟡 gated on #6+#7 |
+| — | Reputation v2 (engagement dim) | Trust | 🟡 gated ~Aug (pointsLedger accrual) |
+| 9 | Pet health memory | Pet | 🔴 buildable now |
+| 10 | Pet Social Graph | Pet | 🔴 buildable now |
+| 11 | Pet playdate booking | Pet | 🔴 after #10 |
+| 12 | Pet-friendly matching floors | Pet | 🔴 after #10 |
+| 13 | Lost pet alert | Pet | 🔴 buildable now |
+| 14 | Emergency caretaker | Pet | 🔴 after #10 |
+| 15 | Life Timeline | Tenant | 🔴 buildable now |
+| 16 | Farewell Archive + AI Summary | Tenant | 🔴 buildable now |
+
+**Sequencing logic:** capture flows (1–5) first because they unlock the retention-moat scores (6–8 = blueprint Core Metric 3 "Emotional Lock-in") → then Pet ecosystem (9–14) → then Tenant memory (15–16). Within a pillar, build the shared primitive (e.g. #10 graph) before its consumers (#11/#12/#14).
+
+---
+
+## Pillar map (blueprint Phase 2)
+
+- **Trust & Economy** — Deep Marketplace & Trust (#0,1,6,7,8) · Community Quests (#1) · Micro Economy (#3,4,5)
+- **Emotional Network** — Deep Pet Ecosystem (#10,11,12) · Safety & Care (#9,13,14)
+- **Deep Tenant System** ("Territory of Memories") — Life Timeline (#15) · Farewell Archive + AI (#16)
+
+---
+
+## Sequenced build plan
+
+### 0 — Reputation score v1 · ✅ SHIPPED (#288/#289)
+**What:** server-computed reliability 0–100 per tenant; tenant sees coarse tier badge only.
+**Lives in:** `functions/_reputation.js` (pure core: payment 60% / tenure 25% / complaint-free 15%) → `trustScores/{tenantId}` {reputation, provisional, factors, computedAt}; tier enum mirrored onto `tenants/{b}/list/{r}.reputationTier`. CF `computeTrustScoresScheduled` (daily 05:40 BKK) + admin `recomputeTrustScores` callable. Admin card `shared/dashboard-reputation.js`; tenant badge `shared/tenant-reputation.js`.
+**This is the template** for #6/#7/#8 — same write-locked doc, same daily sweep, same "Trust ≠ points / server-only" stance.
+
+---
+
+### 1 — Community Quests engine · 🔴 buildable now · ⭐ START HERE
+**What:** turn real-life behaviors into quests — "ช่วยยกของให้เพื่อนบ้าน", "ปิดไฟ/แอร์ก่อนออกครบ 7 วัน", "ช่วยรดน้ำต้นไม้ส่วนกลาง", "Silent Helper" → แลกสิทธิประโยชน์.
+**Captures (proposed):** `quests/{questId}` (definition: title, type, reward, cadence, verifyMode) + completion → append to **`pointsLedger/{idempotencyKey}`** with a new `source:'quest'` value (+ `refId: questId`). Energy-saver quests can verify off the `meter_data` signal the #276 energy card already reads — no self-claim.
+**Depends / Reuses:** `pointsLedger` (verified: `functions/_pointsLedger.js`, `source` enum at line ~25 — **extend the enum** for `'quest'`) + gamification points display.
+**Gate:** none.
+**Value:** standalone engagement + behavior change NOW; **the capture primitive that #6 Kindness sums.** Highest unlock-per-effort.
+**Guardrails:** anti-gaming — peer/auto-verified completion only, cap per-day quest credit; §7-NN callable; §7-T grep `pointsLedger` readers before adding the `source` value.
+
+### 2 — Helper-request lifecycle · 🔴 buildable now
+**What:** neighbor asks for help → another accepts → completes → **peer rating**.
+**Captures (proposed):** `helpRequests/{id}` { requesterUid, building, room, title, status: open→accepted→done, helperUid, rating, createdAt } (§7-T status-enum writer/reader). One callable per transition.
+**Depends / Reuses:** request/notification pattern (maintenance + announcements precedent); LINE notify infra.
+**Gate:** none.
+**Value:** real neighbor help NOW; **unlocks #7 Verified Helper + feeds #6 Kindness (helper side).**
+**Guardrails:** §7-NN callable not trigger; rate-limit request creation; sender==auth.uid (anti-spoof); PDPA (names visible to building).
+
+### 3 — Community requests board · 🔴 buildable now
+**What:** "บอร์ดกระจายคำร้องขอจากคนในตึก" — ใครมี X ให้ยืม/ขอ/ช่วยได้บ้าง.
+**Captures (proposed):** `communityRequests/{id}` — same lifecycle shape as #2 (open→fulfilled), reuse the #2 callable + rule pattern wholesale.
+**Depends / Reuses:** #2 (build right after — same mental model loaded = sustainable batching).
+**Gate:** none. **Value:** turns the building into a micro-economy; low marginal cost on top of #2.
+
+### 4 — Food sharing feed · 🔴 buildable now
+**What:** "คืนนี้มีคนปล่อยของกินเหลือ" — ephemeral share feed.
+**Captures (proposed):** `foodShares/{id}` { uid, building, note, claimedBy, expiresAt } + sharing action → `pointsLedger source:'food_share'`.
+**Depends / Reuses:** community-feed / broadcast pattern (verified: `shared/broadcasts.js`, announcements); notification.
+**Gate:** none. **Value:** light, high-frequency kindness signal; feeds #6.
+
+### 5 — Trade history memory · 🔴 buildable now
+**What:** "บันทึกประวัติการแลกเปลี่ยนสินค้า" — persistent neighbor-trade record.
+**Captures (proposed):** log completed marketplace trades → `tradeHistory/{id}` (or subcoll on the listing); giveaways → `pointsLedger source:'giveaway'`.
+**Depends / Reuses:** existing marketplace (`shared/tenant-marketplace.js`, `marketplace-chat.js`).
+**Gate:** none. **Value:** trade memory + feeds #6 Kindness (giving).
+
+### 6 — Kindness score · 🟡 gated on #1–5 accrual (~weeks)
+**What:** "คะแนนความมีน้ำใจ" — generosity 0–100.
+**Captures:** *none new* — sums the kind-tagged `pointsLedger` events from #1–5 (`source ∈ {quest, food_share, giveaway, help_completed}`).
+**Depends:** #1–5 must be live + have ~weeks of data. **Reuses:** the #0 pattern exactly — add `kindness` + `kindnessFactors` to `trustScores/{tenantId}`, compute in the SAME daily sweep.
+**Guardrails:** §6 Trust ≠ points (Kindness derives from verifiable/peer-confirmed actions, never self-claim or purchase); server-computed only.
+
+### 7 — Verified Helper · 🟡 gated on #2 job history
+**What:** "ผู้ช่วยชุมชนที่ยืนยันตัวตน" — safe-to-hire badge → gates paid helper market (**revenue Tier 3**).
+**Captures:** *none new* — derives from KYC (#236) AND ≥N completed+rated #2 jobs AND avg rating ≥ threshold → `trustScores/{tenantId}.verifiedHelper` {bool, tier}.
+**Depends:** #2 live + accrued. **Reuses:** #236 KYC gate, #2 rating data.
+**Guardrails:** liability/ToS depth = owner decision (phase-3.2 §8 Q4).
+
+### 8 — Resident Rank · 🟡 gated on #6+#7
+**What:** "แรงก์/ชนชั้นตามการมีส่วนร่วม" — composite tier ladder (e.g. ผู้มาเยือน → สมาชิก → คนสนิท → แกนนำชุมชน → ตำนานของตึก). **The Emotional-Lock-in display** (blueprint Core Metric 3 — "you'd lose แกนนำ rank if you leave").
+**Captures:** pure derived `weighted(reputation, kindness, tenure)` → `trustScores/{tenantId}.{rank, rankLabel}`, same daily CF.
+**Depends:** #6 + #7 live.
+**⚠️ Distinct from gamification rank** (Seedling/etc. in `complaintAndGamification.js`) which is points-based — this is Trust-derived (§6).
+**Guardrails:** rank ladder naming = brand pass (muji tone); thresholds = owner decision.
+
+### — Reputation v2 (engagement dimension) · 🟡 gated ~Aug
+Add the engagement-consistency dimension (pointsLedger event cadence) to #0 once `pointsLedger` has ~1–3 mo accrual. Pure extension of `_reputation.js`. (Tracked in phase-3.2 plan §3.2a v2.)
+
+---
+
+### 9 — Pet health memory · 🔴 buildable now
+**What:** "สมุดบันทึกสุขภาพและวัคซีน" → ongoing health timeline (vet visits, weight, meds, vaccines over time).
+**Captures (proposed):** extend pet doc `tenants/{b}/list/{r}/pets/{petId}` with a `health` subcoll (entries: type, date, note, fileURL). Today only a one-time vaccine-book file exists.
+**Depends / Reuses:** existing pet registry + Storage `pets/{b}/{r}/{petId}/` (verified: [[lifecycle_pets_registration]]).
+**Gate:** none. **Guardrails:** PDPA (vaccine/health = sensitive); storage.rules claim-match already tightened.
+
+### 10 — Pet Social Graph · 🔴 buildable now
+**What:** "สร้างโปรไฟล์และผูกความสัมพันธ์ระหว่างสัตว์เลี้ยงในตึก."
+**Captures (proposed):** public pet profile (opt-in) + `petLinks/{id}` (friend edges). Foundation for #11/#12/#14.
+**Depends / Reuses:** pet registry. **Gate:** none. **Guardrails:** owner consent to make a pet profile building-visible (PDPA opt-in).
+
+### 11 — Pet playdate booking · 🔴 after #10
+**What:** "ระบบนัดหมายกลุ่มเล่นของสัตว์เลี้ยง (Pet playdate booking)."
+**Captures (proposed):** `petPlaydates/{id}` slot + attendees, atomic conflict-check.
+**Depends:** #10. **Reuses:** facility-booking atomic tx (verified: `functions/createFacilityBooking.js` + `shared/facility-booking.js`) — clone the slot/lock pattern.
+**Gate:** none.
+
+### 12 — Pet-friendly matching floors · 🔴 after #10
+**What:** "จับคู่อยู่อาศัยในชั้นที่เป็นมิตรต่อสัตว์เลี้ยงประเภทเดียวกัน."
+**Captures:** derived suggestion from #10 graph + pet type + room/floor data. **Depends:** #10. **Gate:** none.
+
+### 13 — Lost pet alert · 🔴 buildable now
+**What:** "วันนี้แมวหาย" → urgent building-wide broadcast so everyone watches.
+**Captures (proposed):** `petAlerts/{id}` (active flag, photo, last-seen) → fan-out push.
+**Depends / Reuses:** LINE notification + broadcast infra (verified: `shared/broadcasts.js`, [[lifecycle_line_notification]]).
+**Gate:** none. **Guardrails:** rate-limit (no alert spam); auto-expire.
+
+### 14 — Emergency caretaker · 🔴 after #10
+**What:** "ระบบหาคนช่วยดูแลยามฉุกเฉิน."
+**Captures (proposed):** caretaker opt-in flag on pet profile + a request→accept flow (mirror #2). **Depends:** #10 (+ #2 pattern). **Gate:** none.
+
+---
+
+### 15 — Life Timeline · 🔴 buildable now
+**What:** "Move-in journey / First-night welcome / Room memory timeline" — เช่น "อยู่ครบ 1 ปี".
+**Captures:** mostly **reads existing data** (lease start, milestones, events) + a few milestone markers. Low-risk — derive a timeline view from data already captured.
+**Depends / Reuses:** lease (`leases/{b}/list`), occupancyLog, events. **Gate:** none.
+
+### 16 — Farewell Archive + AI Summary · 🔴 buildable now
+**What:** on move-out — "Memory wall" + AI summary of the tenant's life in the community, gifted before they leave.
+**Captures / Reuses:** `archiveTenantOnMoveOut` already moves docs to `archive/{contractId}/*` (verified earlier) — add a memory-wall compose + AI summary step (callable). **Depends:** #15 helps. **Gate:** none. **Guardrails:** PDPA (summary = personal data, consent + DSR); AI cost/latency = callable not inline.
+
+---
+
+## Cross-cutting guardrails (every ตัว)
+- **Backend = `onCall`, never Firestore trigger** (§7-NN — Firestore in SE3, Eventarc unsupported). Invoke from client after the write.
+- **Trust = server-computed only; Trust ≠ points** (§6) — never buyable, or the retention moat collapses.
+- **New field/UI → grep writer + reader first** (§7-T). **Composite index READY before any `where+orderBy`** (§7-J).
+- **Any claim mint → `setCustomUserClaims` twin** (§7-Z). **Tenant LIFF reads → `_onLiffClaimsReady` + claim guard** (§7-A/U); live-verify on real LINE.
+- **PDPA** for every personal-data feature (consent #236/#238 gate, DSR export, retention) — pets health, profiles, helper identity, farewell summary all qualify.
+- **Production data actions → preview, never auto-`.click()`** (§7-I). **One surface per PR; no sweeps.**
+
+## Data-readiness gates (when each can START)
+| ตัว | Blocker | Earliest |
+|-----|---------|----------|
+| 1–5, 9, 10, 13, 15, 16 | none | now |
+| 11, 12, 14 | #10 live | after #10 |
+| 6 (Kindness) | ~weeks of #1–5 accrual | after #1–5 + accrual |
+| 7 (Verified Helper) | #2 job history | after #2 + accrual |
+| 8 (Resident Rank) | #6 + #7 live | after #7 |
+| Reputation v2 | ~1–3 mo pointsLedger | ~Aug 2026 |
+
+---
+
+## Review (flip + cite as each ตัว ships)
+- **2026-06-08:** roadmap created from blueprint Phase 2 gap analysis. Confirmed live: only Reputation v1 (#288/#289) has real data; #1–16 have no capture. Verified reuse paths (`_pointsLedger.js source` enum, `createFacilityBooking`, `broadcasts.js`). Order chosen capture-first (1–5) → trust scores (6–8) → pet (9–14) → tenant memory (15–16). Awaiting: confirm start at #1 (Community Quests).

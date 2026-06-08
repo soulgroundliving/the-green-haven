@@ -4,11 +4,85 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-08) — Meaning Layer **#1: Community Quests engine** (daily checklist · fuller engine) · ⏳ AWAITING APPROVAL (Plan-First)
+
+> Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#1 · ⭐ START HERE**. #0 Reputation shipped (#288/#289). Owner directives (2026-06-08): verify model = **"quest ให้เค้ากดรับเมื่อมี checklist ให้ทำในแต่ละวัน"** (daily tap-to-claim checklist) · scope = **fuller engine now**.
+
+### Recommended verification design — ONE unified tap-to-claim checklist; behaviour routes on per-quest `verifyMode`
+Every quest in the tenant's daily checklist is **"กดรับ"**. What the server does on tap depends on the quest definition's `verifyMode`:
+
+| `verifyMode` | On tap "รับ" | Tamper-proof | Use for | Points |
+|---|---|---|---|---|
+| `auto` | Server **re-derives the signal** (today's `meter_data` / login-streak) → award only if satisfied, else "ยังทำไม่ครบ" | ✅ server re-checks | ลดใช้ไฟช่วงบ่าย · เช็คอินครบ N วัน | any |
+| `self` | Award immediately; **idempotent per-day + per-day total cap + low points** | ⚠️ honor, capped/low-stakes | daily habits: รดน้ำต้นไม้ · แยกขยะ | 1–5 |
+| `admin` | Create a **pending claim** (no award) → owner approves in dashboard → award | ✅ human-verified | real kindness: ช่วยยกของ · Silent Helper | 10–50 |
+
+**Why:** it *is* the daily checklist (everything = กดรับ), keeps the **#6 Kindness feed honest** (kindness quests are `admin`-verified, never self-claimed → respects roadmap "no pure self-claim"), and confines honor-system to low-stakes capped habits. The admin picks `verifyMode` per quest at creation.
+
+### Why Plan-First (CLAUDE.md §1 — all three thresholds)
+New `quests/` + `questClaims/` collections + 2 callables + `firestore.rules` (read/write + tamper-protected field) + new composite index + pointsLedger enum + admin UI + tenant UI + tests + lifecycle doc ≈ **14 files**; schema+security+architectural; CF+rules deploy = **not single-revert**; 2+ valid verify architectures (settled above with owner).
+
+### Verified reuse (Explore, file:line — §7-H/K/O/AA discovery)
+- **§7-O/AA — placeholder already exists:** `URGENT_QUESTS` hard-coded ([gamification-rules.js:97](shared/gamification-rules.js#L97)) rendered as a **disabled "รับ X Pts · Coming soon"** card ([tenant-leaderboard.js:299](shared/tenant-leaderboard.js#L299)) into `#urgent-quests-list` ([tenant_app.html:3948](tenant_app.html#L3948)). Comment: *"post-launch admin can move to a Firestore `quests` collection."* → we **wire the stub to real infra**, not greenfield. No other quest/ภารกิจ/challenge code exists.
+- **Points capture:** add `'quest'` to `VALID_SOURCES` ([_pointsLedger.js:41](functions/_pointsLedger.js#L41)); `appendPointsLedger(tx, fs, {...})` is atomic with the `gamification.points` balance update on `tenants/{b}/list/{r}` or `people/{tenantId}`. Ledger rules (admin-read / CF-write, firestore.rules:757) + composite index `tenantId ASC, at DESC` **already exist** → no ledger rule/index change. Add `quest:` label to `SOURCE_LABEL` ([dashboard-behavioral-engagement.js:29](shared/dashboard-behavioral-engagement.js#L29)) (graceful fallback if missing — no break, §7-T).
+- **Award CF template:** clone `claimDailyLoginPoints` — auth gate (`assertTenantAccess` / player token) → `runTransaction` → idempotency marker → `appendPointsLedger` → `{success, pointsBefore, pointsAfter}`. Per-day cap via `_rateLimit.js` `checkRateLimit(uid, action, max, win)`.
+- **Admin catalog:** clone the **rewards CRUD** ([dashboard-config.js:1025](shared/dashboard-config.js#L1025)) — direct admin Firestore write, modal form + onSnapshot table; rule precedent `rewards/{id} allow read: if true; write: if isAdmin()` (firestore.rules:40). `data-action` hub at [dashboard-main.js:686](shared/dashboard-main.js#L686).
+- **Tenant claim UI:** clone the `redeemReward` optimistic-callable pattern ([tenant-leaderboard.js:410](shared/tenant-leaderboard.js#L410)); self-wire via `_onLiffClaimsReady` + `_taBuilding/_taRoom` guard (§7-A/U/BB), cleanest template = [tenant-reputation.js](shared/tenant-reputation.js) (#289). CSS in `components.css` (§7-RR).
+
+### Data model
+- **`quests/{questId}`** (admin catalog) — `{ title, description, icon, category, rewardPoints, cadence:'daily'|'weekly'|'once', verifyMode:'auto'|'self'|'admin', autoSignal?:'energy_afternoon'|'login_streak', dailyCapPoints?, building:'all'|'nest'|'rooms', active, order, startDate?, endDate?, createdAt, updatedAt, createdBy{uid,email} }`. Read: signed-in; write: admin (rewards model).
+- **`questClaims/{questId}__{tenantId}__{day}`** (deterministic id = per-day idempotency + immutable audit + admin review queue) — `{ questId, tenantId, building, roomId, status:'self'|'auto'|'pending'|'approved'|'rejected', day:'YYYY-MM-DD', points, claimedAt, reviewedAt?, reviewedBy?, note?, photoURL? }`. Read: admin + own (claim-gated by `tenantId` token, §7-A/U/P); write: false (CF only).
+- **`tenants/{b}/list/{r}.gamification.questsToday`** (lightweight per-day state map `{questId:status}`) — written by the CF in the SAME tx; the tenant's **existing** eco-points `onSnapshot` ([tenant-leaderboard.js:170](shared/tenant-leaderboard.js#L170)) already delivers it → **no new tenant read/query/index**. Must be a **tamper-protected field** (§6, like `reputationTier`).
+- **`pointsLedger`** append `source:'quest'`, `refId:questId`, discriminator `questId__day`.
+
+### Build — PR1 (server + rules + index; owner-deploy-gated, NOT stacked)
+- [ ] `functions/_pointsLedger.js` — add `'quest'` to `VALID_SOURCES` (+ test).
+- [ ] `functions/_questEngine.js` (NEW, **pure**, TDD-first) — `isAvailableToday(quest, claimsToday, now)` (cadence/active/date/cap window), `evaluateAutoSignal(quest, signalData)` (energy/login). No I/O. Table-driven unit tests.
+- [ ] `functions/claimQuest.js` (NEW callable, SE1) — auth gate (tenant/player); load quest; per-day idempotency via `questClaims/{questId}__{tenantId}__{day}`; cap check; route by `verifyMode` (`auto`→re-derive signal→award/deny · `self`→award · `admin`→write `pending`, no award); award path = `runTransaction` ( balance + `appendPointsLedger` + `questsToday` update ). Tests (each mode · idempotent re-tap · cap · auto-deny · admin-pending-no-award).
+- [ ] `functions/reviewQuestClaim.js` (NEW callable, SE1, **admin**) — approve/reject a `pending` claim → on approve, award (tx + ledger + `questsToday`). Gate `context.auth.token.admin===true`. Tests.
+- [ ] `functions/index.js` — register both (§7-NN callable, NOT a Firestore trigger).
+- [ ] `firestore.rules` — `quests/{questId}` (read signed-in / write admin) + `questClaims/{claimId}` (read admin+own / write false) + add **`questsToday`** to the `tenants/{b}/list/{r}` update protected `hasAny([...])` block (§6 tamper, mirrors `reputationTier`). + rules tests.
+- [ ] `firestore.indexes.json` — `questClaims` composite `status ASC, claimedAt DESC` (admin pending-review queue) → deploy + **READY before query** (§7-J/N).
+- [ ] `shared/dashboard-behavioral-engagement.js` — `SOURCE_LABEL.quest = 'เควสต์'`.
+- [ ] Gate: `node --check` · functions suite green · rules suite green (emulator) · `verify:memory` green.
+
+### Build — PR2 (admin UI + tenant checklist; auto-merge + Vercel, off fresh main AFTER PR1 deploy)
+- [ ] `shared/dashboard-quests-admin.js` (NEW) — quest catalog CRUD (clone rewards UI: table + modal, fields incl. `verifyMode`/`cadence`/`autoSignal`/`dailyCapPoints`/`building`) → direct admin write; PLUS a **pending-claims review queue** (list `questClaims status==pending` → approve/reject → `reviewQuestClaim`, §7-I explicit click, no auto-`.click()`).
+- [ ] `dashboard.html` — `#dashQuests` mount on the **Gamification 🏆 page** [REC] + `<script src>` (§7-PP order) + hub wires ([dashboard-main.js](shared/dashboard-main.js)). No inline edit → no CSP drift (§7-II).
+- [ ] `shared/tenant-quests.js` (NEW) — self-wire `_onLiffClaimsReady` + claim guard (§7-A/U); read active `quests` (getDocs, filter cadence+building) + `questsToday` from the eco onSnapshot; render **daily checklist** into `#urgent-quests-list` with per-quest state (รับ / ✓ claimed / ⏳ pending / 🔒 locked); tap → `claimQuest` optimistic (clone redeemReward §7-I); §7-N read-fail→muted; idempotent init.
+- [ ] `shared/gamification-rules.js` + `shared/tenant-leaderboard.js` — retire the hard-coded `URGENT_QUESTS` disabled placeholder; delegate rendering to `tenant-quests.js` (§7-QQ ensure `window.` export · §7-PP load order · §7-CC no top-level `let` leak). Keep a muted empty-state when `quests` is empty.
+- [ ] `shared/components.css` — static `.quest-card*` / `.quest-checklist*` styles (§7-RR, never injected `<style>`).
+- [ ] Gate: `test:shared` green · `node --check` · **static-harness preview-MCP screenshot** of checklist states (available/claimed/pending/locked/empty) · mojibake clean (§7-TT) · CSP no-drift (§7-II §G) · `verify:memory` green.
+- [ ] Docs: new `memory/lifecycle_community_quests.md` + MEMORY.md index + **flip roadmap #1 → ✅ SHIPPED + cite PRs** (same session, §7-K doc-drift).
+
+### Owner-only live-verify (cannot run from this env — §7-A/U/J)
+Real LINE tenant → `#quest-page` → ranking tab → daily checklist renders → tap `self`/`auto` quest → points + ledger update (reopen persists); admin creates a quest + approves a `pending` `admin`-mode claim → tenant sees ✓.
+
+### Defaults (owner-tunable — proposed, flag don't block)
+- **Seed quests:** 1 `auto` energy (reuse `solar_afternoon` 10pt) · 2–3 `self` daily habits (รดน้ำต้นไม้/แยกขยะ/ทักทาย, 2–3pt) · 1–2 `admin` kindness (ช่วยยกของ/Silent Helper, 20–30pt). Owner edits freely post-ship.
+- **Caps:** `self` per-day total 20pt. **Placement:** admin on Gamification 🏆 page [REC] (vs content-management tab). **Catalog write:** direct admin write [REC] (callable only for claim/review — they need server authority).
+
+### Guardrails (§7 + §6)
+§6 trust/points integrity (server-authoritative award; `questsToday` tamper-protected) · §7-NN callables not triggers · §7-I no auto-click on approve · §7-A/U/BB tenant claim-gated self-wire · §7-T grep `pointsLedger`/`questsToday` writer+reader before/after · §7-J index READY before query · §7-N read-error→muted state · §7-RR CSS static · §7-II/§G CSP no-drift · §7-PP/QQ/CC script order + window export · §7-E `YearUtils` if BE dates touch · **CF+rules deploy = OWNER-CONFIRMED before merge** (CI auto-deploys CFs; rules not single-revert) · PR2 frontend auto-merge ([[feedback_auto_merge_prs]]) · don't stack (PR1 deploy → PR2 off fresh main, [[feedback_stacked_pr_squash_merge]]).
+
+### Risk (money-of-points path, §7-I)
+Tenant tap writes ledger + balance. Anti-gaming: per-day `questClaims` idempotency doc + per-day cap + `admin`-verify for high-value + server re-verify for `auto` (no client-trusted award). Production write gated by valid claim; no auto-click. Touches the live gamification balance → needs approval before build.
+
+### Out of scope (named, not dropped)
+peer-verify (#2 Helper-lifecycle prerequisite) · #6 Kindness score (sums these quest events after ~weeks accrual) · weekly/seasonal rotation beyond the cadence field · photo-proof storage for `admin` claims (text note v1; photo a fast follow if owner wants).
+
+### Review (append after execution)
+_(pending approval + build)_
+
+---
+
 ## ▶▶▶ ACTIVE PLAN (2026-06-08) — Tenant can pay the CURRENT (synth) month via SlipOK & have it marked paid · ⏳ AWAITING APPROVAL (Plan-First)
 
 > Surfaced while fixing the SlipOK slip-verification bug chain (form-data → CI-deploy-regex → API key/branch → data:URL prefix — all SHIPPED & live-verified, admin+tenant ✅). Paying the **current month** still shows "รอชำระ" → separate billing-lifecycle gap below.
 
-### ▶▶ PIVOT (2026-06-08, after live testing) — user directive "ทำให้ยั่งยืน" → ROOT fix (Option C). ⏳ AWAITING APPROVAL
+### ▶▶ PIVOT (2026-06-08) — user directive "ทำให้ยั่งยืน" → ROOT fix (Option C). ✅ SHIPPED + DEPLOYED (`c33d084`)
+
+> **Review (2026-06-08):** Option C SHIPPED. `notifyTenantOnMeterUpload` → `writeBillOnIssue` (NEW `functions/_billWrite.js`) creates `bills/{b}/{r}/TGH-{BE}{MM}-{room}` `status:'pending'` at meter-approve (best-effort · idempotent · dedup by room+MONTH · §7-BBB boundary). `tools/backfill-synth-bills.js` (dry-run default, `--apply`/`--building`/`--room`/`--month`). 63 tests, suite 2009/0, deployed via CI. **June ห้อง13 fixed** (`--room 13 --month 6 --apply` → paid ฿2,020, live-verified). **Jan-Mar 2569 ห้อง13 HELD** (owner call — ฿5,328, Apr/May paid → likely settled outside app). **Open:** live-verify a real meter-approve creates the bill (§7-J admin step). Catches: §7-T (`'pending'` not `'unpaid'`), §7-D/E (legacy suffixed bill ids → dedup by month). Docs: [[billing_monthly_flow]] + handoff `next_session_handoff_2026_06_08_option_c_canonical_bill.md`. The Option-C checklist below is now historical.
 
 Option B (materialize-on-payment) was SHIPPED + unit-tested, but live testing exposed it's FRAGILE: it depended on the tenant app sending a new field, and §7-MM stale SW cache kept the client from sending it / even from calling verifySlip (client-state confusion after repeated attempts). The user's question "why don't admin & tenant connect?" pinpointed the REAL gap: **there is no canonical bill record.** → Pivot to Option C; keep Option B deployed as a SAFETY NET.
 
