@@ -5494,42 +5494,83 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <!-- Quest edit modal -->
       <div class="ui-modal ui-modal--top u-init-hide" id="questEditModal" role="dialog" aria-modal="true" aria-labelledby="questEditTitle">
         <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 520px; max-height: 90vh; overflow-y: auto;">
-          <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="questEditTitle">เพิ่มเควส</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1rem;">
+            <div style="font-size: 1.15rem; font-weight: 700;" id="questEditTitle">เพิ่มเควส</div>
+            <small style="color:var(--text-muted);font-size:.74rem;"><span style="color:#e23;">*</span> = จำเป็น</small>
+          </div>
           <input type="hidden" id="questEditId">
-          <div style="display: grid; gap: .85rem;">
-            <label>ชื่อเควส<input type="text" id="questEditTitleInput" class="input-sm" maxlength="80"></label>
-            <label>รายละเอียด<input type="text" id="questEditDesc" class="input-sm" maxlength="200" placeholder="(ไม่บังคับ)"></label>
-            <label>ไอคอน (emoji)<input type="text" id="questEditIcon" placeholder="🎯" maxlength="4" class="input-sm"></label>
-            <label>แต้มรางวัล<input type="number" id="questEditPoints" min="1" class="input-sm"></label>
-            <label>รอบการทำ
-              <select id="questEditCadence" class="input-sm">
-                <option value="daily">รายวัน (ทำได้ทุกวัน)</option>
-                <option value="once">ครั้งเดียว</option>
-              </select>
+          <div style="display: grid; gap: .9rem;">
+            <label>ชื่อเควส <span style="color:#e23;">*</span>
+              <input type="text" id="questEditTitleInput" class="input-sm" maxlength="80" required placeholder="เช่น รดน้ำต้นไม้ส่วนกลาง">
+              <small class="quest-hint">ชื่อที่ลูกบ้านเห็นในรายการเควส</small>
             </label>
-            <label>วิธีตรวจ (verifyMode)
+            <label>รายละเอียด
+              <input type="text" id="questEditDesc" class="input-sm" maxlength="200" placeholder="(ไม่บังคับ)">
+              <small class="quest-hint">คำอธิบายสั้น ๆ ใต้ชื่อเควส</small>
+            </label>
+            <label>ไอคอน
+              <select id="questEditIcon" class="input-sm">
+                <option value="🎯">🎯 เป้าหมาย</option>
+                <option value="🌱">🌱 ต้นไม้</option>
+                <option value="🌳">🌳 ต้นไม้ใหญ่</option>
+                <option value="💧">💧 น้ำ</option>
+                <option value="♻️">♻️ รีไซเคิล</option>
+                <option value="🗑️">🗑️ ขยะ</option>
+                <option value="🧹">🧹 ทำความสะอาด</option>
+                <option value="🤝">🤝 ช่วยเหลือ</option>
+                <option value="💪">💪 แรงกาย</option>
+                <option value="❤️">❤️ น้ำใจ</option>
+                <option value="🙏">🙏 ขอบคุณ</option>
+                <option value="🐾">🐾 สัตว์เลี้ยง</option>
+                <option value="☀️">☀️ พลังงาน</option>
+                <option value="📚">📚 ความรู้</option>
+                <option value="✨">✨ พิเศษ</option>
+              </select>
+              <small class="quest-hint">เลือกไอคอนแทนเควส</small>
+            </label>
+            <label>แต้มรางวัล <span style="color:#e23;">*</span>
+              <input type="number" id="questEditPoints" min="1" step="1" class="input-sm" required placeholder="เช่น 3">
+              <small class="quest-hint">แต้มที่ลูกบ้านได้รับเมื่อทำสำเร็จ</small>
+            </label>
+            <label>รอบการทำ <span style="color:#e23;">*</span>
+              <select id="questEditCadence" class="input-sm">
+                <option value="daily">รายวัน — ทำได้ทุกวัน</option>
+                <option value="once">ครั้งเดียว — ตลอดการเป็นสมาชิก</option>
+              </select>
+              <small class="quest-hint">ความถี่ที่ลูกบ้านรับเควสนี้ซ้ำได้</small>
+            </label>
+            <label>วิธีตรวจ <span style="color:#e23;">*</span>
               <select id="questEditVerifyMode" class="input-sm">
-                <option value="self">self — กดรับเอง (honor · มีเพดาน/วัน)</option>
-                <option value="auto">auto — เซิร์ฟเวอร์ตรวจสัญญาณเอง</option>
+                <option value="self">self — ลูกบ้านกดรับเอง (ได้แต้มทันที)</option>
+                <option value="auto">auto — ระบบตรวจสัญญาณเอง</option>
                 <option value="admin">admin — รออนุมัติก่อนได้แต้ม</option>
               </select>
+              <small class="quest-hint">self = เชื่อใจกดเอง · auto = ระบบเช็คให้ · admin = คุณกดอนุมัติในคิวก่อน</small>
             </label>
-            <label id="questEditAutoSignalRow">สัญญาณ (auto)
+            <label id="questEditAutoSignalRow">สัญญาณที่ระบบตรวจ <span style="color:#e23;">*</span>
               <select id="questEditAutoSignal" class="input-sm">
-                <option value="checkin_today">เช็คอินวันนี้</option>
-                <option value="login_streak">เช็คอินต่อเนื่องครบ N วัน</option>
+                <option value="checkin_today">เช็คอินวันนี้แล้ว</option>
+                <option value="login_streak">เช็คอินต่อเนื่องครบ 7 วัน</option>
               </select>
+              <small class="quest-hint">เงื่อนไขที่ระบบใช้ตัดสินว่าทำสำเร็จ (เฉพาะโหมด auto)</small>
             </label>
-            <label id="questEditCapRow">เพดาน self รวม/วัน (ไม่บังคับ — ว่าง = ไม่จำกัด)<input type="number" id="questEditCap" min="1" class="input-sm" placeholder="ไม่จำกัด"></label>
-            <label>ตึก
+            <label id="questEditCapRow">เพดาน self รวม/วัน
+              <input type="number" id="questEditCap" min="1" step="1" class="input-sm" placeholder="ไม่จำกัด">
+              <small class="quest-hint">(ไม่บังคับ) จำกัดแต้ม self รวมต่อวันของลูกบ้านแต่ละคน — เว้นว่าง = ไม่จำกัด</small>
+            </label>
+            <label>ตึกที่แสดง <span style="color:#e23;">*</span>
               <select id="questEditBuilding" class="input-sm">
                 <option value="all">ทุกตึก</option>
                 <option value="rooms">ห้องแถว (rooms)</option>
                 <option value="nest">Nest</option>
               </select>
+              <small class="quest-hint">เลือกว่าลูกบ้านตึกไหนเห็นเควสนี้</small>
             </label>
-            <label>ลำดับ (น้อยขึ้นก่อน)<input type="number" id="questEditOrder" min="1" value="99" class="input-sm"></label>
-            <label class="dash-flex-ac-8"><input type="checkbox" id="questEditActive" checked> เปิดใช้งาน (ลูกบ้านเห็น)</label>
+            <label>ลำดับการแสดง
+              <input type="number" id="questEditOrder" min="1" step="1" value="99" class="input-sm">
+              <small class="quest-hint">(ไม่บังคับ) เลขน้อยแสดงก่อน</small>
+            </label>
+            <label class="dash-flex-ac-8" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="questEditActive" checked> <span>เปิดใช้งาน (ลูกบ้านเห็นทันที)</span></label>
           </div>
           <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.5rem;">
             <button data-action="closeQuestEdit" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);">ยกเลิก</button>

@@ -95,7 +95,15 @@ function openQuestEdit(questId) {
   const q = isNew ? {} : (_questsAdminCache.find(x => x.id === questId) || {});
   g('questEditTitleInput').value = q.title || '';
   g('questEditDesc').value = q.description || '';
-  g('questEditIcon').value = q.icon || '🎯';
+  // Icon is now a <select>; keep a custom stored icon by injecting an option for it.
+  const iconSel = g('questEditIcon');
+  const icon = q.icon || '🎯';
+  if (iconSel && !Array.prototype.some.call(iconSel.options, o => o.value === icon)) {
+    const opt = document.createElement('option');
+    opt.value = icon; opt.textContent = icon + ' (เดิม)';
+    iconSel.insertBefore(opt, iconSel.firstChild);
+  }
+  iconSel.value = icon;
   g('questEditPoints').value = q.rewardPoints || '';
   g('questEditCadence').value = q.cadence === 'once' ? 'once' : 'daily';
   g('questEditVerifyMode').value = ['self', 'auto', 'admin'].includes(q.verifyMode) ? q.verifyMode : 'self';

@@ -898,3 +898,11 @@ body.gh-tour-open {
   font-size: 0.84rem; color: var(--text-muted, #8a8f98);
   border: 1px dashed var(--border-subtle, #ebe9e2); border-radius: 14px;
 }
+/* Admin quest-form field hint (dashboard #questEditModal). */
+.quest-hint {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-muted, #8a8f98);
+}
