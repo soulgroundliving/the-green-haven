@@ -23,7 +23,8 @@
  *   building:     string | null,   // null for player-path (people/{tenantId}) events
  *   roomId:       string | null,
  *   source:       'daily_login' | 'wellness_quiz' | 'contract_quiz'
- *               | 'complaint_free_month' | 'payment' | 'redeem' | 'quest',
+ *               | 'complaint_free_month' | 'payment' | 'redeem' | 'quest'
+ *               | 'help_completed',
  *   points:       number,          // SIGNED: + for earn, − for redeem (never 0)
  *   balanceAfter: number | null,   // running total after this event, when known
  *   at:           Timestamp,       // serverTimestamp() at write
@@ -46,6 +47,7 @@ const VALID_SOURCES = new Set([
   'payment',
   'redeem',
   'quest',
+  'help_completed',   // completeHelpRequest — peer-confirmed neighbor help (Meaning Layer #2)
 ]);
 
 // Firestore doc IDs cannot contain '/' or start with '.'. Build a safe segment.
@@ -65,6 +67,7 @@ function _sanitiseSegment(s) {
  *   - payment:               monthKey (matches the paymentHistory idempotency fence)
  *   - redeem:                redemptionId (unique per redemption)
  *   - quest:                 questId__day (one credit per quest per BKK day)
+ *   - help_completed:        requestId (one credit per completed help request)
  */
 function buildLedgerKey({ source, tenantId, discriminator }) {
   return [

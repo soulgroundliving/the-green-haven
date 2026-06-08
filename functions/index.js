@@ -181,6 +181,17 @@ exports.claimContractQuizPoints  = require('./claimContractQuizPoints').claimCon
 exports.claimQuest       = require('./claimQuest').claimQuest;
 exports.reviewQuestClaim = require('./reviewQuestClaim').reviewQuestClaim;
 
+// Helper-request lifecycle (Meaning Layer #2) — neighbor posts a help request,
+// another tenant accepts, the requester confirms-done + rates, the helper earns
+// peer-confirmed kindness points (pointsLedger source:'help_completed', feeds the
+// future #6 Kindness + #7 Verified Helper). ONE callable per transition. §7-NN
+// callables (Eventarc can't watch SE3 Firestore); accept/complete reuse the
+// existing LINE_CHANNEL_ACCESS_TOKEN secret for the requester/helper push (§7-WW).
+exports.postHelpRequest     = require('./postHelpRequest').postHelpRequest;
+exports.acceptHelpRequest   = require('./acceptHelpRequest').acceptHelpRequest;
+exports.completeHelpRequest = require('./completeHelpRequest').completeHelpRequest;
+exports.cancelHelpRequest   = require('./cancelHelpRequest').cancelHelpRequest;
+
 // Immutable admin-action audit trail (Core Readiness Phase 1.1). Client-side admin
 // mutations call this after the write; in-tx CF actions log via _actionAudit directly.
 exports.recordAdminAction = require('./recordAdminAction').recordAdminAction;

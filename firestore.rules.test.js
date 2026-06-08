@@ -372,6 +372,40 @@ describe('leaseRequests — LIFF tenant creates own room only, admin updates', (
   });
 });
 
+describe('helpRequests — building-scoped read, CF-only write (Meaning Layer #2)', () => {
+  it('admin can read any building\'s help request', async () => {
+    await seedDoc('helpRequests/h1', { building: 'nest', room: 'N1', status: 'open' });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'helpRequests/h1')));
+  });
+
+  it('LIFF tenant can read a request in their OWN building', async () => {
+    await seedDoc('helpRequests/h1', { building: 'rooms', room: '101', status: 'open' });
+    await assertSucceeds(getDoc(doc(LIFF_TENANT().firestore(), 'helpRequests/h1')));
+  });
+
+  it('LIFF tenant CANNOT read a request in a DIFFERENT building (PDPA scope)', async () => {
+    await seedDoc('helpRequests/h1', { building: 'nest', room: 'N1', status: 'open' });
+    await assertFails(getDoc(doc(LIFF_TENANT().firestore(), 'helpRequests/h1')));
+  });
+
+  it('anonymous user (no building claim) CANNOT read', async () => {
+    await seedDoc('helpRequests/h1', { building: 'rooms', room: '101', status: 'open' });
+    await assertFails(getDoc(doc(ANON().firestore(), 'helpRequests/h1')));
+  });
+
+  it('LIFF tenant CANNOT client-write — create or update (CF-only)', async () => {
+    await assertFails(addDoc(collection(LIFF_TENANT().firestore(), 'helpRequests'),
+      { building: 'rooms', room: '101', title: 'x', status: 'open' }));
+    await seedDoc('helpRequests/h1', { building: 'rooms', status: 'open' });
+    await assertFails(updateDoc(doc(LIFF_TENANT().firestore(), 'helpRequests/h1'), { status: 'accepted' }));
+  });
+
+  it('admin CANNOT client-write either (every transition is a callable)', async () => {
+    await assertFails(addDoc(collection(EMAIL_ADMIN().firestore(), 'helpRequests'),
+      { building: 'rooms', title: 'x', status: 'open' }));
+  });
+});
+
 describe('complaints — any auth creates, only admin modifies/deletes', () => {
   const validComplaint = (uid = 'tenant-1') => ({
     linkedAuthUid: uid,

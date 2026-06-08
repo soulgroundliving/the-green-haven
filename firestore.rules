@@ -56,6 +56,18 @@ service cloud.firestore {
       allow read:  if isAdmin();
       allow write: if false;
     }
+    // Helper-request lifecycle (Meaning Layer #2) — the neighbor-to-neighbor help
+    // board. Building-scoped read: a tenant sees ONLY their own building's
+    // requests (PDPA — requester/helper names are visible within the building,
+    // never across buildings). Admin reads all (the moderation monitor). CF-only
+    // writes: postHelpRequest / acceptHelpRequest / completeHelpRequest /
+    // cancelHelpRequest (admin SDK bypasses rules; every transition is a callable).
+    match /helpRequests/{requestId} {
+      allow read:  if isAdmin()
+                || (isSignedIn() && request.auth.token.building != null
+                    && resource.data.building == request.auth.token.building);
+      allow write: if false;
+    }
     match /system/{docId} {
       allow read:  if true;
       allow write: if isAdmin();
