@@ -3895,15 +3895,19 @@
         <div id="help-rating-modal" role="dialog" aria-modal="true" aria-labelledby="help-rating-title"
              style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:120; align-items:center; justify-content:center; padding:20px;">
             <div style="background:#fff; border-radius:16px; padding:1.5rem; width:100%; max-width:360px;">
-                <h2 id="help-rating-title" style="margin:0 0 4px; font-size:1.05rem; font-weight:700;">ยืนยันว่าช่วยเสร็จแล้ว</h2>
-                <p style="margin:0 0 8px; font-size:.82rem; color:var(--text-muted,#8a8f98);">ให้ดาวขอบคุณผู้ช่วย — ผู้ช่วยจะได้รับ +20 แต้มน้ำใจ</p>
-                <div class="help-stars" id="help-rating-stars">
-                    <span>☆</span><span>☆</span><span>☆</span><span>☆</span><span>☆</span>
+                <h2 id="help-rating-title" style="margin:0 0 4px; font-size:1.05rem; font-weight:700;">ขอบคุณผู้ช่วย 💚</h2>
+                <p style="margin:0 0 10px; font-size:.82rem; color:var(--text-muted,#8a8f98);">เลือกคำชมน้ำใจ (เลือกได้หลายอย่าง) — ผู้ช่วยจะได้รับ +20 แต้มน้ำใจ</p>
+                <div class="help-tag-pick" id="help-appreciation-tags">
+                    <button type="button" class="help-tag" data-tag="kind">💚 ใจดีมาก</button>
+                    <button type="button" class="help-tag" data-tag="fast">⚡ รวดเร็วทันใจ</button>
+                    <button type="button" class="help-tag" data-tag="extra">✨ ช่วยเกินคาด</button>
+                    <button type="button" class="help-tag" data-tag="friendly">😊 เป็นกันเอง</button>
+                    <button type="button" class="help-tag" data-tag="trusty">🤝 ไว้ใจได้</button>
                 </div>
-                <textarea id="help-rating-note" maxlength="280" rows="2" placeholder="ฝากข้อความขอบคุณ (ไม่บังคับ)" style="width:100%; margin-bottom:12px;"></textarea>
+                <textarea id="help-rating-note" maxlength="280" rows="2" placeholder="ฝากข้อความขอบคุณ (ไม่บังคับ)" style="width:100%; margin:12px 0;"></textarea>
                 <div style="display:flex; gap:8px;">
                     <button type="button" id="help-rating-cancel" class="btn-secondary" style="flex:1;">ยกเลิก</button>
-                    <button type="button" id="help-rating-confirm" class="btn-main" style="flex:1;" disabled>ยืนยัน</button>
+                    <button type="button" id="help-rating-confirm" class="btn-main" style="flex:1;" disabled>ส่งคำขอบคุณ</button>
                 </div>
             </div>
         </div>
