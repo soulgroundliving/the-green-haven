@@ -165,6 +165,13 @@
   async function maybePromptAccountConsent() {
     if (_busy) return;                 // a prompt is already open (re-entrant hook fire)
     if (_alreadyHandled()) return;     // accepted before, or deferred this session
+    // Members only (owner request): a not-yet-approved / pending / unlinked visitor must
+    // NOT see the PDPA consent — it should appear only once they are a linked tenant.
+    // Both signals are window globals from tenant-liff-auth.js (verified real, §7-BB):
+    // _lineLinkStatus → 'approved' on sign-in; _tenantAppRoom set on link/fast-path.
+    // After auto-connect (#3) flips status→approved + fires liffLinked, this hook re-runs
+    // and the popup then shows correctly.
+    if (window._lineLinkStatus !== 'approved' && !window._tenantAppRoom) return;
     // GhModal is a defer module too — if it hasn't loaded yet, bail; the next
     // _onLiffClaimsReady fire (liffLinked) will retry once it's available.
     if (!window.GhModal || typeof window.GhModal.confirm !== 'function') return;
