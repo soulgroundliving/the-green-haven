@@ -234,7 +234,7 @@ async function logVerificationAttempt(params, result, status) {
       status,
       building: params.building,
       room: params.room,
-      userId: params.userId,
+      userId: params.userId || params.room || null,  // tenant calls send room not userId → avoid Firestore undefined-reject (breaks verifiedSlips write + dedup + admin payment view)
       expectedAmount: params.expectedAmount,
       verifiedAmount: result?.amount,
       transactionId: result?.transactionId,
@@ -290,7 +290,7 @@ async function saveVerifiedSlip(slipData, params, auditActor, receiptCtx) {
       transactionId: slipData.transactionId,
       building: params.building,
       room: params.room,
-      userId: params.userId,
+      userId: params.userId || params.room || null,  // tenant calls send room not userId → avoid Firestore undefined-reject (breaks verifiedSlips write + dedup + admin payment view)
       amount: slipData.amount,
       expectedAmount: params.expectedAmount,
       sender: slipData.sender?.displayName || slipData.sender?.name,
@@ -354,22 +354,93 @@ async function markBillPaidInRTDB(slipData, params, receiptNo) {
     const bills = snap.val() || {};
     const updates = {};
     let matched = 0;
+    let paidBillId = null;
+    let sawCurrentMonth = false;   // any bill (paid OR unpaid, any id) already exists for the slip month
     Object.keys(bills).forEach(billId => {
       const b = bills[billId];
-      if (!b || b.status === 'paid') return;
+      if (!b) return;
       const by = Number(b.year); const bm = Number(b.month);
       const byBE = by < 2400 ? 2500 + (by % 100) : by;
       if (byBE === billYearBE && bm === billMonth) {
+        sawCurrentMonth = true;
+        if (b.status === 'paid') return;   // month already settled — nothing to mark
         updates[`${billId}/status`] = 'paid';
         updates[`${billId}/paidAt`] = Date.now();
         updates[`${billId}/paidVia`] = 'tenant_app_slipok';
         updates[`${billId}/paidRef`] = slipData.transactionId || '';
         if (receiptNo) updates[`${billId}/receiptNo`] = receiptNo;  // gapless RCP- (Roadmap 1.2a)
+        if (!paidBillId) paidBillId = billId;
         matched++;
       }
     });
     if (matched > 0) {
       await ref.update(updates);
+    }
+
+    // ===== MATERIALIZE A SYNTHESIZED CURRENT-MONTH BILL (2026-06-08) =====
+    // The current month's bill is SYNTHESIZED client-side from meter_data (`SYNTH-…`)
+    // with NO RTDB doc when the meter-upload flow didn't create one (generateBillsOnMeterUpdate
+    // frozen). A valid slip for the current month then matches no existing bill and would
+    // leave it "รอชำระ". Create the REAL RTDB bill marked paid so tenant + admin agree
+    // (RTDB = SoT). Gate is SERVER-SIDE (robust to §7-MM stale frontends — NO dependency on
+    // any client flag): materialize when NO bill exists for the slip's BKK month AND it is
+    // the current BKK month AND the slip already passed the amount check upstream. Client
+    // charges/meterReadings decorate the breakdown when present. Deterministic id so a re-pay
+    // merges; never overwrite a paid doc. Field shape mirrors a real bill (year "BE4" string,
+    // totalCharge) per §7-E.
+    const _nowBkk = new Date(Date.now() + BKK_OFFSET_MS);
+    const _curYM = (_nowBkk.getUTCFullYear() + 543) * 100 + (_nowBkk.getUTCMonth() + 1);
+    const _billYM = billYearBE * 100 + billMonth;
+    if (matched === 0 && !sawCurrentMonth && _billYM === _curYM) {
+      try {
+        const mm = String(billMonth).padStart(2, '0');
+        const newBillId = `TGH-${billYearBE}${mm}-${room}`;   // deterministic (matches generateBills format)
+        const billRef = ref.child(newBillId);
+        const existing = (await billRef.once('value')).val();
+        const total = Number(params.totalAmount ?? params.expectedAmount ?? slipData.amount) || 0;
+        if (!existing) {
+          const nowIso2 = new Date().toISOString();
+          await billRef.set({
+            billId: newBillId,
+            building: buildingRaw,
+            room,
+            month: billMonth,
+            year: String(billYearBE),          // "2569" string — §7-E RTDB-bill format
+            status: 'paid',
+            totalCharge: total,
+            totalAmount: total,
+            charges: params.charges || null,
+            meterReadings: params.meterReadings || null,
+            paidVia: 'tenant_app_slipok',
+            paidAt: Date.now(),
+            paidRef: slipData.transactionId || '',
+            slipVerified: true,
+            receiptNo: receiptNo || null,
+            billDate: nowIso2,
+            createdAt: nowIso2,
+            materializedFromSynth: true,
+            source: 'cf:verifySlip',
+            note: 'ออกบิล+ชำระอัตโนมัติจากสลิป (materialized from synthesized meter bill)',
+          });
+          paidBillId = newBillId;
+          matched = 1;
+          console.info(`🧾 Materialized synth bill as paid: ${buildingRaw}/${room}/${newBillId} ฿${total}`);
+        } else if (existing.status !== 'paid') {
+          await billRef.update({
+            status: 'paid',
+            paidAt: Date.now(),
+            paidVia: 'tenant_app_slipok',
+            paidRef: slipData.transactionId || '',
+            receiptNo: receiptNo || existing.receiptNo || null,
+          });
+          paidBillId = newBillId;
+          matched = 1;
+        } else {
+          paidBillId = newBillId;  // already paid (double-submit) — leave as-is
+        }
+      } catch (matErr) {
+        console.error('⚠️ markBillPaidInRTDB: synth materialize failed:', matErr?.message);
+      }
     }
 
     // Mirror payment record into payments/{b}/{r}/{pushId} for admin
@@ -386,12 +457,9 @@ async function markBillPaidInRTDB(slipData, params, receiptNo) {
     // downstream readers (TenantFirebaseSync.loadPaymentHistory, dashboard
     // reconciliation) see consistent records pre- and post-migration.
     try {
-      const firstMatchedBillId = matched > 0
-        ? Object.keys(updates).find(k => k.endsWith('/status'))?.split('/')[0] || null
-        : null;
       const nowIso = new Date().toISOString();
       await rtdb.ref(`payments/${buildingRaw}/${room}`).push({
-        billId: firstMatchedBillId,
+        billId: paidBillId,
         month: billMonth,
         year: billYearBE,
         amount: Number(slipData.amount) || 0,
