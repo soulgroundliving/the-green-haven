@@ -88,9 +88,14 @@ describe('buildBillFlex', () => {
     assert.ok(msg.contents.type === 'bubble');
   });
 
-  it('header is blue #1565c0', () => {
+  it('header is a bright-blue gradient (ฟ้าสว่าง) with a solid fallback, distinct from green', () => {
     const msg = buildBillFlex(bill, {});
-    assert.equal(msg.contents.header.backgroundColor, '#1565c0');
+    const h = msg.contents.header;
+    assert.equal(h.background?.type, 'linearGradient');
+    assert.equal(h.background.startColor, '#039BE5');
+    assert.equal(h.background.endColor, '#01579B');
+    assert.equal(h.backgroundColor, '#0288D1', 'solid fallback for non-gradient clients');
+    assert.notEqual(h.backgroundColor, '#2d8653', 'must NOT be the receipt green');
   });
 
   it('header subtitle shows tenant name when provided', () => {

@@ -172,7 +172,7 @@ function buildBillFlex(bill, opts = {}) {
 
   const footerButtons = [
     {
-      type: 'button', style: 'primary', color: '#1565c0', height: 'sm',
+      type: 'button', style: 'primary', color: '#0288D1', height: 'sm',
       action: { type: 'uri', label: 'ดูใบแจ้งหนี้', uri: TENANT_APP_PAYMENT_URL }
     }
   ];
@@ -180,11 +180,16 @@ function buildBillFlex(bill, opts = {}) {
   const bubble = {
     type: 'bubble',
     header: {
-      type: 'box', layout: 'vertical', backgroundColor: '#1565c0', paddingAll: '16px',
+      // Bright sky-blue gradient (ฟ้าสว่าง · หรู) — distinct from the green receipt.
+      // backgroundColor is a solid fallback for clients that don't render gradients
+      // (keeps the white header text readable either way).
+      type: 'box', layout: 'vertical', paddingAll: '16px',
+      backgroundColor: '#0288D1',
+      background: { type: 'linearGradient', angle: '135deg', startColor: '#039BE5', endColor: '#01579B' },
       contents: [
         { type: 'text', text: 'ใบแจ้งหนี้', color: '#ffffff', weight: 'bold', size: 'xl' },
         { type: 'text', text: `${nameLabel} • เดือน ${monthLabel}`,
-          color: '#bbdefb', size: 'sm', margin: 'xs' }
+          color: '#E1F5FE', size: 'sm', margin: 'xs' }
       ]
     },
     body: {
@@ -204,7 +209,7 @@ function buildBillFlex(bill, opts = {}) {
           contents: [
             { type: 'text', text: 'ยอดชำระทั้งสิ้น', size: 'sm', weight: 'bold', flex: 3, color: '#333333' },
             // flex:4 + shrink-to-fit so a long amount (฿xx,xxx.00) never truncates to "…" on the wire
-            { type: 'text', text: fmtBaht(b.total), size: 'xl', weight: 'bold', color: '#1565c0', flex: 4, align: 'end', adjustMode: 'shrink-to-fit', wrap: false }
+            { type: 'text', text: fmtBaht(b.total), size: 'xl', weight: 'bold', color: '#0277BD', flex: 4, align: 'end', adjustMode: 'shrink-to-fit', wrap: false }
           ]
         }
       ]
