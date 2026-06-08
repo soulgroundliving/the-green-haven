@@ -84,9 +84,22 @@
     const open = _raw.filter(r => r.status === 'open' && r.requesterUid !== myUid).sort(_byNewest);
     const mine = _raw.filter(r => r.requesterUid === myUid && r.status !== 'cancelled').sort(_byNewest);
     const jobs = _raw.filter(r => r.helperUid === myUid && r.status !== 'cancelled').sort(_byNewest);
+    _renderKindness(jobs.filter(r => r.status === 'done'));
     _renderList('help-open-list', 'help-open-count', open, 'open', 'ยังไม่มีคำขอจากเพื่อนบ้านตอนนี้ 🌱');
     _renderList('help-mine-list', 'help-mine-count', mine, 'mine', 'คุณยังไม่ได้โพสต์คำขอ');
     _renderList('help-jobs-list', 'help-jobs-count', jobs, 'jobs', 'ยังไม่ได้รับช่วยใคร — ไปที่ "เปิดรับ" เพื่อช่วยเพื่อนบ้าน');
+  }
+
+  // "น้ำใจของฉัน" summary — gives the kindness points a visible home (the +20s
+  // merge into the general balance, so without this they're hard to spot).
+  function _renderKindness(jobsDone) {
+    const el = document.getElementById('help-kindness-summary');
+    if (!el) return;
+    const n = jobsDone.length;
+    if (!n) { el.classList.add('u-hidden'); el.textContent = ''; return; }
+    const pts = jobsDone.reduce((s, r) => s + (Number(r.helperPointsAwarded) || 0), 0);
+    el.classList.remove('u-hidden');
+    el.textContent = `💚 น้ำใจของคุณ · ช่วยเพื่อนบ้านไป ${n} ครั้ง · +${pts.toLocaleString()} แต้มน้ำใจ`;
   }
 
   function _renderList(listId, countId, rows, kind, emptyMsg) {
