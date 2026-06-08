@@ -71,15 +71,17 @@ function seedAccepted(id = 'r1', { helperBuilding = 'rooms', helperRoom = '102',
 describe('completeHelpRequest — award', () => {
   beforeEach(reset);
 
-  it('requester completes → helper +20, ledger help_completed, request done', async () => {
+  it('requester completes with appreciation tags → helper +20, ledger help_completed, done', async () => {
     seedAccepted('r1');
-    const r = await handler({ requestId: 'r1', rating: 5, ratingNote: 'ขอบคุณมาก' }, requesterCtx());
+    const r = await handler({ requestId: 'r1', appreciationTags: ['kind', 'fast', 'kind'], ratingNote: 'ขอบคุณมาก' }, requesterCtx());
     assert.equal(r.success, true);
     assert.equal(r.awarded, 20);
-    assert.equal(r.rating, 5);
+    assert.deepEqual(r.tags, ['kind', 'fast'], 'deduped tags returned');
 
     assert.equal(reqDocs.r1.status, 'done');
-    assert.equal(reqDocs.r1.rating, 5);
+    assert.deepEqual(reqDocs.r1.appreciationTags, ['kind', 'fast']);
+    assert.equal(reqDocs.r1.rating, null, 'no legacy star when tags given');
+    assert.equal(reqDocs.r1.ratingNote, 'ขอบคุณมาก');
     assert.equal(reqDocs.r1.helperPointsAwarded, 20);
     assert.equal(lastTenantPatch['gamification.points'], 70, 'helper balance 50 → 70');
 
@@ -91,6 +93,24 @@ describe('completeHelpRequest — award', () => {
     assert.equal(led.doc.refId, 'r1');
     assert.equal(led.doc.tenantId, 'rooms_102');
     assert.equal(led.key, 'help_completed__rooms_102__r1', 'ledger id embeds the requestId discriminator');
+  });
+
+  it('still accepts a legacy 1-5 rating (back-compat mid-deploy)', async () => {
+    seedAccepted('r1');
+    const r = await handler({ requestId: 'r1', rating: 5 }, requesterCtx());
+    assert.equal(r.awarded, 20);
+    assert.equal(reqDocs.r1.rating, 5);
+    assert.equal(reqDocs.r1.appreciationTags, null);
+    assert.equal(writtenLedger.length, 1);
+  });
+
+  it('bogus tags + no rating → invalid-argument (no award)', async () => {
+    seedAccepted('r1');
+    await assert.rejects(
+      () => handler({ requestId: 'r1', appreciationTags: ['nope'] }, requesterCtx()),
+      (e) => e.code === 'invalid-argument',
+    );
+    assert.equal(writtenLedger.length, 0);
   });
 
   it('double-complete is a no-op (status guard) → failed-precondition', async () => {

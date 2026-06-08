@@ -19,17 +19,18 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { appendPointsLedger } = require('./_pointsLedger');
 const { lookupApprovedRoomUsers, pushAndRetry } = require('./_notifyHelper');
-const { canComplete, isValidRating, HELPER_REWARD_POINTS, MAX_RATING_NOTE_LEN } = require('./_helpRequestEngine');
+const { canComplete, isValidRating, sanitizeAppreciation, APPRECIATION_LABELS, HELPER_REWARD_POINTS, MAX_RATING_NOTE_LEN } = require('./_helpRequestEngine');
 
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
-function _completedMessage(title, rating, awarded) {
-  const stars = '⭐'.repeat(Math.max(1, Math.min(5, Number(rating) || 0)));
-  return {
-    type: 'text',
-    text: `💚 ขอบคุณสำหรับน้ำใจ!\n\nเพื่อนบ้านยืนยันว่าคุณช่วย “${title}” เสร็จแล้ว\nคะแนน: ${stars}\nคุณได้รับ +${awarded} แต้มน้ำใจ`,
-  };
+function _completedMessage(title, tags, note, awarded) {
+  const praise = (tags && tags.length) ? tags.map(k => APPRECIATION_LABELS[k] || k).join(' · ') : '';
+  let text = `💚 ขอบคุณสำหรับน้ำใจ!\n\nเพื่อนบ้านยืนยันว่าคุณช่วย “${title}” เสร็จแล้ว`;
+  if (praise) text += `\nคำชม: ${praise}`;
+  if (note) text += `\n“${note}”`;
+  text += `\nคุณได้รับ +${awarded} แต้มน้ำใจ 💚`;
+  return { type: 'text', text };
 }
 
 exports.completeHelpRequest = functions
@@ -40,15 +41,21 @@ exports.completeHelpRequest = functions
       throw new functions.https.HttpsError('unauthenticated', 'Sign-in required');
     }
 
-    const { requestId, rating, ratingNote } = data || {};
+    const { requestId, appreciationTags, rating, ratingNote } = data || {};
     if (!requestId) {
       throw new functions.https.HttpsError('invalid-argument', 'requestId is required');
     }
-    if (!isValidRating(rating)) {
-      throw new functions.https.HttpsError('invalid-argument', 'กรุณาให้คะแนน 1-5 ดาว');
+    // New: warm appreciation tags (the requester thanks, not grades). Legacy: a
+    // 1-5 rating — still accepted so an old client mid-deploy doesn't break. At
+    // least one is required.
+    const tags = sanitizeAppreciation(appreciationTags);
+    const hasTags = tags.length > 0;
+    const hasRating = isValidRating(rating);
+    if (!hasTags && !hasRating) {
+      throw new functions.https.HttpsError('invalid-argument', 'กรุณาเลือกคำชมน้ำใจอย่างน้อย 1 อย่าง');
     }
     const callerUid = context.auth.uid;
-    const ratingInt = Math.round(Number(rating));
+    const ratingInt = hasRating ? Math.round(Number(rating)) : null;
     const reqRef = firestore.collection('helpRequests').doc(String(requestId));
 
     const result = await firestore.runTransaction(async (tx) => {
@@ -105,15 +112,20 @@ exports.completeHelpRequest = functions
       }
 
       const awarded = (pointsAfter != null) ? HELPER_REWARD_POINTS : 0;
+      const cleanNote = ratingNote ? String(ratingNote).slice(0, MAX_RATING_NOTE_LEN) : null;
       tx.update(reqRef, {
         status: 'done',
-        rating: ratingInt,
-        ratingNote: ratingNote ? String(ratingNote).slice(0, MAX_RATING_NOTE_LEN) : null,
+        appreciationTags: hasTags ? tags : null,
+        rating: ratingInt,                 // legacy/null — kept for back-compat display
+        ratingNote: cleanNote,
         helperPointsAwarded: awarded,
         completedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      return { helperBuilding, helperRoom, title: req.title || '', rating: ratingInt, awarded };
+      return {
+        helperBuilding, helperRoom, title: req.title || '',
+        tags: hasTags ? tags : [], note: cleanNote || '', awarded,
+      };
     });
 
     // Best-effort LINE push to the helper — never fails the completion.
@@ -124,7 +136,7 @@ exports.completeHelpRequest = functions
         if (docs && docs.length) {
           await pushAndRetry({
             docs,
-            message: _completedMessage(result.title, result.rating, result.awarded),
+            message: _completedMessage(result.title, result.tags, result.note, result.awarded),
             token,
             source: 'completeHelpRequest',
             context: { building: result.helperBuilding, roomId: result.helperRoom, requestId },
@@ -136,5 +148,5 @@ exports.completeHelpRequest = functions
       console.warn('completeHelpRequest notify failed (non-fatal):', e.message);
     }
 
-    return { success: true, requestId: String(requestId), rating: result.rating, awarded: result.awarded };
+    return { success: true, requestId: String(requestId), tags: result.tags, awarded: result.awarded };
   });
