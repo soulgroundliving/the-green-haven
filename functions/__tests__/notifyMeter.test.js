@@ -79,7 +79,17 @@ Module._load = function (id, parent, ...rest) {
     return {
       apps: { length: 1 },
       initializeApp: () => {},
-      database: () => ({ ref: () => ({ once: async () => ({ val: () => null }) }) }),
+      database: () => {
+        // ref() supports the Option C bill-write path (writeBillOnIssue →
+        // writeCanonicalBillIdempotent uses roomRef.once + roomRef.child().set/update).
+        const ref = () => ({
+          once: async () => ({ val: () => null }),
+          child: () => ref(),
+          set: async () => {},
+          update: async () => {},
+        });
+        return { ref };
+      },
       firestore: firestoreFn
     };
   }
