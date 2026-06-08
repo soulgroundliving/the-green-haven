@@ -757,6 +757,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'closeRewardEdit') { typeof closeRewardEdit === 'function' && closeRewardEdit(); return; }
     if (a === 'openEmergencyEdit') { typeof openEmergencyEdit === 'function' && openEmergencyEdit(null); return; }
     if (a === 'openRewardEdit') { typeof openRewardEdit === 'function' && openRewardEdit(null); return; }
+    if (a === 'openQuestEdit') { typeof openQuestEdit === 'function' && openQuestEdit(null); return; }
+    if (a === 'closeQuestEdit') { typeof closeQuestEdit === 'function' && closeQuestEdit(); return; }
 
     // Tenant modal quick-links
     if (a === 'showTenantLease') { typeof showTenantLeaseHistory === 'function' && showTenantLeaseHistory(currentEditBuilding, currentEditRoomId); return; }
@@ -866,6 +868,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'exportDepositReceipt') { typeof exportDepositReceipt === 'function' && exportDepositReceipt(el.dataset.building, el.dataset.room); return; }
     if (a === 'showAddHousekeepingModal') { typeof showAddHousekeepingModal === 'function' && showAddHousekeepingModal(); return; }
     if (a === 'saveReward') { typeof saveReward === 'function' && saveReward(); return; }
+    if (a === 'saveQuest') { typeof saveQuest === 'function' && saveQuest(); return; }
     if (a === 'publishBroadcast') { typeof window.publishBroadcast === 'function' && window.publishBroadcast(); return; }
 
     // Phase 4E Step 2 — page-people-management policy saves + page-requests-approvals housekeeping campaign + wellness form

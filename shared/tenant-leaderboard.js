@@ -138,6 +138,7 @@
                 _ecoPointsUnsub = fs.onSnapshot(peopleRef, snap => {
                     if (!snap.exists()) return;
                     const gam = (snap.data() || {}).gamification || {};
+                    window._taQuestsToday = gam.questsToday || {}; // Meaning Layer #1 checklist state
                     const pts = typeof gam.points === 'number' ? gam.points : null;
                     if (pts !== null) {
                         window.userPoints = pts;
@@ -181,6 +182,7 @@
             _ecoPointsUnsub = fs.onSnapshot(tenantRef, snap => {
                 if (!snap.exists()) return;
                 const gam = (snap.data() || {}).gamification || {};
+                window._taQuestsToday = gam.questsToday || {}; // Meaning Layer #1 checklist state
                 const pts = typeof gam.points === 'number' ? gam.points : null;
                 if (pts !== null) {
                     window.userPoints = pts;
@@ -242,7 +244,10 @@
         if (bar) bar.style.width = Math.round(lp.progress) + '%';
         _renderTierLegend(pts);
         _renderEarningGuide();
-        _renderUrgentQuests();
+        // Meaning Layer #1: the live quest checklist owns #urgent-quests-list.
+        // Fall back to the static placeholder only if tenant-quests didn't load.
+        if (typeof window.renderTenantQuests === 'function') window.renderTenantQuests();
+        else _renderUrgentQuests();
         if (typeof _renderBadgeGrid === 'function') _renderBadgeGrid(_lastKnownBadges || []);
     }
 

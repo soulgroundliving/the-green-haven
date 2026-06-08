@@ -862,3 +862,39 @@ body.gh-tour-open {
 }
 .rep-consent__privacy { color: var(--green, #2d8653); text-decoration: underline; }
 .rep-consent__later:hover, .rep-consent__privacy:hover { opacity: 0.75; }
+
+/* ── Community Quests checklist (Meaning Layer #1) — tenant #urgent-quests-list.
+   Static here, never injected via createElement('style') (§7-RR). */
+.quest-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; margin: 0 0 10px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border-subtle, #ebe9e2);
+  border-left: 4px solid var(--green, #2d8653);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.quest-card[data-state="claimed"] { border-left-color: #bfe6d2; background: linear-gradient(180deg, #f4fbf7 0%, var(--card, #fff) 80%); }
+.quest-card[data-state="pending"] { border-left-color: #ecc97a; background: linear-gradient(180deg, #fffaf0 0%, var(--card, #fff) 80%); }
+.quest-card[data-state="rejected"] { border-left-color: #e0b4b4; }
+.quest-card__main { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.quest-card__icon { font-size: 1.5rem; line-height: 1; flex-shrink: 0; }
+.quest-card__title { margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--text, #2c2c2c); }
+.quest-card__sub { margin: 2px 0 0; font-size: 0.72rem; color: var(--text-muted, #8a8f98); line-height: 1.35; }
+.quest-card__btn {
+  flex-shrink: 0; padding: 7px 16px;
+  background: var(--green, #2d8653); color: #fff;
+  border: none; border-radius: 999px;
+  font-family: inherit; font-size: 0.78rem; font-weight: 800;
+  cursor: pointer; transition: transform 0.12s ease, background-color 0.2s ease;
+}
+.quest-card__btn:hover { background: var(--green-dark, #1a5c38); }
+.quest-card__btn:active { transform: scale(0.95); }
+.quest-card__btn:disabled { cursor: default; transform: none; }
+.quest-card__btn.is-done { background: var(--green-pale, #eef5ee); color: var(--green-dark, #1a5c38); }
+.quest-card__btn.is-pending { background: #fbeecb; color: #9a6b12; }
+.quest-empty {
+  padding: 18px 14px; text-align: center;
+  font-size: 0.84rem; color: var(--text-muted, #8a8f98);
+  border: 1px dashed var(--border-subtle, #ebe9e2); border-radius: 14px;
+}
