@@ -11,7 +11,9 @@ const assert = require('node:assert/strict');
 
 const {
   HELPER_REWARD_POINTS, MAX_TITLE_LEN,
+  VALID_APPRECIATION_TAGS, APPRECIATION_LABELS,
   isValidStatus, isValidCategory, isValidRating,
+  isValidAppreciation, sanitizeAppreciation,
   sanitizeTitle, sanitizeDetail,
   canAccept, canComplete, canCancel,
 } = require('../_helpRequestEngine');
@@ -48,6 +50,25 @@ describe('validators', () => {
     assert.equal(isValidRating(NaN), false);
     assert.equal(isValidRating(null), false);
     assert.equal(isValidRating(undefined), false);
+  });
+});
+
+describe('appreciation tags (replace 1-5 stars)', () => {
+  it('sanitizeAppreciation keeps valid keys, dedupes, caps at 5', () => {
+    assert.deepEqual(sanitizeAppreciation(['kind', 'fast', 'kind']), ['kind', 'fast']);
+    assert.deepEqual(sanitizeAppreciation(['kind', 'bogus', 'extra']), ['kind', 'extra']);
+    assert.deepEqual(sanitizeAppreciation([]), []);
+    assert.deepEqual(sanitizeAppreciation('kind'), []);   // not an array
+    assert.deepEqual(sanitizeAppreciation(null), []);
+  });
+  it('isValidAppreciation requires ≥1 valid tag', () => {
+    assert.ok(isValidAppreciation(['kind']));
+    assert.equal(isValidAppreciation(['bogus']), false);
+    assert.equal(isValidAppreciation([]), false);
+  });
+  it('every valid tag key has a label', () => {
+    assert.equal(VALID_APPRECIATION_TAGS.size, 5);
+    for (const k of VALID_APPRECIATION_TAGS) assert.ok(APPRECIATION_LABELS[k], `label for ${k}`);
   });
 });
 

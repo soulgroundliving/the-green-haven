@@ -36,6 +36,20 @@
 const VALID_STATUS = new Set(['open', 'accepted', 'done', 'cancelled']);
 const VALID_CATEGORY = new Set(['lifting', 'errand', 'petcare', 'tech', 'other']);
 
+// Appreciation tags REPLACE the cold 1-5 star rating (owner decision 2026-06-09):
+// the requester picks warm "thank-you" tags instead of grading. The keys are
+// stored; canonical labels are MIRRORED in shared/tenant-helpers.js +
+// shared/dashboard-helpers-admin.js (the frontend can't require this module, so
+// keep the three in sync — keys here are the source of truth).
+const VALID_APPRECIATION_TAGS = new Set(['kind', 'fast', 'extra', 'friendly', 'trusty']);
+const APPRECIATION_LABELS = {
+  kind:     '💚 ใจดีมาก',
+  fast:     '⚡ รวดเร็วทันใจ',
+  extra:    '✨ ช่วยเกินคาด',
+  friendly: '😊 เป็นกันเอง',
+  trusty:   '🤝 ไว้ใจได้',
+};
+
 // Owner decision 2026-06-08: a completed, peer-confirmed help is worth 20 pts
 // (the 10-50 "real kindness" band). Tune here; the callables read this constant.
 const HELPER_REWARD_POINTS = 20;
@@ -66,6 +80,21 @@ function sanitizeTitle(t) {
 function sanitizeDetail(t) {
   return String(t == null ? '' : t).trim().slice(0, MAX_DETAIL_LEN);
 }
+
+/** Clean an appreciation-tags array → deduped, valid keys only, max 5. */
+function sanitizeAppreciation(tags) {
+  if (!Array.isArray(tags)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const t of tags) {
+    const k = String(t == null ? '' : t);
+    if (VALID_APPRECIATION_TAGS.has(k) && !seen.has(k)) { seen.add(k); out.push(k); }
+  }
+  return out.slice(0, 5);
+}
+
+/** A completion must carry at least one valid appreciation tag. */
+function isValidAppreciation(tags) { return sanitizeAppreciation(tags).length > 0; }
 
 /**
  * Can `helperUid` accept request `req`?
@@ -118,6 +147,8 @@ function canCancel(req, callerUid, opts = {}) {
 module.exports = {
   VALID_STATUS,
   VALID_CATEGORY,
+  VALID_APPRECIATION_TAGS,
+  APPRECIATION_LABELS,
   HELPER_REWARD_POINTS,
   MAX_TITLE_LEN,
   MAX_DETAIL_LEN,
@@ -125,6 +156,8 @@ module.exports = {
   isValidStatus,
   isValidCategory,
   isValidRating,
+  isValidAppreciation,
+  sanitizeAppreciation,
   sanitizeTitle,
   sanitizeDetail,
   canAccept,
