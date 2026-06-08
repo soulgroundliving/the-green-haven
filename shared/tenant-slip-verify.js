@@ -76,6 +76,12 @@
         if (wrap) wrap.style.display = '';
         if (drop) drop.style.display = 'none';
         if (btn) btn.disabled = false;
+
+        // Auto-verify on upload — no separate "ตรวจสอบ" tap (owner request). The preview
+        // still renders above so the tenant sees what was sent; verifyTenantSlip self-guards
+        // (rate-limit + _slipBase64 presence) and re-enables the button for retry on failure.
+        // _taCurrentBill is already set from the payment-step navigation → amount check is correct.
+        verifyTenantSlip();
     }
 
     // ── Slip verification ────────────────────────────────────────────────────
