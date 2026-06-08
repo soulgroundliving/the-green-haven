@@ -8,6 +8,30 @@
 
 > Surfaced while fixing the SlipOK slip-verification bug chain (form-data → CI-deploy-regex → API key/branch → data:URL prefix — all SHIPPED & live-verified, admin+tenant ✅). Paying the **current month** still shows "รอชำระ" → separate billing-lifecycle gap below.
 
+### ▶▶ PIVOT (2026-06-08, after live testing) — user directive "ทำให้ยั่งยืน" → ROOT fix (Option C). ⏳ AWAITING APPROVAL
+
+Option B (materialize-on-payment) was SHIPPED + unit-tested, but live testing exposed it's FRAGILE: it depended on the tenant app sending a new field, and §7-MM stale SW cache kept the client from sending it / even from calling verifySlip (client-state confusion after repeated attempts). The user's question "why don't admin & tenant connect?" pinpointed the REAL gap: **there is no canonical bill record.** → Pivot to Option C; keep Option B deployed as a SAFETY NET.
+
+**Root cause (confirmed BOTH sides via Explore):** on meter upload, `notifyTenantOnMeterUpload` writes `meter_data` + an `INV-` invoice number + a LINE message, but **NOT an RTDB bill** (generateBillsOnMeterUpdate frozen, SE3). So the "bill" exists in 3 fragmented forms that never converge:
+- Admin dashboard reads RTDB `bills/` ONLY (no synth) → doesn't see the month. Paid status from `verifiedSlips` (PaymentStore), not bill status.
+- Tenant app synthesizes from meter (`SYNTH-…`) → sees a pending bill. Paid status from bill `status`.
+- Payment lives in `verifiedSlips` — a 3rd record, separate from the bill.
+
+**Option C — create the canonical RTDB bill at meter-upload (the connection point):**
+- [ ] **CF `notifyTenantOnMeterUpload`** (functions/): after the existing `computeBill` + `issueInvoiceNo`, WRITE `bills/{b}/{r}/{billId}` — deterministic `TGH-{BE4}{MM}-{room}`, `status:'unpaid'`, the computed `charges`/`meterReadings`/`totalCharge`, `invoiceNo`, `year` as "BE4" string (§7-E). **Idempotent:** create if absent; if exists+unpaid → update amounts (meter correction); if exists+PAID → never touch. Respect §7-BBB `moveInDate` boundary (don't bill before move-in).
+- [ ] **Fix the `verifiedSlips` write bug** (makes admin SEE tenant payments + restores dedup): `saveVerifiedSlip` (verifySlip.js:262) + `logVerificationAttempt` (verifySlip.js:237) write `userId: params.userId` → **undefined for tenant calls** → Firestore rejects → verifiedSlips never written (confirmed: June slip doc 404) → admin payment view AND dedup both broken (4 duplicate payment pushes = double-pay risk). Fix: `params.userId || params.room || null` at every write site.
+- [ ] **Backfill** existing synth-only months → RTDB (`tools/backfill-synth-bills.js`, preview + `--apply` per §7-I): for each room, months with meter_data but no RTDB bill → create it; `status='paid'` if a payments/verifiedSlips record exists, else `'unpaid'`. **Fixes June ห้อง 13** (4 payment records → paid).
+- [ ] **Keep Option B** (materialize-on-payment) as a safety net for any residual synth-at-payment-time.
+- [ ] Tenant/admin reads need NO change (both already read RTDB `bills/`; synth becomes a pure legacy fallback that dedups against the real bill). Optional: add synth fallback to the admin grid for pre-Option-C legacy months.
+- [ ] Tests: notifyTenantOnMeterUpload writes bill (idempotent · no-overwrite-paid · boundary); userId fallback; backfill dry-run. Docs: billing_monthly_flow.md rewrite + §7 anti-pattern (3-fragmented-forms / frozen-CF gap).
+
+**Why sustainable:** ONE canonical bill per room/month, created when the admin issues it, read + updated by BOTH sides + verifySlip. No synth divergence, no payment-time band-aid, dedup + admin-payment-view restored.
+
+**Risk (money path, §7-I):** writes RTDB bills on every meter upload → idempotency + no-overwrite-paid + §7-BBB boundary mandatory; backfill preview-first. Touches the live meter→bill flow → needs approval before I build.
+
+---
+_(Below: the earlier Option B analysis + checklist — Option B is SHIPPED as the safety net.)_
+
 ### Problem (verified via code + RTDB read + 2 Explore agents)
 - Current-month bill is **synthesized client-side** (`SYNTH-rooms-13-202606`) by `synthesizeFromMeter` ([shared/billing-system.js:1045](shared/billing-system.js:1045)); never a real RTDB doc under `bills/{b}/{r}`.
 - `generateBillsOnMeterUpdate` (used to create RTDB bills on meter write) is **FROZEN + SE3-region-dead** (never fires) → nothing auto-creates RTDB bills. `notifyTenantOnMeterUpload` issues the invoice number but does **not** create the bill.

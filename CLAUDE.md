@@ -1473,6 +1473,35 @@ grep -rn "tenantBoundaryYM\|filterByTenantBoundary" shared/billing-system.js
 ```
 Family: §7-T (two writers / one reader — field-name/value drift), §7-DD (lifecycle CF must update every sibling reader falls through to), §7-L (code-only cleanup ≠ data migrated — here the lease DOC had the right value, the subobject didn't), §7-AAA (different root, same symptom "latest month doesn't show").
 
+### CCC. CI auto-deploy regex skips INDENTED/conditional `exports.X` → pushed CF fixes silently never deploy
+
+`.github/workflows/deploy-functions.yml` built its deploy list with `grep -oP '^exports\.\K\w+' functions/index.js`. The `^` anchor matches column-0 ONLY. But `verifySlip`, `notifyLiffRequest`, `notifyLiffStatusChange` are exported **indented** inside `try { if (mod.x) { exports.x = mod.x } }` optional-module guards (functions/index.js:118, 314, 323). So those 3 CFs were **silently dropped from EVERY auto-deploy** — a pushed fix to `verifySlip.js` made CI go green while prod kept running ancient code. Cost: ~a whole session of "deploy succeeded but the fix isn't live" confusion (the §7-YY form-data fix had been pushed but never deployed; prod stack traces showed OLD line numbers).
+
+**Rule:** the deploy-list builder must match `exports.X` at ANY indentation: `grep -oP '^\s*exports\.\K\w+' | sort -u`. Fixed 2026-06-08 (`1576017`).
+```bash
+# Audit: indented exports the OLD anchor would miss
+grep -nE "^[[:space:]]+exports\.[A-Za-z0-9_]+[[:space:]]*=" functions/index.js
+```
+Family: §7-AA/NN (deploy-time invariants the source doesn't reveal), §7-K (defined ≠ wired). Confirm a CF is actually in the deploy: read the CI run log for `Deploying N CFs` + the `updating … <name>` line, OR `gcloud functions describe <name> --format="value(updateTime)"`.
+
+### DDD. An "extracted-helper" file that's actually DEAD — `grep require` BEFORE editing it
+
+`functions/_verifySlipWrite.js` *looked* like verifySlip's extracted helpers (named for it, contained `markBillPaidInRTDB`/`saveVerifiedSlip`/`logVerificationAttempt`, listed in an index.js comment). It is **never `require`d anywhere** — `verifySlip.js` defines its OWN copies of all of them inline. I edited the dead file for the entire Option-B materialize implementation (2 commits, 2 deploys) and **none of it ran**; the deployed `markBillPaidInRTDB` was verifySlip.js's untouched copy. The data:URL/trim fixes worked only because those happened to be edited in verifySlip.js directly.
+
+**Rule:** before editing any `_helper.js` / "extracted" / "split" file, confirm it's actually imported:
+```bash
+grep -rnE "require\(.*<basename-no-ext>" functions/   # 0 hits = DEAD, you're editing nothing
+```
+If a function name exists in two files, find which the entry point uses (`grep -n "function <name>\|require.*<helper>" functions/<entrypoint>.js`). Sibling of §7-K (defined ≠ wired) + §7-QQ (refactor left a function un-exported). Fixed 2026-06-08 (`a782797`): ported the logic into the LIVE `verifySlip.js`, deleted the dead file.
+
+### EEE. Tenant `FileReader.readAsDataURL` sends a FULL `data:` URL — CF base64-decode must strip the prefix
+
+The tenant slip path (`shared/tenant-slip-verify.js`) sent `window._slipBase64` = `FileReader.readAsDataURL` output verbatim = `"data:image/jpeg;base64,<payload>"` (the preview `<img src>` needs the prefix). The CF did `Buffer.from(file, 'base64')` — decoding the `data:…;base64,` prefix as base64 corrupts the bytes → SlipOK 400 `code:1005` "ไฟล์ไม่ใช่ไฟล์ภาพ". The **admin** path worked because it strips client-side (`r.result.split(',')[1]`). Fixed at the CF boundary 2026-06-08 (`7d93a83`): `const b64 = file.startsWith('data:') ? file.slice(file.indexOf(',')+1) : file;` — tolerates both forms, covers every caller.
+```bash
+grep -rn "readAsDataURL" shared/*.js   # each result: does it .split(',')[1] OR does the CF strip? one of them must.
+```
+Cousin of §7-Y (`fetch('data:')` blocked by CSP) — both are "a `data:` URL isn't the raw thing the consumer expected." Note: the SlipOK callers also had a `userId: params.userId` write that's `undefined` for tenant calls (no userId sent) → Firestore rejects → `verifiedSlips` never written (admin payment view + dedup silently broken); fix `params.userId || params.room || null` (same commit `a782797`).
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
