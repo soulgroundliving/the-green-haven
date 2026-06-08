@@ -138,7 +138,6 @@
                 _ecoPointsUnsub = fs.onSnapshot(peopleRef, snap => {
                     if (!snap.exists()) return;
                     const gam = (snap.data() || {}).gamification || {};
-                    window._taQuestsToday = gam.questsToday || {}; // Meaning Layer #1 checklist state
                     const pts = typeof gam.points === 'number' ? gam.points : null;
                     if (pts !== null) {
                         window.userPoints = pts;
@@ -182,7 +181,6 @@
             _ecoPointsUnsub = fs.onSnapshot(tenantRef, snap => {
                 if (!snap.exists()) return;
                 const gam = (snap.data() || {}).gamification || {};
-                window._taQuestsToday = gam.questsToday || {}; // Meaning Layer #1 checklist state
                 const pts = typeof gam.points === 'number' ? gam.points : null;
                 if (pts !== null) {
                     window.userPoints = pts;
