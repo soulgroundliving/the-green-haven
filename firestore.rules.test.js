@@ -242,6 +242,21 @@ describe('tenants — sensitive field protection', () => {
     });
     await assertFails(getDoc(doc(ANON('tenant-1').firestore(), 'tenants/rooms/list/202')));
   });
+
+  it('claim-based self-read: LIFF tenant with matching room+building claims CAN read even when linkedAuthUid is empty (§7-HH)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'tenants/rooms/list/101'), { name: 'Slim', linkedAuthUid: '' });
+    });
+    // LIFF_TENANT defaults to room='101', building='rooms' custom claims.
+    await assertSucceeds(getDoc(doc(LIFF_TENANT().firestore(), 'tenants/rooms/list/101')));
+  });
+
+  it('claim-based self-read is scoped to the OWN room (claims for 101 cannot read 102)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'tenants/rooms/list/102'), { name: 'Other', linkedAuthUid: '' });
+    });
+    await assertFails(getDoc(doc(LIFF_TENANT('line:Ux', '101', 'rooms').firestore(), 'tenants/rooms/list/102')));
+  });
 });
 
 describe('taxSummary — financial data, CF-only writes, admin-only reads', () => {

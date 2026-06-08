@@ -379,7 +379,16 @@ service cloud.firestore {
     match /tenants/{building}/list/{roomId} {
       allow read: if isAdmin()
                || isBuildingManager(building)
-               || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid);
+               || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid)
+               // Claim-based self-read (§7-HH/P): a LIFF tenant whose room+building
+               // custom claims match THIS path is the legitimate owner — even when
+               // linkedAuthUid is empty or has drifted (anon-UID rotation). Mirrors
+               // assertTenantAccess's claim-match path that the tenant-gated CFs
+               // already trust. READ ONLY — PII updates keep the stricter
+               // linkedAuthUid gate below, and gamification stays CF-write-only.
+               || (isSignedIn()
+                   && request.auth.token.room == roomId
+                   && request.auth.token.building == building);
       // Update: admin always; otherwise self-ownership required AND the
       // protected-field block (gamification/rentAmount/building/roomId/
       // tenantId). Without the linkedAuthUid gate (added 2026-05-22 security
