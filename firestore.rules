@@ -41,6 +41,21 @@ service cloud.firestore {
       allow read:  if true;
       allow write: if isAdmin();
     }
+    // Community Quests catalog (Meaning Layer #1) — public read like rewards (a
+    // non-sensitive catalog the tenant checklist reads pre/post-LIFF); admin-only
+    // write (admin authors quests directly, mirrors the rewards pattern).
+    match /quests/{questId} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+    // Quest claims — the per-period idempotency fence + immutable audit + admin
+    // review queue. CF-only writes (claimQuest / reviewQuestClaim via admin SDK).
+    // Admin-read for the review queue; a tenant never reads here — their checklist
+    // state is mirrored onto gamification.questsToday (already rule-protected).
+    match /questClaims/{claimId} {
+      allow read:  if isAdmin();
+      allow write: if false;
+    }
     match /system/{docId} {
       allow read:  if true;
       allow write: if isAdmin();

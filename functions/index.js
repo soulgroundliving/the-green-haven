@@ -174,6 +174,13 @@ exports.claimDailyLoginPoints = require('./claimDailyLoginPoints').claimDailyLog
 exports.claimWellnessQuizPoints  = require('./claimWellnessQuizPoints').claimWellnessQuizPoints;
 exports.claimContractQuizPoints  = require('./claimContractQuizPoints').claimContractQuizPoints;
 
+// Community Quests (Meaning Layer #1) — daily tap-to-claim checklist. claimQuest
+// routes on the quest's verifyMode (self / auto re-verify / admin-pending);
+// reviewQuestClaim is the admin approve/reject of pending admin-mode claims.
+// pointsLedger source:'quest' feeds the future #6 Kindness score. §7-NN callables.
+exports.claimQuest       = require('./claimQuest').claimQuest;
+exports.reviewQuestClaim = require('./reviewQuestClaim').reviewQuestClaim;
+
 // Immutable admin-action audit trail (Core Readiness Phase 1.1). Client-side admin
 // mutations call this after the write; in-tx CF actions log via _actionAudit directly.
 exports.recordAdminAction = require('./recordAdminAction').recordAdminAction;
