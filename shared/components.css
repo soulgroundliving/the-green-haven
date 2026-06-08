@@ -898,6 +898,67 @@ body.gh-tour-open {
   font-size: 0.84rem; color: var(--text-muted, #8a8f98);
   border: 1px dashed var(--border-subtle, #ebe9e2); border-radius: 14px;
 }
+
+/* ── Helper board (Meaning Layer #2) — tenant #helper-board sub-page.
+   Static here, never injected via createElement('style') (§7-RR). */
+.help-section { margin: 0 0 18px; }
+.help-section__head {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 8px;
+  font-size: 0.92rem; font-weight: 700; color: var(--text, #2c2c2c);
+}
+.help-section__count {
+  /* Hardcoded light chip — var(--green-pale) flips to a near-black tint in dark
+     mode (it is --brand-primary-soft, not actually pale), and the help cards are
+     always #fff (--card is undefined → fallback), so a light chip reads on both. */
+  background: #e3f1ea; color: #0d5c4e;
+  border-radius: 999px; padding: 1px 9px; font-size: 0.74rem; font-weight: 700;
+}
+.help-card {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; margin: 0 0 10px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border-subtle, #ebe9e2);
+  border-left: 4px solid #ecc97a;           /* open = amber */
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.help-card[data-status="accepted"] { border-left-color: #8fb8e6; background: linear-gradient(180deg, #f5f9fe 0%, var(--card, #fff) 80%); }
+.help-card[data-status="done"]     { border-left-color: #bfe6d2; background: linear-gradient(180deg, #f4fbf7 0%, var(--card, #fff) 80%); }
+.help-card__main { min-width: 0; flex: 1; }
+.help-card__title { margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--text, #2c2c2c); }
+.help-card__detail { margin: 3px 0 0; font-size: 0.78rem; color: var(--text, #2c2c2c); opacity: 0.75; line-height: 1.35; }
+.help-card__sub { margin: 4px 0 0; font-size: 0.72rem; color: var(--text-muted, #8a8f98); line-height: 1.35; }
+.help-card__side { flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; justify-content: center; }
+.help-btn {
+  flex-shrink: 0; padding: 7px 14px; white-space: nowrap;
+  border: none; border-radius: 999px;
+  font-family: inherit; font-size: 0.76rem; font-weight: 800;
+  cursor: pointer; transition: transform 0.12s ease, background-color 0.2s ease;
+}
+.help-btn:active { transform: scale(0.95); }
+.help-btn:disabled { cursor: default; transform: none; opacity: 0.6; }
+.help-btn--accept, .help-btn--done { background: var(--green, #2d8653); color: #fff; }
+.help-btn--accept:hover, .help-btn--done:hover { background: var(--green-dark, #1a5c38); }
+.help-btn--ghost { background: #eef5ee; color: #1a5c38; }   /* light — see .help-section__count note */
+.help-btn--danger { background: #fbe4e4; color: #b00020; }
+.help-badge {
+  font-size: 0.74rem; font-weight: 700; color: #5a6b66;
+  padding: 5px 10px; background: #eef5ee; border-radius: 999px; white-space: nowrap;
+}
+.help-empty {
+  padding: 16px 14px; text-align: center;
+  font-size: 0.82rem; color: var(--text-muted, #8a8f98);
+  border: 1px dashed var(--border-subtle, #ebe9e2); border-radius: 14px;
+}
+/* Rating modal star picker (#help-rating-stars). */
+.help-stars { display: flex; gap: 6px; justify-content: center; margin: 4px 0 12px; }
+.help-stars > span {
+  font-size: 2rem; line-height: 1; cursor: pointer; color: #d9d4c7;
+  transition: transform 0.1s ease, color 0.15s ease; user-select: none;
+}
+.help-stars > span.is-on { color: #f5b301; }
+.help-stars > span:active { transform: scale(1.2); }
+
 /* Admin quest-form field hint (dashboard #questEditModal). */
 .quest-hint {
   display: block;

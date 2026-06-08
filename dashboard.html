@@ -5362,6 +5362,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button data-action="switchGamificationTab" data-tab="badges" class="dash-tab-btn">🎖️ Badges</button>
       <button data-action="switchGamificationTab" data-tab="rewards" class="dash-tab-btn">🎁 Rewards</button>
       <button data-action="switchGamificationTab" data-tab="quests" class="dash-tab-btn">🎯 เควส</button>
+      <button data-action="switchGamificationTab" data-tab="helpers" class="dash-tab-btn">🤝 น้ำใจ</button>
     </div>
 
     <!-- Leaderboard Tab -->
@@ -5450,6 +5451,36 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <button data-action="saveReward" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:var(--font-brand);">Save</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Helper board monitor (Meaning Layer #2) — read-only + moderation cancel -->
+    <div id="gamificationHelpers" class="u-init-hide">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;">
+        <div style="font-weight:700;font-size:1.05rem;">🤝 คำขอช่วยเหลือเพื่อนบ้าน</div>
+        <span id="helpersActiveCount" style="background:var(--green-pale);color:var(--green-dark);border-radius:999px;padding:1px 9px;font-size:.8rem;font-weight:700;">0</span>
+        <span style="font-size:.78rem;color:var(--text-muted);">กำลังดำเนินการ</span>
+      </div>
+      <div class="u-scroll-x">
+        <table class="data-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th>ผู้ขอ</th>
+              <th>เรื่อง</th>
+              <th>ผู้ช่วย</th>
+              <th class="dash-w-100">สถานะ</th>
+              <th style="width:80px;">คะแนน</th>
+              <th class="dash-w-100">วันที่</th>
+              <th style="width:90px;">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="helpersAdminTable">
+            <tr><td colspan="7" class="dash-empty-msg">กำลังโหลด…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:1rem;padding:.75rem 1rem;background:#eefbf3;border-left:3px solid var(--green);border-radius:4px;font-size:.82rem;color:#1a5c38;">
+        <strong>หมายเหตุ:</strong> ผู้เช่าจัดการกันเอง (โพสต์ → รับช่วย → ยืนยัน+ให้ดาว). แอดมินดูได้อย่างเดียว และกด "ยกเลิก" คำขอที่ไม่เหมาะสมได้ (โหมดกำกับดูแล)
       </div>
     </div>
 
@@ -5774,6 +5805,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-bills.js" defer></script>
 <script src="./shared/dashboard-config.js" defer></script>
 <script src="./shared/dashboard-quests-admin.js" defer></script>
+<script src="./shared/dashboard-helpers-admin.js" defer></script>
 <script src="./shared/dashboard-admin-ops.js" defer></script>
 <script src="./shared/dashboard-audit-panel.js" defer></script>
 <script src="./shared/dashboard-reconcile.js" defer></script>

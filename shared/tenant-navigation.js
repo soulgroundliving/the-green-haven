@@ -90,6 +90,7 @@ window.showSubPage = function showSubPage(id) {
     // Optional render hooks (guarded — may not be loaded yet)
     if (id === 'elec_usage' && typeof window.renderElecUsage === 'function') window.renderElecUsage();
     if (id === 'water_usage' && typeof window.renderWaterUsage === 'function') window.renderWaterUsage();
+    if (id === 'helper-board' && typeof window.renderHelperBoard === 'function') window.renderHelperBoard();
 
     window.scrollTo(0, 0);
 };

@@ -839,6 +839,7 @@ function switchGamificationTab(tabName, btn) {
     if (typeof loadQuestsAdmin === 'function') loadQuestsAdmin();
     if (typeof loadQuestClaimsQueue === 'function') loadQuestClaimsQueue();
   }
+  if (tabName === 'helpers' && typeof loadHelpersAdmin === 'function') loadHelpersAdmin();
   if (tabName === 'badges') loadBadgesAdmin();
 }
 
