@@ -1029,6 +1029,10 @@ Family: §7-N (onSnapshot must have error callback), §7-V (cleanup before re-at
 
 Incident (2026-05-23 late evening (8)): daily-bonus modal appearing on every LIFF reopen after successful claim. Optimistic close + sync localStorage marker was correct, but `_subscribeEcoPoints` reconciliation block cleared it during the cached-snapshot fire (sub-millisecond after the marker write). Fix in commit `2dfc440` — added `!snap.metadata?.fromCache && !snap.metadata?.hasPendingWrites` to both player + tenant branches.
 
+Incident 2 (2026-06-08): the NEW LIFF approval listener (`_setupApprovalStatusListener`, tenant-liff-auth.js) acted on the FIRST onSnapshot tick of `liffUsers/{uid}` — served from the local Firestore cache, holding a STALE `'approved'` from a prior session (account history: link→unlink→relink-same-room→**rejected**). Cached `'approved'` → `location.reload()` → re-init → cache replays `'approved'` → reload … a **full-page reload loop every ~5s** that made the rejected overlay + its ส่งคำขอใหม่ form unusable. Fix `bcf0ac9`: `if (snap.metadata && snap.metadata.fromCache) return;` at the top of the handler — act only on server-confirmed status.
+
+**Generalized rule (both incidents):** ANY onSnapshot whose handler does something NON-IDEMPOTENT + hard to undo — `location.reload()`, navigation, a write, clearing localStorage, showing/hiding an overlay that traps the user — MUST gate on `!snap.metadata?.fromCache` (and `!hasPendingWrites` if optimistic local writes are in play). The first tick is almost always cache and can be stale; only server-confirmed snapshots are safe to act on. Pure UI reads (rendering a list) don't need the guard; state-changing side effects do.
+
 ### LL. Firebase RTDB JSONP fallback hits BOTH `script-src-elem` AND `frame-src` — fix in one commit
 
 Firebase RTDB SDK opens a WebSocket by default. When that fails — even momentarily (intermittent network, restrictive proxy, NAT/firewall, single CONNECTION_RESET) — the SDK silently falls back to JSONP long-polling. The fallback creates TWO different DOM elements pointing at the RTDB origin:
