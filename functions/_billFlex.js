@@ -203,7 +203,8 @@ function buildBillFlex(bill, opts = {}) {
           type: 'box', layout: 'horizontal', margin: 'md',
           contents: [
             { type: 'text', text: 'ยอดชำระทั้งสิ้น', size: 'sm', weight: 'bold', flex: 3, color: '#333333' },
-            { type: 'text', text: fmtBaht(b.total), size: 'xl', weight: 'bold', color: '#1565c0', flex: 2, align: 'end' }
+            // flex:4 + shrink-to-fit so a long amount (฿xx,xxx.00) never truncates to "…" on the wire
+            { type: 'text', text: fmtBaht(b.total), size: 'xl', weight: 'bold', color: '#1565c0', flex: 4, align: 'end', adjustMode: 'shrink-to-fit', wrap: false }
           ]
         }
       ]
@@ -272,7 +273,8 @@ function buildReceiptFlex(bill, opts = {}) {
           type: 'box', layout: 'horizontal', margin: 'md',
           contents: [
             { type: 'text', text: 'ยอดที่ชำระ', size: 'sm', weight: 'bold', flex: 3, color: '#333333' },
-            { type: 'text', text: fmtBaht(b.total), size: 'xl', weight: 'bold', color: '#2d8653', flex: 2, align: 'end' }
+            // flex:4 + shrink-to-fit so a long amount (฿xx,xxx.00) never truncates to "…" on the wire
+            { type: 'text', text: fmtBaht(b.total), size: 'xl', weight: 'bold', color: '#2d8653', flex: 4, align: 'end', adjustMode: 'shrink-to-fit', wrap: false }
           ]
         }
       ]

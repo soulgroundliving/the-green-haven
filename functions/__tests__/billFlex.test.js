@@ -126,6 +126,15 @@ describe('buildBillFlex', () => {
     assert.ok(!bodyText.includes('bankAccount'));
     assert.ok(!bodyText.includes('คัดลอก'));
   });
+
+  it('total amount is shrink-to-fit (never truncates to "…" on the wire)', () => {
+    const msg = buildBillFlex(bill, {});
+    const totalBox = msg.contents.body.contents.find(
+      c => c.type === 'box' && c.contents?.some(t => t.text === 'ยอดชำระทั้งสิ้น'));
+    const amount = totalBox.contents.find(t => t.text !== 'ยอดชำระทั้งสิ้น');
+    assert.equal(amount.adjustMode, 'shrink-to-fit');
+    assert.ok(amount.flex >= 3, `amount needs room; flex=${amount.flex}`);
+  });
 });
 
 // ── buildReceiptFlex ──────────────────────────────────────────────────────────
@@ -177,5 +186,14 @@ describe('buildReceiptFlex', () => {
     const bodyText = JSON.stringify(msg.contents.body);
     assert.ok(bodyText.includes('วันที่ชำระ'));
     assert.ok(bodyText.includes('2568')); // Thai year
+  });
+
+  it('total amount is shrink-to-fit (never truncates to "…" on the wire)', () => {
+    const msg = buildReceiptFlex(bill, {});
+    const totalBox = msg.contents.body.contents.find(
+      c => c.type === 'box' && c.contents?.some(t => t.text === 'ยอดที่ชำระ'));
+    const amount = totalBox.contents.find(t => t.text !== 'ยอดที่ชำระ');
+    assert.equal(amount.adjustMode, 'shrink-to-fit');
+    assert.ok(amount.flex >= 3, `amount needs room; flex=${amount.flex}`);
   });
 });
