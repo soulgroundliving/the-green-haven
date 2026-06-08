@@ -16,7 +16,10 @@
  *   autoThreshold?: number,                       // signal-specific threshold
  *   startDate?:    ISO string | null,             // availability window (optional)
  *   endDate?:      ISO string | null,
- *   selfDailyCap?: number,                        // override the per-tenant self cap
+ *   selfDailyCap?: number,                        // OPTIONAL per-tenant daily TOTAL
+ *                                                 // ceiling across self claims. Unset
+ *                                                 // = uncapped (a self quest is still
+ *                                                 // once/day via questClaims idempotency).
  * }
  *
  * Claim record (questClaims/{questId}__{tenantId}__{periodKey}) status enum:
@@ -30,7 +33,6 @@
 
 'use strict';
 
-const DEFAULT_SELF_DAILY_CAP = 10;
 const DEFAULT_LOGIN_STREAK_THRESHOLD = 7;
 
 const VALID_CADENCE = new Set(['daily', 'weekly', 'once']);
@@ -137,13 +139,17 @@ function evaluateAutoSignal(quest, signalData) {
 }
 
 /**
- * Per-tenant daily cap for `self` (honor-system) claims. The tenant doc carries
- * a running same-day total (reset when the stamped day rolls over) so this is a
- * free, query-less check inside the claim transaction.
+ * OPTIONAL per-tenant daily total ceiling for `self` (honor-system) claims. When
+ * `cap` is unset (or not a positive number) self claims are UNCAPPED — a self
+ * quest is still once/day via questClaims idempotency, and the admin curates the
+ * quest set, so no ceiling is needed by default. An owner who wants an
+ * anti-gaming ceiling sets `selfDailyCap` on the quest. The tenant doc carries a
+ * running same-day total (reset on day rollover) → a free, query-less check.
  * @returns {{ allowed: boolean, prior: number, newTotal: number, cap: number }}
  */
 function selfCapCheck({ questDay, questSelfToday, today, reward, cap }) {
-  const effectiveCap = Number.isFinite(Number(cap)) ? Number(cap) : DEFAULT_SELF_DAILY_CAP;
+  const capNum = Number(cap);
+  const effectiveCap = (Number.isFinite(capNum) && capNum > 0) ? capNum : Infinity; // unset = uncapped
   const prior = questDay === today ? (Number(questSelfToday) || 0) : 0;
   const newTotal = prior + (Number(reward) || 0);
   return { allowed: newTotal <= effectiveCap, prior, newTotal, cap: effectiveCap };
@@ -155,7 +161,6 @@ function isValidVerifyMode(v) { return VALID_VERIFY_MODE.has(v); }
 function isValidAutoSignal(s) { return VALID_AUTO_SIGNAL.has(s); }
 
 module.exports = {
-  DEFAULT_SELF_DAILY_CAP,
   DEFAULT_LOGIN_STREAK_THRESHOLD,
   VALID_CADENCE,
   VALID_VERIFY_MODE,

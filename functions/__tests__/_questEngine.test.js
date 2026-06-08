@@ -6,7 +6,6 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
-  DEFAULT_SELF_DAILY_CAP,
   bkkDateString,
   bkkWeekKey,
   periodKeyFor,
@@ -146,36 +145,36 @@ describe('evaluateAutoSignal', () => {
 describe('selfCapCheck', () => {
   const today = '2026-06-08';
 
-  it('allows when under the default cap', () => {
-    const r = selfCapCheck({ questDay: today, questSelfToday: 5, today, reward: 3 });
+  it('no cap set → uncapped (always allowed, once/day handled by idempotency)', () => {
+    const r = selfCapCheck({ questDay: today, questSelfToday: 100, today, reward: 50 });
     assert.equal(r.allowed, true);
-    assert.equal(r.newTotal, 8);
-    assert.equal(r.cap, DEFAULT_SELF_DAILY_CAP);
+    assert.equal(r.cap, Infinity);
   });
 
-  it('allows exactly at the cap', () => {
-    const r = selfCapCheck({ questDay: today, questSelfToday: 7, today, reward: 3 });
+  it('explicit cap: allows under', () => {
+    const r = selfCapCheck({ questDay: today, questSelfToday: 5, today, reward: 3, cap: 10 });
+    assert.equal(r.allowed, true);
+    assert.equal(r.newTotal, 8);
+    assert.equal(r.cap, 10);
+  });
+
+  it('explicit cap: allows exactly at', () => {
+    const r = selfCapCheck({ questDay: today, questSelfToday: 7, today, reward: 3, cap: 10 });
     assert.equal(r.allowed, true);
     assert.equal(r.newTotal, 10);
   });
 
-  it('blocks when over the cap', () => {
-    const r = selfCapCheck({ questDay: today, questSelfToday: 9, today, reward: 3 });
+  it('explicit cap: blocks over', () => {
+    const r = selfCapCheck({ questDay: today, questSelfToday: 9, today, reward: 3, cap: 10 });
     assert.equal(r.allowed, false);
     assert.equal(r.newTotal, 12);
   });
 
   it('resets the running total when the stamped day rolled over', () => {
-    const r = selfCapCheck({ questDay: '2026-06-07', questSelfToday: 19, today, reward: 3 });
+    const r = selfCapCheck({ questDay: '2026-06-07', questSelfToday: 19, today, reward: 3, cap: 10 });
     assert.equal(r.prior, 0);
     assert.equal(r.newTotal, 3);
     assert.equal(r.allowed, true);
-  });
-
-  it('honors a custom cap', () => {
-    const r = selfCapCheck({ questDay: today, questSelfToday: 4, today, reward: 3, cap: 5 });
-    assert.equal(r.allowed, false); // 7 > 5
-    assert.equal(r.cap, 5);
   });
 });
 
