@@ -35,16 +35,17 @@ New `quests/` + `questClaims/` collections + 2 callables + `firestore.rules` (re
 - **`tenants/{b}/list/{r}.gamification.questsToday`** (lightweight per-day state map `{questId:status}`) — written by the CF in the SAME tx; the tenant's **existing** eco-points `onSnapshot` ([tenant-leaderboard.js:170](shared/tenant-leaderboard.js#L170)) already delivers it → **no new tenant read/query/index**. Must be a **tamper-protected field** (§6, like `reputationTier`).
 - **`pointsLedger`** append `source:'quest'`, `refId:questId`, discriminator `questId__day`.
 
-### Build — PR1 (server + rules + index; owner-deploy-gated, NOT stacked)
-- [ ] `functions/_pointsLedger.js` — add `'quest'` to `VALID_SOURCES` (+ test).
-- [ ] `functions/_questEngine.js` (NEW, **pure**, TDD-first) — `isAvailableToday(quest, claimsToday, now)` (cadence/active/date/cap window), `evaluateAutoSignal(quest, signalData)` (energy/login). No I/O. Table-driven unit tests.
-- [ ] `functions/claimQuest.js` (NEW callable, SE1) — auth gate (tenant/player); load quest; per-day idempotency via `questClaims/{questId}__{tenantId}__{day}`; cap check; route by `verifyMode` (`auto`→re-derive signal→award/deny · `self`→award · `admin`→write `pending`, no award); award path = `runTransaction` ( balance + `appendPointsLedger` + `questsToday` update ). Tests (each mode · idempotent re-tap · cap · auto-deny · admin-pending-no-award).
-- [ ] `functions/reviewQuestClaim.js` (NEW callable, SE1, **admin**) — approve/reject a `pending` claim → on approve, award (tx + ledger + `questsToday`). Gate `context.auth.token.admin===true`. Tests.
-- [ ] `functions/index.js` — register both (§7-NN callable, NOT a Firestore trigger).
-- [ ] `firestore.rules` — `quests/{questId}` (read signed-in / write admin) + `questClaims/{claimId}` (read admin+own / write false) + add **`questsToday`** to the `tenants/{b}/list/{r}` update protected `hasAny([...])` block (§6 tamper, mirrors `reputationTier`). + rules tests.
-- [ ] `firestore.indexes.json` — `questClaims` composite `status ASC, claimedAt DESC` (admin pending-review queue) → deploy + **READY before query** (§7-J/N).
-- [ ] `shared/dashboard-behavioral-engagement.js` — `SOURCE_LABEL.quest = 'เควสต์'`.
-- [ ] Gate: `node --check` · functions suite green · rules suite green (emulator) · `verify:memory` green.
+### Build — PR1 (server + rules + index; owner-deploy-gated, NOT stacked) — ✅ BUILT, PR #296 (⏳ owner merge+deploy)
+- [x] `functions/_pointsLedger.js` — `'quest'` added to `VALID_SOURCES` (+ schema/discriminator comment; test 6→7).
+- [x] `functions/_questEngine.js` (NEW, **pure**) — `periodKeyFor` (daily/weekly/once), `resolveState` (inactive/locked/available/pending/claimed/rejected), `evaluateAutoSignal` (checkin_today/login_streak/energy_month_saver), `selfCapCheck`, validators. **37 unit tests**.
+- [x] `functions/claimQuest.js` (NEW callable, SE1) — tenant+player paths; `_authSoT` gate; per-period idempotency via `questClaims/{questId}__{tenantId}__{periodKey}`; route by `verifyMode` (`auto`→re-derive signal→award/deny · `self`→cap+award · `admin`→`pending` no-award); tx + `appendPointsLedger` + `gamification.questsToday` mirror. Energy signal reads `meter_data` (eNew-eOld, §7-E/AAA). **18 tests**.
+- [x] `functions/reviewQuestClaim.js` (NEW callable, SE1, **admin**) — approve→credit+ledger+`questsToday`; reject→re-claimable; `status==='pending'` no-double-credit fence. **13 tests**.
+- [x] `functions/index.js` — both registered column-0 (§7-CCC/SS · §7-NN callables).
+- [x] `firestore.rules` — `quests/{id}` (read public like rewards / write admin) + `questClaims/{id}` (read admin / **write false** — tenant reads `questsToday` not here). **Simplification: `questsToday` needed NO new protected-field — the tenants update rule already protects the whole `gamification` object (firestore.rules:382), so it's tamper-proof via the CF-only write.** +9 rule tests.
+- [x] ~~`firestore.indexes.json`~~ — **No index needed.** Admin review queue uses single-field `where status=='pending'` (auto-indexed) + client sort (reputation-card precedent); `pointsLedger` index already exists. (§7-J-free.)
+- [x] `shared/dashboard-behavioral-engagement.js` — `SOURCE_LABEL.quest = 'เควสต์'`.
+- [x] Gate: `node --check` clean · **functions 2080/0** · **rules 298/0** (emulator) · `verify:memory` green (README 274→280, 98→101) · mojibake clean (§7-TT) · pre-commit hook green.
+- [ ] **OWNER:** merge PR #296 (CI auto-deploys `claimQuest`+`reviewQuestClaim`) + `firebase deploy --only firestore:rules`. Then PR2 off fresh main.
 
 ### Build — PR2 (admin UI + tenant checklist; auto-merge + Vercel, off fresh main AFTER PR1 deploy)
 - [ ] `shared/dashboard-quests-admin.js` (NEW) — quest catalog CRUD (clone rewards UI: table + modal, fields incl. `verifyMode`/`cadence`/`autoSignal`/`dailyCapPoints`/`building`) → direct admin write; PLUS a **pending-claims review queue** (list `questClaims status==pending` → approve/reject → `reviewQuestClaim`, §7-I explicit click, no auto-`.click()`).
