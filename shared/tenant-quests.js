@@ -159,12 +159,14 @@
       _render();
     } catch (e) {
       _busy.delete(quest.id);
-      const msg = (e && e.message) || '';
-      if (/รอตรวจ|pending/i.test(msg)) _toast('ส่งคำขอไปแล้ว กำลังรอตรวจ', 'error');
-      else if (/already|รับเควส/i.test(msg)) _toast('รับเควสนี้ไปแล้ว', 'error');
-      else if (/precondition|ยังทำ/i.test(msg)) _toast('ยังทำภารกิจนี้ไม่ครบ', 'error');
-      else if (/exhausted|โควต้า/i.test(msg)) _toast('วันนี้รับเควสครบโควต้าแล้ว', 'error');
-      else _toast('รับไม่สำเร็จ กรุณาลองใหม่', 'error');
+      // Show the server's user-friendly Thai message directly — it already
+      // distinguishes already-claimed / pending / not-done / cap-exceeded. The
+      // old substring mapping mis-fired: the cap message "...รับเควสครบโควต้า..."
+      // contains "รับเควส" and was wrongly shown as "รับเควสนี้ไปแล้ว".
+      const code = String((e && e.code) || '');
+      const msg = String((e && e.message) || '');
+      _toast((/internal|unknown|unavailable|deadline/i.test(code) || !msg)
+        ? 'รับไม่สำเร็จ กรุณาลองใหม่' : msg, 'error');
       _render();
     }
   }
