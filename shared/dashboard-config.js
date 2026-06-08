@@ -835,6 +835,10 @@ function switchGamificationTab(tabName, btn) {
   });
   btn.classList.add('u-gamification-tab-active');
   if (tabName === 'rewards' && typeof loadRewardsAdmin === 'function') loadRewardsAdmin();
+  if (tabName === 'quests') {
+    if (typeof loadQuestsAdmin === 'function') loadQuestsAdmin();
+    if (typeof loadQuestClaimsQueue === 'function') loadQuestClaimsQueue();
+  }
   if (tabName === 'badges') loadBadgesAdmin();
 }
 

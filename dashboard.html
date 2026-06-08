@@ -5361,6 +5361,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button data-action="switchGamificationTab" data-tab="leaderboard" class="dash-tab-btn">🏅 Leaderboard</button>
       <button data-action="switchGamificationTab" data-tab="badges" class="dash-tab-btn">🎖️ Badges</button>
       <button data-action="switchGamificationTab" data-tab="rewards" class="dash-tab-btn">🎁 Rewards</button>
+      <button data-action="switchGamificationTab" data-tab="quests" class="dash-tab-btn">🎯 เควส</button>
     </div>
 
     <!-- Leaderboard Tab -->
@@ -5447,6 +5448,92 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.5rem;">
             <button data-action="closeRewardEdit" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);">Cancel</button>
             <button data-action="saveReward" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:var(--font-brand);">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quests Tab (Meaning Layer #1 — Community Quests) -->
+    <div id="gamificationQuests" class="u-init-hide">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div style="font-weight: 700; font-size: 1.05rem;">🎯 คลังเควส (Community Quests)</div>
+        <button data-action="openQuestEdit" style="background: var(--green-dark); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: var(--font-brand);">+ เพิ่มเควส</button>
+      </div>
+      <div class="u-scroll-x">
+        <table class="data-table" style="width: 100%;">
+          <thead>
+            <tr>
+              <th class="w-50">ลำดับ</th>
+              <th class="w-50">ไอคอน</th>
+              <th>ชื่อเควส</th>
+              <th class="dash-w-100">แต้ม</th>
+              <th class="dash-w-140">โหมด</th>
+              <th class="dash-w-100">รอบ</th>
+              <th style="width: 70px;">เปิด</th>
+              <th class="dash-w-140">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="questsAdminTable">
+            <tr><td colspan="8" class="dash-empty-msg">กำลังโหลดเควส…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pending admin-verify claims review queue -->
+      <div style="display:flex;align-items:center;gap:8px;margin:1.5rem 0 .75rem;">
+        <div style="font-weight:700;font-size:1.05rem;">📋 คำขอรอตรวจ</div>
+        <span id="questClaimsCount" style="background:var(--green-pale);color:var(--green-dark);border-radius:999px;padding:1px 9px;font-size:.8rem;font-weight:700;">0</span>
+      </div>
+      <div id="questClaimsQueue" style="display:grid;gap:.6rem;">
+        <div class="dash-empty-msg" style="padding:14px;">— ไม่มีคำขอรอตรวจ —</div>
+      </div>
+      <div style="margin-top:1rem;padding:.75rem 1rem;background:#fff8e1;border-left:3px solid #ffc107;border-radius:4px;font-size:.82rem;color:#6c5005;">
+        <strong>หมายเหตุ:</strong> เควสโหมด <code>admin</code> ต้องกดอนุมัติที่นี่ก่อนลูกบ้านจะได้แต้ม · โหมด <code>self</code>/<code>auto</code> ลูกบ้านกดรับได้เองทันที (เซิร์ฟเวอร์ตรวจสอบเอง)
+      </div>
+
+      <!-- Quest edit modal -->
+      <div class="ui-modal ui-modal--top u-init-hide" id="questEditModal" role="dialog" aria-modal="true" aria-labelledby="questEditTitle">
+        <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 520px; max-height: 90vh; overflow-y: auto;">
+          <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="questEditTitle">เพิ่มเควส</div>
+          <input type="hidden" id="questEditId">
+          <div style="display: grid; gap: .85rem;">
+            <label>ชื่อเควส<input type="text" id="questEditTitleInput" class="input-sm" maxlength="80"></label>
+            <label>รายละเอียด<input type="text" id="questEditDesc" class="input-sm" maxlength="200" placeholder="(ไม่บังคับ)"></label>
+            <label>ไอคอน (emoji)<input type="text" id="questEditIcon" placeholder="🎯" maxlength="4" class="input-sm"></label>
+            <label>แต้มรางวัล<input type="number" id="questEditPoints" min="1" class="input-sm"></label>
+            <label>รอบการทำ
+              <select id="questEditCadence" class="input-sm">
+                <option value="daily">รายวัน (ทำได้ทุกวัน)</option>
+                <option value="once">ครั้งเดียว</option>
+              </select>
+            </label>
+            <label>วิธีตรวจ (verifyMode)
+              <select id="questEditVerifyMode" class="input-sm">
+                <option value="self">self — กดรับเอง (honor · มีเพดาน/วัน)</option>
+                <option value="auto">auto — เซิร์ฟเวอร์ตรวจสัญญาณเอง</option>
+                <option value="admin">admin — รออนุมัติก่อนได้แต้ม</option>
+              </select>
+            </label>
+            <label id="questEditAutoSignalRow">สัญญาณ (auto)
+              <select id="questEditAutoSignal" class="input-sm">
+                <option value="checkin_today">เช็คอินวันนี้</option>
+                <option value="login_streak">เช็คอินต่อเนื่องครบ N วัน</option>
+              </select>
+            </label>
+            <label id="questEditCapRow">เพดาน self (แต้ม/วัน — ว่าง = 10)<input type="number" id="questEditCap" min="1" class="input-sm" placeholder="10"></label>
+            <label>ตึก
+              <select id="questEditBuilding" class="input-sm">
+                <option value="all">ทุกตึก</option>
+                <option value="rooms">ห้องแถว (rooms)</option>
+                <option value="nest">Nest</option>
+              </select>
+            </label>
+            <label>ลำดับ (น้อยขึ้นก่อน)<input type="number" id="questEditOrder" min="1" value="99" class="input-sm"></label>
+            <label class="dash-flex-ac-8"><input type="checkbox" id="questEditActive" checked> เปิดใช้งาน (ลูกบ้านเห็น)</label>
+          </div>
+          <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.5rem;">
+            <button data-action="closeQuestEdit" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);">ยกเลิก</button>
+            <button data-action="saveQuest" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:var(--font-brand);">บันทึก</button>
           </div>
         </div>
       </div>
@@ -5645,6 +5732,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-tenant-lease.js" defer></script>
 <script src="./shared/dashboard-bills.js" defer></script>
 <script src="./shared/dashboard-config.js" defer></script>
+<script src="./shared/dashboard-quests-admin.js" defer></script>
 <script src="./shared/dashboard-admin-ops.js" defer></script>
 <script src="./shared/dashboard-audit-panel.js" defer></script>
 <script src="./shared/dashboard-reconcile.js" defer></script>

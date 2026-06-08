@@ -19,12 +19,12 @@
 
 ---
 
-## Status (1 shipped · 16 pending)
+## Status (2 shipped · 15 pending)
 
 | # | ตัว | Pillar | Status |
 |---|-----|--------|--------|
 | 0 | Reputation score v1 | Trust | ✅ SHIPPED (#288/#289) |
-| 1 | Community Quests engine | Trust | 🔴 buildable now |
+| 1 | Community Quests engine | Trust | ✅ SHIPPED (server #296 + UI) |
 | 2 | Helper-request lifecycle | Trust | 🔴 buildable now |
 | 3 | Community requests board | Micro-Econ | 🔴 buildable now |
 | 4 | Food sharing feed | Micro-Econ | 🔴 buildable now |
@@ -63,7 +63,9 @@
 
 ---
 
-### 1 — Community Quests engine · 🔴 buildable now · ⭐ START HERE
+### 1 — Community Quests engine · ✅ SHIPPED 2026-06-08 (server #296 `dcbec48` + UI)
+**Shipped:** daily tap-to-claim checklist; `quests/` catalog + `questClaims/` fence + `gamification.questsToday` state; `claimQuest`/`reviewQuestClaim` callables + pure `_questEngine.js`; `pointsLedger source:'quest'`; admin Gamification→เควส tab (catalog CRUD + review queue) + tenant `tenant-quests.js` checklist. verifyMode self/auto/admin. **Owner trims:** energy auto cut (meter_data is monthly), self cap 10, tenants-only + daily/once UI. Lifecycle: [[lifecycle_community_quests]]. **Open:** owner real-LINE live-verify (tap a quest → points; admin approve a pending claim).
+
 **What:** turn real-life behaviors into quests — "ช่วยยกของให้เพื่อนบ้าน", "ปิดไฟ/แอร์ก่อนออกครบ 7 วัน", "ช่วยรดน้ำต้นไม้ส่วนกลาง", "Silent Helper" → แลกสิทธิประโยชน์.
 **Captures (proposed):** `quests/{questId}` (definition: title, type, reward, cadence, verifyMode) + completion → append to **`pointsLedger/{idempotencyKey}`** with a new `source:'quest'` value (+ `refId: questId`). Energy-saver quests can verify off the `meter_data` signal the #276 energy card already reads — no self-claim.
 **Depends / Reuses:** `pointsLedger` (verified: `functions/_pointsLedger.js`, `source` enum at line ~25 — **extend the enum** for `'quest'`) + gamification points display.
@@ -186,4 +188,5 @@ Add the engagement-consistency dimension (pointsLedger event cadence) to #0 once
 ---
 
 ## Review (flip + cite as each ตัว ships)
-- **2026-06-08:** roadmap created from blueprint Phase 2 gap analysis. Confirmed live: only Reputation v1 (#288/#289) has real data; #1–16 have no capture. Verified reuse paths (`_pointsLedger.js source` enum, `createFacilityBooking`, `broadcasts.js`). Order chosen capture-first (1–5) → trust scores (6–8) → pet (9–14) → tenant memory (15–16). Awaiting: confirm start at #1 (Community Quests).
+- **2026-06-08:** roadmap created from blueprint Phase 2 gap analysis. Confirmed live: only Reputation v1 (#288/#289) has real data; #1–16 have no capture. Verified reuse paths (`_pointsLedger.js source` enum, `createFacilityBooking`, `broadcasts.js`). Order chosen capture-first (1–5) → trust scores (6–8) → pet (9–14) → tenant memory (15–16).
+- **2026-06-08 — #1 Community Quests SHIPPED.** Server PR #296 (`dcbec48`, merged + deployed: 2 callables via CI + rules) + UI PR (admin เควส tab + tenant checklist, Vercel). Engine pure-TDD (61 quest tests); rules 298/0; shared 484/0. Owner review trimmed energy-auto + cap→10 + tenants-only/daily-once. Next capture ตัว = **#2 Helper-request lifecycle**. Lifecycle doc [[lifecycle_community_quests]].
