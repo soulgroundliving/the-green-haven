@@ -113,6 +113,32 @@ describe('completeHelpRequest — award', () => {
     assert.equal(writtenLedger.length, 0);
   });
 
+  it('daily cap: helper already at 60 today → awards 0 (capped) but still completes', async () => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+    reqDocs.r1 = { status: 'accepted', requesterUid: REQUESTER, helperBuilding: 'rooms', helperRoom: '102', helperTenantId: 'rooms_102', title: 'x' };
+    tenantDocs['rooms/102'] = { gamification: { points: 100, kindnessDay: today, kindnessToday: 60 } };
+    const r = await handler({ requestId: 'r1', appreciationTags: ['kind'] }, requesterCtx());
+    assert.equal(r.awarded, 0);
+    assert.equal(r.capped, true);
+    assert.equal(reqDocs.r1.status, 'done', 'still completes');
+    assert.equal(reqDocs.r1.helperPointsAwarded, 0);
+    assert.equal(writtenLedger.length, 0, 'no points-ledger row when capped');
+    assert.equal(lastTenantPatch['gamification.points'], undefined, 'no points bump');
+    assert.equal(lastTenantPatch['gamification.kindnessToday'], 60, 'counter stays at the cap');
+  });
+
+  it('daily cap: helper at 40 today → awards 20, counter → 60', async () => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+    reqDocs.r1 = { status: 'accepted', requesterUid: REQUESTER, helperBuilding: 'rooms', helperRoom: '102', helperTenantId: 'rooms_102', title: 'x' };
+    tenantDocs['rooms/102'] = { gamification: { points: 50, kindnessDay: today, kindnessToday: 40 } };
+    const r = await handler({ requestId: 'r1', appreciationTags: ['kind'] }, requesterCtx());
+    assert.equal(r.awarded, 20);
+    assert.equal(r.capped, false);
+    assert.equal(lastTenantPatch['gamification.points'], 70);
+    assert.equal(lastTenantPatch['gamification.kindnessToday'], 60);
+    assert.equal(writtenLedger.length, 1);
+  });
+
   it('double-complete is a no-op (status guard) → failed-precondition', async () => {
     seedAccepted('r1');
     await handler({ requestId: 'r1', rating: 4 }, requesterCtx());

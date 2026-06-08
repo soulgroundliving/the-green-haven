@@ -54,6 +54,13 @@ const APPRECIATION_LABELS = {
 // (the 10-50 "real kindness" band). Tune here; the callables read this constant.
 const HELPER_REWARD_POINTS = 20;
 
+// Daily cap on the kindness POINTS a helper can EARN (owner decision 2026-06-09 =
+// 60 = 3 helps). Beyond the cap, completing a help still records the kindness
+// (the helpRequests done-doc feeds #6 Kindness) and gives appreciation — it just
+// stops awarding spendable points (points = money: 10pts = 1฿), so a colluding
+// pair can't farm. A genuine helper rarely exceeds 3 helps/day. Unset/<=0 = uncapped.
+const KINDNESS_DAILY_CAP = 60;
+
 const MAX_TITLE_LEN = 80;
 const MAX_DETAIL_LEN = 500;
 const MAX_RATING_NOTE_LEN = 280;
@@ -95,6 +102,22 @@ function sanitizeAppreciation(tags) {
 
 /** A completion must carry at least one valid appreciation tag. */
 function isValidAppreciation(tags) { return sanitizeAppreciation(tags).length > 0; }
+
+/**
+ * Daily kindness-POINTS cap for a helper. The helper's gamification doc carries a
+ * running same-day total (`kindnessToday`, reset on `kindnessDay` rollover) → a
+ * free, query-less check. Returns the award (clamped to the remaining room) and a
+ * `capped` flag so the caller can word the LINE push accordingly.
+ * @returns {{ award: number, prior: number, newToday: number, capped: boolean, cap: number }}
+ */
+function kindnessCapCheck({ kindnessDay, kindnessToday, today, reward, cap }) {
+  const capNum = Number(cap);
+  const effectiveCap = (Number.isFinite(capNum) && capNum > 0) ? capNum : Infinity;
+  const prior = kindnessDay === today ? (Number(kindnessToday) || 0) : 0;
+  const want = Math.max(0, Number(reward) || 0);
+  const award = Math.max(0, Math.min(want, effectiveCap - prior));
+  return { award, prior, newToday: prior + award, capped: award <= 0 && want > 0, cap: effectiveCap };
+}
 
 /**
  * Can `helperUid` accept request `req`?
@@ -150,6 +173,7 @@ module.exports = {
   VALID_APPRECIATION_TAGS,
   APPRECIATION_LABELS,
   HELPER_REWARD_POINTS,
+  KINDNESS_DAILY_CAP,
   MAX_TITLE_LEN,
   MAX_DETAIL_LEN,
   MAX_RATING_NOTE_LEN,
@@ -158,6 +182,7 @@ module.exports = {
   isValidRating,
   isValidAppreciation,
   sanitizeAppreciation,
+  kindnessCapCheck,
   sanitizeTitle,
   sanitizeDetail,
   canAccept,

@@ -19,17 +19,20 @@ const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { appendPointsLedger } = require('./_pointsLedger');
 const { lookupApprovedRoomUsers, pushAndRetry } = require('./_notifyHelper');
-const { canComplete, isValidRating, sanitizeAppreciation, APPRECIATION_LABELS, HELPER_REWARD_POINTS, MAX_RATING_NOTE_LEN } = require('./_helpRequestEngine');
+const { canComplete, isValidRating, sanitizeAppreciation, APPRECIATION_LABELS, HELPER_REWARD_POINTS, KINDNESS_DAILY_CAP, kindnessCapCheck, MAX_RATING_NOTE_LEN } = require('./_helpRequestEngine');
 
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
-function _completedMessage(title, tags, note, awarded) {
+function bkkDateString(d) { return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }); }
+
+function _completedMessage(title, tags, note, awarded, capped) {
   const praise = (tags && tags.length) ? tags.map(k => APPRECIATION_LABELS[k] || k).join(' · ') : '';
   let text = `💚 ขอบคุณสำหรับน้ำใจ!\n\nเพื่อนบ้านยืนยันว่าคุณช่วย “${title}” เสร็จแล้ว`;
   if (praise) text += `\nคำชม: ${praise}`;
   if (note) text += `\n“${note}”`;
-  text += `\nคุณได้รับ +${awarded} แต้มน้ำใจ 💚`;
+  if (awarded > 0) text += `\nคุณได้รับ +${awarded} แต้มน้ำใจ 💚`;
+  else if (capped) text += `\n(วันนี้รับแต้มน้ำใจครบ ${KINDNESS_DAILY_CAP}/วันแล้ว — แต่น้ำใจของคุณยังนับเข้าคะแนนน้ำใจ 💚)`;
   return { type: 'text', text };
 }
 
@@ -56,6 +59,7 @@ exports.completeHelpRequest = functions
     }
     const callerUid = context.auth.uid;
     const ratingInt = hasRating ? Math.round(Number(rating)) : null;
+    const now = new Date();
     const reqRef = firestore.collection('helpRequests').doc(String(requestId));
 
     const result = await firestore.runTransaction(async (tx) => {
@@ -92,26 +96,41 @@ exports.completeHelpRequest = functions
       }
 
       // ── Writes ────────────────────────────────────────────────────────────
-      let pointsAfter = null;
+      // Daily kindness-points cap: beyond it the help still completes + records
+      // the kindness (feeds #6) + gives appreciation, but awards 0 more points.
+      let awarded = 0;
+      let capped = false;
       if (helperRef && helperGami) {
-        const before = Number(helperGami.points) || 0;
-        pointsAfter = before + HELPER_REWARD_POINTS;
-        tx.update(helperRef, { 'gamification.points': pointsAfter });
-        appendPointsLedger(tx, firestore, {
-          tenantId: helperTenantId,
-          building: helperBuilding,
-          roomId: helperRoom,
-          source: 'help_completed',
-          discriminator: String(requestId),     // one award per request, ever
-          points: HELPER_REWARD_POINTS,
-          balanceAfter: pointsAfter,
-          by: callerUid,
-          refId: String(requestId),
-          note: req.title || null,
+        const today = bkkDateString(now);
+        const cc = kindnessCapCheck({
+          kindnessDay: helperGami.kindnessDay, kindnessToday: helperGami.kindnessToday,
+          today, reward: HELPER_REWARD_POINTS, cap: KINDNESS_DAILY_CAP,
         });
+        awarded = cc.award;
+        capped = cc.capped;
+        // Always advance the daily counter (when capped it just stays at the cap).
+        const patch = { 'gamification.kindnessDay': today, 'gamification.kindnessToday': cc.newToday };
+        if (awarded > 0) {
+          const pointsAfter = (Number(helperGami.points) || 0) + awarded;
+          patch['gamification.points'] = pointsAfter;
+          tx.update(helperRef, patch);
+          appendPointsLedger(tx, firestore, {
+            tenantId: helperTenantId,
+            building: helperBuilding,
+            roomId: helperRoom,
+            source: 'help_completed',
+            discriminator: String(requestId),   // one award per request, ever
+            points: awarded,
+            balanceAfter: pointsAfter,
+            by: callerUid,
+            refId: String(requestId),
+            note: req.title || null,
+          });
+        } else {
+          tx.update(helperRef, patch);          // capped → counter only, no points/ledger
+        }
       }
 
-      const awarded = (pointsAfter != null) ? HELPER_REWARD_POINTS : 0;
       const cleanNote = ratingNote ? String(ratingNote).slice(0, MAX_RATING_NOTE_LEN) : null;
       tx.update(reqRef, {
         status: 'done',
@@ -124,19 +143,19 @@ exports.completeHelpRequest = functions
 
       return {
         helperBuilding, helperRoom, title: req.title || '',
-        tags: hasTags ? tags : [], note: cleanNote || '', awarded,
+        tags: hasTags ? tags : [], note: cleanNote || '', awarded, capped,
       };
     });
 
     // Best-effort LINE push to the helper — never fails the completion.
     try {
       const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-      if (token && result.awarded > 0 && result.helperBuilding && result.helperRoom) {
+      if (token && result.helperBuilding && result.helperRoom) {
         const { docs } = await lookupApprovedRoomUsers(firestore, result.helperBuilding, result.helperRoom);
         if (docs && docs.length) {
           await pushAndRetry({
             docs,
-            message: _completedMessage(result.title, result.tags, result.note, result.awarded),
+            message: _completedMessage(result.title, result.tags, result.note, result.awarded, result.capped),
             token,
             source: 'completeHelpRequest',
             context: { building: result.helperBuilding, roomId: result.helperRoom, requestId },
@@ -148,5 +167,5 @@ exports.completeHelpRequest = functions
       console.warn('completeHelpRequest notify failed (non-fatal):', e.message);
     }
 
-    return { success: true, requestId: String(requestId), tags: result.tags, awarded: result.awarded };
+    return { success: true, requestId: String(requestId), tags: result.tags, awarded: result.awarded, capped: result.capped };
   });

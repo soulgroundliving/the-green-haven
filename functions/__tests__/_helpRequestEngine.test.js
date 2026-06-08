@@ -10,10 +10,10 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
-  HELPER_REWARD_POINTS, MAX_TITLE_LEN,
+  HELPER_REWARD_POINTS, KINDNESS_DAILY_CAP, MAX_TITLE_LEN,
   VALID_APPRECIATION_TAGS, APPRECIATION_LABELS,
   isValidStatus, isValidCategory, isValidRating,
-  isValidAppreciation, sanitizeAppreciation,
+  isValidAppreciation, sanitizeAppreciation, kindnessCapCheck,
   sanitizeTitle, sanitizeDetail,
   canAccept, canComplete, canCancel,
 } = require('../_helpRequestEngine');
@@ -85,6 +85,29 @@ describe('sanitizers', () => {
     assert.equal(sanitizeDetail('  รายละเอียด  '), 'รายละเอียด');
     assert.ok(sanitizeDetail('y'.repeat(900)).length <= 500);
   });
+});
+
+describe('kindnessCapCheck (daily points cap)', () => {
+  const cap = 60, today = '2026-06-09';
+  it('full reward under the cap; advances the daily total', () => {
+    assert.deepEqual(kindnessCapCheck({ kindnessDay: today, kindnessToday: 0, today, reward: 20, cap }),
+      { award: 20, prior: 0, newToday: 20, capped: false, cap: 60 });
+    assert.equal(kindnessCapCheck({ kindnessDay: today, kindnessToday: 40, today, reward: 20, cap }).award, 20);
+  });
+  it('caps at the limit → award 0, capped true, total unchanged', () => {
+    const r = kindnessCapCheck({ kindnessDay: today, kindnessToday: 60, today, reward: 20, cap });
+    assert.equal(r.award, 0); assert.equal(r.capped, true); assert.equal(r.newToday, 60);
+  });
+  it('clamps a partial award at the boundary', () => {
+    assert.equal(kindnessCapCheck({ kindnessDay: today, kindnessToday: 50, today, reward: 20, cap }).award, 10);
+  });
+  it('resets on day rollover (yesterday total ignored)', () => {
+    assert.equal(kindnessCapCheck({ kindnessDay: '2026-06-08', kindnessToday: 60, today, reward: 20, cap }).award, 20);
+  });
+  it('uncapped when cap is unset/0', () => {
+    assert.equal(kindnessCapCheck({ kindnessDay: today, kindnessToday: 9999, today, reward: 20, cap: 0 }).award, 20);
+  });
+  it('KINDNESS_DAILY_CAP is 60', () => { assert.equal(KINDNESS_DAILY_CAP, 60); });
 });
 
 describe('canAccept', () => {
