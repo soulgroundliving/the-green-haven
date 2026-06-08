@@ -56,6 +56,7 @@ const { loadRoomConfig, computeBill, buildBillFlex } = require('./_billFlex');
 const { lookupApprovedRoomUsers, pushAndRetry } = require('./_notifyHelper');
 const { assignInvoiceNo } = require('./_invoiceCounter');
 const { appendActionAudit } = require('./_actionAudit');
+const { writeBillOnIssue } = require('./_billWrite');
 
 const LINE_TOKEN = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
 
@@ -181,7 +182,8 @@ async function notifyOne({ docId, force = false, auditActor = null }) {
   }
 
   const tenantSnap = await firestore.collection('tenants').doc(building).collection('list').doc(String(roomId)).get();
-  const tenantName = tenantSnap.exists ? (tenantSnap.data()?.name || '') : '';
+  const tenantData = tenantSnap.exists ? (tenantSnap.data() || {}) : {};
+  const tenantName = tenantData.name || '';
 
   const { docs: userDocs, error: lookupErr } = await lookupApprovedRoomUsers(firestore, building, roomId);
   if (lookupErr) return { docId, error: lookupErr };
@@ -207,6 +209,19 @@ async function notifyOne({ docId, force = false, auditActor = null }) {
     console.error('[notifyTenantOnMeterUpload] issueInvoiceNo failed for', docId, ':', e?.message || e);
   }
 
+  // Option C (2026-06-08): admin "อนุมัติ meter import" = ออกบิล. Create the ONE
+  // canonical RTDB bill (status 'pending') so admin dashboard + tenant app read +
+  // update the SAME doc — RTDB is SoT, the client synth twin auto-dedups by
+  // year+month. Idempotent + never overwrites a paid/manual bill + §7-BBB move-in
+  // boundary (all inside _billWrite). Best-effort: a failure here must NOT break
+  // the LINE notify (the primary job) — a re-notify or the backfill retries.
+  let billWrite = null;
+  try {
+    billWrite = await writeBillOnIssue({ building, roomId, bill, invoiceNo, tenantData, meterDocId: docId });
+  } catch (e) {
+    console.error('[notifyTenantOnMeterUpload] writeBillOnIssue failed for', docId, ':', e?.message || e);
+  }
+
   const flexMsg = buildBillFlex(bill, { tenantName, invoiceNo });
   const { pushed, failed: failedCount } = await pushAndRetry({
     docs: userDocs,
@@ -225,7 +240,7 @@ async function notifyOne({ docId, force = false, auditActor = null }) {
     });
   }
 
-  return { docId, pushed, failed: failedCount };
+  return { docId, pushed, failed: failedCount, bill: (billWrite && billWrite.action) || null, billId: (billWrite && billWrite.billId) || null };
 }
 
 exports.notifyTenantOnMeterUpload = onCall(

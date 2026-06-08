@@ -40,6 +40,9 @@ let countersState;      // { [counterId]: { seq } }
 let auditWrites;        // array of { id, data } written to actionAudit
 let buildBillFlexCalls; // array of { bill, opts } — assert invoiceNo passed through
 let autoIdSeq;          // actionAudit server-autoId counter
+let writeBillOnIssueCalls;  // Option C — array of args passed to _billWrite.writeBillOnIssue
+let writeBillOnIssueResult; // what the stub returns ({ action, billId })
+let writeBillOnIssueThrow;  // Error to simulate a non-fatal bill-write failure
 
 function resetStubs() {
   meterDataState = {
@@ -74,6 +77,9 @@ function resetStubs() {
   auditWrites = [];
   buildBillFlexCalls = [];
   autoIdSeq = 0;
+  writeBillOnIssueCalls = [];
+  writeBillOnIssueResult = { action: 'created', billId: 'TGH-256905-15' };
+  writeBillOnIssueThrow = null;
 }
 
 resetStubs();
@@ -238,6 +244,21 @@ Module._load = function (request, parent, ...rest) {
     return {
       enqueueLineRetry: async (args) => {
         enqueueLineRetryArgs.push(args);
+      },
+    };
+  }
+
+  // _billWrite — Option C canonical bill write (top-level require in CF)
+  if (
+    request === './_billWrite' ||
+    request.replace(/\\/g, '/').endsWith('/_billWrite') ||
+    request.replace(/\\/g, '/').endsWith('/_billWrite.js')
+  ) {
+    return {
+      writeBillOnIssue: async (args) => {
+        writeBillOnIssueCalls.push(args);
+        if (writeBillOnIssueThrow) throw writeBillOnIssueThrow;
+        return writeBillOnIssueResult;
       },
     };
   }
@@ -622,6 +643,58 @@ describe('notifyTenantOnMeterUpload', () => {
       assert.equal(upd.notifiedCount, 1);
       assert.equal(upd.notifiedAt, '__SERVER_TS__');
       assert.equal(upd.lastNotifiedSignature, '100|150|30|35', 'writes correct signature');
+    });
+  });
+
+  // ── Option C — canonical RTDB bill write (writeBillOnIssue) ──────────────────
+
+  describe('Option C — canonical bill write', () => {
+    beforeEach(() => { resetStubs(); });
+
+    it('calls writeBillOnIssue once with building/roomId/bill/invoiceNo/tenantData/meterDocId', async () => {
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      assert.equal(writeBillOnIssueCalls.length, 1, 'writeBillOnIssue must be called exactly once');
+      const arg = writeBillOnIssueCalls[0];
+      assert.equal(arg.building, 'rooms');
+      assert.equal(arg.roomId, '15');
+      assert.equal(arg.bill.totalCharge, 3520, 'passes the computeBill result through');
+      assert.equal(arg.invoiceNo, 'INV-rooms-2569-00001', 'passes the minted invoiceNo');
+      assert.equal(arg.meterDocId, 'rooms_69_5_15');
+      assert.ok(arg.tenantData, 'passes tenantData for the §7-BBB boundary');
+      assert.equal(arg.tenantData.name, 'สมชาย');
+    });
+
+    it('passes tenantData carrying moveInDate through to writeBillOnIssue (§7-BBB)', async () => {
+      tenantSnapState['rooms/15'] = { name: 'สมชาย', lease: { moveInDate: '2026-01-21' } };
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      const arg = writeBillOnIssueCalls[0];
+      assert.equal(arg.tenantData.lease.moveInDate, '2026-01-21');
+    });
+
+    it('surfaces the bill-write action + billId in the per-doc result', async () => {
+      writeBillOnIssueResult = { action: 'created', billId: 'TGH-256905-15' };
+      const result = await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      assert.equal(result.results[0].bill, 'created');
+      assert.equal(result.results[0].billId, 'TGH-256905-15');
+    });
+
+    it('a writeBillOnIssue failure is non-fatal — tenant is still notified', async () => {
+      writeBillOnIssueThrow = new Error('rtdb down');
+      const result = await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      assert.equal(result.pushed, 1, 'LINE notify still succeeds despite the bill-write failure');
+      assert.equal(result.results[0].bill, null, 'bill action is null when the write threw');
+    });
+
+    it('does NOT write a bill when the room has no approved tenant (early return)', async () => {
+      liffUsersState = [];
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      assert.equal(writeBillOnIssueCalls.length, 0, 'recipient-less room → no bill (matches no invoice burn)');
+    });
+
+    it('does NOT write a bill when computeBill returns null (rent_zero)', async () => {
+      computeBillResult = null;
+      await capturedHandler(makeRequest({ docId: 'rooms_69_5_15' }));
+      assert.equal(writeBillOnIssueCalls.length, 0);
     });
   });
 
