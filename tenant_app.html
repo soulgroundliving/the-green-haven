@@ -277,6 +277,13 @@
             --bg-color:      var(--brand-primary-wash);
             --white:         var(--surface-card);
             --border:        var(--stone);
+            /* Generic aliases shared/components.css consumes as var(--card)/var(--text)
+               (.rep-card/.quest-card/.help-card etc.) — mirrors dashboard.html:706-707.
+               Auto-flip for dark because brand.css redefines --surface-card/--ink under
+               [data-theme="dark"]; the alias inherits lazily, so no dark-block override is
+               needed. Without these, dark-mode cards fell back to light #fff/#2c2c2c. */
+            --card:          var(--surface-card);
+            --text:          var(--ink);
             --accent:       var(--warn, #d97706);            /* Amber accent — aliased to brand --warn */
             --accent-gold:  #D4AF37;                          /* Reward gold — no brand equivalent */
             --danger:       var(--alert, #dc2626);            /* Danger red — aliased to brand --alert */
