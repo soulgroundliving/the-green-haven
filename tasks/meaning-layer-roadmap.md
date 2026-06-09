@@ -19,7 +19,7 @@
 
 ---
 
-## Status (4 shipped · 13 pending)
+## Status (5 shipped · 12 pending)
 
 | # | ตัว | Pillar | Status |
 |---|-----|--------|--------|
@@ -27,8 +27,8 @@
 | 1 | Community Quests engine | Trust | ✅ SHIPPED (server #296 + UI) |
 | 2 | Helper-request lifecycle | Trust | ✅ SHIPPED (#303 server + #304 UI) |
 | 3 | Community requests board | Micro-Econ | ✅ SHIPPED (#312 server + UI) |
-| 4 | Food sharing feed | Micro-Econ | 🔴 buildable now ⭐ NEXT |
-| 5 | Trade history memory | Micro-Econ | 🔴 buildable now |
+| 4 | Food sharing feed | Micro-Econ | ✅ SHIPPED (#314 server + UI) |
+| 5 | Trade history memory | Micro-Econ | 🔴 buildable now ⭐ NEXT |
 | 6 | Kindness score | Trust | 🟡 gated on #1–5 accrual |
 | 7 | Verified Helper | Trust | 🟡 gated on #2 job history |
 | 8 | Resident Rank | Trust | 🟡 gated on #6+#7 |
@@ -89,10 +89,11 @@
 **Depends / Reuses:** #2 (built right after — same mental model loaded = sustainable batching).
 **Gate:** none. **Value:** turns the building into a micro-economy; low marginal cost on top of #2.
 
-### 4 — Food sharing feed · 🔴 buildable now
+### 4 — Food sharing feed · ✅ SHIPPED 2026-06-09 (PR #314 server + UI)
+**Shipped:** ephemeral `foodShares/{id}` share→claim feed (available→claimed + cancelled); 3 callables (share/claim/cancel, SE1, §7-NN) + `cleanupFoodSharesScheduled` (daily 03:20 BKK, single-field expiresAt sweep) + pure `_foodShareEngine`; building-scoped read rule (CF-only write); tenant `#food-share` sub-page (`tenant-food-share.js`, Profile 🍲 tile, 3 sections + ⏳ expiry countdown) + admin "🍲 แบ่งปันอาหาร" monitor. **The SHARER earns peer-confirmed `food_share` points on claim** (reward 10, own daily cap 50 — anti-farm; extends `_pointsLedger` VALID_SOURCES 8→9 — #4 IS in the #6 Kindness set, unlike #3). Ephemeral: expiresAt default 24h/max 72h, client hides expired + the cron sweeps. claimFood reuses the existing LINE secret (§7-WW). 68 tests; functions 2241/0, rules 318/0, shared 484/0. Auto-deployed (deploy-functions + deploy-rules + Vercel). **Open:** owner real-LINE live-verify (LIFF-gated). Lifecycle: [[lifecycle_food_sharing]]. Next capture ตัว = **#5 Trade history memory**.
 **What:** "คืนนี้มีคนปล่อยของกินเหลือ" — ephemeral share feed.
-**Captures (proposed):** `foodShares/{id}` { uid, building, note, claimedBy, expiresAt } + sharing action → `pointsLedger source:'food_share'`.
-**Depends / Reuses:** community-feed / broadcast pattern (verified: `shared/broadcasts.js`, announcements); notification.
+**Captures:** `foodShares/{id}` { sharerUid, building, title, claimerUid, expiresAt, … } + claim action → `pointsLedger source:'food_share'` (awards the SHARER, peer-confirmed).
+**Depends / Reuses:** the #2 award+cap pattern + the cleanup-sweep precedent (`cleanupChecklistsScheduled`); LINE notify.
 **Gate:** none. **Value:** light, high-frequency kindness signal; feeds #6.
 
 ### 5 — Trade history memory · 🔴 buildable now
@@ -194,3 +195,4 @@ Add the engagement-consistency dimension (pointsLedger event cadence) to #0 once
 - **2026-06-08 — #1 Community Quests SHIPPED.** Server PR #296 (`dcbec48`, merged + deployed: 2 callables via CI + rules) + UI PR (admin เควส tab + tenant checklist, Vercel). Engine pure-TDD (61 quest tests); rules 298/0; shared 484/0. Owner review trimmed energy-auto + cap→10 + tenants-only/daily-once. Next capture ตัว = **#2 Helper-request lifecycle**. Lifecycle doc [[lifecycle_community_quests]].
 - **2026-06-09 — #2 Helper-request lifecycle SHIPPED.** Server PR #303 (`e132b04`) + UI PR #304 (`c06ab04`) + appreciation-tags refinement #306–311 (warm tags not stars, thank-you note surfaced, daily kindness-points cap 60/day). `helpRequests` board + 4 callables + `pointsLedger source:'help_completed'` (+20 peer-confirmed → feeds #6/#7). Next capture ตัว = **#3 Community requests board**. Lifecycle doc [[lifecycle_helper_requests]].
 - **2026-06-09 — #3 Community requests board SHIPPED.** PR #312 (`580b1d7`, server + UI in one PR; auto-deploys via deploy-functions + deploy-rules + Vercel). `communityRequests` board (open→offered→fulfilled), 4 transition callables + pure `_communityRequestEngine`, building-scoped read rule, tenant 🔄 sub-page + admin monitor. Clones #2 wholesale but for ITEMS (borrow/share, `requestKind`) and **awards NO points** — deliberately outside the #6 Kindness source set, so zero farm surface + clearly distinct from #2. 52 new tests (functions 2190/0, rules 294/0, shared 484/0). Next capture ตัว = **#4 Food sharing feed**. Lifecycle doc [[lifecycle_community_requests]].
+- **2026-06-09 — #4 Food sharing feed SHIPPED.** PR #314 (`fbd6fba`, server + UI in one PR; auto-deploys). Ephemeral `foodShares` share→claim feed + 3 callables + `cleanupFoodSharesScheduled` (daily sweep) + pure `_foodShareEngine`. **First points-awarding capture since #2** — the SHARER earns `food_share` (reward 10, own daily cap 50, anti-farm peer-confirmed-on-claim); extends `_pointsLedger` 8→9 sources (#4 IS in the #6 set). Ephemeral via expiresAt (24h/72h) + client-hide + cron sweep. 68 new tests (functions 2241/0, rules 318/0, shared 484/0). Next capture ตัว = **#5 Trade history memory** (last of the #1–5 capture block → then #6 Kindness can compute). Lifecycle doc [[lifecycle_food_sharing]].
