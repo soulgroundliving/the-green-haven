@@ -4,6 +4,98 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-10) — Meaning Layer **#9: Pet health memory** · ✅ APPROVED — BUILDING PR1
+
+> **Decisions LOCKED (owner 2026-06-10):** (1) **array-on-pet-doc** `healthLog[]` — "เลือกที่ยั่งยืนและต่อยอดได้": built sustainable now, but ALL health data access goes behind a thin module interface (`window.PetHealth.add/list/delete` — repository pattern per [[patterns]]) so a future array→subcollection migration touches only that module, not the UI/consumers. (2) **PDPA lean** — reuse `getDownloadURL` (parity w/ vaccine books) + rely on `account_v1` consent (no new CF/consent); add disclosure + pets→DSR-export. (3) admin read-only view IN. → only `exportMyData` deploys.
+
+> Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#9 · 🔴 buildable now**. The #1–5 capture block is COMPLETE; #6/#7/#8 are accrual-gated (~weeks of #1–5 data) → **#9 is the next buildable in order**, opening the **Pet pillar** (blueprint "Emotional Network"). Each pet gets an ongoing **health timeline** (vet visits, weight, meds, vaccines over time) beyond today's single vaccine-book file.
+
+### Verified state (2 Explore agents + rules read — §7-H/AA/K/O)
+- **Greenfield confirmed (§7-O/AA/K):** grep `health|vet|weight history` across `shared/` + `functions/` → only **doc-level** vaccine fields (`isVaccinated/vaxDate/vaxExpiry/vaccineBookURL/Path/FileName`) on the pet doc. No timeline anywhere, no orphaned API to wire.
+- **Pet doc** `tenants/{b}/list/{r}/pets/{petId}` ([tenant-pets.js:189](shared/tenant-pets.js#L189)); petId = `Date.now().toString()`. **Write rule** ([firestore.rules:467](firestore.rules#L467)) = `isAdmin() || (isSignedIn() && get(tenants/$(b)/list/$(r)).linkedAuthUid == auth.uid)` — durable SoT crosscheck (§7-P-safe).
+- **Storage** `pets/{b}/{r}/{petId}/{file=**}` claim-match read/write, admin-only delete ([storage.rules:58](storage.rules#L58)) → health files land in the **same prefix** ⇒ **no storage.rules change**.
+- **Admin queue** ([dashboard-tenant-lease.js:1199](shared/dashboard-tenant-lease.js#L1199)) `collectionGroup('pets')` + live-path filter `[2]==='list'` — already loads the full pet doc, so a read-only health view is nearly free.
+- **PDPA surfaces all exist & extend cleanly:** consent `VALID_PURPOSES` ([recordChecklistConsent.js:29](functions/recordChecklistConsent.js#L29)) · DSR export ([exportMyData.js](functions/exportMyData.js) — **currently exports ZERO pet data = a pre-existing gap**) · erasure/archive (pets ∈ `ARCHIVED_SUBCOLLECTIONS` in [archiveTenantOnMoveOut.js](functions/archiveTenantOnMoveOut.js) + `_petStorage` cleanup in `deletePetMedia`/move-out).
+
+### ⭐ DECISION 1 (your call) — data model: **`healthLog[]` array on the pet doc (REC)** vs subcollection
+The roadmap text said "health **subcoll**", but verifying the PDPA lifecycle flips the calculus:
+
+| | **A · `healthLog[]` array on pet doc (REC)** | B · `pets/{petId}/health/{entryId}` subcollection |
+|---|---|---|
+| Archive on move-out | **FREE** — `pets` already in `ARCHIVED_SUBCOLLECTIONS`, array rides along | needs explicit nested-archive (§7-DD risk: nested subcoll NOT auto-copied by `.get()`) |
+| Erasure §32 / admin remove | **FREE** — gone with the pet doc | needs `recursiveDelete` in `deletePetMedia` + nested cascade in `requestDataDeletion` |
+| Export §30 | **FREE** — rides in the pet doc | needs nested collectionGroup/loop |
+| Firestore rule | **none** (covered by existing pets write rule) | new `match /health/{id}` + collectionGroup wildcard |
+| Capacity | entry ≈ 200 B; files → Storage (URL only). 1 MB ⇒ ~5000 entries; a 2-yr lease ≈ <100 | unbounded |
+| Per-entry query | whole-array read (fine at this scale) | independently queryable |
+
+**REC = A.** KISS/YAGNI + minimal blast radius: archive/erasure/retention/Storage-cleanup all ride on the **proven** pet lifecycle instead of adding new nested-data handling the §7-DD/L anti-patterns warn is bug-prone. Capacity is a non-issue (files in Storage; doc holds metadata only). **Diverges from the roadmap's literal "subcoll" wording → flagging for your OK.**
+
+### ⭐ DECISION 2 — file links: reuse existing `getDownloadURL` (REC) vs new signed-URL CF
+Pet photo + vaccine-book files already use `getDownloadURL()` (permanent tokenized URL in the doc). The PDPA checklist uses a 1h signed-URL CF (`getChecklistMediaUrl`). Pet health is personal data **but not PDPA §26-sensitive** (§26 = a *person's* medical data, not an animal's).
+- **REC: reuse the existing pet `getDownloadURL` pattern** — parity with vaccine books, smallest blast radius. Note a follow-up to migrate **both** vaccine-book + health files to a `getPetMediaUrl` signed-URL CF *together* (coherent, avoids a piecemeal breadth sweep — [[feedback_score_instability_breadth_trap]]).
+- Alt: build `getPetMediaUrl` now (clone `getChecklistMediaUrl` 6-path gate) — stricter but inconsistent with vaccine books + bigger scope.
+
+### ⭐ DECISION 3 — consent: rely on existing `account_v1` (REC) vs new `pet_health_v1`
+The existing pet-registration feature has **no per-feature consent** (covered by whole-app `account_v1` + privacy disclosure). A dedicated `pet_health_v1` only for health — while basic pet data has none — is inconsistent.
+- **REC: no new consent gate** — pet health rides on `account_v1` + contract performance; add a pet-health line to the privacy notice (PDPA disclosure §1/§2/§5) + add pets to the DSR export. Sufficient (pet health ≠ §26-sensitive).
+- Alt: add a `pet_health_v1` consent gate (strict template) — heavier UX, inconsistent with pet reg.
+
+*(Pick the strict side on all three — B + signed-URL CF + new consent — and I re-scope to the bigger PR.)*
+
+### Data model — `healthLog[]` entry (Option A)
+`tenants/{b}/list/{r}/pets/{petId}.healthLog: [ entry, … ]`, entry =
+`{ id:<ts>, type:'vet'|'vaccine'|'weight'|'med'|'note', date:'YYYY-MM-DD', title, note?, weightKg?:number|null, fileURL?:null, filePath?:null, fileName?:null, createdAt:ISO }`
+- **Add:** `updateDoc(petRef, { healthLog: arrayUnion(entry) })` — surgical; **never rewrites `status`** so admin approval is untouched. **Delete entry:** read-modify-write tx. **Edit:** delete + re-add in v1 (no in-place edit).
+- **File** (optional vet doc / lab result): `_uploadPetFile(file, b, r, petId, 'health')` → `pets/{b}/{r}/{petId}/health_{ts}.{ext}` (existing helper + prefix + rules — no change).
+
+### Build — PR1 (tenant UI + minimal admin read-view + PDPA export/disclosure)
+- [ ] `shared/tenant-pet-health.js` (NEW, IIFE) — pure helpers (`buildHealthEntry`, `sortHealthLog`, `healthTypeMeta`, validators) + timeline render + add-entry form + delete; `updateDoc(arrayUnion)` add, optimistic (§7-I tenant-initiated); §7-A/U claim guard via `_taBuilding/_taRoom` (not phantom `_liffClaims`, §7-BB); §7-N read-fail muted; §7-X innerHTML fallbacks; DOM API for user text ([[feedback_modal_security]]); `window.*` exports (§7-QQ/CC).
+- [ ] `tenant_app.html` — new `#pet-health-page` sub-page (timeline + add form: type/date/title/note/weight/file) reachable per-pet from `#pet-park-page`; `<script src tenant-pet-health.js>` external (no CSP drift §7-II; order after tenant-pets.js §7-PP).
+- [ ] `shared/tenant-pets.js` — add "📋 ประวัติสุขภาพ" button to each pet card → opens `#pet-health-page` for that petId (small render edit).
+- [ ] `shared/components.css` — static `.pet-health-*` timeline styles (§7-RR, NOT JS-injected).
+- [ ] `shared/dashboard-tenant-lease.js` — admin read-only "📋 ประวัติสุขภาพ" on the pet card → modal listing `p.healthLog` (data already loaded; no new query, no admin write).
+- [ ] `functions/exportMyData.js` — add a `pets` section (each pet doc incl. `healthLog`), scoped by building+room — **closes the pre-existing no-pet-export gap**. +tests (present / empty).
+- [ ] `tenant_app.html` privacy section + `privacy.html` — one pet-health line in the collected-data disclosure (PDPA §1/§2/§5). Text-only (no CSP regen).
+- [ ] Tests: `shared/__tests__/tenant-pet-health.test.js` (build/sort/type-meta/validation) + extend `functions/__tests__/exportMyData.test.js` (pets+healthLog).
+- [ ] Gate: `node --check` · test:shared green · functions tests green · static-harness preview-MCP screenshot (timeline empty/populated, add form, dark+light) · mojibake (§7-TT) · CSP no-drift (§7-II §G) · `verify:memory`.
+- [ ] **OWNER:** merge → CI auto-deploys `exportMyData` (the ONLY CF; Option A needs no rules/storage deploy). Then owner real-LINE live-verify (LIFF-gated): add a vet/weight entry → reopen persists → admin sees the timeline.
+
+### Guardrails (§7 + §6 + PDPA)
+§7-A/U/BB tenant claim-gated self-wire · §7-I tenant-initiated, no auto-click, surgical `arrayUnion` (never rewrites admin `status`) · §7-N read-fail→muted · §7-X innerHTML fallback · §7-RR static CSS · §7-II external script only (no inline edit → no CSP regen) · §7-PP script order · §7-QQ/CC window export · §7-T single writer (tenant owns the pet doc; admin read-only) · **§7-DD/L AVOIDED by design** (array rides on existing pet lifecycle — zero new nested-data handling) · [[feedback_modal_security]] DOM API for user text · PDPA disclosure + DSR export (erasure/retention free via pet lifecycle).
+
+### Out of scope (named, not dropped)
+weight sparkline/chart (v2) · in-place entry edit (v1 = add + delete) · signed-URL CF migration for pet files (vaccine-book + health together — follow-up) · `pet_health_v1` dedicated consent · admin write/annotate on health (admin read-only v1) · **#10 Pet Social Graph** (next pet ตัว) · pet-doc `status` self-approve hole (PRE-EXISTING: the pets write rule lets a linked tenant write `status:'approved'` via devtools — low-severity, flag separately, NOT introduced by #9).
+
+### Risk
+Frontend-heavy; Option A touches **no rules/storage**, only the additive `exportMyData` CF. Health writes go to the tenant's own pet doc via the existing claim-gated rule — no new trust surface, no points/money path (§7-I). Live-verify on real LINE is owner-gated (LIFF auth); static-harness screenshot proves the visual states pre-merge.
+
+### Why
+Roadmap #9 — the next buildable Meaning-Layer ตัว (capture #1–5 done; trust scores #6–8 accrual-gated). Opens the Pet pillar; builds the health-timeline primitive future pet features (e.g. #14 emergency-caretaker context) lean on. Array-on-doc keeps the PDPA lifecycle free and the blast radius minimal.
+
+### Review (2026-06-10) — BUILT (PR1), ⏳ owner merge + live-verify
+**Shipped (10 files, 1 branch `feat/pet-health-memory`):**
+- `shared/tenant-pet-health.js` (NEW) — pure helpers + repository-boundary data ops (`_readPet`/`_writeLog`/`addEntry`/`removeEntry` — the ONLY Firestore touch, so a future array→subcoll migration is contained) + DOM-API timeline render + add/delete. `healthLog[]` written via surgical read-modify-write `updateDoc({healthLog})` (NEVER rewrites admin `status`; `arrayUnion` is server-only in this repo, not on the client wrapper → RMW is both safe + dependency-free).
+- `shared/__tests__/tenant-pet-health.test.js` (NEW) — 23 pure-helper tests (validate/build/sort/typeMeta).
+- `tenant_app.html` — `#pet-health-page` sub-page (form in native `<details>`, timeline) + `<script src>` (external, §7-II no CSP drift) + privacy disclosure line. **CSP no-drift confirmed** (no inline `<script>`/`<style>` block touched).
+- `shared/tenant-pets.js` — "📋 ประวัติสุขภาพ" button per pet card (`data-action="openPetHealth"`, mirrors `viewVaccineBook`) + exposes `_taUploadPetFile` (DRY Storage reuse).
+- `shared/components.css` — static `.ph-*` timeline styles (§7-RR; theme-aware via `--card`/`--text`/`--border` vars).
+- `shared/dashboard-tenant-lease.js` — admin **read-only** health `<details>` in the pet card (data already on the collectionGroup doc; `_escapeHTML`/`_escapeAttr` on all tenant free-text; no admin write, no new query).
+- `functions/exportMyData.js` (+test) — DSR §30 now exports `pets` (incl. `healthLog`) — **closes the pre-existing gap that ZERO pet data was exported**. +2 tests.
+- `privacy.html` + tenant_app privacy section — PDPA disclosure line for the health timeline.
+
+**Gate (all green):** `test:shared` **507/0** (+23) · `exportMyData` **10/0** (+2 pets) · `node --check` 4 files OK · **mojibake CLEAN** (§7-TT) · **CSP no-drift** (§7-II) · **verify:memory 0 fails**. Visual: static-harness preview-MCP screenshot — timeline renders light + dark (theme-aware, dots/title/note/weight-chip/date/delete; sort newest-first), 0 console errors (the earlier full-width-dot screenshot was a browser CSS-cache artifact, not a bug — confirmed `phRules:13`, `dot 38px`, `display:flex` after cache-bust).
+
+**Decisions honoured:** array-on-doc (sustainable) + repository interface (extensible — "ต่อยอดได้") · PDPA lean (getDownloadURL + `account_v1`, no new CF/consent) · admin read-only.
+
+**⏳ Owner-gated next:**
+1. **Merge** (= CI auto-deploys `exportMyData` — the only CF; additive, try/catch-guarded, low-risk). Frontend (Vercel) ships on merge too.
+2. **Live LIFF verify** (auth-gated, can't drive from dev env): open a pet → 📋 ประวัติสุขภาพ → add a vet/weight entry (+ optional file) → reopen persists → admin pet queue shows the read-only timeline → DSR `exportMyData` JSON includes `pets[].healthLog`.
+
+**Out of scope (named):** weight chart (v2) · in-place edit (v1 = add+delete) · signed-URL CF for pet files (vaccine-book + health together, follow-up) · #10 Pet Social Graph (next pet ตัว) · pre-existing pet-doc `status` self-approve hole (flag separately).
+
+---
+
 ## ✅ SHIPPED (2026-06-09) — Meaning Layer **#2: Helper-request lifecycle** · PR #303 server + #304 UI
 
 > Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#2 · 🔴 buildable now** — next in order after #1 Community Quests (✅ shipped #296–#302). Neighbor posts a help request → another tenant accepts → requester confirms-done + rates → **helper earns peer-confirmed kindness points**. Captures the job-history + ratings that **#7 Verified Helper** aggregates and feeds the **#6 Kindness score** (helper side). Mirrors the #1 quests architecture exactly: pure engine + per-transition callables + CF-only-write records + `pointsLedger` capture.

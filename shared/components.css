@@ -1186,3 +1186,152 @@ body.gh-tour-open {
   line-height: 1.35;
   color: var(--text-muted, #8a8f98);
 }
+
+/* ===== Pet health memory (Meaning Layer #9, tenant_app) ===== */
+/* Theme-aware via brand.css tokens — --surface-card/--surface-raised/--ink/
+   --muted/--stone are defined in BOTH :root (light) and :root[data-theme="dark"]
+   so they FLIP automatically (no hardcoded white in night mode). All static
+   (§7-RR). The form uses these classes (not inline styles) so it themes AND
+   never overflows (box-sizing:border-box, independent of the ambient reset). */
+
+/* Add-entry form */
+.ph-add { border: none; margin: 0 16px 16px; }
+.ph-add__summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--surface-card, #fff);
+  border: 1px dashed var(--primary-green, #2d8653);
+  color: var(--primary-green, #2d8653);
+  font-weight: 700;
+  font-size: var(--fs-sm, 0.85rem);
+  text-align: center;
+  user-select: none;
+}
+.ph-add__summary::-webkit-details-marker { display: none; }
+.ph-add[open] .ph-add__summary { border-style: solid; margin-bottom: 10px; }
+
+.ph-form-card {
+  background: var(--surface-card, #fff);
+  border: 1px solid var(--stone, #eef0ee);
+  border-radius: 20px;
+  padding: 16px;
+  box-sizing: border-box;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+}
+.ph-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ph-field { margin-bottom: 12px; }
+.ph-label { display: block; font-size: var(--fs-sm, 0.82rem); font-weight: 600; color: var(--muted, #586679); margin: 0 0 5px; }
+.ph-req { color: #e5484d; }
+.ph-input, .ph-select, .ph-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--stone, #d9e8e3);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: var(--fs-md, 0.95rem);
+  background: var(--surface-raised, #fff);
+  color: var(--ink, #1c3a36);
+  -webkit-appearance: none;
+  appearance: none;
+}
+.ph-textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+.ph-input::placeholder, .ph-textarea::placeholder { color: var(--muted, #9aa0a6); opacity: 0.6; }
+.ph-input:focus, .ph-select:focus, .ph-textarea:focus {
+  outline: none;
+  border-color: var(--primary-green, #2d8653);
+  box-shadow: 0 0 0 3px rgba(45, 134, 83, 0.14);
+}
+.ph-file-drop {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1.5px dashed var(--stone, #cfe0d9);
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--muted, #586679);
+  font-size: var(--fs-sm, 0.85rem);
+  font-weight: 600;
+  background: transparent;
+}
+.ph-file-drop:hover { border-color: var(--primary-green, #2d8653); color: var(--primary-green, #2d8653); }
+.ph-file-name { font-size: var(--fs-sm, 0.8rem); color: var(--primary-green, #2d8653); font-weight: 700; margin-top: 6px; word-break: break-all; }
+.ph-save-btn {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--primary-green, #2d8653);
+  color: #fff;
+  border: none;
+  padding: 14px;
+  border-radius: 16px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: var(--fs-md, 0.95rem);
+  cursor: pointer;
+  margin-top: 4px;
+}
+.ph-save-btn:active { transform: translateY(1px); }
+.ph-save-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* Timeline */
+.ph-timeline { display: flex; flex-direction: column; gap: 10px; }
+.ph-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--surface-card, #fff);
+  border: 1px solid var(--stone, #f0f0f0);
+  border-radius: 16px;
+  padding: 14px;
+  box-sizing: border-box;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
+}
+.ph-entry__dot {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  color: #fff;
+}
+.ph-entry__body { flex: 1; min-width: 0; }
+.ph-entry__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+.ph-entry__type { font-size: var(--fs-sm, 0.82rem); font-weight: 700; color: var(--muted, #586679); }
+.ph-entry__date { font-size: 0.72rem; color: var(--muted, #9aa0a6); flex-shrink: 0; }
+.ph-entry__title { font-size: var(--fs-md, 0.95rem); font-weight: 700; color: var(--ink, #1c3a36); word-break: break-word; }
+.ph-entry__note { font-size: var(--fs-sm, 0.85rem); color: var(--muted, #586679); margin-top: 3px; line-height: 1.45; word-break: break-word; white-space: pre-wrap; }
+.ph-entry__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ph-entry__chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 8px;
+  padding: 3px 8px;
+}
+.ph-entry__file {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #4338ca;
+  background: #eef2ff;
+  border-radius: 8px;
+  padding: 3px 8px;
+  text-decoration: none;
+}
+.ph-empty { text-align: center; padding: 36px 16px; color: var(--muted, #8a8f98); }
+.ph-empty__icon { font-size: 2.2rem; margin-bottom: 8px; opacity: 0.6; }
+.ph-empty__title { margin: 0; font-weight: 700; color: var(--ink, #4b5563); font-size: var(--fs-md, 0.95rem); }
+.ph-empty__text { margin: 6px 0 0; font-size: var(--fs-sm, 0.82rem); line-height: 1.5; }
+.ph-loading, .ph-error { text-align: center; padding: 28px 16px; font-size: var(--fs-sm, 0.85rem); color: var(--muted, #8a8f98); }
+.ph-error { color: #c0392b; }

@@ -1275,6 +1275,26 @@ function loadAndRenderPetApprovals() {
     const vaccineBookBtn = p.vaccineBookURL
       ? `<a href="${p.vaccineBookURL}" target="_blank" rel="noopener" class="compact-btn compact-btn-view" style="text-decoration:none; display:inline-block;">📖 ดูสมุดวัคซีน${p.vaccineBookFileName ? ` (${p.vaccineBookFileName})` : ''}</a>`
       : '';
+    // Read-only health timeline (#9). Tenant-entered free text → MUST escape
+    // (_escapeHTML/_escapeAttr). Admin never writes here. Native <details> toggle.
+    const _healthLog = Array.isArray(p.healthLog) ? p.healthLog : [];
+    const _healthEmoji = { vet: '🩺', vaccine: '💉', weight: '⚖️', med: '💊', note: '📝' };
+    const healthBlock = _healthLog.length ? `
+        <details style="margin-bottom:0.8rem;">
+          <summary style="cursor:pointer; font-size:0.85rem; font-weight:600; color:#4338ca;">📋 ประวัติสุขภาพ (${_healthLog.length})</summary>
+          <div style="margin-top:0.5rem; display:flex; flex-direction:column; gap:0.4rem;">
+            ${_healthLog.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).map(h => {
+              const em = _healthEmoji[h.type] || '📝';
+              const w = (h.weightKg != null && isFinite(Number(h.weightKg))) ? ` · ⚖️ ${Number(h.weightKg)} กก.` : '';
+              const file = (h.fileURL && /^https:\/\//.test(String(h.fileURL)))
+                ? ` · <a href="${_escapeAttr(h.fileURL)}" target="_blank" rel="noopener">📎 ${_escapeHTML(h.fileName || 'ไฟล์')}</a>` : '';
+              const note = h.note ? `<div style="color:var(--text-muted); font-size:0.8rem; margin-top:2px; white-space:pre-wrap;">${_escapeHTML(h.note)}</div>` : '';
+              return `<div style="font-size:0.82rem; padding:6px 8px; border-radius:8px; background:#f8f8fb;">
+                <strong>${em} ${_escapeHTML(h.title || '')}</strong> <span style="color:var(--text-muted);">${_escapeHTML(h.date || '')}</span>${w}${file}${note}
+              </div>`;
+            }).join('')}
+          </div>
+        </details>` : '';
     return `
       <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${statusColor};">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem; gap:0.8rem;">
@@ -1298,6 +1318,7 @@ function loadAndRenderPetApprovals() {
           ${p.vaxExpiry ? ` · หมดอายุ: ${p.vaxExpiry}` : ''}
         </div>
         ${vaccineBookBtn ? `<div style="margin-bottom:0.8rem;">${vaccineBookBtn}</div>` : ''}
+        ${healthBlock}
         ${p.status === 'pending' ? `
           <div style="display: flex; gap: 0.5rem;">
             <button data-action="approvePet" data-id="${p.building}" data-arg="${p.room}" data-arg2="${p.id}" class="compact-btn compact-btn-view">✅ Approve</button>
