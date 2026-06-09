@@ -73,6 +73,13 @@ describe('expiry', () => {
     assert.equal(normalizeExpiryHours(999), MAX_EXPIRY_HOURS);
     assert.equal(normalizeExpiryHours(0.5), 1);      // floor → 0 → clamped up to MIN 1
   });
+  it('accepts the longer dropdown presets up to 7 days (dried-goods window)', () => {
+    assert.equal(MAX_EXPIRY_HOURS, 168);             // 7 days
+    assert.equal(normalizeExpiryHours(72), 72);      // 3 วัน
+    assert.equal(normalizeExpiryHours(120), 120);    // 5 วัน
+    assert.equal(normalizeExpiryHours(168), 168);    // 7 วัน
+    assert.equal(normalizeExpiryHours(169), MAX_EXPIRY_HOURS);  // beyond max → clamp
+  });
   it('computeExpiresAtMs adds clamped hours to the base', () => {
     assert.equal(computeExpiresAtMs(1000, 2), 1000 + 2 * 3600 * 1000);
     assert.equal(computeExpiresAtMs(0, 999), MAX_EXPIRY_HOURS * 3600 * 1000);
