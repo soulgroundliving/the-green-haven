@@ -19,15 +19,29 @@
     var _subs = {};
     var _cache = {};
 
+    // Category / kind label maps — MIRROR each board module's own CAT_LABEL /
+    // KIND_LABEL (tenant-helpers.js · tenant-community-requests.js ·
+    // tenant-food-share.js). Static + rarely change; kept here so this aggregator
+    // stays self-contained (the source maps are private to each board's IIFE).
+    var CAT_HELP = { lifting: '📦 ยกของ', errand: '🏃 ธุระ', petcare: '🐾 สัตว์เลี้ยง', tech: '🔧 อุปกรณ์', other: '📝 อื่น ๆ' };
+    var CAT_COMM = { tool: '🔧 เครื่องมือ', kitchen: '🍳 ของใช้ครัว', household: '🏠 ของใช้ในบ้าน', electronics: '🔌 อุปกรณ์ไฟฟ้า', other: '📦 อื่น ๆ' };
+    var KIND_COMM = { borrow: '🔁 ขอยืม', have: '🎁 ขอแบ่ง' };
+    var CAT_FOOD = { meal: '🍱 อาหารจานหลัก', snack: '🍪 ของว่าง', fruit: '🍎 ผลไม้', drink: '🥤 เครื่องดื่ม', ingredient: '🧂 เครื่องปรุง/วัตถุดิบ', other: '🍽️ อื่น ๆ' };
+    function _foodImg(r) { return (Array.isArray(r.imageUrls) && r.imageUrls[0]) || r.imageUrl || ''; }
+
     // Each board: how to read it, which status is "active/open", how to label it,
-    // and which sub-page a tap should open (window.showSubPage id).
+    // a tag() (category / kind), an img() (thumbnail URL, '' if none), and which
+    // sub-page a tap should open (window.showSubPage id).
     var BOARDS = [
         { key: 'help',  coll: 'helpRequests',      emoji: '🆘', label: 'ขอความช่วยเหลือ', sub: 'helper-board',
-          titleFb: 'ขอความช่วยเหลือ', active: function (r) { return r.status === 'open'; } },
+          titleFb: 'ขอความช่วยเหลือ', active: function (r) { return r.status === 'open'; },
+          tag: function (r) { return CAT_HELP[r.category] || ''; }, img: function () { return ''; } },
         { key: 'borrow', coll: 'communityRequests', emoji: '📦', label: 'ขอ-ยืมของ',      sub: 'community-requests',
-          titleFb: 'ขอ/แบ่งของ',     active: function (r) { return r.status === 'open'; } },
+          titleFb: 'ขอ/แบ่งของ',     active: function (r) { return r.status === 'open'; },
+          tag: function (r) { return KIND_COMM[r.requestKind] || CAT_COMM[r.category] || ''; }, img: function () { return ''; } },
         { key: 'food',  coll: 'foodShares',         emoji: '🍲', label: 'แบ่งอาหาร',       sub: 'food-share',
-          titleFb: 'ของแบ่งปัน',     active: function (r) { return r.status === 'available' && !_isExpired(r); } }
+          titleFb: 'ของแบ่งปัน',     active: function (r) { return r.status === 'available' && !_isExpired(r); },
+          tag: function (r) { return CAT_FOOD[r.category] || ''; }, img: function (r) { return _foodImg(r); } }
     ];
     var MAX_ITEMS = 30;
 
@@ -64,6 +78,9 @@
                     board: b.key, emoji: b.emoji, label: b.label, sub: b.sub,
                     title: r.title || b.titleFb,
                     room: (r.room != null ? String(r.room) : ''),
+                    detail: r.detail || '',
+                    tag: b.tag(r),
+                    img: b.img(r),
                     ts: _ms(r.createdAt)
                 });
             });
@@ -109,16 +126,28 @@
             var unread = it.ts > cutoff;
             var when = _relTime(it.ts);
             var room = it.room ? ('ห้อง ' + _esc(it.room)) : '';
-            var meta = [it.label, room].filter(Boolean).join(' · ');
+            // board label + category/kind + room (board label kept; category added)
+            var meta = [_esc(it.label), _esc(it.tag), room].filter(Boolean).join(' · ');
+            // Thumb gives every row a visual — the post photo (food) else an emoji tile.
+            // https URLs only (§7-XX); built as markup (§7-RR — no createElement('style')).
+            var thumb = it.img
+                ? '<img src="' + _esc(it.img) + '" alt="" loading="lazy" style="width:54px; height:54px; flex-shrink:0; border-radius:10px; object-fit:cover; background:#f0f0f0;">'
+                : '<div style="width:54px; height:54px; flex-shrink:0; border-radius:10px; background:var(--soft-green, #eaf3ec); display:flex; align-items:center; justify-content:center; font-size:26px;">' + it.emoji + '</div>';
+            var detail = it.detail
+                ? '<div style="font-size:.82rem; color:var(--text-muted); margin-top:.25rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">' + _esc(it.detail) + '</div>'
+                : '';
             return '<div class="gh-activity-item" role="button" tabindex="0" data-sub="' + _esc(it.sub) + '" ' +
-                'style="border-bottom:1px solid var(--border, #e5e5e5); padding:14px 20px; cursor:pointer; ' +
+                'style="display:flex; gap:12px; border-bottom:1px solid var(--border, #e5e5e5); padding:14px 20px; cursor:pointer; ' +
                 (unread ? 'border-left:3px solid var(--primary-green, #4caf50);' : '') + '">' +
-                '<div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:.3rem;">' +
-                '<strong style="font-size:.98rem; ' + (unread ? 'color:var(--text-dark);' : 'color:var(--text-muted);') + '">' +
-                it.emoji + ' ' + _esc(it.title) + '</strong>' +
-                (when ? '<span style="font-size:.78rem; color:var(--text-muted); white-space:nowrap;">' + _esc(when) + '</span>' : '') +
+                thumb +
+                '<div style="flex:1; min-width:0;">' +
+                    '<div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">' +
+                        '<strong style="font-size:.96rem; ' + (unread ? 'color:var(--text-dark);' : 'color:var(--text-muted);') + '">' + _esc(it.title) + '</strong>' +
+                        (when ? '<span style="font-size:.76rem; color:var(--text-muted); white-space:nowrap;">' + _esc(when) + '</span>' : '') +
+                    '</div>' +
+                    (meta ? '<div style="font-size:.8rem; color:var(--text-muted); margin-top:.15rem;">' + meta + '</div>' : '') +
+                    detail +
                 '</div>' +
-                '<div style="font-size:.8rem; color:var(--text-muted);">' + meta + '</div>' +
                 '</div>';
         }).join('');
         // Tap an item → open that board's sub-page (direct listener, not the
