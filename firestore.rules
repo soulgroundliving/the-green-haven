@@ -68,6 +68,18 @@ service cloud.firestore {
                     && resource.data.building == request.auth.token.building);
       allow write: if false;
     }
+    // Community requests board (Meaning Layer #3) — neighbour borrow/share board.
+    // Same building-scoped read + CF-only-write contract as helpRequests above
+    // (PDPA: requester/offerer room labels are visible within the building only;
+    // admin reads all for the moderation monitor). Writes via the callables
+    // postCommunityRequest / offerCommunityRequest / fulfillCommunityRequest /
+    // cancelCommunityRequest (admin SDK bypasses rules; every transition is a callable).
+    match /communityRequests/{requestId} {
+      allow read:  if isAdmin()
+                || (isSignedIn() && request.auth.token.building != null
+                    && resource.data.building == request.auth.token.building);
+      allow write: if false;
+    }
     match /system/{docId} {
       allow read:  if true;
       allow write: if isAdmin();

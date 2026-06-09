@@ -129,6 +129,7 @@
     <script src="./shared/tenant-leaderboard.js" defer></script>
     <script src="./shared/tenant-quests.js" defer></script>
     <script src="./shared/tenant-helpers.js" defer></script>
+    <script src="./shared/tenant-community-requests.js" defer></script>
     <script src="./shared/tenant-daily-bonus.js" defer></script>
     <script src="./shared/tenant-cleaning.js" defer></script>
     <script src="./shared/tenant-data-export.js" defer></script>
@@ -3844,6 +3845,10 @@
                     <div class="ta-stat-val">🤝</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:#1a5c38;">ช่วยเหลือเพื่อนบ้าน</div>
                 </div>
+                <div data-action="showSubPage" data-page="community-requests" style="background:#EAF3F7; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                    <div class="ta-stat-val">🔄</div>
+                    <div style="font-weight:700; font-size:var(--fs-sm); color:#1b5a6e;">ขอ-ยืมของ</div>
+                </div>
             </div>
         </div>
     </div>
@@ -3910,6 +3915,71 @@
                 <div style="display:flex; gap:8px;">
                     <button type="button" id="help-rating-cancel" class="btn-secondary" style="flex:1;">ยกเลิก</button>
                     <button type="button" id="help-rating-confirm" class="btn-main" style="flex:1;" disabled>ส่งคำขอบคุณ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Community requests board (Meaning Layer #3) — neighbour borrow/share requests -->
+    <div id="community-requests" class="page">
+        <div class="app-bar ta-page-top">
+            <div class="ta-icon-circle" data-action="goBackToProfile">
+                <i class="fas fa-chevron-left u-color-green"></i>
+            </div>
+            <h1 class="ta-card-title">ขอ-ยืมของเพื่อนบ้าน</h1>
+        </div>
+
+        <div style="padding:0 16px;">
+            <button type="button" id="creq-post-toggle" class="btn-main" style="width:100%; margin-bottom:12px;">+ โพสต์ขอ/ยืมของ</button>
+
+            <div id="creq-post-form" class="card u-hidden" style="margin-bottom:16px;">
+                <label class="ta-field-label">อยากขอยืม หรือ ขอแบ่ง?</label>
+                <select id="creq-post-kind" style="width:100%; margin-bottom:10px;">
+                    <option value="borrow">🔁 ขอยืม (คืนภายหลัง)</option>
+                    <option value="have">🎁 ขอแบ่ง (เก็บไว้ได้)</option>
+                </select>
+                <label class="ta-field-label">ต้องการขอ/ยืมอะไร? *</label>
+                <input type="text" id="creq-post-title" maxlength="80" placeholder="เช่น ขอยืมไขควง, ขอกล่องลัง, ขอยืมที่ชาร์จ" style="width:100%; margin-bottom:10px;">
+                <label class="ta-field-label">หมวด (ไม่บังคับ)</label>
+                <select id="creq-post-category" style="width:100%; margin-bottom:10px;">
+                    <option value="">— เลือกหมวด —</option>
+                    <option value="tool">🔧 เครื่องมือ</option>
+                    <option value="kitchen">🍳 ของใช้ครัว</option>
+                    <option value="household">🏠 ของใช้ในบ้าน</option>
+                    <option value="electronics">🔌 อุปกรณ์ไฟฟ้า</option>
+                    <option value="other">📦 อื่น ๆ</option>
+                </select>
+                <label class="ta-field-label">รายละเอียดเพิ่มเติม (ไม่บังคับ)</label>
+                <textarea id="creq-post-detail" maxlength="500" rows="2" placeholder="บอกรายละเอียด เช่น ใช้เมื่อไหร่ คืนเมื่อไหร่ ..." style="width:100%; margin-bottom:12px;"></textarea>
+                <button type="button" id="creq-post-submit" class="btn-main" style="width:100%;">โพสต์คำขอ</button>
+            </div>
+
+            <div id="creq-share-summary" class="creq-summary u-hidden"></div>
+
+            <div class="creq-section">
+                <div class="creq-section__head">🔄 เปิดรับ <span class="creq-section__count" id="creq-open-count">0</span></div>
+                <div id="creq-open-list"><div class="creq-empty">กำลังโหลด…</div></div>
+            </div>
+            <div class="creq-section">
+                <div class="creq-section__head">📩 คำขอของฉัน <span class="creq-section__count" id="creq-mine-count">0</span></div>
+                <div id="creq-mine-list"><div class="creq-empty">—</div></div>
+            </div>
+            <div class="creq-section">
+                <div class="creq-section__head">🤲 ของที่ฉันแบ่งปัน <span class="creq-section__count" id="creq-given-count">0</span></div>
+                <div id="creq-given-list"><div class="creq-empty">—</div></div>
+            </div>
+        </div>
+
+        <!-- Thank modal (requester confirms received + optional thank-you note) -->
+        <div id="creq-thank-modal" role="dialog" aria-modal="true" aria-labelledby="creq-thank-title"
+             style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:120; align-items:center; justify-content:center; padding:20px;">
+            <div style="background:#fff; border-radius:16px; padding:1.5rem; width:100%; max-width:360px;">
+                <h2 id="creq-thank-title" style="margin:0 0 4px; font-size:1.05rem; font-weight:700;">ยืนยันรับของ 🙏</h2>
+                <p style="margin:0 0 10px; font-size:.82rem; color:var(--text-muted,#8a8f98);">ฝากข้อความขอบคุณเพื่อนบ้านที่แบ่งปัน (ไม่บังคับ)</p>
+                <textarea id="creq-thank-note" maxlength="280" rows="2" placeholder="เช่น ขอบคุณมากครับ ได้รับเรียบร้อย" style="width:100%; margin:0 0 12px;"></textarea>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" id="creq-thank-cancel" class="btn-secondary" style="flex:1;">ยกเลิก</button>
+                    <button type="button" id="creq-thank-confirm" class="btn-main" style="flex:1;">ยืนยันรับของ</button>
                 </div>
             </div>
         </div>

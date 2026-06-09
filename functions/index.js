@@ -192,6 +192,17 @@ exports.acceptHelpRequest   = require('./acceptHelpRequest').acceptHelpRequest;
 exports.completeHelpRequest = require('./completeHelpRequest').completeHelpRequest;
 exports.cancelHelpRequest   = require('./cancelHelpRequest').cancelHelpRequest;
 
+// Community requests board (Meaning Layer #3) — the micro-economy sibling of the
+// Helper board: a tenant asks to borrow/be-given an ITEM, a neighbour offers it,
+// the requester confirms received. open→offered→fulfilled (+cancelled), ONE
+// callable per transition. Awards NO points (deliberately outside #6 Kindness —
+// no farm surface). §7-NN callables; offer/fulfill reuse the existing
+// LINE_CHANNEL_ACCESS_TOKEN secret for the requester/offerer push (§7-WW).
+exports.postCommunityRequest    = require('./postCommunityRequest').postCommunityRequest;
+exports.offerCommunityRequest   = require('./offerCommunityRequest').offerCommunityRequest;
+exports.fulfillCommunityRequest = require('./fulfillCommunityRequest').fulfillCommunityRequest;
+exports.cancelCommunityRequest  = require('./cancelCommunityRequest').cancelCommunityRequest;
+
 // Immutable admin-action audit trail (Core Readiness Phase 1.1). Client-side admin
 // mutations call this after the write; in-tx CF actions log via _actionAudit directly.
 exports.recordAdminAction = require('./recordAdminAction').recordAdminAction;
