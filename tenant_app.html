@@ -2616,38 +2616,56 @@
     <div id="world-map-page" class="page active" tabindex="-1"
         style="position: fixed; inset: 0; width: 100vw; height: 100vh; background: #FDF6F0; z-index: 5; overflow: hidden; display: block; will-change: transform; transform: translateZ(0);">
 
-        <div
-            style="position: absolute; top: 20px; left: 20px; z-index: 20; height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.8); padding: 4px 15px; border-radius: 30px; backdrop-filter: blur(5px);">
+        <!-- Top header row — avatar/level chip (left) + bell (right) share ONE flex
+             row so the iOS-LINE webview lays them on the SAME line at equal height.
+             Replaces two independent position:absolute boxes the webview rendered at
+             mismatched heights (chip taller than bell — 2026-06-09 carry-over, §7-W).
+             Root cause: the chip is a flex item whose two-line text block can exceed
+             44px (inherited line-height ~1.5–1.65 × --fs-sm), and min-height:auto let
+             it grow past the explicit height:44px. Fix: overflow:hidden makes the flex
+             auto-min-size 0 so height:44px is authoritative, + tight line-height/nowrap
+             keeps the text inside 44px. pointer-events:none on the transparent row so
+             the gap between chip & bell never eats taps on the map below. -->
+        <div style="position: absolute; top: 20px; left: 20px; right: 20px; z-index: 20;
+                    display: flex; justify-content: space-between; align-items: center;
+                    gap: 12px; pointer-events: none;">
 
-            <div id="current-avatar-map"
-                style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--primary-green); display: flex; align-items: center; justify-content: center; font-size: var(--fs-lg); background: white;">
-                🌿
+            <div style="flex-shrink: 1; min-width: 0; pointer-events: auto;
+                        height: 44px; box-sizing: border-box; overflow: hidden;
+                        display: flex; align-items: center; gap: 12px;
+                        background: rgba(255,255,255,0.8); padding: 4px 15px;
+                        border-radius: 30px; backdrop-filter: blur(5px);">
+
+                <div id="current-avatar-map"
+                    style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--primary-green); display: flex; align-items: center; justify-content: center; font-size: var(--fs-lg); background: white;">
+                    🌿
+                </div>
+
+                <div style="min-width: 0;">
+                    <p id="display-name-map" style="font-size: var(--fs-sm); line-height: 1.25; font-weight: 700; margin: 0; color: #334435; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">คุณลูกบ้าน</p>
+                    <!-- Rendered by loadGamificationData() from LEVEL_TIERS (SSoT) -->
+                    <p id="world-map-level" style="font-size: var(--fs-sm); line-height: 1.25; margin: 0; color: var(--primary-green); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Lv.1 Seedling</p>
+                </div>
             </div>
 
-            <div>
-                <p id="display-name-map" style="font-size: var(--fs-sm); font-weight: 700; margin: 0; color: #334435;">คุณลูกบ้าน</p>
-                <!-- Rendered by loadGamificationData() from LEVEL_TIERS (SSoT) -->
-                <p id="world-map-level" style="font-size: var(--fs-sm); margin: 0; color: var(--primary-green);">Lv.1 Seedling</p>
-            </div>
+            <!-- Bell icon: shows in-app broadcasts. -->
+            <button type="button" id="map-bell-btn" data-action="openBroadcastsPanel"
+                aria-label="ประกาศจากผู้ดูแล"
+                style="flex-shrink: 0; pointer-events: auto;
+                       height: 44px; box-sizing: border-box; margin: 0;
+                       -webkit-appearance: none; appearance: none;
+                       display: flex; align-items: center; gap: 6px;
+                       background: rgba(255,255,255,0.8); padding: 0 16px;
+                       border: none; border-radius: 30px; backdrop-filter: blur(5px);
+                       cursor: pointer; font: inherit;">
+                <span class="ta-lg-tight">🔔</span>
+                <span id="map-bell-badge" aria-live="polite"
+                    style="display: none; min-width: 18px; padding: 0 6px; height: 18px;
+                           background: #E74C3C; color: #fff; border-radius: 9px;
+                           font-size: 11px; font-weight: 800;
+                           align-items: center; justify-content: center; line-height: 1;">0</span>
+            </button>
         </div>
-
-        <!-- Bell icon: mirror of avatar chip at top-right. Shows in-app broadcasts. -->
-        <button type="button" id="map-bell-btn" data-action="openBroadcastsPanel"
-            aria-label="ประกาศจากผู้ดูแล"
-            style="position: absolute; top: 20px; right: 20px; z-index: 20;
-                   height: 44px; box-sizing: border-box; margin: 0;
-                   -webkit-appearance: none; appearance: none;
-                   display: flex; align-items: center; gap: 6px;
-                   background: rgba(255,255,255,0.8); padding: 0 16px;
-                   border: none; border-radius: 30px; backdrop-filter: blur(5px);
-                   cursor: pointer; font: inherit;">
-            <span class="ta-lg-tight">🔔</span>
-            <span id="map-bell-badge" aria-live="polite"
-                style="display: none; min-width: 18px; padding: 0 6px; height: 18px;
-                       background: #E74C3C; color: #fff; border-radius: 9px;
-                       font-size: 11px; font-weight: 800;
-                       align-items: center; justify-content: center; line-height: 1;">0</span>
-        </button>
 
         <!-- Daily-bonus quick-peek: round mirror of bell, lets Nest tenants reopen
              the daily modal even after they've already claimed today.
