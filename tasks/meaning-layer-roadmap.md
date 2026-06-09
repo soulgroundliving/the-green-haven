@@ -19,7 +19,7 @@
 
 ---
 
-## Status (5 shipped · 12 pending)
+## Status (6 shipped · 11 pending)
 
 | # | ตัว | Pillar | Status |
 |---|-----|--------|--------|
@@ -28,8 +28,8 @@
 | 2 | Helper-request lifecycle | Trust | ✅ SHIPPED (#303 server + #304 UI) |
 | 3 | Community requests board | Micro-Econ | ✅ SHIPPED (#312 server + UI) |
 | 4 | Food sharing feed | Micro-Econ | ✅ SHIPPED (#314 server + UI) |
-| 5 | Trade history memory | Micro-Econ | 🔴 buildable now ⭐ NEXT |
-| 6 | Kindness score | Trust | 🟡 gated on #1–5 accrual |
+| 5 | Trade history memory | Micro-Econ | ✅ SHIPPED (#325 — achievement, NOT points) |
+| 6 | Kindness score | Trust | 🟡 capture done (#1–5 live) — gated on accrual only; sums {quest, food_share, help_completed} ⭐ NEXT |
 | 7 | Verified Helper | Trust | 🟡 gated on #2 job history |
 | 8 | Resident Rank | Trust | 🟡 gated on #6+#7 |
 | — | Reputation v2 (engagement dim) | Trust | 🟡 gated ~Aug (pointsLedger accrual) |
@@ -96,11 +96,10 @@
 **Depends / Reuses:** the #2 award+cap pattern + the cleanup-sweep precedent (`cleanupChecklistsScheduled`); LINE notify.
 **Gate:** none. **Value:** light, high-frequency kindness signal; feeds #6.
 
-### 5 — Trade history memory · 🔴 buildable now
-**What:** "บันทึกประวัติการแลกเปลี่ยนสินค้า" — persistent neighbor-trade record.
-**Captures (proposed):** log completed marketplace trades → `tradeHistory/{id}` (or subcoll on the listing); giveaways → `pointsLedger source:'giveaway'`.
-**Depends / Reuses:** existing marketplace (`shared/tenant-marketplace.js`, `marketplace-chat.js`).
-**Gate:** none. **Value:** trade memory + feeds #6 Kindness (giving).
+### 5 — Trade history memory · ✅ SHIPPED 2026-06-09 (PR #325 server + UI)
+**Shipped:** durable `tradeHistory/{postId}` written on every marketplace completion (one per post, fenced by the same `marketplaceLedger[postId]`, survives post deletion) + a `tradesCompleted` counter → **Community Trader achievement** at 10 trades (📜 `BADGE_CATALOG` entry, auto-renders in the tenant badge grid). Extends the existing `marketplaceStatsAggregator` CF (NO new board, NO new CF). Admin read-only "📜 ประวัติแลกเปลี่ยน" monitor. Lifecycle: [[lifecycle_trade_history]].
+**Owner decision (don't re-litigate):** **awards NO points** — marketplace completion is **self-attested** (owner closes their own post; no peer claim/confirm like #4), and points = money, so points would be a farm surface. Reward = a cosmetic achievement instead. **No `pointsLedger source:'giveaway'` created** — so #6 Kindness sums `{quest, food_share, help_completed}` (the originally-planned `giveaway` 4th source is intentionally not built; revisit only via a peer-confirm path, never self-close).
+**Tests:** aggregator 23/23 (6 new), rules 306/306 (6 new), shared 484/484. Full CF suite 2267, CSP unchanged. **Open:** owner real-LINE live-verify (complete a trade → admin monitor row; reach 10 → badge). **#1–5 capture block COMPLETE → #6 Kindness unblocked (accrual only).**
 
 ### 6 — Kindness score · 🟡 gated on #1–5 accrual (~weeks)
 **What:** "คะแนนความมีน้ำใจ" — generosity 0–100.
@@ -196,3 +195,4 @@ Add the engagement-consistency dimension (pointsLedger event cadence) to #0 once
 - **2026-06-09 — #2 Helper-request lifecycle SHIPPED.** Server PR #303 (`e132b04`) + UI PR #304 (`c06ab04`) + appreciation-tags refinement #306–311 (warm tags not stars, thank-you note surfaced, daily kindness-points cap 60/day). `helpRequests` board + 4 callables + `pointsLedger source:'help_completed'` (+20 peer-confirmed → feeds #6/#7). Next capture ตัว = **#3 Community requests board**. Lifecycle doc [[lifecycle_helper_requests]].
 - **2026-06-09 — #3 Community requests board SHIPPED.** PR #312 (`580b1d7`, server + UI in one PR; auto-deploys via deploy-functions + deploy-rules + Vercel). `communityRequests` board (open→offered→fulfilled), 4 transition callables + pure `_communityRequestEngine`, building-scoped read rule, tenant 🔄 sub-page + admin monitor. Clones #2 wholesale but for ITEMS (borrow/share, `requestKind`) and **awards NO points** — deliberately outside the #6 Kindness source set, so zero farm surface + clearly distinct from #2. 52 new tests (functions 2190/0, rules 294/0, shared 484/0). Next capture ตัว = **#4 Food sharing feed**. Lifecycle doc [[lifecycle_community_requests]].
 - **2026-06-09 — #4 Food sharing feed SHIPPED.** PR #314 (`fbd6fba`, server + UI in one PR; auto-deploys). Ephemeral `foodShares` share→claim feed + 3 callables + `cleanupFoodSharesScheduled` (daily sweep) + pure `_foodShareEngine`. **First points-awarding capture since #2** — the SHARER earns `food_share` (reward 10, own daily cap 50, anti-farm peer-confirmed-on-claim); extends `_pointsLedger` 8→9 sources (#4 IS in the #6 set). Ephemeral via expiresAt (24h/72h) + client-hide + cron sweep. 68 new tests (functions 2241/0, rules 318/0, shared 484/0). Next capture ตัว = **#5 Trade history memory** (last of the #1–5 capture block → then #6 Kindness can compute). Lifecycle doc [[lifecycle_food_sharing]].
+- **2026-06-09 — #5 Trade history memory SHIPPED.** PR [#325](https://github.com/soulgroundliving/the-green-haven/pull/325) (`e4896b2`, server + UI in one PR; auto-deploys via deploy-functions + deploy-rules + Vercel). Durable `tradeHistory/{postId}` written on every completion (fenced by `marketplaceLedger[postId]`, survives post deletion) + `tradesCompleted` counter → **Community Trader** achievement at 10 (📜). Extends the existing `marketplaceStatsAggregator` (no new board/CF). Admin "📜 ประวัติแลกเปลี่ยน" monitor (§7-AAA bounded read). **Owner decision: NO points — marketplace completion is self-attested (no peer confirm), points = money → farm surface; reward is a cosmetic achievement. No `giveaway` ledger source created.** Tests: aggregator 23/23 (6 new ML#5), rules 306/306 (6 new), shared 484/484; full CF 2267; CSP unchanged. **#1–5 capture block COMPLETE.** Next ตัว = **#6 Kindness score** — no new capture; sums `{quest, food_share, help_completed}` from `pointsLedger`; gated on ACCRUAL only (~weeks of data) + reuses the #0 `trustScores/{tenantId}` + daily-sweep pattern. Lifecycle doc [[lifecycle_trade_history]].
