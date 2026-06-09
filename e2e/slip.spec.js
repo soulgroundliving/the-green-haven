@@ -1,12 +1,19 @@
 // Flow 3 — Slip view (admin)
 //
-// Confirms the slip verification UI is present in the bill detail, and that
-// any already-verified slip images load from a valid Firebase Storage signed
-// URL (not a raw data: URL — see CLAUDE.md §7-Y).
+// Confirms the admin slip-verification UI is present in the bill detail.
 //
-// This flow is CONDITIONALLY INCONCLUSIVE: if no room in the grid has a
-// paid bill with an attached slip, the "signed URL" assertion is skipped
-// and the test reports inconclusive rather than fail.
+// WHY there is no "signed-URL slip image" assertion here (fixme removed 2026-06-10):
+// the admin bill UI renders verified-slip data as METADATA TEXT only
+// (ผู้โอน · ฿amount · ref · date — see shared/dashboard-bill.js showPayDetail
+// and dashboard-bill-slip-verify.js #slipResult). It NEVER renders a stored
+// slip IMAGE. Stored slip images are only shown in the tenant LIFF payment
+// history. So the §7-Y "stored slip images load from a Storage signed URL,
+// never data:" invariant is not observable on the admin side — it is owned by
+// the tenant LIFF playbook (tasks/smoke-test-liff-playbook.md Flow 3, manual)
+// and the data layer (npm run smoke). A prior `test.fixme` here asserted a
+// non-existent admin behavior (clicking a paid card to find a slip <img>) and
+// was removed. The cross-cutting §7-Y "any Storage-hosted <img> must be signed"
+// invariant is guarded deterministically by e2e/signed-url.spec.js.
 //
 // Read-only — this test never uploads a slip or writes any data.
 //
@@ -43,59 +50,5 @@ test.describe('Slip view flow', () => {
 
     // Result container must exist
     await expect(page.locator('#slipResult')).toBeAttached();
-  });
-
-  // QUARANTINED (2026-06-09, §7-GGG / lifecycle_smoke_test.md): chronically flaky
-  // against the live cold deploy. It has irreducible live preconditions — a PAID
-  // bill that ALSO has a slip image attached — AND the shared beforeEach leaves the
-  // page in room-15's DETAIL view, where the grid's .bill-room-card.bc-paid cards
-  // are hidden, so the scan resolves to a hidden element and times out. The §7-Y
-  // invariant it guards (slip images use signed URLs, never data:) is covered by
-  // the data layer; `npm run smoke` is the authoritative regression gate. Re-enable
-  // only with a deterministic fixture (a known paid+slip room) + an explicit return
-  // to the grid view first.
-  test.fixme('paid rooms with verified slips serve images via signed URL', async ({ page }) => {
-    // Look for any paid room in the grid — paid rooms show ".bc-paid" status
-    const paidCards = page.locator('.bill-room-card.bc-paid');
-    const paidCount = await paidCards.count();
-
-    if (paidCount === 0) {
-      // No paid bills in the grid — inconclusive, not a failure.
-      // This happens when all bills are unpaid (e.g. beginning of month).
-      test.info().annotations.push({
-        type: 'inconclusive',
-        description: 'No paid bills found in the room grid — slip image check skipped',
-      });
-      return;
-    }
-
-    // Click the first paid room (most likely to have a slip attached)
-    const firstPaid = paidCards.first();
-    const paidRoomId = await firstPaid.getAttribute('data-room');
-    await openBillRoomDetail(page, firstPaid);
-
-    // Look for slip images in the bill detail — signed URLs contain the
-    // GCS query parameter X-Goog-Algorithm (§7-Y: never raw data: URLs)
-    const slipImages = page.locator('img[src*="X-Goog-Algorithm"], img[src*="firebasestorage.googleapis.com"]');
-    const slipCount = await slipImages.count();
-
-    if (slipCount === 0) {
-      // Paid bill exists but no slip image displayed.
-      // This is inconclusive (tenant may have paid cash, no slip uploaded).
-      test.info().annotations.push({
-        type: 'inconclusive',
-        description: `Room ${paidRoomId} is paid but has no slip image — check tenant payment method`,
-      });
-      return;
-    }
-
-    // Slip image exists — verify it uses a Storage signed URL, not data:
-    const firstSlip = slipImages.first();
-    const src = await firstSlip.getAttribute('src');
-
-    expect(src, 'Slip image src must not be a data: URL (§7-Y)').not.toMatch(/^data:/);
-    expect(src, 'Slip image must be a Firebase Storage signed URL').toMatch(
-      /firebasestorage\.googleapis\.com|X-Goog-Algorithm/
-    );
   });
 });

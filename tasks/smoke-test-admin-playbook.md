@@ -97,24 +97,31 @@
 
 ## Flow 3 — Slip view (admin)
 
-**Goal:** confirm admin can view a verified payment slip image + metadata. **Does NOT upload anything.**
+**Goal:** confirm admin can view a verified payment slip's METADATA. **Does NOT upload anything.**
+
+> ⚠️ **The admin bill UI shows slip data as TEXT, not an image.** `showPayDetail`
+> (shared/dashboard-bill.js) renders a paid bill's slip as a metadata line
+> (`💳 SlipOK: {sender} · ฿{amount}`); `#slipResult`
+> (dashboard-bill-slip-verify.js) renders verified-slip fields as text rows.
+> Neither renders a stored slip `<img>`. The "slip image loads from a signed
+> URL" §7-Y check is therefore **NOT an admin flow** — slip images are only shown
+> in the tenant LIFF payment history (**Flow 3 of the LIFF playbook**, manual),
+> and the cross-cutting "any Storage-hosted `<img>` is signed" invariant is guarded
+> deterministically by **`e2e/signed-url.spec.js`** + the data layer (`npm run smoke`).
 
 ### Steps
 
-1. Stay on bill modal from Flow 2 (or re-open if closed)
-2. `find` element with text "ดูสลิป" / "สลิป" / or `<img>` thumbnail inside the bill detail
-3. If a slip exists on this bill: `left_click` to expand
-4. If no slip exists on the fixture bill: navigate to "ค้นหาบิลที่มีสลิป" — open another room's bill known to have a slip (during S4 dry-run, populate `SMOKE_BILL_WITH_SLIP_ROOM` env var with the room id)
-5. Wait for slip viewer overlay (`find` by image with `slip_*` filename pattern in src or class `slip-img`)
-6. `read_network_requests` — check the slip image URL
+1. From the bill page room grid, `left_click` a PAID room card (`.bill-room-card.bc-paid`) → `showPayDetail` opens `#payModalOverlay`
+2. Read the modal body (`#payModalBody`) — for a slip-paid bill it shows the `💳 SlipOK: …` metadata line; for a cash/manual mark it shows the receipt line without it
+3. (Optional) on an UNPAID room, open the bill form and confirm the slip-verify UI is present (`#slipVerifySection`, `#slipFileInput`, `#slipResult`) — the upload entry point, exercised for real only from the LIFF playbook
 
 ### Assertions
 
 | ☐ | Assertion | How |
 |---|-----------|-----|
-| ☐ | Slip viewer overlay appears | DOM contains `<img>` with src matching slip URL |
-| ☐ | Image src is a Storage signed URL (NOT raw download) | URL contains `X-Goog-Algorithm=` or signed-url params (§7-Y check) |
-| ☐ | Verification status displays ("verified" / "verified by SlipOK" / amount + bank) | extract by text grep |
+| ☐ | Paid bill modal shows verified-slip metadata as text | `#payModalBody` contains "✅ ชำระแล้ว" + (if slip-paid) "💳 SlipOK" sender/amount |
+| ☐ | Slip-verify UI section is present on the bill form | `#slipVerifySection` / `#slipFileInput` / `#slipResult` attached |
+| ☐ | No stored slip `<img>` is expected in the admin view | (documentary — the signed-URL check lives in the LIFF playbook + `e2e/signed-url.spec.js`) |
 | ☐ | No `[ERROR]` since flow start | `read_console_messages` |
 
 ### Result
@@ -122,7 +129,7 @@
 - [ ] Pass / [ ] Fail
 - Obs:
 
-**Known limitation:** if no fixture room has a verified slip at smoke time, this flow is **inconclusive** rather than fail. Mark Obs="no slip available — flow inconclusive" and continue.
+**Known limitation:** if no paid+slip room exists at smoke time, the metadata assertion is **inconclusive** rather than fail. Mark Obs="no slip-paid bill available — flow inconclusive" and continue.
 
 ---
 
