@@ -3876,25 +3876,14 @@
             <p id="profile-room-display" style="margin:5px 0; font-size:var(--fs-md); opacity:0.6;">ห้อง — | —</p>
         </div>
 
-        <!-- Shortcut grid — all tenants (rooms + Nest) -->
+        <!-- Shortcut grid — all tenants (rooms + Nest).
+             The lease / pay-bill / maintenance / complaint shortcuts were removed
+             here (owner, 2026-06-09); those features remain reachable elsewhere —
+             สัญญาเช่า via the "แจ้งต่อสัญญา" button + LIFF deep-link, ชำระบิล via the
+             world-map PAY BILL tile + bottom nav, แจ้งซ่อม/ร้องเรียน via the
+             "หมวดหมู่แจ้งเรื่อง" menu. Only the neighbour boards stay as shortcuts. -->
         <div id="profile-shortcuts" style="padding:0 16px; margin-bottom:16px;">
             <div class="ta-grid-2col">
-                <div data-action="showSubPage" data-page="contract-action-page" style="background:var(--soft-green); padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
-                    <div class="ta-stat-val">📄</div>
-                    <div style="font-weight:700; font-size:var(--fs-sm); color:var(--primary-dark);">สัญญาเช่า</div>
-                </div>
-                <div data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3" style="background:#FFF9E6; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
-                    <div class="ta-stat-val">💳</div>
-                    <div style="font-weight:700; font-size:var(--fs-sm); color:#8B6F00;">ชำระบิล</div>
-                </div>
-                <div data-action="showSubPage" data-page="maintenance" style="background:#FFF0F0; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
-                    <div class="ta-stat-val">🔧</div>
-                    <div style="font-weight:700; font-size:var(--fs-sm); color:#B00020;">แจ้งซ่อม</div>
-                </div>
-                <div data-action="showSubPage" data-page="complaint" style="background:#F0F4FF; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
-                    <div class="ta-stat-val">💬</div>
-                    <div style="font-weight:700; font-size:var(--fs-sm); color:#003D99;">ร้องเรียน</div>
-                </div>
                 <div data-action="showSubPage" data-page="helper-board" style="background:#EEFBF3; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
                     <div class="ta-stat-val">🤝</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:#1a5c38;">ช่วยเหลือเพื่อนบ้าน</div>
