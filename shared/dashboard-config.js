@@ -840,6 +840,7 @@ function switchGamificationTab(tabName, btn) {
     if (typeof loadQuestClaimsQueue === 'function') loadQuestClaimsQueue();
   }
   if (tabName === 'helpers' && typeof loadHelpersAdmin === 'function') loadHelpersAdmin();
+  if (tabName === 'community' && typeof loadCommunityRequestsAdmin === 'function') loadCommunityRequestsAdmin();
   if (tabName === 'badges') loadBadgesAdmin();
 }
 

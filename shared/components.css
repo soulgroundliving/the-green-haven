@@ -973,6 +973,73 @@ body.gh-tour-open {
   background: #f4f7f5; border-radius: 8px; padding: 6px 10px; line-height: 1.4;
 }
 
+/* ── Community requests board (Meaning Layer #3) — tenant #community-requests
+   sub-page. Its own namespace (mirrors .help-* but decoupled so a change to one
+   board never breaks the other). Static here, never injected via createElement
+   (§7-RR). Hardcoded light values per the §7-W note on .help-section__count. */
+.creq-section { margin: 0 0 18px; }
+.creq-section__head {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 8px;
+  font-size: 0.92rem; font-weight: 700; color: var(--text, #2c2c2c);
+}
+.creq-section__count {
+  background: #e4eef4; color: #1b5a6e;
+  border-radius: 999px; padding: 1px 9px; font-size: 0.74rem; font-weight: 700;
+}
+.creq-summary {
+  margin: 0 0 16px; padding: 12px 14px;
+  background: #e4eef4; color: #1b5a6e; border: 1px solid #cfe1ea;
+  border-radius: 14px; font-size: 0.86rem; font-weight: 700; text-align: center;
+}
+.creq-card {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; margin: 0 0 10px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border-subtle, #ebe9e2);
+  border-left: 4px solid #ecc97a;           /* open = amber */
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.creq-card[data-status="offered"]   { border-left-color: #8fb8e6; background: linear-gradient(180deg, #f5f9fe 0%, var(--card, #fff) 80%); }
+.creq-card[data-status="fulfilled"] { border-left-color: #bfe6d2; background: linear-gradient(180deg, #f4fbf7 0%, var(--card, #fff) 80%); }
+.creq-card__main { min-width: 0; flex: 1; }
+.creq-card__title { margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--text, #2c2c2c); }
+.creq-card__detail { margin: 3px 0 0; font-size: 0.78rem; color: var(--text, #2c2c2c); opacity: 0.75; line-height: 1.35; }
+.creq-card__sub { margin: 4px 0 0; font-size: 0.72rem; color: var(--text-muted, #8a8f98); line-height: 1.35; }
+.creq-card__side { flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; justify-content: center; }
+/* The borrow/share kind badge that prefixes a card title (🔁 ขอยืม / 🎁 ขอแบ่ง). */
+.creq-kind {
+  display: inline-block; margin-right: 6px; padding: 1px 7px;
+  background: #eef3f6; color: #1b5a6e; border-radius: 999px;
+  font-size: 0.68rem; font-weight: 800; vertical-align: middle;
+}
+.creq-btn {
+  flex-shrink: 0; padding: 7px 14px; white-space: nowrap;
+  border: none; border-radius: 999px;
+  font-family: inherit; font-size: 0.76rem; font-weight: 800;
+  cursor: pointer; transition: transform 0.12s ease, background-color 0.2s ease;
+}
+.creq-btn:active { transform: scale(0.95); }
+.creq-btn:disabled { cursor: default; transform: none; opacity: 0.6; }
+.creq-btn--offer, .creq-btn--done { background: var(--green, #2d8653); color: #fff; }
+.creq-btn--offer:hover, .creq-btn--done:hover { background: var(--green-dark, #1a5c38); }
+.creq-btn--ghost { background: #eef5ee; color: #1a5c38; }
+.creq-btn--danger { background: #fbe4e4; color: #b00020; }
+.creq-badge {
+  font-size: 0.74rem; font-weight: 700; color: #5a6b66;
+  padding: 5px 10px; background: #eef5ee; border-radius: 999px; white-space: nowrap;
+}
+.creq-empty {
+  padding: 16px 14px; text-align: center;
+  font-size: 0.82rem; color: var(--text-muted, #8a8f98);
+  border: 1px dashed var(--border-subtle, #ebe9e2); border-radius: 14px;
+}
+/* The thank-you note shown on a fulfilled card (the offerer reads the thanks). */
+.creq-card__note {
+  margin: 6px 0 0; font-size: 0.78rem; color: #5a6b66;
+  background: #f4f7f5; border-radius: 8px; padding: 6px 10px; line-height: 1.4;
+}
+
 /* Admin quest-form field hint (dashboard #questEditModal). */
 .quest-hint {
   display: block;

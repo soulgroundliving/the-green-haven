@@ -91,6 +91,7 @@ window.showSubPage = function showSubPage(id) {
     if (id === 'elec_usage' && typeof window.renderElecUsage === 'function') window.renderElecUsage();
     if (id === 'water_usage' && typeof window.renderWaterUsage === 'function') window.renderWaterUsage();
     if (id === 'helper-board' && typeof window.renderHelperBoard === 'function') window.renderHelperBoard();
+    if (id === 'community-requests' && typeof window.renderCommunityRequests === 'function') window.renderCommunityRequests();
 
     window.scrollTo(0, 0);
 };
