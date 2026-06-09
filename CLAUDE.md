@@ -1540,6 +1540,21 @@ grep -rn "firebaseReady" e2e/                              # the gate must exist
 ```
 This is the live-page cousin of §7-A (auth-gated reads need the right ready signal, not the wrong/early one). The canonical E2E doc is [[lifecycle_smoke_test]]; the read-only `npm run smoke` REST asserter is the regression catcher that does NOT depend on this UI timing.
 
+### HHH. Verify a UI behavior EXISTS in the surface BEFORE writing an E2E/playbook assertion about it — an assertion on an assumed behavior flakes like a data/timing bug
+
+The `slip.spec.js` "paid rooms … signed URL" test (a `test.fixme`) AND `tasks/smoke-test-admin-playbook.md` Flow 3 BOTH asserted that the admin bill UI displays a stored slip IMAGE loaded from a Storage signed URL. **It does not.** `showPayDetail` ([shared/dashboard-bill.js](shared/dashboard-bill.js)) renders a paid bill's slip as a metadata line (`💳 SlipOK: {sender} · ฿{amount}`); `#slipResult` ([shared/dashboard-bill-slip-verify.js](shared/dashboard-bill-slip-verify.js)) renders verified-slip fields as **text rows**. No admin surface renders a stored slip `<img>` — slip images appear only in the tenant LIFF payment history. So the test scanned for an `<img>` and clicked a PAID card expecting `#billActiveRoom` (but a paid card fires `showPayDetail` → a MODAL `#payModalOverlay`, not the bill-detail panel) and **timed out waiting for an element that never renders**. That read as "irreducible live-data flakiness" — the real cause was that it tested a non-existent behavior. Seeding a paid+slip fixture could never fix it.
+
+**Rule:** before writing — or trying to un-quarantine — any E2E / Chrome-MCP / playbook assertion about a *rendered* behavior, GREP the render path to confirm the surface actually emits the element/text you will assert. An assertion built on an assumed behavior is worse than no test: it flakes or times out in a way that mimics a data/timing problem and hides that the premise is wrong. When such a test "irreducibly" times out or goes perpetually inconclusive, do NOT first reach for retries / fixtures / longer timeouts — grep the source to confirm the behavior exists at all, and confirm what the interaction's REAL target is.
+
+```bash
+# Before asserting "<surface> shows <X>", prove <surface> renders <X>:
+grep -n "showPayDetail\|slipResult\|<img" shared/dashboard-bill.js shared/dashboard-bill-slip-verify.js
+# e.g. a PAID bill-grid card fires showPayDetail (opens #payModalOverlay), NOT the
+# #billActiveRoom panel — so "click paid card → wait for #billActiveRoom" can never resolve.
+```
+
+Family: §7-K (defined ≠ wired — a function exists but nothing calls it), §7-M ("loadable in browser" ≠ "in production flow"), §7-J (static deploy ≠ live-verified). All are "the code/assertion assumes a behavior the runtime surface does not actually produce." Incident 2026-06-10: removed the dead `test.fixme`, corrected admin playbook Flow 3, and replaced both with `e2e/signed-url.spec.js` — a §7-Y tripwire that only inspects URLs that genuinely appear (it never assumes a surface renders one). See [[lifecycle_smoke_test]].
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md

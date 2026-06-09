@@ -922,15 +922,15 @@ function runReadmeCountAssertions() {
   // "A–NN / ~40 patterns" staleness when new patterns are appended.
   const claudeMd = path.join(REPO_ROOT, 'CLAUDE.md');
   if (fs.existsSync(claudeMd)) {
-    const headings = fs.readFileSync(claudeMd, 'utf8').match(/^### [A-Z]{1,2}\. /gm) || [];
+    const headings = fs.readFileSync(claudeMd, 'utf8').match(/^### [A-Z]+\. /gm) || [];
     const count = headings.length;
     const lastLetter = count > 0
-      ? headings[count - 1].match(/^### ([A-Z]{1,2})\./)[1]
+      ? headings[count - 1].match(/^### ([A-Z]+)\./)[1]
       : null;
     if (count > 0) {
       const dash = '[\\u2013\\u2014-]'; // en / em dash or hyphen
-      const m1 = readme.match(new RegExp(`§7 \\(currently A${dash}([A-Z]{1,2}), (\\d+) patterns\\)`));
-      const m2 = readme.match(new RegExp(`anti-pattern catalog \\(§7 A${dash}([A-Z]{1,2})\\)`));
+      const m1 = readme.match(new RegExp(`§7 \\(currently A${dash}([A-Z]+), (\\d+) patterns\\)`));
+      const m2 = readme.match(new RegExp(`anti-pattern catalog \\(§7 A${dash}([A-Z]+)\\)`));
       const statedLetters = [m1 && m1[1], m2 && m2[1]].filter(Boolean);
       const found = statedLetters.length > 0;
       const letterOk = found && statedLetters.every(l => l === lastLetter);
