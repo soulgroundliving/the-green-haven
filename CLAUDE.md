@@ -1520,6 +1520,26 @@ grep -rn "=== _authUid\|Uid === .*_authUid\|sharerUid === \|ownerUid === " share
 ```
 Family: §7-U (act after claims ready), §7-BB (`window._liffClaims` phantom → use `_taBuilding`/`_taRoom`), §7-Z/HH (uid not where eval expects).
 
+### GGG. E2E login helpers MUST gate the submit on `window.firebaseReady` — raising the timeout does NOT fix the cold-deploy race
+
+`login.html`'s `handleLogin()` returns EARLY — shows the transient "กำลังโหลด… โปรดรอสักครู่" message and does **NOT** sign in — while `window.firebaseReady` is false ([login.html:966](login.html:966)). `firebaseReady` flips true only after `window.loadFirebaseConfig()` fetches **`/api/config` — a Vercel SERVERLESS function** — and the Firebase SDK inits ([login.html:729](login.html:729),[login.html:750](login.html:750)). The Playwright E2E suite is triggered by `deployment_status` (`.github/workflows/e2e.yml`), i.e. the instant a fresh build goes live — the COLDEST moment, when `/api/config` is a cold spin-up. A login helper that fills + clicks `#loginBtn` immediately races `firebaseReady`; if the click lands first it's a **silent no-op** (no sign-in, no redirect) → `page.waitForURL(/dashboard/)` just times out.
+
+Incident 2026-06-09: E2E ran red on EVERY commit #319→#325 (27/32 passed, 2 failed clustering on the coldest builds). The opaque symptom — `TimeoutError: page.waitForURL: Timeout 25000ms exceeded` — and the secondary "Test timeout while running beforeEach hook" (the per-test ceiling was smaller than a slow cold login that runs inside `beforeEach`) both looked like "raise the timeout." **Raising the timeout ALONE cannot fix it — a no-op submit never redirects, so it'd just time out later.** Fix (`ddc5560`, verified green 30/0/0/2): gate the submit on `firebaseReady` BEFORE clicking, in both the shared helper and any inline login spec:
+
+```js
+// e2e/helpers/login.js + e2e/login.spec.js — BEFORE fill/click:
+await page.waitForFunction(() => window.firebaseReady === true, undefined, { timeout: 30_000 });
+```
+
+Plus, as defense: wrap fill+click+`waitForURL` in a `submitAndAwaitRedirect()` retried once; raise `waitForURL` 25→45s; raise the per-test ceiling well above the in-`beforeEach` login budget (playwright.config `timeout` 30→120s, `retries`→2); and a `globalSetup` warm-up (`e2e/helpers/global-setup.js`) that GETs `/api/config` + the login/dashboard routes ONCE so the cold spin-up isn't paid per-test.
+
+**Detection** — any Playwright/Puppeteer login helper for this app:
+```bash
+grep -rn "click('#loginBtn')\|click(\"#loginBtn\")" e2e/   # each MUST be preceded by a firebaseReady waitForFunction
+grep -rn "firebaseReady" e2e/                              # the gate must exist in every login path
+```
+This is the live-page cousin of §7-A (auth-gated reads need the right ready signal, not the wrong/early one). The canonical E2E doc is [[lifecycle_smoke_test]]; the read-only `npm run smoke` REST asserter is the regression catcher that does NOT depend on this UI timing.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
