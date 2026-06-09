@@ -39,6 +39,25 @@ function _foodWhen(ts) {
   catch (_) { return '—'; }
 }
 
+// Full-screen photo viewer for moderation — https URLs (§7-XX safe), DOM-built,
+// CSS in components.css (.food-lightbox, §7-RR safe). No innerHTML.
+function _foodOpenLightbox(urls) {
+  if (!urls || !urls.length) return;
+  const ov = document.createElement('div');
+  ov.className = 'food-lightbox';
+  const close = document.createElement('button');
+  close.className = 'food-lightbox__close';
+  close.setAttribute('aria-label', 'ปิด');
+  close.textContent = '✕';
+  const inner = document.createElement('div');
+  inner.className = 'food-lightbox__inner';
+  urls.forEach(u => { const im = document.createElement('img'); im.className = 'food-lightbox__img'; im.src = u; im.alt = ''; inner.appendChild(im); });
+  ov.appendChild(close);
+  ov.appendChild(inner);
+  ov.addEventListener('click', (e) => { if (e.target === ov || e.target === close) ov.remove(); });
+  document.body.appendChild(ov);
+}
+
 function loadFoodShareAdmin() {
   if (window._foodShareAdminUnsub) return; // idempotent
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
@@ -81,8 +100,9 @@ function renderFoodShareAdminTable() {
       thumb.src = imgUrls[0];            // https token URL — §7-XX safe
       thumb.alt = '';
       thumb.loading = 'lazy';
-      thumb.title = imgUrls.length > 1 ? `${imgUrls.length} รูป` : '';
-      thumb.style.cssText = 'width:36px;height:36px;object-fit:cover;border-radius:6px;margin-right:8px;vertical-align:middle;';
+      thumb.title = imgUrls.length > 1 ? `ดู ${imgUrls.length} รูป` : 'ดูรูป';
+      thumb.style.cssText = 'width:36px;height:36px;object-fit:cover;border-radius:6px;margin-right:8px;vertical-align:middle;cursor:pointer;';
+      thumb.addEventListener('click', () => _foodOpenLightbox(imgUrls));   // tap to view full photos
       titleTd.insertBefore(thumb, titleTd.firstChild);
       if (imgUrls.length > 1) {
         const cnt = document.createElement('span');

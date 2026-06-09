@@ -2617,7 +2617,7 @@
         style="position: fixed; inset: 0; width: 100vw; height: 100vh; background: #FDF6F0; z-index: 5; overflow: hidden; display: block; will-change: transform; transform: translateZ(0);">
 
         <div
-            style="position: absolute; top: 20px; left: 20px; z-index: 20; height: 48px; box-sizing: border-box; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.8); padding: 6px 15px; border-radius: 30px; backdrop-filter: blur(5px);">
+            style="position: absolute; top: 20px; left: 20px; z-index: 20; height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.8); padding: 4px 15px; border-radius: 30px; backdrop-filter: blur(5px);">
 
             <div id="current-avatar-map"
                 style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--primary-green); display: flex; align-items: center; justify-content: center; font-size: var(--fs-lg); background: white;">
@@ -2635,7 +2635,8 @@
         <button type="button" id="map-bell-btn" data-action="openBroadcastsPanel"
             aria-label="ประกาศจากผู้ดูแล"
             style="position: absolute; top: 20px; right: 20px; z-index: 20;
-                   height: 48px; box-sizing: border-box;
+                   height: 44px; box-sizing: border-box; margin: 0;
+                   -webkit-appearance: none; appearance: none;
                    display: flex; align-items: center; gap: 6px;
                    background: rgba(255,255,255,0.8); padding: 0 16px;
                    border: none; border-radius: 30px; backdrop-filter: blur(5px);
@@ -2654,7 +2655,7 @@
              clears inline display for Nest → falls back to CSS rule (display:flex). -->
         <button type="button" id="map-daily-btn" data-action="openDailyModal"
             aria-label="ดูสถานะรับพ้อยท์รายวัน"
-            style="display: none; position: absolute; top: 76px; right: 20px; z-index: 20;
+            style="display: none; position: absolute; top: 70px; right: 20px; z-index: 20;
                    align-items: center; justify-content: center;
                    width: 44px; height: 44px; padding: 0;
                    background: rgba(255,255,255,0.8); border: none; border-radius: 50%;

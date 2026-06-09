@@ -1097,11 +1097,30 @@ body.gh-tour-open {
 }
 /* Optional food photos — feed thumbnail (fixed dims = no CLS) + multi-photo picker. */
 .food-card__thumb {
-  position: relative;
+  position: relative; cursor: pointer;
   flex-shrink: 0; width: 64px; height: 64px;
   border-radius: 12px; overflow: hidden; background: #f3ece2;
 }
 .food-card__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Full-screen photo viewer (tenant card + admin monitor) */
+.food-lightbox {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex; flex-direction: column; align-items: center;
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 56px 12px 24px;
+}
+.food-lightbox__close {
+  position: fixed; top: 12px; right: 16px;
+  width: 40px; height: 40px; border-radius: 999px;
+  border: none; background: rgba(255, 255, 255, 0.92); color: #222;
+  font-size: 1.1rem; font-weight: 800; cursor: pointer; z-index: 1;
+}
+.food-lightbox__inner { display: flex; flex-direction: column; gap: 12px; max-width: 100%; }
+.food-lightbox__img {
+  display: block; max-width: 92vw; max-height: 86vh;
+  object-fit: contain; border-radius: 12px;
+}
 .food-card__imgcount {
   position: absolute; bottom: 3px; right: 3px;
   padding: 0 5px; height: 16px; line-height: 16px;
