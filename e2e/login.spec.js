@@ -46,14 +46,21 @@ test.describe('Login page', () => {
       'SMOKE_ADMIN_EMAIL / SMOKE_ADMIN_PASSWORD not configured — skipping live login test');
 
     await page.goto('/login.html');
-    await expect(page.locator('#loginBtn')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#loginBtn')).toBeVisible({ timeout: 15_000 });
+
+    // Gate the submit on Firebase init. handleLogin() bails out early (no
+    // sign-in, no redirect) while window.firebaseReady is false — which it is
+    // until the cold /api/config serverless fn resolves, exactly when this suite
+    // runs (right after a Vercel deploy). Clicking before then is a no-op and the
+    // waitForURL below would just time out. (Same fix as the loginAsAdmin helper.)
+    await page.waitForFunction(() => window.firebaseReady === true, undefined, { timeout: 30_000 });
 
     await page.fill('#loginEmail', email);
     await page.fill('#loginPassword', password);
     await page.click('#loginBtn');
 
     // Redirect to dashboard — Vercel serves /dashboard (no .html extension)
-    await page.waitForURL(/\/dashboard(\.html)?([?#]|$)/, { timeout: 25_000 });
+    await page.waitForURL(/\/dashboard(\.html)?([?#]|$)/, { timeout: 45_000 });
     await expect(page).toHaveURL(/\/dashboard/);
 
     // Sidebar is the canonical "dashboard rendered" indicator

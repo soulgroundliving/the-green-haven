@@ -18,25 +18,48 @@ async function loginAsAdmin(page) {
   }
 
   await page.goto('/login.html');
-  await expect(page.locator('#loginBtn')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('#loginBtn')).toBeVisible({ timeout: 15_000 });
 
-  await page.fill('#loginEmail', email);
-  await page.fill('#loginPassword', password);
-  await page.click('#loginBtn');
-
-  // Wait for the dashboard redirect — Vercel serves /dashboard (no .html
-  // extension) but also accepts /dashboard.html, so match both. On the success
-  // path this resolves well before the timeout; we deliberately do NOT race it
-  // against #errorMessage, because login.html reuses #errorMessage for a
-  // transient "กำลังโหลด… โปรดรอสักครู่" loading state during the sign-in — racing
-  // it produced false "login failed" results on slow loads.
+  // Gate the submit on Firebase being initialized. login.html's handleLogin()
+  // returns EARLY (shows the transient "กำลังโหลด… โปรดรอสักครู่" message and does
+  // NOT sign in) while window.firebaseReady is false. firebaseReady flips true
+  // only after /api/config — a Vercel SERVERLESS function, and therefore COLD
+  // right after the deploy that triggers this suite (deployment_status) —
+  // resolves and the Firebase SDK finishes init (login.html:750). Clicking
+  // before then is a silent no-op: no sign-in, no redirect, so the waitForURL
+  // below just times out. This race was the root cause of the cold-deploy E2E
+  // flakiness (most logins passed, a couple failed on the coldest builds).
+  // Gating here makes the submit deterministic regardless of cold-start latency.
   try {
-    await page.waitForURL(/\/dashboard(\.html)?([?#]|$)/, { timeout: 25_000 });
+    await page.waitForFunction(() => window.firebaseReady === true, undefined, { timeout: 30_000 });
+  } catch (_) {
+    throw new Error(
+      'login.html never set window.firebaseReady=true within 30s — Firebase failed ' +
+      'to initialize, usually because /api/config (Vercel serverless) was down or ' +
+      'returned a bad/empty config on a fresh deploy. This is an infra/deploy ' +
+      'problem, NOT a test or code regression.'
+    );
+  }
+
+  // Fill + submit + await the dashboard redirect as ONE unit so a retry re-does
+  // the whole thing with fresh field values. Vercel serves /dashboard (no .html
+  // extension) but also accepts /dashboard.html, so match both. We deliberately
+  // do NOT race waitForURL against #errorMessage, because login.html reuses
+  // #errorMessage for the transient "กำลังโหลด…" state during sign-in — racing it
+  // produced false "login failed" results on slow loads.
+  const submitAndAwaitRedirect = async () => {
+    await page.fill('#loginEmail', email);
+    await page.fill('#loginPassword', password);
+    await page.click('#loginBtn');
+    await page.waitForURL(/\/dashboard(\.html)?([?#]|$)/, { timeout: 45_000 });
+  };
+
+  try {
+    await submitAndAwaitRedirect();
   } catch (navErr) {
-    // No redirect within 25s — surface a real login error if one is shown. By
-    // now the transient loading text is gone (login.html replaces it with the
-    // error via showMessage + setLoading(false)); still exclude the loading
-    // wording defensively so only a genuine auth error is treated as actionable.
+    // No redirect. If login.html surfaced a genuine auth error, report it as an
+    // account/secret problem (not a code regression). Exclude the transient
+    // loading wording defensively so only a real auth error is actionable.
     const msg = ((await page.locator('#errorMessage').textContent().catch(() => '')) || '').trim();
     if (msg && !/กำลังโหลด|โปรดรอ|loading/i.test(msg)) {
       throw new Error(
@@ -46,13 +69,16 @@ async function loginAsAdmin(page) {
         'verify the GitHub secret, and run tools/grant-admin-claim.js if the claim is missing.'
       );
     }
-    throw navErr;
+    // No genuine error shown → the submit was almost certainly a transient no-op
+    // (a redirect that never started). Re-submit ONCE with a fresh budget; by now
+    // firebaseReady is true and /api/config is warm, so this resolves quickly.
+    await submitAndAwaitRedirect();
   }
 
   // Sidebar presence confirms the dashboard rendered successfully
   await expect(
     page.locator('button[data-action="showPage"][data-page="bill"]')
-  ).toBeVisible({ timeout: 10_000 });
+  ).toBeVisible({ timeout: 15_000 });
 
   // Dismiss the first-run onboarding tour (shared/onboarding-tour.js). It drops
   // a full-page .gh-tour-overlay that intercepts pointer events, so every
