@@ -1329,18 +1329,6 @@ body.gh-tour-open {
   padding: 3px 8px;
   text-decoration: none;
 }
-.ph-entry__del {
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-  color: var(--muted, #b0b4ba);
-  font-size: 0.95rem;
-  cursor: pointer;
-  padding: 2px 4px;
-  line-height: 1;
-}
-.ph-entry__del:hover { color: #e5484d; }
-
 .ph-empty { text-align: center; padding: 36px 16px; color: var(--muted, #8a8f98); }
 .ph-empty__icon { font-size: 2.2rem; margin-bottom: 8px; opacity: 0.6; }
 .ph-empty__title { margin: 0; font-weight: 700; color: var(--ink, #4b5563); font-size: var(--fs-md, 0.95rem); }
