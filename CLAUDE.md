@@ -6,7 +6,7 @@ Loaded at every session start. Overrides any default behavior — follow exactly
 
 Two docs auto-load at session start; they are **complementary, not duplicates**:
 
-- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-SS** (project-specific lessons that auto-load every session).
+- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-III** (project-specific lessons that auto-load every session).
 - **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, archive.
 
 **Boundary rule for new content:**
@@ -1554,6 +1554,32 @@ grep -n "showPayDetail\|slipResult\|<img" shared/dashboard-bill.js shared/dashbo
 ```
 
 Family: §7-K (defined ≠ wired — a function exists but nothing calls it), §7-M ("loadable in browser" ≠ "in production flow"), §7-J (static deploy ≠ live-verified). All are "the code/assertion assumes a behavior the runtime surface does not actually produce." Incident 2026-06-10: removed the dead `test.fixme`, corrected admin playbook Flow 3, and replaced both with `e2e/signed-url.spec.js` — a §7-Y tripwire that only inspects URLs that genuinely appear (it never assumes a surface renders one). See [[lifecycle_smoke_test]].
+
+### III. A dark-mode page that loads `components.css` MUST define the generic `--card`/`--text` aliases in `:root` — else its cards render LIGHT in dark mode
+
+`shared/components.css` styles dozens of cards with `var(--card, #fff)` / `var(--text, #2c2c2c)` (`.rep-card`, `.quest-card`, `.help-card`, `.u-msg-*`, `.status-filter-btn`, …). Those generic names are NOT brand tokens: `brand.css` defines `--surface-card`/`--ink` and flips them for dark, but NEVER `--card`/`--text`. Each consuming HTML must alias them itself, exactly as `dashboard.html:706-707` does. A page that loads `components.css`, HAS a dark theme, but is MISSING the aliases gets the LIGHT fallback (`#fff`/`#2c2c2c`) in dark mode → white cards / dark-on-dark text. Invisible in source review and in light mode; only the computed value on the deployed dark page shows it (§7-W/§7-II family).
+
+Incident 2026-06-10: `tenant_app.html` aliased `--text-dark`/`--white`/`--text-muted`/`--border` to brand tokens but NOT `--card`/`--text`, while `dashboard.html` had all six. Every `var(--card)`/`var(--text)` consumer (`.rep-card` etc.) computed `rgb(255,255,255)` in the tenant app's `[data-theme="dark"]` mode. Fixed by adding the two aliases to `:root` (tenant_app.html ~line 280). Static-harness A/B: `getComputedStyle('.rep-card--muted').backgroundColor` flipped `rgb(255,255,255)` → `rgb(22,40,37)` (#162825) once the aliases were present.
+
+**Rule:** any HTML that loads `shared/components.css` AND has a dark theme (`[data-theme="dark"]`, `@media (prefers-color-scheme: dark)`, or `.night-mode`) MUST define in `:root`:
+```css
+--card:       var(--surface-card);
+--text:       var(--ink);
+--text-muted: var(--muted);
+--border:     var(--stone);
+```
+They auto-flip for dark because `brand.css` redefines `--surface-card`/`--ink` under `[data-theme="dark"]`; the alias inherits the flip lazily, so NO dark-block override is needed — proven by `dashboard.html`, which has no `--card`/`--text` override in its dark block yet renders dark correctly. Editing the inline `<style>` of a CSP-tracked file → regen hashes (§7-II).
+
+**Detection recipe — a components.css consumer with dark mode must have the aliases:**
+```bash
+for f in *.html; do grep -q "components\.css" "$f" || continue;
+  card=$(grep -cE "^\s*--card:\s" "$f"); dark=$(grep -cE 'data-theme="dark"|prefers-color-scheme:\s*dark|\.night-mode' "$f");
+  echo "$f : --card=$card dark=$dark"; done
+# Any file with dark>=1 AND --card=0 is buggy in dark mode.
+```
+As of the fix, 4 files load `components.css` without the aliases — `booking.html`, `login.html`, `privacy.html`, `terms.html` — but all are light-only (dark=0), so they are NOT currently buggy; each becomes a latent bug the moment dark mode is added to it.
+
+Family: §7-W (cascade — verify the computed value on the deployed page, not source), §7-T (a shared resource consumed via a name each consumer must define → silent drift), §7-II/§7-RR (CSP/CSS that breaks only on the deployed page).
 
 ---
 
