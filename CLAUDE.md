@@ -1506,6 +1506,20 @@ grep -rn "readAsDataURL" shared/*.js   # each result: does it .split(',')[1] OR 
 ```
 Cousin of §7-Y (`fetch('data:')` blocked by CSP) — both are "a `data:` URL isn't the raw thing the consumer expected." Note: the SlipOK callers also had a `userId: params.userId` write that's `undefined` for tenant calls (no userId sent) → Firestore rejects → `verifiedSlips` never written (admin payment view + dedup silently broken); fix `params.userId || params.room || null` (same commit `a782797`).
 
+### FFF. Client "is this mine?" buckets must key off stable identity (room/tenantId), NOT auth uid
+
+A client list that splits items into "mine" vs "others" by `item.ownerUid === window._authUid` mis-buckets whenever the current uid ≠ the owner identity at render time:
+1. **Before auth uid loads** — `_authUid` is `''` on the first onSnapshot tick → every item's `ownerUid !== ''` → ALL land in "others"/"available", NONE in "mine". The owner's own item flashes as actionable-by-self until a later re-render (§7-U cousin).
+2. **Admin preview** — `_authUid` = the ADMIN's uid, not the previewed tenant's → the room's own items NEVER match → stuck in "others".
+
+Incident 2026-06-09 (#318): food-share `_render` bucketed by `sharerUid === _authUid` → a tenant's OWN share showed in "เปิดให้" (looked self-claimable), corrected only after auth settled (user saw it "move back ~min later"). Fix: bucket by **room identity** `_myTenantId()` = `building_room` (the doc's `sharerTenantId`/`claimerTenantId`) — stable across uid-load AND admin-preview — and early-return `_render` until that identity is ready.
+
+**Rule:** any "my items" CLIENT filter keys off the durable identity the doc stores (tenantId, room, ownerTenantId), never the live `auth.uid`. uid stays for SERVER auth gates (e.g. claimFood's self-claim check is uid-based — correct); client ownership DISPLAY uses the stable id.
+```bash
+grep -rn "=== _authUid\|Uid === .*_authUid\|sharerUid === \|ownerUid === " shared/*.js   # client ownership filters by uid = suspect
+```
+Family: §7-U (act after claims ready), §7-BB (`window._liffClaims` phantom → use `_taBuilding`/`_taRoom`), §7-Z/HH (uid not where eval expects).
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md

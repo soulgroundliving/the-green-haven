@@ -45,15 +45,42 @@
   function _fns() { return window.firebase && window.firebase.functions; }
   function _bldg() { return window._tenantAppBuilding || ''; }
   function _room() { return String(window._tenantAppRoom || ''); }
-  function _uid() { return window._authUid || ''; }
   function _who(building, room) { return (building === 'nest' ? 'Nest ' : 'ห้อง ') + room; }
   function _myLabel() { return _who(_bldg(), _room()); }
+  // Room identity (`building_room`) — bucket "mine"/"got" by this, NOT by uid: it's
+  // correct for real tenants, admin-preview (uid = admin), AND before auth uid loads
+  // (else a tenant's own post flashes into "เปิดให้" — looks claimable by self).
+  function _myTenantId() { const b = _bldg(), r = _room(); return (b && r) ? (b + '_' + r) : ''; }
   function _toast(m, k) { if (typeof window.toast === 'function') window.toast(m, k); }
   // Image URLs for a share — the new array, else the legacy single, else none (§7-T back-compat).
   function _imgUrls(r) {
     if (r && Array.isArray(r.imageUrls) && r.imageUrls.length) return r.imageUrls;
     if (r && r.imageUrl) return [r.imageUrl];
     return [];
+  }
+
+  // Full-screen photo viewer — tap a card thumbnail to see all photos (https URLs →
+  // §7-XX safe; DOM-built, CSS in components.css → §7-RR safe; no innerHTML).
+  function _openLightbox(urls) {
+    if (!urls || !urls.length) return;
+    const ov = document.createElement('div');
+    ov.className = 'food-lightbox';
+    const close = document.createElement('button');
+    close.className = 'food-lightbox__close';
+    close.setAttribute('aria-label', 'ปิด');
+    close.textContent = '✕';
+    const inner = document.createElement('div');
+    inner.className = 'food-lightbox__inner';
+    urls.forEach(u => {
+      const im = document.createElement('img');
+      im.className = 'food-lightbox__img';
+      im.src = u; im.alt = '';
+      inner.appendChild(im);
+    });
+    ov.appendChild(close);
+    ov.appendChild(inner);
+    ov.addEventListener('click', (e) => { if (e.target === ov || e.target === close) ov.remove(); });
+    document.body.appendChild(ov);
   }
 
   function _ms(ts) {
@@ -95,11 +122,12 @@
 
   function _render() {
     if (!document.getElementById('food-share')) return;
-    const myUid = _uid();
+    const myId = _myTenantId();
+    if (!myId) return;        // room identity not ready — don't mis-bucket own posts into "เปิดให้" (§7-U)
     const nowMs = Date.now();
-    const open = _raw.filter(r => r.status === 'available' && r.sharerUid !== myUid && !_isExpired(r, nowMs)).sort(_byNewest);
-    const mine = _raw.filter(r => r.sharerUid === myUid && r.status !== 'cancelled').sort(_byNewest);
-    const got = _raw.filter(r => r.claimerUid === myUid && r.status === 'claimed').sort((a, b) => _ms(b.claimedAt) - _ms(a.claimedAt));
+    const open = _raw.filter(r => r.status === 'available' && r.sharerTenantId !== myId && !_isExpired(r, nowMs)).sort(_byNewest);
+    const mine = _raw.filter(r => r.sharerTenantId === myId && r.status !== 'cancelled').sort(_byNewest);
+    const got = _raw.filter(r => r.claimerTenantId === myId && r.status === 'claimed').sort((a, b) => _ms(b.claimedAt) - _ms(a.claimedAt));
     _renderSummary(mine.filter(r => r.status === 'claimed'));
     _renderList('food-open-list', 'food-open-count', open, 'open', nowMs, 'ยังไม่มีของแบ่งปันตอนนี้ 🌱 เป็นคนแรกที่แบ่งสิ!');
     _renderList('food-mine-list', 'food-mine-count', mine, 'mine', nowMs, 'คุณยังไม่ได้แบ่งปันอะไร');
@@ -135,6 +163,8 @@
     if (urls.length) {
       const thumb = document.createElement('div');
       thumb.className = 'food-card__thumb';
+      thumb.setAttribute('role', 'button');
+      thumb.setAttribute('aria-label', 'ดูรูป');
       const img = document.createElement('img');
       img.src = urls[0];                // https token URL the CF built — §7-XX safe
       img.loading = 'lazy';
@@ -146,6 +176,7 @@
         badge.textContent = '📷' + urls.length;
         thumb.appendChild(badge);
       }
+      thumb.addEventListener('click', () => _openLightbox(urls));   // tap to view full photos
       card.appendChild(thumb);
     }
 
