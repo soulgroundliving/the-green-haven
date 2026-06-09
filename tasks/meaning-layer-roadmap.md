@@ -19,15 +19,15 @@
 
 ---
 
-## Status (3 shipped · 14 pending)
+## Status (4 shipped · 13 pending)
 
 | # | ตัว | Pillar | Status |
 |---|-----|--------|--------|
 | 0 | Reputation score v1 | Trust | ✅ SHIPPED (#288/#289) |
 | 1 | Community Quests engine | Trust | ✅ SHIPPED (server #296 + UI) |
 | 2 | Helper-request lifecycle | Trust | ✅ SHIPPED (#303 server + #304 UI) |
-| 3 | Community requests board | Micro-Econ | 🔴 buildable now ⭐ NEXT |
-| 4 | Food sharing feed | Micro-Econ | 🔴 buildable now |
+| 3 | Community requests board | Micro-Econ | ✅ SHIPPED (#312 server + UI) |
+| 4 | Food sharing feed | Micro-Econ | 🔴 buildable now ⭐ NEXT |
 | 5 | Trade history memory | Micro-Econ | 🔴 buildable now |
 | 6 | Kindness score | Trust | 🟡 gated on #1–5 accrual |
 | 7 | Verified Helper | Trust | 🟡 gated on #2 job history |
@@ -82,10 +82,11 @@
 **Value:** real neighbor help NOW; **unlocks #7 Verified Helper + feeds #6 Kindness (helper side).**
 **Guardrails:** §7-NN callable not trigger; rate-limit request creation; sender==auth.uid (anti-spoof); PDPA (names visible to building).
 
-### 3 — Community requests board · 🔴 buildable now
+### 3 — Community requests board · ✅ SHIPPED 2026-06-09 (PR #312 server + UI)
+**Shipped:** `communityRequests/{id}` board (open→offered→fulfilled + cancelled); 4 transition callables (post/offer/fulfill/cancel, SE1, §7-NN) + pure `_communityRequestEngine`; building-scoped read rule (CF-only write); tenant `#community-requests` sub-page (`tenant-community-requests.js`, Profile 🔄 tile, 3 live sections) + admin "🔄 ขอ-ยืมของ" monitor (`dashboard-community-requests-admin.js`). `requestKind` (🔁 ขอยืม / 🎁 ขอแบ่ง) + item categories distinguish it from #2's labour board. **Awards NO points — deliberately outside #6 Kindness** (sources `{quest, food_share, giveaway, help_completed}` exclude it), so no farm surface; reward = the connection + a thank-you note. offer/fulfill reuse the existing `LINE_CHANNEL_ACCESS_TOKEN` (§7-WW-safe, no new secret). 52 tests; functions 2190/0, rules 294/0, shared 484/0. Auto-deploys on merge (deploy-functions + deploy-rules + Vercel). **Open:** owner real-LINE live-verify (board is LIFF-auth-gated). Lifecycle: [[lifecycle_community_requests]]. Next capture ตัว = **#4 Food sharing feed**.
 **What:** "บอร์ดกระจายคำร้องขอจากคนในตึก" — ใครมี X ให้ยืม/ขอ/ช่วยได้บ้าง.
-**Captures (proposed):** `communityRequests/{id}` — same lifecycle shape as #2 (open→fulfilled), reuse the #2 callable + rule pattern wholesale.
-**Depends / Reuses:** #2 (build right after — same mental model loaded = sustainable batching).
+**Captures:** `communityRequests/{id}` — same lifecycle shape as #2 (open→fulfilled), reused the #2 callable + rule pattern wholesale.
+**Depends / Reuses:** #2 (built right after — same mental model loaded = sustainable batching).
 **Gate:** none. **Value:** turns the building into a micro-economy; low marginal cost on top of #2.
 
 ### 4 — Food sharing feed · 🔴 buildable now
@@ -191,3 +192,5 @@ Add the engagement-consistency dimension (pointsLedger event cadence) to #0 once
 ## Review (flip + cite as each ตัว ships)
 - **2026-06-08:** roadmap created from blueprint Phase 2 gap analysis. Confirmed live: only Reputation v1 (#288/#289) has real data; #1–16 have no capture. Verified reuse paths (`_pointsLedger.js source` enum, `createFacilityBooking`, `broadcasts.js`). Order chosen capture-first (1–5) → trust scores (6–8) → pet (9–14) → tenant memory (15–16).
 - **2026-06-08 — #1 Community Quests SHIPPED.** Server PR #296 (`dcbec48`, merged + deployed: 2 callables via CI + rules) + UI PR (admin เควส tab + tenant checklist, Vercel). Engine pure-TDD (61 quest tests); rules 298/0; shared 484/0. Owner review trimmed energy-auto + cap→10 + tenants-only/daily-once. Next capture ตัว = **#2 Helper-request lifecycle**. Lifecycle doc [[lifecycle_community_quests]].
+- **2026-06-09 — #2 Helper-request lifecycle SHIPPED.** Server PR #303 (`e132b04`) + UI PR #304 (`c06ab04`) + appreciation-tags refinement #306–311 (warm tags not stars, thank-you note surfaced, daily kindness-points cap 60/day). `helpRequests` board + 4 callables + `pointsLedger source:'help_completed'` (+20 peer-confirmed → feeds #6/#7). Next capture ตัว = **#3 Community requests board**. Lifecycle doc [[lifecycle_helper_requests]].
+- **2026-06-09 — #3 Community requests board SHIPPED.** PR #312 (`580b1d7`, server + UI in one PR; auto-deploys via deploy-functions + deploy-rules + Vercel). `communityRequests` board (open→offered→fulfilled), 4 transition callables + pure `_communityRequestEngine`, building-scoped read rule, tenant 🔄 sub-page + admin monitor. Clones #2 wholesale but for ITEMS (borrow/share, `requestKind`) and **awards NO points** — deliberately outside the #6 Kindness source set, so zero farm surface + clearly distinct from #2. 52 new tests (functions 2190/0, rules 294/0, shared 484/0). Next capture ตัว = **#4 Food sharing feed**. Lifecycle doc [[lifecycle_community_requests]].
