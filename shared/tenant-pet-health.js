@@ -139,6 +139,7 @@
 
     // ── Browser-only below ──────────────────────────────────────────────────
     var _currentPetId = null;
+    var _currentPet = null;     // last-read pet (so delete can name the exact entry)
     var _saving = false;
 
     function _toast(msg, kind) {
@@ -311,7 +312,8 @@
         if (!window._taBuilding || !window._taRoom) { _renderError('กรุณาเปิดผ่าน LINE เพื่อดูข้อมูล'); return; }
         try {
             var pet = await _readPet(_currentPetId);
-            if (!pet) { _setPetName(null); _renderError('ไม่พบข้อมูลสัตว์เลี้ยง'); return; }
+            if (!pet) { _currentPet = null; _setPetName(null); _renderError('ไม่พบข้อมูลสัตว์เลี้ยง'); return; }
+            _currentPet = pet;
             _setPetName(pet);
             _renderTimeline(pet);
         } catch (e) {
@@ -380,18 +382,46 @@
         }
     }
 
-    function deletePetHealthEntry(entryId) {
+    async function deletePetHealthEntry(entryId) {
         if (!entryId || !_currentPetId) return;
-        // User-initiated (a tap on 🗑️) → an explicit confirm is OK (§7-I: no
-        // auto-action; the tenant chose to delete). Native confirm works in LIFF.
-        var ok = (typeof window.confirm === 'function') ? window.confirm('ลบรายการนี้ออกจากประวัติสุขภาพ?') : true;
-        if (!ok) return;
-        removeEntry(_currentPetId, entryId)
-            .then(function () { _toast('ลบรายการแล้ว'); return _renderPage(); })
-            .catch(function (e) {
-                console.warn('[pet-health] delete failed:', e && e.message);
-                _toast('ลบไม่สำเร็จ กรุณาลองใหม่', 'error');
+        // Name the EXACT record so an accidental 🗑️ tap can't delete anything
+        // without a clear, deliberate 2nd confirm. Prefer the on-brand styled
+        // GhModal (red "ลบ" button) over the native confirm the owner found
+        // unsafe-looking; fall back to native only if GhModal isn't loaded.
+        var entry = (_currentPet && Array.isArray(_currentPet.healthLog))
+            ? _currentPet.healthLog.filter(function (e) { return e && e.id === entryId; })[0] : null;
+        var meta = entry ? healthTypeMeta(entry.type) : null;
+        var titleText = entry ? (entry.title || meta.label) : 'รายการนี้';
+        var dateText = (entry && entry.date) ? entry.date : '';
+        var petName = (_currentPet && _currentPet.name) || '';
+
+        var ok;
+        if (window.GhModal && typeof window.GhModal.confirm === 'function') {
+            // GhModal renders `body` as plain text (textContent — XSS-safe by
+            // design, modal.js:67), so no tags / no manual escaping needed.
+            ok = await window.GhModal.confirm({
+                title: '🗑️ ลบบันทึกสุขภาพ',
+                body: 'ลบ "' + titleText + '"' + (dateText ? ' (' + dateText + ')' : '') +
+                      ' ออกจากประวัติสุขภาพ' + (petName ? 'ของน้อง' + petName : '') +
+                      '? การลบนี้กู้คืนไม่ได้',
+                confirmLabel: 'ลบ',
+                cancelLabel: 'ยกเลิก',
+                danger: true,
             });
+        } else {
+            ok = (typeof window.confirm === 'function')
+                ? window.confirm('ลบ "' + titleText + '"' + (dateText ? ' (' + dateText + ')' : '') + ' ออกจากประวัติสุขภาพ?')
+                : true;
+        }
+        if (!ok) return;
+        try {
+            await removeEntry(_currentPetId, entryId);
+            _toast('ลบรายการแล้ว');
+            await _renderPage();
+        } catch (e) {
+            console.warn('[pet-health] delete failed:', e && e.message);
+            _toast('ลบไม่สำเร็จ กรุณาลองใหม่', 'error');
+        }
     }
 
     // ── Exports ─────────────────────────────────────────────────────────────
