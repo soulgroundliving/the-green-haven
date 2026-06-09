@@ -4658,14 +4658,15 @@
             <h1 id="pet-health-pet-name" style="margin:0; font-size: var(--fs-lg); color: var(--text-dark);">🐾 ประวัติสุขภาพ</h1>
         </div>
 
-        <!-- Add-entry form — native <details> so no toggle JS is needed -->
-        <details class="ph-add" style="margin:0 16px 16px;">
+        <!-- Add-entry form — native <details> (no toggle JS); all styling via
+             .ph-* classes in components.css (theme-aware + box-sizing, §7-RR). -->
+        <details class="ph-add">
             <summary class="ph-add__summary">➕ เพิ่มบันทึกสุขภาพ</summary>
-            <div class="card" style="margin-top:10px; border-radius:20px; padding:16px; box-shadow:0 6px 18px rgba(0,0,0,0.04);">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-                    <div>
-                        <label class="ta-md-600-sub">ประเภท</label>
-                        <select id="ph-type" class="ta-input-lg-white">
+            <div class="ph-form-card">
+                <div class="ph-grid-2">
+                    <div class="ph-field">
+                        <label class="ph-label">ประเภท</label>
+                        <select id="ph-type" class="ph-select">
                             <option value="vet">🩺 พบสัตวแพทย์</option>
                             <option value="vaccine">💉 วัคซีน</option>
                             <option value="weight">⚖️ ชั่งน้ำหนัก</option>
@@ -4673,34 +4674,37 @@
                             <option value="note">📝 บันทึกทั่วไป</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="ta-md-600-sub">วันที่ <span class="u-color-red">*</span></label>
-                        <input type="date" id="ph-date" data-thai-date class="ta-input-lg-plain">
+                    <div class="ph-field">
+                        <label class="ph-label">วันที่ <span class="ph-req">*</span></label>
+                        <input type="date" id="ph-date" data-thai-date class="ph-input">
                     </div>
                 </div>
 
-                <label class="ta-md-600-sub">หัวข้อ <span class="u-color-red">*</span></label>
-                <input type="text" id="ph-title" maxlength="120" placeholder="เช่น ฉีดวัคซีนพิษสุนัขบ้า, ตรวจสุขภาพประจำปี"
-                    style="width:100%; padding:12px; border:1px solid #eee; border-radius:12px; margin-bottom:12px; font-family:inherit;">
-
-                <label class="ta-md-600-sub">รายละเอียด (ไม่บังคับ)</label>
-                <textarea id="ph-note" maxlength="500" rows="2" placeholder="บันทึกเพิ่มเติม เช่น อาการ ยาที่ได้รับ คำแนะนำหมอ"
-                    style="width:100%; padding:12px; border:1px solid #eee; border-radius:12px; margin-bottom:12px; font-family:inherit; resize:vertical;"></textarea>
-
-                <label class="ta-md-600-sub">น้ำหนัก (กก.) — ไม่บังคับ</label>
-                <input type="number" id="ph-weight" step="0.1" min="0" inputmode="decimal" placeholder="เช่น 4.8"
-                    style="width:100%; padding:12px; border:1px solid #eee; border-radius:12px; margin-bottom:12px; font-family:inherit;">
-
-                <div data-action="triggerInput" data-target="ph-file"
-                    style="border:1.5px dashed var(--primary-green); padding:16px; border-radius:14px; text-align:center; background:#fdfdfd; cursor:pointer; margin-bottom:14px;">
-                    <input type="file" id="ph-file" accept="image/*,application/pdf" hidden data-action-change="updatePetHealthFilePreview">
-                    <i class="fas fa-paperclip" style="color:var(--primary-green); margin-right:6px;"></i>
-                    <span style="font-size:var(--fs-sm); font-weight:600; color:var(--text-dark);">แนบเอกสาร/ใบเสร็จ (ไม่บังคับ)</span>
-                    <div id="ph-file-name" style="font-size:var(--fs-sm); color:var(--primary-green); margin-top:5px; font-weight:600;"></div>
+                <div class="ph-field">
+                    <label class="ph-label">หัวข้อ <span class="ph-req">*</span></label>
+                    <input type="text" id="ph-title" maxlength="120" class="ph-input" placeholder="เช่น ฉีดวัคซีนพิษสุนัขบ้า, ตรวจสุขภาพประจำปี">
                 </div>
 
-                <button id="ph-save-btn" class="btn-main" data-action="savePetHealthEntry"
-                    style="width:100%; background:var(--primary-green); color:#fff; border:none; padding:14px; border-radius:16px; font-weight:600; font-size:var(--fs-md); cursor:pointer;">
+                <div class="ph-field">
+                    <label class="ph-label">รายละเอียด (ไม่บังคับ)</label>
+                    <textarea id="ph-note" maxlength="500" rows="2" class="ph-textarea" placeholder="บันทึกเพิ่มเติม เช่น อาการ ยาที่ได้รับ คำแนะนำหมอ"></textarea>
+                </div>
+
+                <div class="ph-field">
+                    <label class="ph-label">น้ำหนัก (กก.) — ไม่บังคับ</label>
+                    <input type="number" id="ph-weight" step="0.1" min="0" inputmode="decimal" class="ph-input" placeholder="เช่น 4.8">
+                </div>
+
+                <div class="ph-field">
+                    <div class="ph-file-drop" data-action="triggerInput" data-target="ph-file">
+                        <input type="file" id="ph-file" accept="image/*,application/pdf" hidden data-action-change="updatePetHealthFilePreview">
+                        <i class="fas fa-paperclip"></i>
+                        <span>แนบเอกสาร/ใบเสร็จ (ไม่บังคับ)</span>
+                    </div>
+                    <div id="ph-file-name" class="ph-file-name"></div>
+                </div>
+
+                <button id="ph-save-btn" class="ph-save-btn" data-action="savePetHealthEntry">
                     <i class="fas fa-save" style="margin-right:8px;"></i> บันทึก
                 </button>
             </div>
