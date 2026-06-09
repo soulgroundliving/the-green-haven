@@ -46,6 +46,7 @@ Module._load = function (id, parent, ...rest) {
     const TYPES = { 'image/jpeg': 'image/jpeg', 'image/png': 'image/png', 'image/webp': 'image/webp' };
     return {
       MAX_IMAGE_BYTES: 1024,   // small ceiling so the oversize branch is testable without a 4MB buffer
+      MAX_IMAGES: 5,
       normalizeImageContentType: (ct) => TYPES[String(ct == null ? '' : ct).toLowerCase().trim()] || null,
       decodeImageBuffer: (b64) => {
         const s = String(b64 == null ? '' : b64);
@@ -54,10 +55,11 @@ Module._load = function (id, parent, ...rest) {
         const buf = Buffer.from(raw, 'base64');
         return buf && buf.length ? buf : null;
       },
-      uploadFoodImage: async (shareId, buf, ct) => {
-        uploads.push({ shareId, ct, len: buf.length });
+      uploadFoodImage: async (shareId, buf, ct, index) => {
+        const i = index || 1;
+        uploads.push({ shareId, ct, len: buf.length, index: i });
         if (uploadShouldThrow) throw new Error('storage down');
-        return { imageUrl: `https://fake/${shareId}`, imagePath: `foodShares/${shareId}/photo.jpg` };
+        return { imageUrl: `https://fake/${shareId}/${i}`, imagePath: `foodShares/${shareId}/photo_${i}.jpg` };
       },
       deleteFoodImagesForShare: async (shareId) => { deletes.push(shareId); return 1; },
     };
@@ -143,20 +145,49 @@ describe('shareFood — optional photo', () => {
 
   const b64 = (bytes) => Buffer.alloc(bytes, 0x41).toString('base64');
 
-  it('uploads the photo and writes the URL back to the doc (created null-first)', async () => {
+  it('legacy single photoBase64 still works — uploads + writes back (created null-first)', async () => {
     const r = await handler(
       { building: 'rooms', roomId: '101', title: 'ข้าวกล่อง', photoBase64: b64(50), photoContentType: 'image/jpeg' },
       tenantCtx(),
     );
     assert.equal(r.success, true);
     assert.equal(r.hasImage, true);
+    assert.equal(r.imageCount, 1);
     assert.equal(added[0].imageUrl, null, 'doc created with null imageUrl first');
-    assert.equal(added[0].imagePath, null);
+    assert.deepEqual(added[0].imageUrls, [], 'doc created with empty imageUrls first');
     assert.equal(uploads.length, 1);
     assert.equal(uploads[0].shareId, 'share-1');
     assert.equal(updated.length, 1);
-    assert.equal(updated[0].patch.imageUrl, 'https://fake/share-1');
-    assert.equal(updated[0].patch.imagePath, 'foodShares/share-1/photo.jpg');
+    assert.deepEqual(updated[0].patch.imageUrls, ['https://fake/share-1/1']);
+    assert.deepEqual(updated[0].patch.imagePaths, ['foodShares/share-1/photo_1.jpg']);
+    assert.equal(updated[0].patch.imageUrl, 'https://fake/share-1/1', 'first image mirrored for back-compat');
+    assert.equal(updated[0].patch.imagePath, 'foodShares/share-1/photo_1.jpg');
+  });
+
+  it('uploads multiple photos (array) → imageUrls gallery + first mirrored', async () => {
+    const r = await handler(
+      { building: 'rooms', roomId: '101', title: 'ชุดอาหาร', photos: [
+        { base64: b64(40), contentType: 'image/jpeg' },
+        { base64: b64(40), contentType: 'image/png' },
+        { base64: b64(40), contentType: 'image/jpeg' },
+      ] },
+      tenantCtx(),
+    );
+    assert.equal(r.imageCount, 3);
+    assert.equal(uploads.length, 3);
+    assert.deepEqual(uploads.map(u => u.index), [1, 2, 3], 'uploaded with 1-based indices');
+    assert.equal(updated[0].patch.imageUrls.length, 3);
+    assert.equal(updated[0].patch.imageUrl, updated[0].patch.imageUrls[0], 'first image mirrored');
+  });
+
+  it('rejects more than 5 photos BEFORE creating the doc', async () => {
+    const six = Array.from({ length: 6 }, () => ({ base64: b64(40), contentType: 'image/jpeg' }));
+    await assert.rejects(
+      () => handler({ building: 'rooms', roomId: '101', title: 'x', photos: six }, tenantCtx()),
+      (e) => e.code === 'invalid-argument',
+    );
+    assert.equal(added.length, 0);
+    assert.equal(uploads.length, 0);
   });
 
   it('rejects an unsupported image type BEFORE creating the doc', async () => {

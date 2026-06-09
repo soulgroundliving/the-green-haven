@@ -25,7 +25,7 @@
   let _wired = false;
   const _busy = new Set();
   const _confirmCancel = new Set();
-  let _pendingPhoto = null;            // compressed data:image/jpeg URL of a picked photo, or null
+  let _pendingPhotos = [];             // up to MAX_PHOTOS compressed data:image/jpeg URLs
 
   // Compress target + a soft payload ceiling. compressImage emits JPEG ~<1MB at
   // 1280px/q0.82; the base64 travels in the onCall request (10MB cap), so reject
@@ -33,6 +33,7 @@
   const PHOTO_MAX_DIM = 1280;
   const PHOTO_QUALITY = 0.82;
   const PHOTO_MAX_B64 = 7 * 1024 * 1024;
+  const MAX_PHOTOS = 5;
 
   const CAT_LABEL = {
     meal: '🍱 อาหารจานหลัก', snack: '🍪 ของว่าง', fruit: '🍎 ผลไม้',
@@ -48,6 +49,12 @@
   function _who(building, room) { return (building === 'nest' ? 'Nest ' : 'ห้อง ') + room; }
   function _myLabel() { return _who(_bldg(), _room()); }
   function _toast(m, k) { if (typeof window.toast === 'function') window.toast(m, k); }
+  // Image URLs for a share — the new array, else the legacy single, else none (§7-T back-compat).
+  function _imgUrls(r) {
+    if (r && Array.isArray(r.imageUrls) && r.imageUrls.length) return r.imageUrls;
+    if (r && r.imageUrl) return [r.imageUrl];
+    return [];
+  }
 
   function _ms(ts) {
     if (!ts) return 0;
@@ -124,14 +131,21 @@
     card.className = 'food-card';
     card.dataset.status = r.status || 'available';
 
-    if (r.imageUrl) {
+    const urls = _imgUrls(r);
+    if (urls.length) {
       const thumb = document.createElement('div');
       thumb.className = 'food-card__thumb';
       const img = document.createElement('img');
-      img.src = r.imageUrl;             // https token URL the CF built — §7-XX safe
+      img.src = urls[0];                // https token URL the CF built — §7-XX safe
       img.loading = 'lazy';
       img.alt = '';
       thumb.appendChild(img);
+      if (urls.length > 1) {
+        const badge = document.createElement('span');
+        badge.className = 'food-card__imgcount';
+        badge.textContent = '📷' + urls.length;
+        thumb.appendChild(badge);
+      }
       card.appendChild(thumb);
     }
 
@@ -247,8 +261,9 @@
         expiresInHours: (expiryEl && expiryEl.value) ? Number(expiryEl.value) : undefined,
         detail: (detailEl && detailEl.value || '').trim() || undefined,
         sharerName: _myLabel(),
-        photoBase64: _pendingPhoto ? _pendingPhoto.split(',')[1] : undefined,   // strip data: prefix (§7-EEE)
-        photoContentType: _pendingPhoto ? 'image/jpeg' : undefined,
+        photos: _pendingPhotos.length
+          ? _pendingPhotos.map(d => ({ base64: d.split(',')[1], contentType: 'image/jpeg' }))   // strip data: prefix (§7-EEE)
+          : undefined,
       });
       if (titleEl) titleEl.value = '';
       if (detailEl) detailEl.value = '';
@@ -312,44 +327,78 @@
     if (open) { const t = document.getElementById('food-post-title'); if (t) t.focus(); }
   }
 
-  // ── Optional photo (§7-XX: preview via the compressor's data: URL, never blob:;
-  //    send base64 → shareFood uploads server-side → https token URL on the doc) ──
+  // ── Optional photos, up to MAX_PHOTOS (§7-XX: preview via the compressor's data:
+  //    URL, never blob:; send base64[] → shareFood uploads server-side → https URLs) ──
   async function _onPhotoPick(e) {
     const input = e && e.target;
-    const file = input && input.files && input.files[0];
-    if (!file) return;
+    const files = input && input.files ? Array.from(input.files) : [];
+    if (!files.length) return;
     if (typeof window.compressImage !== 'function') {
       _toast('ยังเพิ่มรูปไม่ได้ตอนนี้ กรุณาลองใหม่', 'warning'); input.value = ''; return;
     }
+    const room = MAX_PHOTOS - _pendingPhotos.length;
+    if (room <= 0) { _toast(`เพิ่มรูปได้สูงสุด ${MAX_PHOTOS} รูป`, 'warning'); input.value = ''; return; }
+    if (files.length > room) _toast(`เพิ่มได้อีก ${room} รูป (สูงสุด ${MAX_PHOTOS})`, 'info');
     const btn = document.getElementById('food-post-photo-btn');
     if (btn) btn.textContent = '⏳ กำลังย่อรูป…';
     try {
-      const dataUrl = await window.compressImage(file, PHOTO_MAX_DIM, PHOTO_MAX_DIM, PHOTO_QUALITY);
-      if (!dataUrl || dataUrl.indexOf('base64,') < 0) throw new Error('compress-failed');
-      if (dataUrl.length > PHOTO_MAX_B64) { _toast('รูปใหญ่เกินไป กรุณาเลือกรูปอื่น', 'warning'); _clearPhoto(); return; }
-      _pendingPhoto = dataUrl;
-      const wrap = document.getElementById('food-post-photo-wrap');
-      const prev = document.getElementById('food-post-photo-preview');
-      if (prev) prev.src = dataUrl;             // data: URL — §7-XX safe
-      if (wrap) wrap.classList.remove('u-hidden');
-      if (btn) btn.classList.add('u-hidden');
+      for (const file of files.slice(0, room)) {
+        const dataUrl = await window.compressImage(file, PHOTO_MAX_DIM, PHOTO_MAX_DIM, PHOTO_QUALITY);
+        if (!dataUrl || dataUrl.indexOf('base64,') < 0) continue;        // skip a failed one
+        if (dataUrl.length > PHOTO_MAX_B64) { _toast('มีรูปใหญ่เกินไป ข้ามรูปนั้น', 'warning'); continue; }
+        if (_pendingPhotos.length < MAX_PHOTOS) _pendingPhotos.push(dataUrl);
+      }
     } catch (_) {
-      _toast('เพิ่มรูปไม่สำเร็จ กรุณาลองใหม่', 'error'); _clearPhoto();
+      _toast('เพิ่มรูปไม่สำเร็จ กรุณาลองใหม่', 'error');
     } finally {
-      if (btn) btn.textContent = '📷 เพิ่มรูปอาหาร';
+      input.value = '';            // reset so the same file can be re-picked
+      _renderPhotoPreviews();      // also resets the button label
     }
   }
 
-  function _clearPhoto() {
-    _pendingPhoto = null;
-    const input = document.getElementById('food-post-photo');
+  function _renderPhotoPreviews() {
     const wrap = document.getElementById('food-post-photo-wrap');
-    const prev = document.getElementById('food-post-photo-preview');
     const btn = document.getElementById('food-post-photo-btn');
+    if (wrap) {
+      wrap.innerHTML = '';
+      wrap.classList.toggle('u-hidden', _pendingPhotos.length === 0);
+      _pendingPhotos.forEach((dataUrl, i) => {
+        const cell = document.createElement('div');
+        cell.className = 'food-post__photo-cell';
+        const img = document.createElement('img');
+        img.className = 'food-post__photo-preview';
+        img.src = dataUrl;          // data: URL — §7-XX safe
+        img.alt = '';
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'food-post__photo-remove';
+        rm.setAttribute('aria-label', 'ลบรูป');
+        rm.textContent = '✕';
+        rm.addEventListener('click', () => _removePhotoAt(i));
+        cell.appendChild(img);
+        cell.appendChild(rm);
+        wrap.appendChild(cell);
+      });
+    }
+    if (btn) {
+      const full = _pendingPhotos.length >= MAX_PHOTOS;
+      btn.textContent = full
+        ? `ครบ ${MAX_PHOTOS} รูปแล้ว`
+        : (_pendingPhotos.length ? `📷 เพิ่มรูป (${_pendingPhotos.length}/${MAX_PHOTOS})` : '📷 เพิ่มรูปอาหาร (สูงสุด 5)');
+      btn.classList.toggle('food-post__photo-btn--full', full);
+    }
+  }
+
+  function _removePhotoAt(i) {
+    _pendingPhotos.splice(i, 1);
+    _renderPhotoPreviews();
+  }
+
+  function _clearPhoto() {
+    _pendingPhotos = [];
+    const input = document.getElementById('food-post-photo');
     if (input) input.value = '';
-    if (prev) prev.removeAttribute('src');
-    if (wrap) wrap.classList.add('u-hidden');
-    if (btn) btn.classList.remove('u-hidden');
+    _renderPhotoPreviews();
   }
 
   function _wire() {
@@ -361,7 +410,6 @@
     on('food-post-toggle', 'click', () => _togglePostForm());
     on('food-post-submit', 'click', _post);
     on('food-post-photo', 'change', _onPhotoPick);
-    on('food-post-photo-remove', 'click', _clearPhoto);
   }
 
   function renderFoodShare() {

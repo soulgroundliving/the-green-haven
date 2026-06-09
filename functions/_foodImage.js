@@ -30,9 +30,13 @@ if (!admin.apps.length) admin.initializeApp();
 // future caller sends the raw picked file.
 const ALLOWED_IMAGE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
-// Decoded-buffer ceiling. The client compresses to ~<1 MB (compressImage, 1280px
-// q≈0.82); this is the server backstop, well under the 10 MB onCall request cap.
+// Decoded-buffer ceiling PER image. The client compresses to ~<1 MB (compressImage,
+// 1280px q≈0.82); this is the server backstop, well under the 10 MB onCall request cap.
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+// Max photos per share. 5 base64 images (~<1 MB each compressed) stay well under
+// the 10 MB onCall request cap; the feed renders the first as a thumbnail + a count.
+const MAX_IMAGES = 5;
 
 /** Lower-case + validate a content type → canonical type, or null if unsupported. */
 function normalizeImageContentType(ct) {
@@ -63,21 +67,24 @@ function decodeImageBuffer(b64) {
 }
 
 /**
- * Upload a decoded image buffer to `foodShares/{shareId}/photo.{ext}` and return a
- * permanent tokenised download URL + the Storage path. Throws on unsupported type
+ * Upload a decoded image buffer to `foodShares/{shareId}/photo_{index}.{ext}` and
+ * return a permanent tokenised download URL + the Storage path. `index` (1-based)
+ * lets a share carry up to MAX_IMAGES photos under distinct names; it defaults to 1
+ * (a single-photo share lands at `photo_1.{ext}`). Throws on unsupported type
  * (callers validate first, so this is a guard, not a user-facing path).
  *
  * @returns {Promise<{ imageUrl: string, imagePath: string }>}
  */
-async function uploadFoodImage(shareId, buffer, contentType) {
+async function uploadFoodImage(shareId, buffer, contentType, index = 1) {
   if (!shareId) throw new Error('uploadFoodImage: shareId required');
   if (!buffer || !buffer.length) throw new Error('uploadFoodImage: empty buffer');
   const ct = normalizeImageContentType(contentType);
   const ext = imageExtForType(ct);
   if (!ct || !ext) throw new Error('uploadFoodImage: unsupported image type');
+  const n = Math.max(1, Math.floor(Number(index) || 1));
 
   const bucket = admin.storage().bucket();
-  const imagePath = `foodShares/${shareId}/photo.${ext}`;
+  const imagePath = `foodShares/${shareId}/photo_${n}.${ext}`;
   const token = randomUUID();
 
   await bucket.file(imagePath).save(buffer, {
@@ -119,6 +126,7 @@ async function deleteFoodImagesForShare(shareId) {
 module.exports = {
   ALLOWED_IMAGE_TYPES,
   MAX_IMAGE_BYTES,
+  MAX_IMAGES,
   normalizeImageContentType,
   imageExtForType,
   stripDataUrlPrefix,

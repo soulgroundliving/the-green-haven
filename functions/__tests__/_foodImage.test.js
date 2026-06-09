@@ -81,12 +81,12 @@ describe('_foodImage — pure validators', () => {
 describe('_foodImage — uploadFoodImage', () => {
   beforeEach(reset);
 
-  it('saves under foodShares/{id}/photo.{ext} and builds a tokenised https URL', async () => {
+  it('saves under foodShares/{id}/photo_1.{ext} (default index) and builds a tokenised https URL', async () => {
     const buf = Buffer.from('JPEGBYTES');
     const { imageUrl, imagePath } = await fi.uploadFoodImage('share-1', buf, 'image/jpeg');
-    assert.equal(imagePath, 'foodShares/share-1/photo.jpg');
+    assert.equal(imagePath, 'foodShares/share-1/photo_1.jpg');
     assert.equal(state.saved.length, 1);
-    assert.equal(state.saved[0].path, 'foodShares/share-1/photo.jpg');
+    assert.equal(state.saved[0].path, 'foodShares/share-1/photo_1.jpg');
     assert.equal(state.saved[0].opts.contentType, 'image/jpeg');
     assert.equal(state.saved[0].opts.resumable, false);
     const token = state.saved[0].opts.metadata.metadata.firebaseStorageDownloadTokens;
@@ -95,16 +95,25 @@ describe('_foodImage — uploadFoodImage', () => {
       imageUrl.startsWith('https://firebasestorage.googleapis.com/v0/b/gh-test.appspot.com/o/'),
       'points at our bucket',
     );
-    assert.ok(imageUrl.includes(encodeURIComponent('foodShares/share-1/photo.jpg')), 'encodes the path');
+    assert.ok(imageUrl.includes(encodeURIComponent('foodShares/share-1/photo_1.jpg')), 'encodes the path');
     assert.ok(imageUrl.includes('alt=media&token=' + token), 'URL carries the same token');
+  });
+
+  it('uses the index for the filename (multi-photo shares)', async () => {
+    await fi.uploadFoodImage('s9', Buffer.from('x'), 'image/jpeg', 3);
+    assert.equal(state.saved[0].path, 'foodShares/s9/photo_3.jpg');
   });
 
   it('uses the right extension for png/webp', async () => {
     await fi.uploadFoodImage('s2', Buffer.from('x'), 'image/png');
-    assert.equal(state.saved[0].path, 'foodShares/s2/photo.png');
+    assert.equal(state.saved[0].path, 'foodShares/s2/photo_1.png');
     reset();
-    await fi.uploadFoodImage('s3', Buffer.from('x'), 'image/webp');
-    assert.equal(state.saved[0].path, 'foodShares/s3/photo.webp');
+    await fi.uploadFoodImage('s3', Buffer.from('x'), 'image/webp', 2);
+    assert.equal(state.saved[0].path, 'foodShares/s3/photo_2.webp');
+  });
+
+  it('exposes MAX_IMAGES = 5', () => {
+    assert.equal(fi.MAX_IMAGES, 5);
   });
 
   it('throws on unsupported type / empty buffer / missing id', async () => {
