@@ -75,13 +75,21 @@ function renderFoodShareAdminTable() {
     const td = (txt, mut) => { const c = document.createElement('td'); c.textContent = txt; if (mut) { c.style.fontSize = '.82rem'; c.style.color = 'var(--text-muted)'; } return c; };
     tr.appendChild(td(_foodWho(r.building, r.room)));
     const titleTd = td(_foodEsc(r.title) + (r.portions ? ` ×${r.portions}` : ''));
-    if (r.imageUrl) {
+    const imgUrls = (Array.isArray(r.imageUrls) && r.imageUrls.length) ? r.imageUrls : (r.imageUrl ? [r.imageUrl] : []);
+    if (imgUrls.length) {
       const thumb = document.createElement('img');
-      thumb.src = r.imageUrl;            // https token URL — §7-XX safe
+      thumb.src = imgUrls[0];            // https token URL — §7-XX safe
       thumb.alt = '';
       thumb.loading = 'lazy';
+      thumb.title = imgUrls.length > 1 ? `${imgUrls.length} รูป` : '';
       thumb.style.cssText = 'width:36px;height:36px;object-fit:cover;border-radius:6px;margin-right:8px;vertical-align:middle;';
       titleTd.insertBefore(thumb, titleTd.firstChild);
+      if (imgUrls.length > 1) {
+        const cnt = document.createElement('span');
+        cnt.style.cssText = 'font-size:.7rem;color:var(--text-muted);margin-right:6px;';
+        cnt.textContent = `📷${imgUrls.length}`;
+        titleTd.insertBefore(cnt, thumb.nextSibling);
+      }
     }
     if (r.category && FOOD_CAT_LABEL[r.category]) {
       const tag = document.createElement('div');

@@ -23,7 +23,7 @@ const admin = require('firebase-admin');
 const { assertTenantAccess } = require('./_authSoT');
 const { checkRateLimit } = require('./_rateLimit');
 const { sanitizeTitle, sanitizeDetail, sanitizePortions, isValidCategory, computeExpiresAtMs } = require('./_foodShareEngine');
-const { decodeImageBuffer, normalizeImageContentType, uploadFoodImage, deleteFoodImagesForShare, MAX_IMAGE_BYTES } = require('./_foodImage');
+const { decodeImageBuffer, normalizeImageContentType, uploadFoodImage, deleteFoodImagesForShare, MAX_IMAGE_BYTES, MAX_IMAGES } = require('./_foodImage');
 
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
@@ -35,7 +35,7 @@ exports.shareFood = functions.region('asia-southeast1').https.onCall(async (data
     throw new functions.https.HttpsError('unauthenticated', 'Sign-in required');
   }
 
-  const { building, roomId, title, detail, category, portions, expiresInHours, sharerName, photoBase64, photoContentType } = data || {};
+  const { building, roomId, title, detail, category, portions, expiresInHours, sharerName, photoBase64, photoContentType, photos } = data || {};
   if (!building || !roomId) {
     throw new functions.https.HttpsError('invalid-argument', 'building and roomId are required');
   }
@@ -51,23 +51,30 @@ exports.shareFood = functions.region('asia-southeast1').https.onCall(async (data
     throw new functions.https.HttpsError('invalid-argument', 'หมวดหมู่ไม่ถูกต้อง');
   }
 
-  // Optional photo — validate + decode BEFORE any write so a bad payload rejects
-  // cleanly without leaving an orphan doc (the actual upload happens post-add,
-  // once we have the shareId for the Storage path).
-  let photoBuffer = null;
-  let photoType = null;
-  if (photoBase64) {
-    photoType = normalizeImageContentType(photoContentType);
-    if (!photoType) {
+  // Optional photos (up to MAX_IMAGES) — validate + decode BEFORE any write so a bad
+  // payload rejects cleanly without leaving an orphan doc (the actual uploads happen
+  // post-add, once we have the shareId for the Storage paths). Accepts the new
+  // `photos: [{base64, contentType}]` array or the legacy single photoBase64 field.
+  const rawPhotos = Array.isArray(photos) && photos.length
+    ? photos
+    : (photoBase64 ? [{ base64: photoBase64, contentType: photoContentType }] : []);
+  if (rawPhotos.length > MAX_IMAGES) {
+    throw new functions.https.HttpsError('invalid-argument', `แนบรูปได้สูงสุด ${MAX_IMAGES} รูป`);
+  }
+  const decodedPhotos = [];   // [{ buffer, type }]
+  for (const p of rawPhotos) {
+    const type = normalizeImageContentType(p && p.contentType);
+    if (!type) {
       throw new functions.https.HttpsError('invalid-argument', 'ชนิดรูปภาพไม่รองรับ (รองรับ JPG/PNG/WEBP)');
     }
-    photoBuffer = decodeImageBuffer(photoBase64);
-    if (!photoBuffer) {
+    const buffer = decodeImageBuffer(p && p.base64);
+    if (!buffer) {
       throw new functions.https.HttpsError('invalid-argument', 'รูปภาพไม่ถูกต้อง');
     }
-    if (photoBuffer.length > MAX_IMAGE_BYTES) {
+    if (buffer.length > MAX_IMAGE_BYTES) {
       throw new functions.https.HttpsError('invalid-argument', 'รูปภาพใหญ่เกินไป กรุณาลองรูปที่เล็กลง');
     }
+    decodedPhotos.push({ buffer, type });
   }
 
   // Auth: caller must be the tenant of this room (claim match, else SoT crosscheck).
@@ -109,28 +116,39 @@ exports.shareFood = functions.region('asia-southeast1').https.onCall(async (data
     sharerPointsAwarded: null,
     imageUrl: null,
     imagePath: null,
+    imageUrls: [],
+    imagePaths: [],
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     expiresAt,
   });
 
-  // Best-effort photo upload — the share already exists (text is useful on its
+  // Best-effort photo uploads — the share already exists (text is useful on its
   // own), so a Storage hiccup must not fail the post. On a write-back failure we
-  // delete the just-uploaded object so cleanup never has to chase an orphan.
-  let hasImage = false;
-  if (photoBuffer) {
-    try {
-      const { imageUrl, imagePath } = await uploadFoodImage(ref.id, photoBuffer, photoType);
+  // delete the just-uploaded objects so cleanup never has to chase an orphan.
+  let imageCount = 0;
+  if (decodedPhotos.length) {
+    const imageUrls = [];
+    const imagePaths = [];
+    for (let i = 0; i < decodedPhotos.length; i++) {
       try {
-        await ref.update({ imageUrl, imagePath });
-        hasImage = true;
+        const { imageUrl, imagePath } = await uploadFoodImage(ref.id, decodedPhotos[i].buffer, decodedPhotos[i].type, i + 1);
+        imageUrls.push(imageUrl);
+        imagePaths.push(imagePath);
+      } catch (uploadErr) {
+        console.warn('shareFood photo upload failed (non-fatal):', uploadErr.message);
+      }
+    }
+    if (imageUrls.length) {
+      try {
+        // imageUrls/imagePaths = the gallery; imageUrl/imagePath = first image (back-compat readers).
+        await ref.update({ imageUrls, imagePaths, imageUrl: imageUrls[0], imagePath: imagePaths[0] });
+        imageCount = imageUrls.length;
       } catch (updateErr) {
         console.warn('shareFood photo write-back failed (non-fatal):', updateErr.message);
         try { await deleteFoodImagesForShare(ref.id); } catch (_) { /* best-effort */ }
       }
-    } catch (uploadErr) {
-      console.warn('shareFood photo upload failed (non-fatal):', uploadErr.message);
     }
   }
 
-  return { success: true, shareId: ref.id, expiresAt: expiresAt.toMillis(), hasImage };
+  return { success: true, shareId: ref.id, expiresAt: expiresAt.toMillis(), hasImage: imageCount > 0, imageCount };
 });

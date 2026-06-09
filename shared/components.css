@@ -1095,12 +1095,19 @@ body.gh-tour-open {
   font-size: 0.82rem; color: var(--text-muted, #8a8f98);
   border: 1px dashed var(--border-subtle, #ebe9e2); border-radius: 14px;
 }
-/* Optional food photo — feed thumbnail (fixed dims = no CLS) + post-form picker/preview. */
+/* Optional food photos — feed thumbnail (fixed dims = no CLS) + multi-photo picker. */
 .food-card__thumb {
+  position: relative;
   flex-shrink: 0; width: 64px; height: 64px;
   border-radius: 12px; overflow: hidden; background: #f3ece2;
 }
 .food-card__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.food-card__imgcount {
+  position: absolute; bottom: 3px; right: 3px;
+  padding: 0 5px; height: 16px; line-height: 16px;
+  background: rgba(0, 0, 0, 0.6); color: #fff;
+  border-radius: 8px; font-size: 0.62rem; font-weight: 800;
+}
 .food-post__photo { margin: 0 0 12px; }
 .food-post__photo-btn {
   display: inline-block; padding: 9px 16px;
@@ -1109,17 +1116,20 @@ body.gh-tour-open {
   transition: background-color 0.2s ease;
 }
 .food-post__photo-btn:hover { background: #ece2d4; }
-.food-post__photo-wrap { position: relative; display: inline-block; }
+.food-post__photo-btn--full { opacity: 0.55; }
+/* picked-photo previews — a wrapping row of small square thumbnails */
+.food-post__photo-wrap { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.food-post__photo-cell { position: relative; width: 84px; height: 84px; }
 .food-post__photo-preview {
-  display: block; width: 160px; height: 160px; max-width: 100%;
-  object-fit: cover; border-radius: 14px;
+  display: block; width: 84px; height: 84px;
+  object-fit: cover; border-radius: 12px;
   border: 1px solid var(--border-subtle, #ebe9e2);
 }
 .food-post__photo-remove {
   position: absolute; top: -8px; right: -8px;
-  width: 28px; height: 28px; line-height: 1;
+  width: 26px; height: 26px; line-height: 1;
   border: none; border-radius: 999px; background: #b00020; color: #fff;
-  font-size: 0.85rem; font-weight: 800; cursor: pointer;
+  font-size: 0.8rem; font-weight: 800; cursor: pointer;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
