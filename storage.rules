@@ -199,6 +199,21 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    // ===== FOOD SHARES — optional photo of shared food (Meaning Layer #4) =====
+    // Path: foodShares/{shareId}/{fileName}
+    // The photo is written CF-side by shareFood (Admin SDK, which bypasses these
+    // rules) and served via a tokenised download URL the CF builds — so there is
+    // NO client write path (the foodShares Firestore doc is likewise CF-only-write).
+    // Read: any signed-in tenant — matches the building-scoped foodShares Firestore
+    // read + the marketplace precedent; the tokenised URL grants access regardless,
+    // this is just defence for a direct getDownloadURL() fallback. Delete: admin
+    // moderation (cleanupFoodSharesScheduled uses the Admin SDK, bypassing rules).
+    match /foodShares/{shareId}/{fileName} {
+      allow read:   if isSignedIn();
+      allow write:  if false;        // CF-only via Admin SDK (mirrors booking slips)
+      allow delete: if isAdmin();
+    }
+
     // Default deny.
     match /{allPaths=**} {
       allow read, write: if false;

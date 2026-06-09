@@ -1095,6 +1095,33 @@ body.gh-tour-open {
   font-size: 0.82rem; color: var(--text-muted, #8a8f98);
   border: 1px dashed var(--border-subtle, #ebe9e2); border-radius: 14px;
 }
+/* Optional food photo — feed thumbnail (fixed dims = no CLS) + post-form picker/preview. */
+.food-card__thumb {
+  flex-shrink: 0; width: 64px; height: 64px;
+  border-radius: 12px; overflow: hidden; background: #f3ece2;
+}
+.food-card__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.food-post__photo { margin: 0 0 12px; }
+.food-post__photo-btn {
+  display: inline-block; padding: 9px 16px;
+  background: #f3ece2; color: #9a5a1e; border-radius: 999px;
+  font-size: 0.82rem; font-weight: 700; cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.food-post__photo-btn:hover { background: #ece2d4; }
+.food-post__photo-wrap { position: relative; display: inline-block; }
+.food-post__photo-preview {
+  display: block; width: 160px; height: 160px; max-width: 100%;
+  object-fit: cover; border-radius: 14px;
+  border: 1px solid var(--border-subtle, #ebe9e2);
+}
+.food-post__photo-remove {
+  position: absolute; top: -8px; right: -8px;
+  width: 28px; height: 28px; line-height: 1;
+  border: none; border-radius: 999px; background: #b00020; color: #fff;
+  font-size: 0.85rem; font-weight: 800; cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
 
 /* Admin quest-form field hint (dashboard #questEditModal). */
 .quest-hint {

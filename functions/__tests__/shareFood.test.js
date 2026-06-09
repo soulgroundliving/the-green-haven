@@ -10,9 +10,9 @@ const assert = require('node:assert/strict');
 const Module = require('module');
 
 const SERVER_TS = '__SERVER_TS__';
-let added, rateLimitCalls;
+let added, rateLimitCalls, updated, uploads, deletes, uploadShouldThrow;
 
-function reset() { added = []; rateLimitCalls = []; }
+function reset() { added = []; rateLimitCalls = []; updated = []; uploads = []; deletes = []; uploadShouldThrow = false; }
 reset();
 
 const _origLoad = Module._load;
@@ -21,7 +21,11 @@ Module._load = function (id, parent, ...rest) {
     const firestoreFn = () => ({
       collection: (name) => {
         if (name === 'foodShares') {
-          return { add: async (doc) => { added.push(doc); return { id: `share-${added.length}` }; } };
+          return { add: async (doc) => {
+            added.push(doc);
+            const id2 = `share-${added.length}`;
+            return { id: id2, update: async (patch) => { updated.push({ id: id2, patch }); } };
+          } };
         }
         throw new Error('unexpected collection: ' + name);
       },
@@ -37,6 +41,26 @@ Module._load = function (id, parent, ...rest) {
   }
   if (id === './_rateLimit') {
     return { checkRateLimit: async (uid, action, max, win) => { rateLimitCalls.push([uid, action, max, win]); } };
+  }
+  if (id === './_foodImage') {
+    const TYPES = { 'image/jpeg': 'image/jpeg', 'image/png': 'image/png', 'image/webp': 'image/webp' };
+    return {
+      MAX_IMAGE_BYTES: 1024,   // small ceiling so the oversize branch is testable without a 4MB buffer
+      normalizeImageContentType: (ct) => TYPES[String(ct == null ? '' : ct).toLowerCase().trim()] || null,
+      decodeImageBuffer: (b64) => {
+        const s = String(b64 == null ? '' : b64);
+        const raw = (s.indexOf('base64,') >= 0 ? s.slice(s.indexOf('base64,') + 7) : s).trim();
+        if (!raw) return null;
+        const buf = Buffer.from(raw, 'base64');
+        return buf && buf.length ? buf : null;
+      },
+      uploadFoodImage: async (shareId, buf, ct) => {
+        uploads.push({ shareId, ct, len: buf.length });
+        if (uploadShouldThrow) throw new Error('storage down');
+        return { imageUrl: `https://fake/${shareId}`, imagePath: `foodShares/${shareId}/photo.jpg` };
+      },
+      deleteFoodImagesForShare: async (shareId) => { deletes.push(shareId); return 1; },
+    };
   }
   return _origLoad.call(this, id, parent, ...rest);
 };
@@ -111,5 +135,65 @@ describe('shareFood — guards', () => {
       () => handler({ building: 'rooms', roomId: '999', title: 'x' }, tenantCtx('101', 'rooms')),
       (e) => e.code === 'permission-denied' || e.code === 'internal',
     );
+  });
+});
+
+describe('shareFood — optional photo', () => {
+  beforeEach(reset);
+
+  const b64 = (bytes) => Buffer.alloc(bytes, 0x41).toString('base64');
+
+  it('uploads the photo and writes the URL back to the doc (created null-first)', async () => {
+    const r = await handler(
+      { building: 'rooms', roomId: '101', title: 'ข้าวกล่อง', photoBase64: b64(50), photoContentType: 'image/jpeg' },
+      tenantCtx(),
+    );
+    assert.equal(r.success, true);
+    assert.equal(r.hasImage, true);
+    assert.equal(added[0].imageUrl, null, 'doc created with null imageUrl first');
+    assert.equal(added[0].imagePath, null);
+    assert.equal(uploads.length, 1);
+    assert.equal(uploads[0].shareId, 'share-1');
+    assert.equal(updated.length, 1);
+    assert.equal(updated[0].patch.imageUrl, 'https://fake/share-1');
+    assert.equal(updated[0].patch.imagePath, 'foodShares/share-1/photo.jpg');
+  });
+
+  it('rejects an unsupported image type BEFORE creating the doc', async () => {
+    await assert.rejects(
+      () => handler({ building: 'rooms', roomId: '101', title: 'x', photoBase64: b64(50), photoContentType: 'image/gif' }, tenantCtx()),
+      (e) => e.code === 'invalid-argument',
+    );
+    assert.equal(added.length, 0, 'no doc on bad photo type');
+    assert.equal(uploads.length, 0);
+  });
+
+  it('rejects an oversized photo BEFORE creating the doc', async () => {
+    await assert.rejects(
+      () => handler({ building: 'rooms', roomId: '101', title: 'x', photoBase64: b64(2048), photoContentType: 'image/jpeg' }, tenantCtx()),
+      (e) => e.code === 'invalid-argument',
+    );
+    assert.equal(added.length, 0);
+    assert.equal(uploads.length, 0);
+  });
+
+  it('still posts (text-only) when the upload fails — photo is best-effort', async () => {
+    uploadShouldThrow = true;
+    const r = await handler(
+      { building: 'rooms', roomId: '101', title: 'ผลไม้', photoBase64: b64(50), photoContentType: 'image/jpeg' },
+      tenantCtx(),
+    );
+    assert.equal(r.success, true);
+    assert.equal(r.hasImage, false, 'photo failed but the share posted');
+    assert.equal(added.length, 1);
+    assert.equal(uploads.length, 1);
+    assert.equal(updated.length, 0, 'no URL written back');
+  });
+
+  it('no photo → no upload, hasImage false', async () => {
+    const r = await handler({ building: 'rooms', roomId: '101', title: 'ขนมปัง' }, tenantCtx());
+    assert.equal(r.hasImage, false);
+    assert.equal(uploads.length, 0);
+    assert.equal(updated.length, 0);
   });
 });

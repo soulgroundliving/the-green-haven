@@ -17,6 +17,7 @@
  *   6. Checklists — claim-match + path-integrity gate (instanceId building/room match)
  *   7. Community documents — admin write, public read
  *   8. Marketplace — owner write via Firestore ownerUid cross-check
+ *   9. Food shares — CF-only write, signed-in read, admin-only delete (#316)
  *
  * Storage rules cross-reference Firestore via firestore.get() — both
  * emulators MUST be running. Tests seed Firestore docs before storage ops.
@@ -421,5 +422,43 @@ describe('Deposits — admin-only settlement evidence (Slice C)', () => {
     });
     const storage = LIFF_TENANT('line:U001', '15', 'rooms').storage();
     await assertFails(deleteObject(ref(storage, 'deposits/rooms/15/damage_1.png')));
+  });
+});
+
+describe('Food shares — CF-only write, signed-in read (Meaning Layer #4 photo)', () => {
+  it('Nobody can write directly — even admin (CF Admin SDK only)', async () => {
+    const adminStorage = EMAIL_ADMIN().storage();
+    await assertFails(uploadBytes(ref(adminStorage, 'foodShares/share-1/photo.jpg'), TINY_PNG, PNG_META));
+  });
+
+  it('LIFF tenant CANNOT write directly (CF-only)', async () => {
+    const storage = LIFF_TENANT('line:U001', '101', 'rooms').storage();
+    await assertFails(uploadBytes(ref(storage, 'foodShares/share-1/photo.jpg'), TINY_PNG, PNG_META));
+  });
+
+  it('Any signed-in tenant CAN read a food photo', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(ref(ctx.storage(), 'foodShares/share-1/photo.jpg'), TINY_PNG, PNG_META);
+    });
+    const storage = LIFF_TENANT('line:U-VIEWER').storage();
+    await assertSucceeds(getBytes(ref(storage, 'foodShares/share-1/photo.jpg')));
+  });
+
+  it('Unauthenticated user CANNOT read a food photo', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(ref(ctx.storage(), 'foodShares/share-1/photo.jpg'), TINY_PNG, PNG_META);
+    });
+    const storage = UNAUTH().storage();
+    await assertFails(getBytes(ref(storage, 'foodShares/share-1/photo.jpg')));
+  });
+
+  it('Admin CAN delete (moderation); tenant CANNOT', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(ref(ctx.storage(), 'foodShares/share-1/photo.jpg'), TINY_PNG, PNG_META);
+    });
+    const tenant = LIFF_TENANT('line:U001', '101', 'rooms').storage();
+    await assertFails(deleteObject(ref(tenant, 'foodShares/share-1/photo.jpg')));
+    const adminStorage = EMAIL_ADMIN().storage();
+    await assertSucceeds(deleteObject(ref(adminStorage, 'foodShares/share-1/photo.jpg')));
   });
 });

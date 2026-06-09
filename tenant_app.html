@@ -4033,6 +4033,15 @@
                 </div>
                 <label class="ta-field-label">รายละเอียดเพิ่มเติม (ไม่บังคับ)</label>
                 <textarea id="food-post-detail" maxlength="500" rows="2" placeholder="บอกรายละเอียด เช่น มารับที่หน้าห้อง, ยังอุ่นอยู่ ..." style="width:100%; margin-bottom:12px;"></textarea>
+                <label class="ta-field-label">รูปอาหาร (ไม่บังคับ)</label>
+                <div class="food-post__photo">
+                    <label for="food-post-photo" id="food-post-photo-btn" class="food-post__photo-btn">📷 เพิ่มรูปอาหาร</label>
+                    <input type="file" id="food-post-photo" accept="image/*" class="u-hidden">
+                    <div id="food-post-photo-wrap" class="food-post__photo-wrap u-hidden">
+                        <img id="food-post-photo-preview" class="food-post__photo-preview" alt="ตัวอย่างรูปอาหาร">
+                        <button type="button" id="food-post-photo-remove" class="food-post__photo-remove" aria-label="ลบรูป">✕</button>
+                    </div>
+                </div>
                 <button type="button" id="food-post-submit" class="btn-main" style="width:100%;">แบ่งปัน</button>
             </div>
 
