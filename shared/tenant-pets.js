@@ -92,9 +92,12 @@
                 <strong style="font-size: var(--fs-md); color: #334435;">น้อง${_esc(pet.name)} (${_esc(pet.breed)})</strong>
                 ${vaxStatusHTML}
                 ${pet.alertStatusHTML || ''}
-                <div style="margin-top: 5px;">
+                <div style="margin-top: 5px; display:flex; flex-wrap:wrap; gap:6px;">
                     <button data-action="viewVaccineBook" data-arg="${safeId}" style="background: #e8f5e9; color: #2d8653; border: none; padding: 4px 10px; border-radius: 8px; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;">
                         <i class="fas fa-book-medical"></i> ดูสมุดวัคซีน
+                    </button>
+                    <button data-action="openPetHealth" data-arg="${safeId}" style="background: #eef2ff; color: #4338ca; border: none; padding: 4px 10px; border-radius: 8px; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-notes-medical"></i> ประวัติสุขภาพ
                     </button>
                 </div>
                 <small style="opacity: 0.5; font-size: var(--fs-sm); display: block; margin-top: 4px;">เพศ${_esc(pet.gender)} | อายุ ${_esc(pet.age)}</small>
@@ -333,6 +336,9 @@
     window.addEventListener('load', () => { setTimeout(_subscribePets, 500); });
 
     window.renderPetListToProfile = renderPetListToProfile;
+    // Exposed for shared/tenant-pet-health.js (#9) so the health timeline reuses
+    // the SAME Storage uploader (DRY) — same pets/{b}/{r}/{petId}/ prefix + rules.
+    window._taUploadPetFile = _uploadPetFile;
     window.updatePetPhotoPreview = updatePetPhotoPreview;
     window.saveNewPet = saveNewPet;
     window.prepareEditPet = prepareEditPet;

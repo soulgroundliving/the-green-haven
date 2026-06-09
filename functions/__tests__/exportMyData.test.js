@@ -16,6 +16,7 @@ let liffUserDocs;   // keyed by lineUserId
 let collectionGroupResults;
 let rtdbValues;     // keyed by full path
 let trustScoreDocs; // keyed by tenantId
+let petsDocs;       // keyed by `${building}/${roomId}` → [{ id, data() }]
 
 function resetStubs() {
   tenantDocs = {};
@@ -25,6 +26,7 @@ function resetStubs() {
   collectionGroupResults = { checklistInstances: [], consents: [] };
   rtdbValues = {};
   trustScoreDocs = {};
+  petsDocs = {};
 }
 resetStubs();
 
@@ -43,6 +45,10 @@ Module._load = function (id, parent, ...rest) {
                     const key = `${building}/${roomId}`;
                     return { exists: key in tenantDocs, data: () => tenantDocs[key] };
                   },
+                  // pets subcollection (exportMyData #9 — tenants/{b}/list/{r}/pets)
+                  collection: () => ({
+                    get: async () => ({ docs: petsDocs[`${building}/${roomId}`] || [] }),
+                  }),
                 }),
               }),
             }),
@@ -195,6 +201,28 @@ describe('exportMyData — auth gate', () => {
     tenantDocs['rooms/15'] = { name: 'T15', tenantId: 't-15' };
     const r = await handler({}, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
     assert.equal(r.trustScore, null);
+  });
+
+  it('includes the tenant\'s pets + healthLog timeline in the DSR export (#9)', async () => {
+    tenantDocs['rooms/15'] = { name: 'T15', tenantId: 't-15' };
+    petsDocs['rooms/15'] = [
+      { id: 'p1', data: () => ({
+        name: 'มะลิ', type: '🐶',
+        healthLog: [{ id: 'ph_1', type: 'vet', date: '2026-06-10', title: 'ตรวจสุขภาพประจำปี', weightKg: 5.2 }],
+      }) },
+    ];
+    const r = await handler({}, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
+    assert.equal(r.pets.length, 1);
+    assert.equal(r.pets[0].id, 'p1');
+    assert.equal(r.pets[0].name, 'มะลิ');
+    assert.equal(r.pets[0].healthLog[0].title, 'ตรวจสุขภาพประจำปี');
+    assert.equal(r.pets[0].healthLog[0].weightKg, 5.2);
+  });
+
+  it('pets is an empty array when the tenant has none', async () => {
+    tenantDocs['rooms/15'] = { name: 'T15', tenantId: 't-15' };
+    const r = await handler({}, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
+    assert.deepEqual(r.pets, []);
   });
 
   it('export payload sanitises liffIdToken from liffUser', async () => {

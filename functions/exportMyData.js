@@ -21,6 +21,8 @@
  *   liffUser: {...} | null,           // liffUsers/{lineId} (sanitised)
  *   checklistInstances: [...],        // every doc where building+roomId match
  *   consents: [...],                  // consents/* for this tenantId
+ *   trustScore: {...} | null,         // trustScores/{tenantId} (derived reputation)
+ *   pets: [...],                      // tenants/{b}/list/{r}/pets/* incl. healthLog[]
  *   complaints: [...],                // RTDB complaints/{building}/{room}
  *   maintenance: [...],               // RTDB maintenance/{building}/{room}
  *   bills: [...]                      // RTDB bills/{building}/{room}
@@ -154,6 +156,19 @@ exports.exportMyData = functions
       trustScore = _safeData(tsSnap);
     }
 
+    // ---- pets + health timeline (#9) ----
+    // The tenant's pet records (incl. the healthLog[] timeline — vet visits,
+    // weight, meds, vaccines) are personal data; PDPA §30 requires they be in
+    // the export. Photo/vaccine/health FILES are not inlined (see _note) — each
+    // pet carries photoPath/vaccineBookPath and healthLog entries carry filePath.
+    const pets = [];
+    try {
+      const q = await tenantRef.collection('pets').get();
+      q.docs.forEach(d => pets.push({ id: d.id, ...d.data() }));
+    } catch (err) {
+      console.warn('[exportMyData] pets query failed:', err.message);
+    }
+
     // ---- RTDB: complaints, maintenance, bills ----
     const db = admin.database();
     const [complaints, maintenance, bills] = await Promise.all([
@@ -177,9 +192,10 @@ exports.exportMyData = functions
       checklistInstances,
       consents,
       trustScore,
+      pets,
       complaints,
       maintenance,
       bills,
-      _note: 'Photos/signatures are NOT inlined. Use getChecklistMediaUrl with each storagePath to fetch a 1h URL.',
+      _note: 'Photos/signatures/pet files are NOT inlined. Use getChecklistMediaUrl with each storagePath, or open the pet photoURL/vaccineBookURL/healthLog[].fileURL directly.',
     };
   });

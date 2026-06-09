@@ -1186,3 +1186,95 @@ body.gh-tour-open {
   line-height: 1.35;
   color: var(--text-muted, #8a8f98);
 }
+
+/* ===== Pet health memory timeline (Meaning Layer #9, tenant_app) ===== */
+/* Entries are built by shared/tenant-pet-health.js via DOM API (textContent for
+   user text); these classes style them. Theme-aware via the shared vars. */
+.ph-add { border: none; }
+.ph-add__summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--card, #fff);
+  border: 1px dashed var(--primary-green, #2d8653);
+  color: var(--primary-green, #2d8653);
+  font-weight: 700;
+  font-size: var(--fs-sm, 0.85rem);
+  text-align: center;
+  user-select: none;
+}
+.ph-add__summary::-webkit-details-marker { display: none; }
+.ph-add[open] .ph-add__summary { border-style: solid; margin-bottom: 4px; }
+
+.ph-timeline { display: flex; flex-direction: column; gap: 10px; }
+
+.ph-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border, #f0f0f0);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
+}
+.ph-entry__dot {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  color: #fff;
+}
+.ph-entry__body { flex: 1; min-width: 0; }
+.ph-entry__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+.ph-entry__type { font-size: var(--fs-sm, 0.82rem); font-weight: 700; color: var(--text-muted, #6b7280); }
+.ph-entry__date { font-size: 0.72rem; color: var(--text-muted, #9aa0a6); flex-shrink: 0; }
+.ph-entry__title { font-size: var(--fs-md, 0.95rem); font-weight: 700; color: var(--text, #2c2c2c); word-break: break-word; }
+.ph-entry__note { font-size: var(--fs-sm, 0.85rem); color: var(--text-muted, #6b7280); margin-top: 3px; line-height: 1.45; word-break: break-word; white-space: pre-wrap; }
+.ph-entry__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ph-entry__chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 8px;
+  padding: 3px 8px;
+}
+.ph-entry__file {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #4338ca;
+  background: #eef2ff;
+  border-radius: 8px;
+  padding: 3px 8px;
+  text-decoration: none;
+}
+.ph-entry__del {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #b0b4ba);
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+}
+.ph-entry__del:hover { color: #dc2626; }
+
+.ph-empty { text-align: center; padding: 36px 16px; color: var(--text-muted, #8a8f98); }
+.ph-empty__icon { font-size: 2.2rem; margin-bottom: 8px; opacity: 0.6; }
+.ph-empty__title { margin: 0; font-weight: 700; color: var(--text, #4b5563); font-size: var(--fs-md, 0.95rem); }
+.ph-empty__text { margin: 6px 0 0; font-size: var(--fs-sm, 0.82rem); line-height: 1.5; }
+.ph-loading, .ph-error { text-align: center; padding: 28px 16px; font-size: var(--fs-sm, 0.85rem); color: var(--text-muted, #8a8f98); }
+.ph-error { color: #c0392b; }
