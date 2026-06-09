@@ -9,7 +9,7 @@
 // Corresponds to: tasks/smoke-test-admin-playbook.md § Flow 2
 
 const { test, expect } = require('@playwright/test');
-const { loginAsAdmin } = require('./helpers/login');
+const { loginAsAdmin, openBillRoomDetail } = require('./helpers/login');
 
 // Fixture room known to have bills (smoke:verify confirmed 2026-05-19)
 const FIXTURE_ROOM = '15';
@@ -51,12 +51,8 @@ test.describe('Bill view flow', () => {
     await page.click('button[data-action="showPage"][data-page="bill"]');
 
     const room15 = page.locator(`.bill-room-card[data-room="${FIXTURE_ROOM}"]`);
-    await expect(room15).toBeVisible({ timeout: 20_000 });
-    await room15.click();
-
-    // Bill detail panel becomes visible
-    const detail = page.locator('#billActiveRoom');
-    await expect(detail).toBeVisible({ timeout: 10_000 });
+    // Robust click — the RTDB grid re-renders the card under the click on cold loads.
+    await openBillRoomDetail(page, room15);
 
     // Room number header must match the fixture
     const roomNum = page.locator('#fpRoomNum');
@@ -67,10 +63,7 @@ test.describe('Bill view flow', () => {
     await page.click('button[data-action="showPage"][data-page="bill"]');
 
     const room15 = page.locator(`.bill-room-card[data-room="${FIXTURE_ROOM}"]`);
-    await expect(room15).toBeVisible({ timeout: 20_000 });
-    await room15.click();
-
-    await expect(page.locator('#billActiveRoom')).toBeVisible({ timeout: 10_000 });
+    await openBillRoomDetail(page, room15);
 
     // Payment status badge — one of the three possible states
     const badge = page.locator('#fpPaidBadge');

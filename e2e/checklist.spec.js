@@ -38,7 +38,15 @@ test.describe('Checklist admin view', () => {
     await openRequestsTab(page, 'checklist');
 
     const list = page.locator('#checklist-admin-list');
-    await expect(list).toBeVisible({ timeout: 10_000 });
+    // The Requests page can re-flip to the default tab during the cold-load
+    // re-render storm (§7-V), hiding the panel (and this child) again. Re-click
+    // the checklist sub-tab if the list slipped out of view, then confirm.
+    await expect(async () => {
+      if (!(await list.isVisible().catch(() => false))) {
+        await page.click('button[data-action="switchRequestsTab"][data-tab="checklist"]').catch(() => {});
+      }
+      await expect(list).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
 
     // Must not be stuck on a loading spinner indefinitely
     await page.waitForTimeout(3_000);

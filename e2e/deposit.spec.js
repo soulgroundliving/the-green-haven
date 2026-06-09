@@ -58,15 +58,24 @@ test.describe('Deposit admin view', () => {
   });
 
   test('building and status filters are interactive', async ({ page }) => {
-    await expect(page.locator('#dep-filter-building')).toBeAttached({ timeout: 10_000 });
-    await expect(page.locator('#dep-filter-status')).toBeAttached();
+    // The filters are visible once the deposits panel is shown (beforeEach), but
+    // their <option>s are populated async from Firestore (dashboard-building-selects.js).
+    // selectOption({index:0}) HANGS the whole timeout if no <option> exists yet, so
+    // wait for the selects to be visible, then retry the select with a SHORT inner
+    // timeout until the options are present and selectable.
+    const building = page.locator('#dep-filter-building');
+    const status = page.locator('#dep-filter-status');
+    await expect(building).toBeVisible({ timeout: 15_000 });
+    await expect(status).toBeVisible({ timeout: 5_000 });
 
     // Selecting a filter should not throw a JS error
     const errors = [];
     page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
 
-    await page.selectOption('#dep-filter-building', { index: 0 });
-    await page.selectOption('#dep-filter-status', { index: 0 });
+    await expect(async () => {
+      await building.selectOption({ index: 0 }, { timeout: 3_000 });
+      await status.selectOption({ index: 0 }, { timeout: 3_000 });
+    }).toPass({ timeout: 20_000 });
     await page.waitForTimeout(1_000);
 
     const jsErrors = errors.filter(e => !/favicon/.test(e));

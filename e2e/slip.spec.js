@@ -13,7 +13,7 @@
 // Corresponds to: tasks/smoke-test-admin-playbook.md § Flow 3
 
 const { test, expect } = require('@playwright/test');
-const { loginAsAdmin } = require('./helpers/login');
+const { loginAsAdmin, openBillRoomDetail } = require('./helpers/login');
 
 const FIXTURE_ROOM = '15';
 
@@ -27,9 +27,8 @@ test.describe('Slip view flow', () => {
     await loginAsAdmin(page);
     await page.click('button[data-action="showPage"][data-page="bill"]');
     const room15 = page.locator(`.bill-room-card[data-room="${FIXTURE_ROOM}"]`);
-    await expect(room15).toBeVisible({ timeout: 20_000 });
-    await room15.click();
-    await expect(page.locator('#billActiveRoom')).toBeVisible({ timeout: 10_000 });
+    // Robust click — the RTDB grid re-renders the card under the click on cold loads.
+    await openBillRoomDetail(page, room15);
   });
 
   test('slip verification UI components are present in bill detail', async ({ page }) => {
@@ -64,9 +63,7 @@ test.describe('Slip view flow', () => {
     // Click the first paid room (most likely to have a slip attached)
     const firstPaid = paidCards.first();
     const paidRoomId = await firstPaid.getAttribute('data-room');
-    await firstPaid.click();
-
-    await expect(page.locator('#billActiveRoom')).toBeVisible({ timeout: 10_000 });
+    await openBillRoomDetail(page, firstPaid);
 
     // Look for slip images in the bill detail — signed URLs contain the
     // GCS query parameter X-Goog-Algorithm (§7-Y: never raw data: URLs)

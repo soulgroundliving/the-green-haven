@@ -101,21 +101,43 @@ async function loginAsAdmin(page) {
   }
 }
 
-// Open a Requests & Approvals sub-tab, resilient to the page's default-tab race.
+// Open a Requests & Approvals sub-tab, resilient to the page's default-tab race
+// AND to the cold-deploy re-render storm.
 // showPage('requests-approvals') schedules a switch BACK to the Maintenance tab
-// ~80ms after navigation (dashboard-main.js:43). Maintenance is also the
-// default-visible panel (no u-init-hide), so "wait until Maintenance is visible"
-// resolves instantly — BEFORE that deferred timer — and an immediate sub-tab
-// click then gets clobbered when the timer fires. Instead, retry the click until
-// the target panel actually STAYS visible: once the +80ms default has fired, a
-// click sticks. No fixed waitForTimeout — deterministic via expect.toPass.
+// ~80ms after navigation (dashboard-main.js:43). Worse: on a cold deploy the
+// dashboard fires repeated re-renders for several seconds (RTDB snapshots →
+// roomconfig-updated, §7-V), each of which can re-flip to the default Maintenance
+// tab AFTER an initial successful switch. A point-in-time toBeVisible can pass in
+// the gap between two re-flips, so the panel is then hidden again when the test
+// interacts. #requests-tab-* panels are `u-init-hide` (§7-SS) → an ancestor
+// display:none makes every child (#checklist-admin-list, #dep-filter-building, …)
+// read as hidden/non-interactable — exactly what flaked the checklist/deposit
+// specs on cold deploys. So: re-click showPage + the sub-tab EVERY attempt, and
+// require the panel to STAY visible across a short settle, not just momentarily.
 async function openRequestsTab(page, tab) {
-  await page.click('button[data-action="showPage"][data-page="requests-approvals"]');
   const panel = page.locator(`#requests-tab-${tab}`);
   await expect(async () => {
+    await page.click('button[data-action="showPage"][data-page="requests-approvals"]').catch(() => {});
     await page.click(`button[data-action="switchRequestsTab"][data-tab="${tab}"]`);
-    await expect(panel).toBeVisible({ timeout: 2_000 });
-  }).toPass({ timeout: 15_000 });
+    await expect(panel).toBeVisible({ timeout: 1_500 });
+    await page.waitForTimeout(600);                     // let any pending re-flip fire…
+    await expect(panel).toBeVisible({ timeout: 500 });  // …and confirm it actually held
+  }).toPass({ timeout: 20_000 });
 }
 
-module.exports = { loginAsAdmin, openRequestsTab };
+// Click a bill room-grid card and wait for its detail panel to open. The bill
+// room grid re-renders on every RTDB snapshot (dashboard-bill-room-grid.js), so
+// a card can detach between the visibility check and the click, or a re-render
+// can swallow the click before #billActiveRoom opens. Retrying the click+assert
+// as a unit (same proven toPass pattern as openRequestsTab) makes it deterministic
+// even under the cold-deploy render churn. Pass any .bill-room-card locator.
+async function openBillRoomDetail(page, cardLocator) {
+  await expect(cardLocator).toBeVisible({ timeout: 20_000 });
+  const detail = page.locator('#billActiveRoom');
+  await expect(async () => {
+    await cardLocator.click({ timeout: 5_000 });
+    await expect(detail).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
+module.exports = { loginAsAdmin, openRequestsTab, openBillRoomDetail };
