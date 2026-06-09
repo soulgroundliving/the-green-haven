@@ -39,23 +39,11 @@ function _foodWhen(ts) {
   catch (_) { return '—'; }
 }
 
-// Full-screen photo viewer for moderation — https URLs (§7-XX safe), DOM-built,
-// CSS in components.css (.food-lightbox, §7-RR safe). No innerHTML.
+// Full-screen photo viewer for moderation → shared swipe carousel
+// (window.FoodLightbox.open in shared/food-lightbox.js; §7-XX https + §7-RR
+// CSS-in-components.css safe). Shared with the tenant card so they can't drift.
 function _foodOpenLightbox(urls) {
-  if (!urls || !urls.length) return;
-  const ov = document.createElement('div');
-  ov.className = 'food-lightbox';
-  const close = document.createElement('button');
-  close.className = 'food-lightbox__close';
-  close.setAttribute('aria-label', 'ปิด');
-  close.textContent = '✕';
-  const inner = document.createElement('div');
-  inner.className = 'food-lightbox__inner';
-  urls.forEach(u => { const im = document.createElement('img'); im.className = 'food-lightbox__img'; im.src = u; im.alt = ''; inner.appendChild(im); });
-  ov.appendChild(close);
-  ov.appendChild(inner);
-  ov.addEventListener('click', (e) => { if (e.target === ov || e.target === close) ov.remove(); });
-  document.body.appendChild(ov);
+  if (window.FoodLightbox) window.FoodLightbox.open(urls);
 }
 
 function loadFoodShareAdmin() {
