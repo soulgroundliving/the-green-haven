@@ -35,6 +35,7 @@
     redeem: 'แลกรางวัล',
     quest: 'เควสต์',
     help_completed: 'น้ำใจ',
+    food_share: 'แบ่งปันอาหาร',
   };
 
   // ── PURE compute (testable) ─────────────────────────────────────────────

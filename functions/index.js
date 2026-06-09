@@ -203,6 +203,18 @@ exports.offerCommunityRequest   = require('./offerCommunityRequest').offerCommun
 exports.fulfillCommunityRequest = require('./fulfillCommunityRequest').fulfillCommunityRequest;
 exports.cancelCommunityRequest  = require('./cancelCommunityRequest').cancelCommunityRequest;
 
+// Food sharing feed (Meaning Layer #4) — a tenant shares leftover food, a neighbour
+// claims it, the SHARER earns peer-confirmed kindness points on claim
+// (pointsLedger source:'food_share', feeds #6 Kindness; capped per day, anti-farm).
+// Ephemeral: every share has an expiresAt; cleanupFoodSharesScheduled sweeps the
+// expired ones (§7-NN scheduled, not a trigger). claimFood reuses the existing
+// LINE_CHANNEL_ACCESS_TOKEN secret for the sharer push (§7-WW).
+exports.shareFood                  = require('./shareFood').shareFood;
+exports.claimFood                  = require('./claimFood').claimFood;
+exports.cancelFood                 = require('./cancelFood').cancelFood;
+exports.cleanupFoodSharesScheduled = require('./cleanupFoodSharesScheduled').cleanupFoodSharesScheduled;
+exports.cleanupFoodSharesManual    = require('./cleanupFoodSharesScheduled').cleanupFoodSharesManual;
+
 // Immutable admin-action audit trail (Core Readiness Phase 1.1). Client-side admin
 // mutations call this after the write; in-tx CF actions log via _actionAudit directly.
 exports.recordAdminAction = require('./recordAdminAction').recordAdminAction;
