@@ -1102,13 +1102,13 @@ body.gh-tour-open {
   border-radius: 12px; overflow: hidden; background: #f3ece2;
 }
 .food-card__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-/* Full-screen photo viewer (tenant card + admin monitor) */
+/* Full-screen photo viewer / swipe carousel (tenant card + admin monitor).
+   Swipe is pure CSS scroll-snap; food-lightbox.js only tracks the active page. */
 .food-lightbox {
   position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex; flex-direction: column; align-items: center;
-  overflow-y: auto; overscroll-behavior: contain;
-  padding: 56px 12px 24px;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 56px 12px 28px; overscroll-behavior: contain;
 }
 .food-lightbox__close {
   position: fixed; top: 12px; right: 16px;
@@ -1116,11 +1116,37 @@ body.gh-tour-open {
   border: none; background: rgba(255, 255, 255, 0.92); color: #222;
   font-size: 1.1rem; font-weight: 800; cursor: pointer; z-index: 1;
 }
-.food-lightbox__inner { display: flex; flex-direction: column; gap: 12px; max-width: 100%; }
-.food-lightbox__img {
-  display: block; max-width: 92vw; max-height: 86vh;
-  object-fit: contain; border-radius: 12px;
+/* Rounded panel that frames the carousel + its chrome */
+.food-lightbox__frame {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  width: min(92vw, 540px);
 }
+.food-lightbox__counter {
+  padding: 3px 13px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16); color: #fff;
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.03em;
+}
+/* Horizontal one-photo-per-page swipe (pure CSS scroll-snap) */
+.food-lightbox__track {
+  display: flex; width: 100%;
+  overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+  border-radius: 16px; scrollbar-width: none;
+}
+.food-lightbox__track::-webkit-scrollbar { display: none; }
+.food-lightbox__img {
+  flex: 0 0 100%; width: 100%; height: 70vh;
+  scroll-snap-align: center; scroll-snap-stop: always;
+  object-fit: contain; display: block;
+  background: rgba(0, 0, 0, 0.25);
+}
+.food-lightbox__dots { display: flex; gap: 7px; }
+.food-lightbox__dot {
+  width: 8px; height: 8px; padding: 0; border: none; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.38); cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+.food-lightbox__dot.is-active { background: #fff; transform: scale(1.3); }
 .food-card__imgcount {
   position: absolute; bottom: 3px; right: 3px;
   padding: 0 5px; height: 16px; line-height: 16px;
