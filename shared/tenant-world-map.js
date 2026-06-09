@@ -105,19 +105,23 @@
         container.style.backgroundRepeat = 'no-repeat, no-repeat';
         // ตั้ง data attribute ให้ debug/test ได้
         if (root) root.dataset.bgMode = mode;
-        // ปรับสี text overlay สำหรับ night/rain (ตัวหนังสือขาวอ่านง่ายกว่า)
-        const avatarPill = root?.querySelector(':scope > div');
-        if (avatarPill) {
+        // Frame-less chip (2026-06-09): no pill background — keep the name/level
+        // legible on BOTH light (day) and dark (night/rain) map backgrounds via an
+        // adaptive text colour + a matching text-shadow halo. Targets .map-chip-text
+        // directly: the chip is now nested inside a flex row, so the old
+        // ':scope > div' selected the wrapper, not the text.
+        if (root) {
             const darkModes = ['night-clear','night-rain','rain','halloween','christmas-night'];
-            if (darkModes.includes(mode)) {
-                avatarPill.style.background = 'rgba(0,0,0,0.45)';
-                avatarPill.style.color = '#fff';
-                avatarPill.querySelectorAll('p').forEach(p => p.style.color = '#fff');
-            } else {
-                avatarPill.style.background = 'rgba(255,255,255,0.8)';
-                avatarPill.style.color = '';
-                avatarPill.querySelectorAll('p').forEach(p => { p.style.color = ''; });
-            }
+            const isDark = darkModes.includes(mode);
+            root.querySelectorAll('.map-chip-text').forEach(p => {
+                const isLevel = p.id === 'world-map-level';
+                p.style.color = isDark
+                    ? (isLevel ? '#bdf0b8' : '#ffffff')   // light green / white on dark bg
+                    : (isLevel ? '#1f6b35' : '#1f2e22');  // deep green / near-black on light bg
+                p.style.textShadow = isDark
+                    ? '0 1px 3px rgba(0,0,0,0.6)'         // dark halo lifts light text off dark bg
+                    : '0 1px 2px rgba(255,255,255,0.85)'; // light halo lifts dark text off light bg
+            });
         }
     }
 
