@@ -5365,6 +5365,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button data-action="switchGamificationTab" data-tab="helpers" class="dash-tab-btn">🤝 น้ำใจ</button>
       <button data-action="switchGamificationTab" data-tab="community" class="dash-tab-btn">🔄 ขอ-ยืมของ</button>
       <button data-action="switchGamificationTab" data-tab="food" class="dash-tab-btn">🍲 แบ่งปันอาหาร</button>
+      <button data-action="switchGamificationTab" data-tab="trades" class="dash-tab-btn">📜 ประวัติแลกเปลี่ยน</button>
     </div>
 
     <!-- Leaderboard Tab -->
@@ -5540,6 +5541,34 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
       <div style="margin-top:1rem;padding:.75rem 1rem;background:#fff6ec;border-left:3px solid #9a5a1e;border-radius:4px;font-size:.82rem;color:#9a5a1e;">
         <strong>หมายเหตุ:</strong> ผู้เช่าแบ่งปันกันเอง (แบ่ง → เพื่อนบ้านมารับ). ผู้แบ่งได้แต้มน้ำใจเมื่อมีคนมารับ (มีเพดานต่อวันกันการปั่นแต้ม). รายการหมดอายุจะถูกลบอัตโนมัติ. แอดมินดูได้อย่างเดียว และกด "ลบ" รายการที่ไม่เหมาะสมได้ (โหมดกำกับดูแล)
+      </div>
+    </div>
+
+    <!-- Trade history monitor (Meaning Layer #5) — read-only, immutable record -->
+    <div id="gamificationTrades" class="u-init-hide">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;">
+        <div style="font-weight:700;font-size:1.05rem;">📜 ประวัติการแลกเปลี่ยนในตึก</div>
+        <span id="tradeHistoryCount" style="background:#eef2e9;color:var(--green-dark);border-radius:999px;padding:1px 9px;font-size:.8rem;font-weight:700;">0</span>
+        <span style="font-size:.78rem;color:var(--text-muted);">รายการล่าสุด</span>
+      </div>
+      <div class="u-scroll-x">
+        <table class="data-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th>ผู้ลงประกาศ</th>
+              <th>รายการ</th>
+              <th class="dash-w-100">ประเภท</th>
+              <th class="dash-w-100">ราคา</th>
+              <th class="dash-w-100">วันที่</th>
+            </tr>
+          </thead>
+          <tbody id="tradeHistoryAdminTable">
+            <tr><td colspan="5" class="dash-empty-msg">กำลังโหลด…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:1rem;padding:.75rem 1rem;background:#eef2e9;border-left:3px solid var(--green-dark);border-radius:4px;font-size:.82rem;color:var(--green-dark);">
+        <strong>หมายเหตุ:</strong> บันทึกอัตโนมัติทุกครั้งที่ประกาศในตลาดถูกปิด (ขาย/แจก/แลกสำเร็จ) — เก็บถาวรแม้ลบประกาศแล้ว. ผู้เช่าที่แลกเปลี่ยนครบ 10 ครั้งจะได้ตรา 📜 Community Trader (เป็นรางวัลความสำเร็จ ไม่ใช่แต้ม). แอดมินดูได้อย่างเดียว
       </div>
     </div>
 
@@ -5868,6 +5897,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-community-requests-admin.js" defer></script>
 <script src="./shared/food-lightbox.js" defer></script>
 <script src="./shared/dashboard-food-share-admin.js" defer></script>
+<script src="./shared/dashboard-trade-history-admin.js" defer></script>
 <script src="./shared/dashboard-admin-ops.js" defer></script>
 <script src="./shared/dashboard-audit-panel.js" defer></script>
 <script src="./shared/dashboard-reconcile.js" defer></script>

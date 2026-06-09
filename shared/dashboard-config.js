@@ -842,6 +842,7 @@ function switchGamificationTab(tabName, btn) {
   if (tabName === 'helpers' && typeof loadHelpersAdmin === 'function') loadHelpersAdmin();
   if (tabName === 'community' && typeof loadCommunityRequestsAdmin === 'function') loadCommunityRequestsAdmin();
   if (tabName === 'food' && typeof loadFoodShareAdmin === 'function') loadFoodShareAdmin();
+  if (tabName === 'trades' && typeof loadTradeHistoryAdmin === 'function') loadTradeHistoryAdmin();
   if (tabName === 'badges') loadBadgesAdmin();
 }
 

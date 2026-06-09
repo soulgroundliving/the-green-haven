@@ -474,6 +474,42 @@ describe('foodShares — building-scoped read, CF-only write (Meaning Layer #4)'
   });
 });
 
+describe('tradeHistory — owner/admin read, CF-only write (Meaning Layer #5)', () => {
+  const OWNER_UID = 'line:U00000000000000000000000000000001'; // == LIFF_TENANT() default uid
+
+  it('admin can read any trade-history record', async () => {
+    await seedDoc('tradeHistory/t1', { ownerUid: OWNER_UID, building: 'rooms', room: '101', category: 'item' });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'tradeHistory/t1')));
+  });
+
+  it('owner can read their OWN trade-history record', async () => {
+    await seedDoc('tradeHistory/t1', { ownerUid: OWNER_UID, building: 'rooms', room: '101', category: 'free' });
+    await assertSucceeds(getDoc(doc(LIFF_TENANT().firestore(), 'tradeHistory/t1')));
+  });
+
+  it('a tenant CANNOT read another owner\'s trade-history record', async () => {
+    await seedDoc('tradeHistory/t1', { ownerUid: 'line:Usomeone-else', building: 'rooms', room: '102', category: 'item' });
+    await assertFails(getDoc(doc(LIFF_TENANT().firestore(), 'tradeHistory/t1')));
+  });
+
+  it('anonymous user CANNOT read', async () => {
+    await seedDoc('tradeHistory/t1', { ownerUid: OWNER_UID, category: 'item' });
+    await assertFails(getDoc(doc(ANON().firestore(), 'tradeHistory/t1')));
+  });
+
+  it('tenant CANNOT client-write — create or update (CF-only)', async () => {
+    await assertFails(addDoc(collection(LIFF_TENANT().firestore(), 'tradeHistory'),
+      { ownerUid: OWNER_UID, category: 'item' }));
+    await seedDoc('tradeHistory/t1', { ownerUid: OWNER_UID, category: 'item' });
+    await assertFails(updateDoc(doc(LIFF_TENANT().firestore(), 'tradeHistory/t1'), { category: 'free' }));
+  });
+
+  it('admin CANNOT client-write either (CF/admin-SDK only)', async () => {
+    await assertFails(addDoc(collection(EMAIL_ADMIN().firestore(), 'tradeHistory'),
+      { ownerUid: OWNER_UID, category: 'item' }));
+  });
+});
+
 describe('complaints — any auth creates, only admin modifies/deletes', () => {
   const validComplaint = (uid = 'tenant-1') => ({
     linkedAuthUid: uid,
