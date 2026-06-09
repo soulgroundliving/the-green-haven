@@ -1040,6 +1040,62 @@ body.gh-tour-open {
   background: #f4f7f5; border-radius: 8px; padding: 6px 10px; line-height: 1.4;
 }
 
+/* ── Food sharing feed (Meaning Layer #4) — tenant #food-share sub-page. Own
+   namespace (warm theme; decoupled from the board namespaces). §7-RR static,
+   §7-W hardcoded light values (cards are always #fff). */
+.food-section { margin: 0 0 18px; }
+.food-section__head {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 8px;
+  font-size: 0.92rem; font-weight: 700; color: var(--text, #2c2c2c);
+}
+.food-section__count {
+  background: #fdecd9; color: #9a5a1e;
+  border-radius: 999px; padding: 1px 9px; font-size: 0.74rem; font-weight: 700;
+}
+.food-summary {
+  margin: 0 0 16px; padding: 12px 14px;
+  background: #fdecd9; color: #9a5a1e; border: 1px solid #f3d8bd;
+  border-radius: 14px; font-size: 0.86rem; font-weight: 700; text-align: center;
+}
+.food-card {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; margin: 0 0 10px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border-subtle, #ebe9e2);
+  border-left: 4px solid #f0b264;           /* available = warm amber */
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.food-card[data-status="claimed"]   { border-left-color: #bfe6d2; background: linear-gradient(180deg, #f4fbf7 0%, var(--card, #fff) 80%); }
+.food-card[data-status="cancelled"] { opacity: 0.6; }
+.food-card__main { min-width: 0; flex: 1; }
+.food-card__title { margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--text, #2c2c2c); }
+.food-portions { display: inline-block; margin-left: 6px; padding: 0 6px; background: #fdecd9; color: #9a5a1e; border-radius: 999px; font-size: 0.7rem; font-weight: 800; vertical-align: middle; }
+.food-card__detail { margin: 3px 0 0; font-size: 0.78rem; color: var(--text, #2c2c2c); opacity: 0.75; line-height: 1.35; }
+.food-card__sub { margin: 4px 0 0; font-size: 0.72rem; color: var(--text-muted, #8a8f98); line-height: 1.35; }
+.food-card__side { flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; justify-content: center; }
+.food-btn {
+  flex-shrink: 0; padding: 7px 14px; white-space: nowrap;
+  border: none; border-radius: 999px;
+  font-family: inherit; font-size: 0.76rem; font-weight: 800;
+  cursor: pointer; transition: transform 0.12s ease, background-color 0.2s ease;
+}
+.food-btn:active { transform: scale(0.95); }
+.food-btn:disabled { cursor: default; transform: none; opacity: 0.6; }
+.food-btn--claim { background: var(--green, #2d8653); color: #fff; }
+.food-btn--claim:hover { background: var(--green-dark, #1a5c38); }
+.food-btn--ghost { background: #f3ece2; color: #9a5a1e; }
+.food-btn--danger { background: #fbe4e4; color: #b00020; }
+.food-badge {
+  font-size: 0.74rem; font-weight: 700; color: #5a6b66;
+  padding: 5px 10px; background: #f3ece2; border-radius: 999px; white-space: nowrap;
+}
+.food-empty {
+  padding: 16px 14px; text-align: center;
+  font-size: 0.82rem; color: var(--text-muted, #8a8f98);
+  border: 1px dashed var(--border-subtle, #ebe9e2); border-radius: 14px;
+}
+
 /* Admin quest-form field hint (dashboard #questEditModal). */
 .quest-hint {
   display: block;

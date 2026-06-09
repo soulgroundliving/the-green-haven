@@ -130,6 +130,7 @@
     <script src="./shared/tenant-quests.js" defer></script>
     <script src="./shared/tenant-helpers.js" defer></script>
     <script src="./shared/tenant-community-requests.js" defer></script>
+    <script src="./shared/tenant-food-share.js" defer></script>
     <script src="./shared/tenant-daily-bonus.js" defer></script>
     <script src="./shared/tenant-cleaning.js" defer></script>
     <script src="./shared/tenant-data-export.js" defer></script>
@@ -3849,6 +3850,10 @@
                     <div class="ta-stat-val">🔄</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:#1b5a6e;">ขอ-ยืมของ</div>
                 </div>
+                <div data-action="showSubPage" data-page="food-share" style="background:#FFF3E8; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                    <div class="ta-stat-val">🍲</div>
+                    <div style="font-weight:700; font-size:var(--fs-sm); color:#9a5a1e;">แบ่งปันอาหาร</div>
+                </div>
             </div>
         </div>
     </div>
@@ -3981,6 +3986,69 @@
                     <button type="button" id="creq-thank-cancel" class="btn-secondary" style="flex:1;">ยกเลิก</button>
                     <button type="button" id="creq-thank-confirm" class="btn-main" style="flex:1;">ยืนยันรับของ</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Food sharing feed (Meaning Layer #4) — ephemeral leftover-food share board -->
+    <div id="food-share" class="page">
+        <div class="app-bar ta-page-top">
+            <div class="ta-icon-circle" data-action="goBackToProfile">
+                <i class="fas fa-chevron-left u-color-green"></i>
+            </div>
+            <h1 class="ta-card-title">แบ่งปันอาหาร</h1>
+        </div>
+
+        <div style="padding:0 16px;">
+            <button type="button" id="food-post-toggle" class="btn-main" style="width:100%; margin-bottom:12px;">+ แบ่งปันของกิน</button>
+
+            <div id="food-post-form" class="card u-hidden" style="margin-bottom:16px;">
+                <label class="ta-field-label">มีอะไรแบ่งปัน? *</label>
+                <input type="text" id="food-post-title" maxlength="80" placeholder="เช่น ข้าวกล่อง 2 กล่อง, ผลไม้รวม, ขนมปัง" style="width:100%; margin-bottom:10px;">
+                <label class="ta-field-label">หมวด (ไม่บังคับ)</label>
+                <select id="food-post-category" style="width:100%; margin-bottom:10px;">
+                    <option value="">— เลือกหมวด —</option>
+                    <option value="meal">🍱 อาหารจานหลัก</option>
+                    <option value="snack">🍪 ของว่าง</option>
+                    <option value="fruit">🍎 ผลไม้</option>
+                    <option value="drink">🥤 เครื่องดื่ม</option>
+                    <option value="ingredient">🧂 เครื่องปรุง/วัตถุดิบ</option>
+                    <option value="other">🍽️ อื่น ๆ</option>
+                </select>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div style="flex:1;">
+                        <label class="ta-field-label">จำนวน (ไม่บังคับ)</label>
+                        <input type="number" id="food-post-portions" min="1" max="99" placeholder="เช่น 2" style="width:100%;">
+                    </div>
+                    <div style="flex:1;">
+                        <label class="ta-field-label">หมดอายุใน</label>
+                        <select id="food-post-expiry" style="width:100%;">
+                            <option value="3">3 ชั่วโมง</option>
+                            <option value="6">6 ชั่วโมง</option>
+                            <option value="12">12 ชั่วโมง</option>
+                            <option value="24" selected>24 ชั่วโมง</option>
+                            <option value="48">2 วัน</option>
+                        </select>
+                    </div>
+                </div>
+                <label class="ta-field-label">รายละเอียดเพิ่มเติม (ไม่บังคับ)</label>
+                <textarea id="food-post-detail" maxlength="500" rows="2" placeholder="บอกรายละเอียด เช่น มารับที่หน้าห้อง, ยังอุ่นอยู่ ..." style="width:100%; margin-bottom:12px;"></textarea>
+                <button type="button" id="food-post-submit" class="btn-main" style="width:100%;">แบ่งปัน</button>
+            </div>
+
+            <div id="food-share-summary" class="food-summary u-hidden"></div>
+
+            <div class="food-section">
+                <div class="food-section__head">🍲 เปิดให้ <span class="food-section__count" id="food-open-count">0</span></div>
+                <div id="food-open-list"><div class="food-empty">กำลังโหลด…</div></div>
+            </div>
+            <div class="food-section">
+                <div class="food-section__head">🤲 ของที่ฉันแบ่ง <span class="food-section__count" id="food-mine-count">0</span></div>
+                <div id="food-mine-list"><div class="food-empty">—</div></div>
+            </div>
+            <div class="food-section">
+                <div class="food-section__head">🙏 ของที่ฉันรับ <span class="food-section__count" id="food-got-count">0</span></div>
+                <div id="food-got-list"><div class="food-empty">—</div></div>
             </div>
         </div>
     </div>

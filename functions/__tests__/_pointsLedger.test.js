@@ -175,9 +175,9 @@ describe('buildLedgerKey + VALID_SOURCES', () => {
     );
   });
 
-  it('exposes exactly the 8 canonical sources', () => {
-    assert.equal(VALID_SOURCES.size, 8);
-    for (const s of ['daily_login', 'wellness_quiz', 'contract_quiz', 'complaint_free_month', 'payment', 'redeem', 'quest', 'help_completed']) {
+  it('exposes exactly the 9 canonical sources', () => {
+    assert.equal(VALID_SOURCES.size, 9);
+    for (const s of ['daily_login', 'wellness_quiz', 'contract_quiz', 'complaint_free_month', 'payment', 'redeem', 'quest', 'help_completed', 'food_share']) {
       assert.ok(VALID_SOURCES.has(s), `VALID_SOURCES must include ${s}`);
     }
   });

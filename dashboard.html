@@ -5364,6 +5364,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button data-action="switchGamificationTab" data-tab="quests" class="dash-tab-btn">🎯 เควส</button>
       <button data-action="switchGamificationTab" data-tab="helpers" class="dash-tab-btn">🤝 น้ำใจ</button>
       <button data-action="switchGamificationTab" data-tab="community" class="dash-tab-btn">🔄 ขอ-ยืมของ</button>
+      <button data-action="switchGamificationTab" data-tab="food" class="dash-tab-btn">🍲 แบ่งปันอาหาร</button>
     </div>
 
     <!-- Leaderboard Tab -->
@@ -5510,6 +5511,35 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
       <div style="margin-top:1rem;padding:.75rem 1rem;background:#eaf3f7;border-left:3px solid #1b5a6e;border-radius:4px;font-size:.82rem;color:#1b5a6e;">
         <strong>หมายเหตุ:</strong> ผู้เช่าจัดการกันเอง (โพสต์ขอ/ยืม → เพื่อนบ้านเสนอให้ → ยืนยันรับ). บอร์ดนี้ไม่มีการให้แต้ม — เป็นการแบ่งปันของในตึก. แอดมินดูได้อย่างเดียว และกด "ยกเลิก" คำขอที่ไม่เหมาะสมได้ (โหมดกำกับดูแล)
+      </div>
+    </div>
+
+    <!-- Food sharing monitor (Meaning Layer #4) — read-only + moderation cancel -->
+    <div id="gamificationFood" class="u-init-hide">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;">
+        <div style="font-weight:700;font-size:1.05rem;">🍲 แบ่งปันอาหารในตึก</div>
+        <span id="foodShareActiveCount" style="background:#fdecd9;color:#9a5a1e;border-radius:999px;padding:1px 9px;font-size:.8rem;font-weight:700;">0</span>
+        <span style="font-size:.78rem;color:var(--text-muted);">เปิดให้อยู่</span>
+      </div>
+      <div class="u-scroll-x">
+        <table class="data-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th>ผู้แบ่ง</th>
+              <th>ของกิน</th>
+              <th>ผู้รับ</th>
+              <th class="dash-w-100">สถานะ</th>
+              <th class="dash-w-100">วันที่</th>
+              <th style="width:90px;">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="foodShareAdminTable">
+            <tr><td colspan="6" class="dash-empty-msg">กำลังโหลด…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:1rem;padding:.75rem 1rem;background:#fff6ec;border-left:3px solid #9a5a1e;border-radius:4px;font-size:.82rem;color:#9a5a1e;">
+        <strong>หมายเหตุ:</strong> ผู้เช่าแบ่งปันกันเอง (แบ่ง → เพื่อนบ้านมารับ). ผู้แบ่งได้แต้มน้ำใจเมื่อมีคนมารับ (มีเพดานต่อวันกันการปั่นแต้ม). รายการหมดอายุจะถูกลบอัตโนมัติ. แอดมินดูได้อย่างเดียว และกด "ลบ" รายการที่ไม่เหมาะสมได้ (โหมดกำกับดูแล)
       </div>
     </div>
 
@@ -5836,6 +5866,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-quests-admin.js" defer></script>
 <script src="./shared/dashboard-helpers-admin.js" defer></script>
 <script src="./shared/dashboard-community-requests-admin.js" defer></script>
+<script src="./shared/dashboard-food-share-admin.js" defer></script>
 <script src="./shared/dashboard-admin-ops.js" defer></script>
 <script src="./shared/dashboard-audit-panel.js" defer></script>
 <script src="./shared/dashboard-reconcile.js" defer></script>
