@@ -9,8 +9,9 @@ const { describe, it, beforeEach, after } = require('node:test');
 const assert = require('node:assert/strict');
 const Module = require('module');
 
-let docs;   // id → { expiresAt: epochMs }
-function reset() { docs = {}; }
+let docs;            // id → { expiresAt: epochMs, imagePath?: string }
+let storagePrefixes; // prefixes passed to bucket.getFiles (photo cleanup wiring)
+function reset() { docs = {}; storagePrefixes = []; }
 reset();
 
 const _origLoad = Module._load;
@@ -24,7 +25,7 @@ Module._load = function (id, parent, ...rest) {
           get: async () => {
             const matched = Object.entries(docs)
               .filter(([, d]) => d.expiresAt < cutoffMs)
-              .map(([docId]) => ({ id: docId, ref: { delete: async () => { delete docs[docId]; } } }));
+              .map(([docId, d]) => ({ id: docId, data: () => d, ref: { delete: async () => { delete docs[docId]; } } }));
             return { empty: matched.length === 0, size: matched.length, docs: matched };
           },
         }),
@@ -32,7 +33,12 @@ Module._load = function (id, parent, ...rest) {
     }
     const firestoreFn = () => ({ collection: () => makeQuery(Infinity) });
     firestoreFn.Timestamp = { fromMillis: (ms) => ({ _ms: ms }) };
-    return { apps: [{}], initializeApp: () => {}, firestore: firestoreFn };
+    const storageFn = () => ({
+      bucket: () => ({
+        getFiles: async ({ prefix }) => { storagePrefixes.push(prefix); return [[{ name: prefix + 'photo.jpg', delete: async () => {} }]]; },
+      }),
+    });
+    return { apps: [{}], initializeApp: () => {}, firestore: firestoreFn, storage: storageFn };
   }
   if (id === 'firebase-functions/v1') {
     class HttpsError extends Error { constructor(code, msg) { super(msg); this.code = code; } }
@@ -71,5 +77,16 @@ describe('cleanupFoodSharesScheduled._run', () => {
     const res = await cf._run();
     assert.equal(res.deleted, 0);
     assert.ok('fresh' in docs);
+    assert.equal(res.deletedFiles, 0);
+  });
+
+  it('also deletes the Storage photo for shares that have one (no getFiles for text-only)', async () => {
+    const now = Date.now();
+    docs.withImg = { expiresAt: now - cf.GRACE_MS - 1000, imagePath: 'foodShares/withImg/photo.jpg' };
+    docs.textOnly = { expiresAt: now - cf.GRACE_MS - 1000 };   // no image → no storage round-trip
+    const res = await cf._run();
+    assert.equal(res.deleted, 2);
+    assert.equal(res.deletedFiles, 1);
+    assert.deepEqual(storagePrefixes, ['foodShares/withImg/'], 'only the share with a photo hit Storage');
   });
 });

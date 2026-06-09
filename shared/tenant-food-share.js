@@ -25,6 +25,14 @@
   let _wired = false;
   const _busy = new Set();
   const _confirmCancel = new Set();
+  let _pendingPhoto = null;            // compressed data:image/jpeg URL of a picked photo, or null
+
+  // Compress target + a soft payload ceiling. compressImage emits JPEG ~<1MB at
+  // 1280px/q0.82; the base64 travels in the onCall request (10MB cap), so reject
+  // anything that would still be huge after compression (server backstops at 4MB).
+  const PHOTO_MAX_DIM = 1280;
+  const PHOTO_QUALITY = 0.82;
+  const PHOTO_MAX_B64 = 7 * 1024 * 1024;
 
   const CAT_LABEL = {
     meal: '🍱 อาหารจานหลัก', snack: '🍪 ของว่าง', fruit: '🍎 ผลไม้',
@@ -115,6 +123,17 @@
     const card = document.createElement('div');
     card.className = 'food-card';
     card.dataset.status = r.status || 'available';
+
+    if (r.imageUrl) {
+      const thumb = document.createElement('div');
+      thumb.className = 'food-card__thumb';
+      const img = document.createElement('img');
+      img.src = r.imageUrl;             // https token URL the CF built — §7-XX safe
+      img.loading = 'lazy';
+      img.alt = '';
+      thumb.appendChild(img);
+      card.appendChild(thumb);
+    }
 
     const main = document.createElement('div');
     main.className = 'food-card__main';
@@ -228,6 +247,8 @@
         expiresInHours: (expiryEl && expiryEl.value) ? Number(expiryEl.value) : undefined,
         detail: (detailEl && detailEl.value || '').trim() || undefined,
         sharerName: _myLabel(),
+        photoBase64: _pendingPhoto ? _pendingPhoto.split(',')[1] : undefined,   // strip data: prefix (§7-EEE)
+        photoContentType: _pendingPhoto ? 'image/jpeg' : undefined,
       });
       if (titleEl) titleEl.value = '';
       if (detailEl) detailEl.value = '';
@@ -287,7 +308,48 @@
     const open = (show === undefined) ? form.classList.contains('u-hidden') : show;
     form.classList.toggle('u-hidden', !open);
     if (toggle) toggle.textContent = open ? '✕ ปิดฟอร์ม' : '+ แบ่งปันของกิน';
+    if (!open) _clearPhoto();
     if (open) { const t = document.getElementById('food-post-title'); if (t) t.focus(); }
+  }
+
+  // ── Optional photo (§7-XX: preview via the compressor's data: URL, never blob:;
+  //    send base64 → shareFood uploads server-side → https token URL on the doc) ──
+  async function _onPhotoPick(e) {
+    const input = e && e.target;
+    const file = input && input.files && input.files[0];
+    if (!file) return;
+    if (typeof window.compressImage !== 'function') {
+      _toast('ยังเพิ่มรูปไม่ได้ตอนนี้ กรุณาลองใหม่', 'warning'); input.value = ''; return;
+    }
+    const btn = document.getElementById('food-post-photo-btn');
+    if (btn) btn.textContent = '⏳ กำลังย่อรูป…';
+    try {
+      const dataUrl = await window.compressImage(file, PHOTO_MAX_DIM, PHOTO_MAX_DIM, PHOTO_QUALITY);
+      if (!dataUrl || dataUrl.indexOf('base64,') < 0) throw new Error('compress-failed');
+      if (dataUrl.length > PHOTO_MAX_B64) { _toast('รูปใหญ่เกินไป กรุณาเลือกรูปอื่น', 'warning'); _clearPhoto(); return; }
+      _pendingPhoto = dataUrl;
+      const wrap = document.getElementById('food-post-photo-wrap');
+      const prev = document.getElementById('food-post-photo-preview');
+      if (prev) prev.src = dataUrl;             // data: URL — §7-XX safe
+      if (wrap) wrap.classList.remove('u-hidden');
+      if (btn) btn.classList.add('u-hidden');
+    } catch (_) {
+      _toast('เพิ่มรูปไม่สำเร็จ กรุณาลองใหม่', 'error'); _clearPhoto();
+    } finally {
+      if (btn) btn.textContent = '📷 เพิ่มรูปอาหาร';
+    }
+  }
+
+  function _clearPhoto() {
+    _pendingPhoto = null;
+    const input = document.getElementById('food-post-photo');
+    const wrap = document.getElementById('food-post-photo-wrap');
+    const prev = document.getElementById('food-post-photo-preview');
+    const btn = document.getElementById('food-post-photo-btn');
+    if (input) input.value = '';
+    if (prev) prev.removeAttribute('src');
+    if (wrap) wrap.classList.add('u-hidden');
+    if (btn) btn.classList.remove('u-hidden');
   }
 
   function _wire() {
@@ -298,6 +360,8 @@
     const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
     on('food-post-toggle', 'click', () => _togglePostForm());
     on('food-post-submit', 'click', _post);
+    on('food-post-photo', 'change', _onPhotoPick);
+    on('food-post-photo-remove', 'click', _clearPhoto);
   }
 
   function renderFoodShare() {

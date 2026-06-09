@@ -10,11 +10,16 @@
  * query (`expiresAt < cutoff`) sweeps available-expired AND claimed/cancelled
  * shares once their lifetime is over — so NO composite index is needed (§7-N).
  *
+ * An expired share may carry an optional photo at storage://foodShares/{id}/ —
+ * deleted alongside the doc so the ephemeral feed never leaks orphan images
+ * (Storage cost + PDPA; §7-DD analogue for Storage, mirror of cleanupChecklists).
+ *
  * §7-NN: a scheduled sweep, NOT a Firestore trigger (Eventarc can't watch SE3).
  * Region asia-southeast1.
  */
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
+const { deleteFoodImagesForShare } = require('./_foodImage');
 
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
@@ -26,6 +31,13 @@ async function _deleteBatch(query, results) {
   const snap = await query.get();
   if (snap.empty) return 0;
   for (const doc of snap.docs) {
+    // Delete the optional Storage photo first (best-effort; the doc delete below
+    // is the canonical step). Only shares that actually have an image pay the
+    // getFiles round-trip.
+    const d = doc.data() || {};
+    if (d.imagePath || d.imageUrl) {
+      results.deletedFiles += await deleteFoodImagesForShare(doc.id);
+    }
     try {
       await doc.ref.delete();
       results.deleted++;
@@ -40,7 +52,7 @@ async function _deleteBatch(query, results) {
 async function _run() {
   const now = Date.now();
   const cutoff = admin.firestore.Timestamp.fromMillis(now - GRACE_MS);
-  const results = { deleted: 0, errors: [] };
+  const results = { deleted: 0, deletedFiles: 0, errors: [] };
   // Page through expired shares (single-field inequality → auto-indexed).
   let swept;
   do {
