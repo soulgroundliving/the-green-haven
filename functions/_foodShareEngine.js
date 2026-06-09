@@ -47,7 +47,10 @@ const FOOD_SHARE_DAILY_CAP = 50;
 
 const DEFAULT_EXPIRY_HOURS = 24;
 const MIN_EXPIRY_HOURS = 1;
-const MAX_EXPIRY_HOURS = 72;
+// Up to 7 days — long enough for dried/baked goods (ขนมอบแห้ง) that keep well;
+// perishables use the shorter dropdown presets. Still ephemeral (cleanup sweeps
+// 24h past expiry), just a wider ceiling than the original 72h.
+const MAX_EXPIRY_HOURS = 168;
 
 const MAX_TITLE_LEN = 80;
 const MAX_DETAIL_LEN = 500;
