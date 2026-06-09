@@ -39,6 +39,13 @@
  *
  * Sprint 6 — Trophies & Badges (Nest Marketplace Spec v1.0 §4.3 /
  * tasks/todo.md §S6).
+ *
+ * Meaning Layer #5 (2026-06-09) — also bumps a `tradesCompleted` counter on
+ * EVERY completion + writes a durable tradeHistory/{postId} record in the same
+ * transaction (fenced by the same marketplaceLedger[postId] check, so a
+ * re-close cannot duplicate it). Unlocks the Community Trader achievement at 10
+ * trades. NO points are written — owner decision: marketplace trading earns an
+ * achievement, not money (points = ฿; a self-completed post is a farm surface).
  */
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
@@ -103,18 +110,19 @@ async function _runAggregator({ firestore, postId, callerUid, isAdmin, FieldValu
   }
 
   // 3. Build the increment payload from the post's category + flags.
-  // Order matches BADGE_CATALOG marketplace keys; missing flags = no
-  // increment (so an item post with neither sky-hook nor pet contributes
-  // nothing — that's intentional).
-  const statsBumped = {};
+  // tradesCompleted bumps on EVERY completion (any category) — it is the
+  // Meaning Layer #5 trade-history counter that gates the Community Trader
+  // achievement at 10. The category/flag counters below are additive on top
+  // (a free pet post completing bumps tradesCompleted + freeGiven + petHelped).
+  const statsBumped = { tradesCompleted: 1 };
   if (post.category === 'free')   statsBumped.freeGiven        = 1;
   if (post.skyHookReady === true) statsBumped.skyHookCompleted = 1;
   if (post.isPetCategory === true) statsBumped.petHelped       = 1;
 
-  // Even an item post can complete with no relevant flags — that's a
-  // valid no-op (we still write the ledger entry so future re-fires
-  // remain idempotent? — NO: writing a no-op ledger entry would lock
-  // out future legitimate completions of the same ID; we just return).
+  // tradesCompleted always bumps, so statsBumped is never empty here. The guard
+  // stays as defence against a future refactor that makes all counters
+  // conditional again (an empty payload must NOT fence the postId — that would
+  // lock out a later legitimate completion of the same id).
   if (Object.keys(statsBumped).length === 0) {
     return { statsBumped: {}, badgesAwarded: 0, newBadges: [], skipped: 'no-stats-eligible' };
   }
@@ -143,6 +151,28 @@ async function _runAggregator({ firestore, postId, callerUid, isAdmin, FieldValu
     // Use set+merge so we don't fail if the target doc doesn't exist
     // yet (player path can be first-write).
     tx.set(target, _expandDotKeys(patch), { merge: true });
+
+    // Meaning Layer #5 — durable trade-history record, one per post, written in
+    // the SAME transaction and fenced by the SAME marketplaceLedger[postId]
+    // check above (a re-close can't duplicate it). Survives later deletion of
+    // the marketplace post; powers the admin "ประวัติการแลกเปลี่ยน" monitor and
+    // is the audit source for the Community Trader achievement. NO points.
+    // imageUrl only (never base64 imageData) so legacy posts can't bloat the doc.
+    const tradeRef = firestore.collection('tradeHistory').doc(postId);
+    tx.set(tradeRef, {
+      postId,
+      ownerUid:    post.ownerUid || null,
+      building:    building || null,
+      room:        room || null,
+      tenantId:    tenantId || null,
+      title:       post.title ? String(post.title) : '',
+      category:    post.category || 'item',
+      price:       Number(post.price) || 0,
+      isGiveaway:  post.category === 'free',
+      imageUrl:    post.imageUrl ? String(post.imageUrl) : '',
+      completedAt: now,
+    });
+
     return true;
   });
 

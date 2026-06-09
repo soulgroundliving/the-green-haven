@@ -65,7 +65,15 @@
         // gamification.marketplaceStats that gates the unlock.
         { id: 'the_giver',     emoji: '🍃', label: 'The Giver',     marketplace: 'freeGiven',        minCount: 3, hint: 'แจกฟรี 3 ครั้ง' },
         { id: 'sky_walker',    emoji: '☁️', label: 'Sky Walker',    marketplace: 'skyHookCompleted', minCount: 5, hint: 'ส่งของผ่านรอก 5 ครั้ง' },
-        { id: 'pet_whisperer', emoji: '🐾', label: 'Pet Whisperer', marketplace: 'petHelped',        minCount: 1, hint: 'ช่วยเรื่องสัตว์เลี้ยง 1 ครั้ง' }
+        { id: 'pet_whisperer', emoji: '🐾', label: 'Pet Whisperer', marketplace: 'petHelped',        minCount: 1, hint: 'ช่วยเรื่องสัตว์เลี้ยง 1 ครั้ง' },
+
+        // ── Meaning Layer #5 — Trade history milestone (achievement, NOT points) ──
+        // Awarded by marketplaceStatsAggregator when marketplaceStats.tradesCompleted
+        // (every COMPLETED marketplace post, any category) reaches 10. Owner decision
+        // 2026-06-09: marketplace giving/trading earns an ACHIEVEMENT, not points —
+        // points = money (10pts=฿1) and a self-completed post is a farm surface, so the
+        // reward is a cosmetic badge. No pointsLedger 'giveaway' source is created.
+        { id: 'community_trader', emoji: '📜', label: 'Community Trader', marketplace: 'tradesCompleted', minCount: 10, hint: 'แลกเปลี่ยนครบ 10 ครั้ง' }
     ];
 
     // ===== RENT PAYMENT TIERS =====

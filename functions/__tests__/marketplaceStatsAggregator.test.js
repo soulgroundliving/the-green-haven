@@ -19,6 +19,9 @@
  *   - no relevant flags (paid item, no tags) → no-op skip + no ledger entry
  *   - missing postId → invalid-argument
  *   - player-path (post has tenantId but no building/room) writes to people/{id}
+ *   - ML#5: every completion bumps tradesCompleted + writes tradeHistory/{postId}
+ *   - ML#5: trade record snapshot fields; base64 imageData never stored (bloat guard)
+ *   - ML#5: 10th trade awards Community Trader; 9th does not; record written once
  */
 const { describe, it, beforeEach, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -68,6 +71,7 @@ const FieldValue = { increment: (n) => ({ __op: 'increment', delta: n }) };
  */
 function makeFirestore({ post, targetState, targetPath }) {
   const writes = [];
+  const tradeWrites = [];   // Meaning Layer #5 — captures tradeHistory/{postId} sets
   let target = targetState ? JSON.parse(JSON.stringify(targetState), reviveOps) : null;
 
   function reviveOps(_k, v) {
@@ -146,9 +150,18 @@ function makeFirestore({ post, targetState, targetPath }) {
   return {
     _state: () => target,
     _writes: () => writes,
+    _tradeWrites: () => tradeWrites,
     collection(name) {
       if (name === 'marketplace') {
         return { doc: (id) => (id === POST_ID ? postRef() : { get: async () => ({ exists: false }) }) };
+      }
+      if (name === 'tradeHistory') {
+        return {
+          doc: (id) => ({
+            _path: `tradeHistory/${id}`,
+            set: async (data, opts) => { tradeWrites.push({ id, data, opts }); },
+          }),
+        };
       }
       if (name === 'tenants' && targetPath?.startsWith('tenants/')) {
         const [, b] = targetPath.split('/');
@@ -256,11 +269,16 @@ describe('marketplaceStatsAggregator', () => {
       assert.equal(out.badgesAwarded, 0);
     });
 
-    it('no relevant flags (paid item, no tags) → no-stats-eligible skip', async () => {
+    it('plain item post counts as one trade (tradesCompleted) + writes trade history (ML#5)', async () => {
+      // Pre-ML#5 this was a no-op skip. Now EVERY completion bumps tradesCompleted
+      // and writes a durable tradeHistory record, even a plain paid item with no flags.
       const fs = makeFirestore({ post: { ..._basePost, category: 'item' }, targetState: {}, targetPath: 'tenants/rooms/list/15' });
       const out = await _runAggregator({ firestore: fs, postId: POST_ID, callerUid: OWNER, isAdmin: false, FieldValue });
-      assert.equal(out.skipped, 'no-stats-eligible');
-      assert.equal(fs._writes().length, 0, 'no writes on no-op skip');
+      assert.equal(out.skipped, null);
+      assert.equal(out.statsBumped.tradesCompleted, 1);
+      assert.equal(out.statsBumped.freeGiven, undefined, 'not a giveaway → no freeGiven');
+      assert.equal(fs._state().gamification.marketplaceStats.tradesCompleted, 1);
+      assert.equal(fs._tradeWrites().length, 1, 'durable trade-history record written');
     });
 
     it('post missing building+room+tenantId → no-target skip', async () => {
@@ -379,6 +397,87 @@ describe('marketplaceStatsAggregator', () => {
       const out = await _runAggregator({ firestore: fs, postId: POST_ID, callerUid: OWNER, isAdmin: false, FieldValue });
       assert.equal(out.statsBumped.freeGiven, 1);
       assert.equal(fs._state().gamification.marketplaceStats.freeGiven, 1);
+    });
+  });
+
+  describe('Meaning Layer #5 — trade history + Community Trader achievement', () => {
+    it('every completion bumps tradesCompleted (free pet post bumps trades + 2 flag counters)', async () => {
+      const fs = makeFirestore({
+        post: { ..._basePost, category: 'free', isPetCategory: true },
+        targetState: { gamification: { marketplaceStats: {}, badges: [] } },
+        targetPath: 'tenants/rooms/list/15',
+      });
+      const out = await _runAggregator({ firestore: fs, postId: POST_ID, callerUid: OWNER, isAdmin: false, FieldValue });
+      assert.equal(out.statsBumped.tradesCompleted, 1);
+      assert.equal(out.statsBumped.freeGiven, 1);
+      assert.equal(out.statsBumped.petHelped, 1);
+      assert.equal(fs._state().gamification.marketplaceStats.tradesCompleted, 1);
+    });
+
+    it('writes a durable tradeHistory record with the post snapshot', async () => {
+      const fs = makeFirestore({
+        post: { ..._basePost, category: 'free', title: 'โซฟาเก่า', price: 0, imageUrl: 'https://store/img.jpg' },
+        targetState: {},
+        targetPath: 'tenants/rooms/list/15',
+      });
+      await _runAggregator({ firestore: fs, postId: POST_ID, callerUid: OWNER, isAdmin: false, FieldValue });
+      const tw = fs._tradeWrites();
+      assert.equal(tw.length, 1);
+      assert.equal(tw[0].id, POST_ID);
+      assert.equal(tw[0].data.ownerUid, OWNER);
+      assert.equal(tw[0].data.building, 'rooms');
+      assert.equal(tw[0].data.room, '15');
+      assert.equal(tw[0].data.title, 'โซฟาเก่า');
+      assert.equal(tw[0].data.category, 'free');
+      assert.equal(tw[0].data.isGiveaway, true);
+      assert.equal(tw[0].data.imageUrl, 'https://store/img.jpg');
+      assert.ok(tw[0].data.completedAt, 'completedAt set');
+    });
+
+    it('never stores base64 imageData in the trade record (bloat guard)', async () => {
+      const fs = makeFirestore({
+        post: { ..._basePost, category: 'item', imageUrl: '', imageData: 'data:image/jpeg;base64,AAAA' },
+        targetState: {},
+        targetPath: 'tenants/rooms/list/15',
+      });
+      await _runAggregator({ firestore: fs, postId: POST_ID, callerUid: OWNER, isAdmin: false, FieldValue });
+      assert.equal(fs._tradeWrites()[0].data.imageUrl, '', 'imageData base64 must not leak into the trade record');
+    });
+
+    it('10th trade awards the Community Trader achievement', async () => {
+      const fs = makeFirestore({
+        post: { ..._basePost, category: 'item' },
+        targetState: { gamification: { marketplaceStats: { tradesCompleted: 9 }, badges: [] } },
+        targetPath: 'tenants/rooms/list/15',
+      });
+      const out = await _runAggregator({ firestore: fs, postId: POST_ID, callerUid: OWNER, isAdmin: false, FieldValue });
+      assert.equal(fs._state().gamification.marketplaceStats.tradesCompleted, 10);
+      assert.equal(out.badgesAwarded, 1);
+      assert.equal(out.newBadges[0].id, 'community_trader');
+    });
+
+    it('9th trade does NOT yet award Community Trader (minCount=10)', async () => {
+      const fs = makeFirestore({
+        post: { ..._basePost, category: 'item' },
+        targetState: { gamification: { marketplaceStats: { tradesCompleted: 8 }, badges: [] } },
+        targetPath: 'tenants/rooms/list/15',
+      });
+      const out = await _runAggregator({ firestore: fs, postId: POST_ID, callerUid: OWNER, isAdmin: false, FieldValue });
+      assert.equal(fs._state().gamification.marketplaceStats.tradesCompleted, 9);
+      assert.equal(out.badgesAwarded, 0);
+    });
+
+    it('trade history is written exactly once (idempotent re-close)', async () => {
+      const fs = makeFirestore({
+        post: { ..._basePost, category: 'item' },
+        targetState: {},
+        targetPath: 'tenants/rooms/list/15',
+      });
+      await _runAggregator({ firestore: fs, postId: POST_ID, callerUid: OWNER, isAdmin: false, FieldValue });
+      const second = await _runAggregator({ firestore: fs, postId: POST_ID, callerUid: OWNER, isAdmin: false, FieldValue });
+      assert.equal(second.skipped, 'already-counted');
+      assert.equal(fs._tradeWrites().length, 1, 'no duplicate trade record on re-close');
+      assert.equal(fs._state().gamification.marketplaceStats.tradesCompleted, 1);
     });
   });
 });

@@ -91,6 +91,16 @@ service cloud.firestore {
                     && resource.data.building == request.auth.token.building);
       allow write: if false;
     }
+    // Trade history memory (Meaning Layer #5) — durable record of every completed
+    // marketplace trade. PERSONAL, not building-scoped: the owner reads their own
+    // trade log (resource.data.ownerUid == auth.uid); admin reads all (the
+    // "ประวัติการแลกเปลี่ยน" monitor). CF-only write: marketplaceStatsAggregator
+    // writes it (admin SDK) in the same tx as the tradesCompleted counter. No points.
+    match /tradeHistory/{tradeId} {
+      allow read:  if isAdmin()
+                || (isSignedIn() && resource.data.ownerUid == request.auth.uid);
+      allow write: if false;
+    }
     match /system/{docId} {
       allow read:  if true;
       allow write: if isAdmin();
