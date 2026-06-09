@@ -101,28 +101,28 @@ async function loginAsAdmin(page) {
   }
 }
 
-// Open a Requests & Approvals sub-tab, resilient to the page's default-tab race
-// AND to the cold-deploy re-render storm.
+// Open a Requests & Approvals sub-tab, resilient to the page's default-tab race.
 // showPage('requests-approvals') schedules a switch BACK to the Maintenance tab
-// ~80ms after navigation (dashboard-main.js:43). Worse: on a cold deploy the
-// dashboard fires repeated re-renders for several seconds (RTDB snapshots →
-// roomconfig-updated, §7-V), each of which can re-flip to the default Maintenance
-// tab AFTER an initial successful switch. A point-in-time toBeVisible can pass in
-// the gap between two re-flips, so the panel is then hidden again when the test
-// interacts. #requests-tab-* panels are `u-init-hide` (§7-SS) → an ancestor
-// display:none makes every child (#checklist-admin-list, #dep-filter-building, …)
-// read as hidden/non-interactable — exactly what flaked the checklist/deposit
-// specs on cold deploys. So: re-click showPage + the sub-tab EVERY attempt, and
-// require the panel to STAY visible across a short settle, not just momentarily.
+// ~80ms after navigation (dashboard-main.js:43). Maintenance is also the
+// default-visible panel (no u-init-hide), so "wait until Maintenance is visible"
+// resolves instantly — BEFORE that deferred timer — and an immediate sub-tab
+// click then gets clobbered when the timer fires. Instead, retry the sub-tab
+// click until the target panel actually STAYS visible: once the +80ms default
+// has fired, a click sticks. No fixed waitForTimeout — deterministic via toPass.
+//
+// IMPORTANT: showPage is clicked ONCE, OUTSIDE the toPass. Re-clicking it on each
+// retry re-arms the +80ms Maintenance re-flip timer every attempt, so the target
+// panel keeps getting re-hidden (#requests-tab-* are u-init-hide+u-hidden, §7-SS)
+// and the toPass never converges — a regression observed 2026-06-09 when this
+// helper briefly re-clicked showPage inside the loop. Click it once; retry only
+// the sub-tab switch.
 async function openRequestsTab(page, tab) {
+  await page.click('button[data-action="showPage"][data-page="requests-approvals"]');
   const panel = page.locator(`#requests-tab-${tab}`);
   await expect(async () => {
-    await page.click('button[data-action="showPage"][data-page="requests-approvals"]').catch(() => {});
     await page.click(`button[data-action="switchRequestsTab"][data-tab="${tab}"]`);
-    await expect(panel).toBeVisible({ timeout: 1_500 });
-    await page.waitForTimeout(600);                     // let any pending re-flip fire…
-    await expect(panel).toBeVisible({ timeout: 500 });  // …and confirm it actually held
-  }).toPass({ timeout: 20_000 });
+    await expect(panel).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
 }
 
 // Click a bill room-grid card and wait for its detail panel to open. The bill
