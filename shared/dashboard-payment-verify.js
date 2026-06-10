@@ -109,7 +109,13 @@ function _pvEffectiveDate(s) {
     const m = id.match(/_(\d{4})_(\d{1,2})$/);
     if (m) return new Date(parseInt(m[1]) - 543, parseInt(m[2]) - 1, 5, 12, 0, 0);
   }
-  return s.timestamp?.toDate ? s.timestamp.toDate() : new Date(s.timestamp || s.verifiedAt);
+  // The live feed is about WHEN a payment was recorded, so date it by verifiedAt. The
+  // `timestamp` field is the billing-month anchor (5th) for manual entries — using it stamped
+  // every payment to the 5th, so the default "today"/"week" feed showed 0 right after recording
+  // (the "live payment ไม่เข้ามา" symptom). PaymentStore keys off `timestamp` separately, so the
+  // billing-month anchor it relies on is untouched. Fall back to timestamp, then now.
+  if (s.verifiedAt) return s.verifiedAt.toDate ? s.verifiedAt.toDate() : new Date(s.verifiedAt);
+  return s.timestamp?.toDate ? s.timestamp.toDate() : new Date(s.timestamp || Date.now());
 }
 
 function _pvInRange(slip) {
