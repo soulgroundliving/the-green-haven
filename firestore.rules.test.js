@@ -372,6 +372,58 @@ describe('leaseRequests — LIFF tenant creates own room only, admin updates', (
   });
 });
 
+describe('pets — claim-match write (§7-P) + linkedAuthUid fallback + admin', () => {
+  // Regression guard for the N101 incident (2026-06-10): a LIFF tenant holds
+  // valid room+building claims but the room doc has NO linkedAuthUid (vacant /
+  // transferred / re-linked). Pet save was denied because the old rule gated
+  // write ONLY on linkedAuthUid == auth.uid. Claim-match is now the primary
+  // gate (mirrors the parent tenant-doc self-access, f494192 §7-HH/§7-P).
+  const PET_PATH = 'tenants/nest/list/N101/pets/p1';
+  const N101_TENANT = () => LIFF_TENANT('line:Unest101', 'N101', 'nest');
+
+  it('LIFF tenant with matching room+building claims CAN create a pet even when the room doc has NO linkedAuthUid (N101 vacant scenario)', async () => {
+    await seedDoc('tenants/nest/list/N101', { status: 'vacant', building: 'nest', roomId: 'N101' }); // no linkedAuthUid
+    await assertSucceeds(setDoc(doc(N101_TENANT().firestore(), PET_PATH),
+      { id: 'p1', name: 'Latte', type: '🐶', building: 'nest', room: 'N101', status: 'pending' }));
+  });
+
+  it('LIFF tenant with matching claims CAN update a pet healthLog (#9 surgical write) without linkedAuthUid', async () => {
+    await seedDoc('tenants/nest/list/N101', { status: 'vacant', building: 'nest', roomId: 'N101' });
+    await seedDoc(PET_PATH, { id: 'p1', name: 'Latte', status: 'approved' });
+    await assertSucceeds(updateDoc(doc(N101_TENANT().firestore(), PET_PATH),
+      { healthLog: [{ id: 'ph_1', type: 'vaccine', date: '2026-06-10', title: 'rabies' }] }));
+  });
+
+  it('LIFF tenant CANNOT write a pet in a DIFFERENT room (claim mismatch + no linkedAuthUid match = forgery)', async () => {
+    await seedDoc('tenants/nest/list/N102', { status: 'occupied', building: 'nest', roomId: 'N102', linkedAuthUid: 'line:SomeoneElse' });
+    await assertFails(setDoc(doc(N101_TENANT().firestore(), 'tenants/nest/list/N102/pets/p9'),
+      { id: 'p9', name: 'Forgery', building: 'nest', room: 'N102' }));
+  });
+
+  it('anonymous tenant (no room/building claims) CANNOT write a pet', async () => {
+    await seedDoc('tenants/nest/list/N101', { status: 'vacant', building: 'nest', roomId: 'N101' });
+    await assertFails(setDoc(doc(ANON().firestore(), PET_PATH),
+      { id: 'p1', name: 'Sneaky', building: 'nest', room: 'N101' }));
+  });
+
+  it('linkedAuthUid fallback still works: tenant whose uid == linkedAuthUid CAN write without room/building claims', async () => {
+    await seedDoc('tenants/rooms/list/101', { status: 'occupied', building: 'rooms', roomId: '101', linkedAuthUid: 'anon-legacy-uid' });
+    await assertSucceeds(setDoc(doc(ANON('anon-legacy-uid').firestore(), 'tenants/rooms/list/101/pets/pLegacy'),
+      { id: 'pLegacy', name: 'Legacy', building: 'rooms', room: '101' }));
+  });
+
+  it('admin CAN write any pet (approve/edit)', async () => {
+    await seedDoc('tenants/nest/list/N101', { status: 'vacant' });
+    await assertSucceeds(setDoc(doc(EMAIL_ADMIN().firestore(), PET_PATH),
+      { id: 'p1', name: 'Latte', status: 'approved' }));
+  });
+
+  it('any signed-in tenant can read a pet (read rule: isSignedIn)', async () => {
+    await seedDoc(PET_PATH, { id: 'p1', name: 'Latte' });
+    await assertSucceeds(getDoc(doc(N101_TENANT().firestore(), PET_PATH)));
+  });
+});
+
 describe('helpRequests — building-scoped read, CF-only write (Meaning Layer #2)', () => {
   it('admin can read any building\'s help request', async () => {
     await seedDoc('helpRequests/h1', { building: 'nest', room: 'N1', status: 'open' });

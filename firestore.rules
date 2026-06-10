@@ -460,15 +460,25 @@ service cloud.firestore {
         allow read:  if isAdmin();
         allow write: if isAdmin();
       }
-      // Pets — tenant writes only their own room (linkedAuthUid match enforced
-      // via parent doc lookup). Without this check, any signed-in user could
-      // create/edit pets under any room. The get() costs +1 doc read per write,
-      // acceptable for security. Audit 2026-04-27.
+      // Pets — tenant writes their own room. Auth gate mirrors the parent
+      // tenants/{b}/list/{r} self-access (f494192, §7-HH/§7-P): claim-match
+      // (token.room + token.building == this path) is the PRIMARY gate, so a LIFF
+      // tenant whose room doc has an empty/drifted linkedAuthUid — anon-UID
+      // rotation, or a vacant/re-linked room — can still manage pets, exactly
+      // like every other tenant-write path (which all moved to claim-match while
+      // pets were the last one left on bare uid-match). The linkedAuthUid get()
+      // stays as an additive fallback: only evaluated when claim-match fails, so
+      // the happy path costs no extra doc read. Audit 2026-04-27; claim-match
+      // added 2026-06-10 (§7-P — fixes pet save failing on rooms with no
+      // linkedAuthUid even though the tenant holds valid room+building claims).
       match /pets/{petId} {
         allow read:  if isSignedIn();
-        allow write: if isAdmin() ||
-          (isSignedIn() &&
-           get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
+        allow write: if isAdmin()
+          || (isSignedIn()
+              && request.auth.token.room == roomId
+              && request.auth.token.building == building)
+          || (isSignedIn() &&
+              get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
       }
       // wellnessClaimed — tenant writes only their own room (linkedAuthUid match
       // via parent doc lookup). Same pattern as pets above. Audit 2026-04-27.
