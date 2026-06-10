@@ -1581,6 +1581,27 @@ As of the fix, 4 files load `components.css` without the aliases — `booking.ht
 
 Family: §7-W (cascade — verify the computed value on the deployed page, not source), §7-T (a shared resource consumed via a name each consumer must define → silent drift), §7-II/§7-RR (CSP/CSS that breaks only on the deployed page).
 
+### JJJ. A `data-action` whose handler takes an arg MUST have an explicit dispatcher case — the generic fallback passes `(el, e)`, not `data-arg`
+
+`tenant_app.html`'s `_dispatch` (and the dashboard equivalents) route `data-action` clicks. Explicitly-cased actions receive `arg` (`= el.dataset.arg`, a STRING); anything NOT explicitly cased falls through to the generic tail `if (a && typeof _ta[a] === 'function') { _ta[a](el, e); return; }` — which passes the **DOM element + event**, NOT the arg. So a handler written as `fn(someId)` that's wired ONLY via `data-action` (no explicit case) silently receives the clicked `<button>` element as its first parameter.
+
+The failure is CRYPTIC and far from the cause: a DOM element where a string path segment was expected makes the Firestore SDK throw **`i.indexOf is not a function (in 'i.indexOf("//")')`** deep inside `ResourcePath` validation — which reads like an SDK / auth / network bug, not a wiring bug. This session burned a long detour theorising `permission-denied` / `liffSignIn` failure (the room genuinely HAD an empty `linkedAuthUid`, reinforcing the false trail) before the §7-N error-code surfacing revealed the real `i.indexOf` TypeError in one screenshot.
+
+Incident 2026-06-10 (`a93f05d`): #9 added `data-action="openPetHealth"` to the pet card but no explicit dispatcher case → `openPetHealth(el)` instead of `openPetHealth(petId)` → `doc(db,…,'pets', <button>)` → `<button>.indexOf("//")` → "โหลดไม่สำเร็จ (i.indexOf is not a function)". Sibling actions `viewVaccineBook`/`prepareEditPet` had explicit cases and worked, which is why ONLY the health page broke.
+
+**Rule:** any new `data-action` whose handler takes an argument MUST get an explicit case that passes `arg`, mirroring the siblings:
+```js
+if (a === 'openPetHealth' && arg && _ta.openPetHealth) { _ta.openPetHealth(arg); return; }
+```
+Arg-less handlers (`savePetHealthEntry()` reads form state) are fine via the generic fallback — they ignore the `(el, e)` they're handed. Handlers that genuinely want the element (e.g. `updatePetHealthFilePreview(input)` via `data-action-change`) are also fine.
+
+Detection — list every action and confirm arg-taking ones are explicitly cased:
+```bash
+grep -oE "data-action=\"[a-zA-Z]+\"" tenant_app.html | sort -u   # every wired action
+grep -n "=== '<action>'" tenant_app.html                         # explicit case present?
+```
+Sibling of §7-QQ (god-file extraction drops `window.X`) and §7-K (defined ≠ wired) — same family: the function exists, but the wiring delivers the wrong thing (here: the element instead of the id). And the cure for the cryptic symptom was §7-N (surface the real error code, don't render a generic dead-end message).
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
