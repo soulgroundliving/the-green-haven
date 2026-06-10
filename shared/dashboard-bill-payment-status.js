@@ -119,6 +119,13 @@ async function saveBillToFirebase(d){
       month: d.month,
       year: d.year,
       status: 'paid',
+      // Stamp WHEN the payment was recorded — the live-payment "ชำระวันนี้" count
+      // (updatePVStats → paidRoomsToday) buckets by paidAt within today. saveBillToFirebase
+      // previously wrote status:'paid' with NO paidAt, so that count stayed 0 even right after
+      // marking paid. Prefer the slip's real transfer time when present, else now.
+      paidAt: (window.slipVerified && window.slipData && window.slipData.transferDate)
+        ? window.slipData.transferDate
+        : new Date().toISOString(),
       billDate: d.dateStr,
       totalCharge: d.total,
       charges: {
