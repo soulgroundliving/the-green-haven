@@ -19,7 +19,8 @@
  *   - roster   FS    `tenants/{building}/list`            (tenantId + occupancy gate)
  *   - complaints FS  `complaints` (top-level, bounded by a streak-cap cutoff)
  *   - kindness FS    `pointsLedger` where source in {quest,food_share,help_completed}
- *                    (Meaning Layer #6 — ONE global read, grouped by tenantId)
+ *                    (Meaning Layer #6 — ONE global read; joined to a roster tenant by
+ *                    `${building}_${roomId}` first, canonical tenantId as fallback)
  *
  * Doc shape (server-write-only — rule `write: if false`):
  *   trustScores/{tenantId} = {
@@ -103,21 +104,36 @@ async function runTrustScoreSweep({ nowMs } = {}) {
   // — kindness (#6): ONE global read of the KIND-tagged points-ledger events.
   //   `where('source','in', [...])` is a single-field query → served by the
   //   automatic index (NO composite, §7-N-safe) and has NO limit → the newest
-  //   events are never dropped (§7-AAA-safe). Grouped by tenantId — the person id
-  //   carries across rooms/buildings, so Kindness is the tenant's OWN cumulative
-  //   generosity regardless of where they live. Trust ≠ points (§6): this reads
-  //   only the kind-EARN subset (peer-confirmed giving), never the spendable total.
-  const kindnessByTenant = new Map(); // tenantId → [{ source, points }]
+  //   events are never dropped (§7-AAA-safe).
+  //
+  //   JOIN by (building, roomId) FIRST: the capture CFs (claimQuest /
+  //   completeHelpRequest / claimFood) tag the ledger `tenantId` with the
+  //   `${building}_${room}` form (e.g. "nest_N101"), NOT the canonical roster
+  //   tenantId ("TENANT_…") — verified live on prod 2026-06-10 (§7-J: the active
+  //   tenant scored 0 despite 4 real quests because the ids didn't join). The
+  //   roster is keyed by building/room, so room-key is the reliable join. Fall
+  //   back to `tenantId` for player-path events (building/roomId null) or any
+  //   future canonical-tagged event. Each event lands in EXACTLY ONE index, so the
+  //   per-tenant union can't double-count. Trust ≠ points (§6): kind-EARN subset only.
+  const kindnessByRoomKey = new Map();  // `${building}_${roomId}` → [{ source, points }]
+  const kindnessByTenantId = new Map(); // tenantId → [{ source, points }] (player / canonical-only)
   try {
     const kSnap = await firestore.collection('pointsLedger')
       .where('source', 'in', [...KINDNESS_SOURCES]).get();
     kSnap.forEach((d) => {
       const e = d.data() || {};
-      if (!e.tenantId) return;
-      const tid = String(e.tenantId);
-      if (!kindnessByTenant.has(tid)) kindnessByTenant.set(tid, []);
-      kindnessByTenant.get(tid).push({ source: e.source, points: e.points });
-      summary.kindnessEventsScanned++;
+      const ev = { source: e.source, points: e.points };
+      if (e.building && e.roomId != null && e.roomId !== '') {
+        const rk = `${e.building}_${String(e.roomId)}`;
+        if (!kindnessByRoomKey.has(rk)) kindnessByRoomKey.set(rk, []);
+        kindnessByRoomKey.get(rk).push(ev);
+        summary.kindnessEventsScanned++;
+      } else if (e.tenantId) {
+        const tid = String(e.tenantId);
+        if (!kindnessByTenantId.has(tid)) kindnessByTenantId.set(tid, []);
+        kindnessByTenantId.get(tid).push(ev);
+        summary.kindnessEventsScanned++;
+      }
     });
   } catch (e) {
     // Non-fatal: reputation still computes; kindness falls back to 0/provisional this run.
@@ -183,10 +199,16 @@ async function runTrustScoreSweep({ nowMs } = {}) {
       const result = computeReputation({ bills: roomBills, moveInDate, complaints, now });
       if (result.provisional) summary.provisional++;
 
-      // Kindness (#6) — sum this tenant's kind-tagged ledger events. Additive
-      // fields on the SAME admin-only doc; no tenant mirror yet (that's the v1.x
-      // badge, mirroring how Reputation shipped admin-only first).
-      const kind = computeKindness({ events: kindnessByTenant.get(String(td.tenantId)) || [] });
+      // Kindness (#6) — sum this tenant's kind-tagged ledger events. JOIN by room
+      // key first (capture CFs tag by `${building}_${room}`), then by canonical
+      // tenantId (player / canonical-only events). Each event is in exactly one
+      // index, so the union never double-counts. Additive fields on the SAME
+      // admin-only doc; no tenant mirror yet (v1.x badge — Reputation shipped admin-first).
+      const kindEvents = [
+        ...(kindnessByRoomKey.get(`${building}_${String(roomId)}`) || []),
+        ...(kindnessByTenantId.get(String(td.tenantId)) || []),
+      ];
+      const kind = computeKindness({ events: kindEvents });
       if (kind.provisional) summary.kindnessProvisional++;
 
       const ref = firestore.collection('trustScores').doc(String(td.tenantId));

@@ -258,7 +258,7 @@ describe('runTrustScoreSweep', () => {
     assert.equal(byMirror('20').data.reputationTier, 'provisional');
   });
 
-  it('computes kindness (#6) from the kind-tagged ledger, grouped by tenantId', async () => {
+  it('computes kindness (#6) via the tenantId fallback when events carry no building/roomId', async () => {
     world.leasesByBuilding = { rooms: [
       { roomId: '15', status: 'active', moveInDate: monthsAgo(30) },
       { roomId: '16', status: 'active', moveInDate: monthsAgo(30) },
@@ -296,6 +296,33 @@ describe('runTrustScoreSweep', () => {
 
     // Reputation is untouched by the kindness extension (separate concern).
     assert.equal(typeof w15.data.reputation, 'number');
+  });
+
+  it('joins kindness by (building, roomId) when the ledger tenantId is the ${building}_${room} form (§7-J fix)', async () => {
+    // Real prod shape (verified 2026-06-10): claimQuest/completeHelpRequest/claimFood
+    // tag the ledger `tenantId` with `${building}_${room}` (e.g. "nest_N101"), NOT the
+    // canonical roster tenantId ("TENANT_…"). The sweep must still join these to the
+    // roster tenant — by room key, not by id — or the score is silently 0 (§7-J).
+    world.buildings = ['nest'];
+    world.leasesByBuilding = { nest: [{ roomId: 'N101', status: 'active', moveInDate: monthsAgo(30) }] };
+    world.tenantsByBuilding = { nest: [{ roomId: 'N101', tenantId: 'TENANT_canon_15', status: 'occupied' }] };
+    world.ledger = [
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'quest', points: 10 },
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'quest', points: 10 },
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'quest', points: 10 },
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'quest', points: 10 },
+    ];
+
+    await runTrustScoreSweep({ nowMs: NOW });
+
+    // Doc keyed by the CANONICAL tenantId; kindness joined via the room key despite
+    // the id mismatch. (With the old id-only join this would be totalEvents=0 / kindness=0.)
+    const w = byId('TENANT_canon_15');
+    assert.ok(w, 'wrote trustScores for the canonical tenantId');
+    assert.equal(w.data.kindnessFactors.questCount, 4);
+    assert.equal(w.data.kindnessFactors.totalPoints, 40);
+    assert.equal(w.data.kindnessProvisional, false); // 4 events ≥ floor
+    assert.ok(w.data.kindness > 0, 'kindness joined via room key, not 0');
   });
 
   it('exposes the scheduled CF as a callable handler', () => {
