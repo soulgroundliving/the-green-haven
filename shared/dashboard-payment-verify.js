@@ -174,6 +174,12 @@ function updatePVStats(slips) {
       });
     });
   }
+  // BillStore bills don't always carry paidAt (SlipOK path + bills issued before the paidAt
+  // fix), so paidRoomsToday/paidRooms miss real payments — "ห้องชำระวันนี้" read 0 even when a
+  // slip arrived today. Union in rooms whose slip was verified in-window (deduped by room, so
+  // no amount inflation — billStorePaidTotal stays BillStore-only).
+  todaySlips.forEach(s => { const r = String(s.room || ''); if (r) paidRoomsToday.add(`${s.building || 'rooms'}|${r}`); });
+  monthSlips.forEach(s => { const r = String(s.room || ''); if (r) paidRooms.add(`${s.building || 'rooms'}|${r}`); });
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   set('pv-today-count', paidRoomsToday.size);
   set('pv-month-count', paidRooms.size);
