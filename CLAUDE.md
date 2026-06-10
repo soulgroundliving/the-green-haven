@@ -1602,6 +1602,43 @@ grep -n "=== '<action>'" tenant_app.html                         # explicit case
 ```
 Sibling of §7-QQ (god-file extraction drops `window.X`) and §7-K (defined ≠ wired) — same family: the function exists, but the wiring delivers the wrong thing (here: the element instead of the id). And the cure for the cryptic symptom was §7-N (surface the real error code, don't render a generic dead-end message).
 
+### KKK. Billing "paid" state spans 4 stores + 3 date semantics — reconcile ALL on every read / write / reset
+
+A room/month's paid status lives in **four** places, written by different paths, and dated by **three** different fields. Touch one without the others and the views silently disagree. One QA pass (2026-06-10, ~10 commits) surfaced a whole cluster of this.
+
+**The 4 stores:**
+1. RTDB `bills/{bld}/{room}/{billId}` — `status:'paid'` + `paidAt` (admin `saveBillToFirebase`; CF materialize). `paidAt` was MISSING on admin bills until `cd5f996`.
+2. Firestore `verifiedSlips/{id}` — SlipOK (`manualEntry:false`) OR admin-manual/cash (`manualEntry:true`, `sender:'(บันทึกโดย admin)'`).
+3. localStorage `payment_status` — legacy mirror; the global verifiedSlips subscription RE-writes it on every snapshot (so clearing it alone is futile).
+4. `bills_YYYY` (localStorage, BillingSystem).
+
+**The 3 date fields (NOT interchangeable):**
+- `verifiedSlips.timestamp` = billing-month anchor (5th) for manual entries — NOT activity time.
+- `verifiedAt` = when the payment was recorded (real activity) → use for the live "what came in" feed/filters.
+- `bill.paidAt` = when marked paid → the "ชำระวันนี้" bucket needs this.
+
+**Readers diverge — map which store + date each uses before editing:**
+- ออกบิล grid + `showPayDetail` modal → `PaymentStore.listForMonth` **with no building arg** = verifiedSlips + localStorage only.
+- Meter table (`renderMeterTable`) → scans `BillStore._cache` (`status==='paid' || paidAt`).
+- Live-payment counts (`updatePVStats`) → BillStore for room counts, verifiedSlips for the feed.
+- `showPayDetail` uses `getByMonth` (returns ONE bill); `renderMeterTable` scans ALL → they disagree when a room/month has duplicate bills.
+
+**Bugs this caused (all same root):** reset flipped RTDB but left verifiedSlips → grid re-showed paid (subscription re-mirrored it + ignored `'removed'`); modal said unpaid (RTDB pending) while meter table said paid (verifiedSlips leftover); live feed dated by `timestamp` (5th) → "today"/"7-วัน" looked empty; "ชำระวันนี้" stuck 0 (bills lacked `paidAt`); "N slip" counted manual/cash as slips; feed unsorted + omitted cash-no-slip bills.
+
+**Rules:**
+- A **reset/correction** must clear EVERY paid signal: delete the RTDB bill(s) for the room/month (ALL of them — duplicates exist), delete the verifiedSlips doc(s), clear localStorage, `PaymentStore._remove`, re-render. Half-clearing = the leftover store wins.
+- A **"what came in" feed** dates by `verifiedAt` + sorts newest-first; a **"which bills paid"** count uses billing-month/BillStore; a **"paid today"** bucket needs `paidAt` (now written by `saveBillToFirebase`). For room counts also union slip-verified rooms (bills don't always have `paidAt`).
+- A **complete bill list** must union BillStore-paid-without-slip (cash) entries — `verifiedSlips` alone omits cash payments (`_pvAugmentBills`).
+- The global verifiedSlips `onSnapshot` MUST handle `'removed'` (drop from cache + localStorage) — it ignored removals, so deletes never reflected without a reload.
+
+```bash
+# every paid-state source + date field — read before editing any billing tally/reset
+grep -rn "verifiedSlips\|payment_status\|bills_YYYY\|saveBillToFirebase\|_pvAugmentBills" shared/dashboard-bill*.js shared/dashboard-payment-verify.js
+grep -rn "manualEntry\|verifiedAt\|paidAt\|_pvEffectiveDate\|_remove" shared/dashboard-payment-verify.js shared/dashboard-bill-payment-status.js shared/dashboard-bill.js
+```
+
+Family: §7-T (writer/reader field drift), §7-DD (lifecycle must update every sibling reader falls through to), §7-E (year-format traps in bill matching), §7-N/V/KK (onSnapshot lifecycle — error cb, unsub-before-rebind, cached-tick guard). Fixed across `9e68fb0`→`9bf6257`.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
