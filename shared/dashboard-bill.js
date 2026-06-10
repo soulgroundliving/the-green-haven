@@ -1241,22 +1241,29 @@ function resetRoomPayment(){
 }
 
 function _doResetRoomPayment() {
-  // Primary: flip RTDB bill back to pending
-  if(window.BillStore && window.firebaseUpdate && window.firebaseRef && window.firebaseDatabase){
+  // Delete EVERY bill for this room+month (not just the first). Duplicates from multi-path
+  // issue (admin manual + verifySlip Option-B materialize) otherwise leave a stale ✅: the
+  // meter table scans ALL _cache bills, so one leftover paid bill keeps the room green while
+  // the modal (getByMonth → one bill) shows unpaid — the exact inconsistency seen on ห้อง 19.
+  // Optimistically drop from _cache so the synchronous renderMeterTable() below reflects it
+  // without waiting for the RTDB round-trip. Year matched via BillStore._be so 2569/"2569"/
+  // 2-digit all normalise (§7-E). Dialog already warns "ข้อมูลใบเสร็จจะถูกลบออก"; re-issue then
+  // creates ONE fresh bill (saveBillToFirebase finds no cached match → new id).
+  if(window.BillStore && window.firebaseSet && window.firebaseRef && window.firebaseDatabase){
     try {
       const bld = /^[Nn]\d/.test(payModalRoomId) ? 'nest' : 'rooms';
       const roomBills = window.BillStore._cache[bld]?.[payModalRoomId] || {};
-      const billEntry = Object.entries(roomBills).find(([, b]) =>
-        Number(b.month) === Number(payModalMonth) && String(b.year) === String(payModalYear)
-      );
-      if(billEntry){
-        const [billId] = billEntry;
-        window.firebaseUpdate(
-          window.firebaseRef(window.firebaseDatabase, `bills/${bld}/${payModalRoomId}/${billId}`),
-          { status: 'pending', paidAt: null }
-        ).catch(e => console.warn('[resetRoomPayment] RTDB update failed:', e));
-      }
-    } catch(e){ console.warn('[resetRoomPayment] RTDB update failed:', e); }
+      const beTarget = window.BillStore._be(payModalYear);
+      Object.entries(roomBills)
+        .filter(([, b]) => Number(b.month) === Number(payModalMonth) && window.BillStore._be(b.year) === beTarget)
+        .forEach(([billId]) => {
+          try { delete window.BillStore._cache[bld][payModalRoomId][billId]; } catch(_){}
+          window.firebaseSet(
+            window.firebaseRef(window.firebaseDatabase, `bills/${bld}/${payModalRoomId}/${billId}`),
+            null
+          ).catch(e => console.warn('[resetRoomPayment] RTDB delete failed:', e));
+        });
+    } catch(e){ console.warn('[resetRoomPayment] RTDB reset failed:', e); }
   }
 
   // Remove from legacy localStorage
