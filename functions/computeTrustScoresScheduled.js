@@ -13,11 +13,13 @@
  * Trust ≠ points (§6): this never reads the spendable `points` balance — only
  * verifiable events (paid bills, lease tenure, complaint record).
  *
- * Data gathered per building (a handful of reads each — cheap at this scale):
+ * Data gathered (a handful of reads — cheap at this scale):
  *   - bills    RTDB  `bills/{building}/{room}/{billId}`  (status / dueDate / paidAt)
  *   - tenure   FS    `leases/{building}/list` where status==active → moveInDate
  *   - roster   FS    `tenants/{building}/list`            (tenantId + occupancy gate)
  *   - complaints FS  `complaints` (top-level, bounded by a streak-cap cutoff)
+ *   - kindness FS    `pointsLedger` where source in {quest,food_share,help_completed}
+ *                    (Meaning Layer #6 — ONE global read, grouped by tenantId)
  *
  * Doc shape (server-write-only — rule `write: if false`):
  *   trustScores/{tenantId} = {
@@ -26,6 +28,10 @@
  *     provisional: bool,                     // true when 0 ratable bills (payment reweighted out)
  *     factors: { paymentScore, tenureScore, complaintScore, onTimeRatio,
  *                onTimeBills, lateBills, tenureMonths, complaintFreeMonths },
+ *     kindness: 0–100,                       // Meaning Layer #6 — generosity (peer-confirmed giving)
+ *     kindnessProvisional: bool,             // true below the accrual-gate event count (seed state)
+ *     kindnessFactors: { questPoints, foodSharePoints, helpCompletedPoints, totalPoints,
+ *                        questCount, foodShareCount, helpCompletedCount, totalEvents },
  *     computedAt: serverTimestamp,
  *   }
  *
@@ -45,6 +51,7 @@ const firestore = admin.firestore();
 
 const { getAllBuildings } = require('./buildingRegistry');
 const { computeReputation, reputationTier, REPUTATION_CONSTANTS } = require('./_reputation');
+const { computeKindness, KINDNESS_SOURCES } = require('./_kindness');
 
 const { MONTH_MS, COMPLAINT_CLEAN_MAX_MONTHS } = REPUTATION_CONSTANTS;
 
@@ -61,11 +68,15 @@ const BATCH_LIMIT = 400;
  * @param {number} [opts.nowMs] injected "now" (defaults to Date.now()) — lets the
  *                              sweep stay deterministic under test.
  * @returns {Promise<object>} summary { scored, skippedVacant, provisional,
- *                              complaintsScanned, buildings:[{building,written}], errors }
+ *                              complaintsScanned, kindnessProvisional,
+ *                              kindnessEventsScanned, buildings:[{building,written}], errors }
  */
 async function runTrustScoreSweep({ nowMs } = {}) {
   const now = Number.isFinite(nowMs) ? nowMs : Date.now();
-  const summary = { scored: 0, skippedVacant: 0, provisional: 0, complaintsScanned: 0, buildings: [], errors: 0 };
+  const summary = {
+    scored: 0, skippedVacant: 0, provisional: 0, complaintsScanned: 0,
+    kindnessProvisional: 0, kindnessEventsScanned: 0, buildings: [], errors: 0,
+  };
 
   // — complaints: one bounded read (single-field range, ISO-string compare, like
   //   complaintAndGamification.js:99 → no composite index). A complaint older than
@@ -86,6 +97,31 @@ async function runTrustScoreSweep({ nowMs } = {}) {
   } catch (e) {
     // Non-fatal: scores still compute, just without the complaint signal this run.
     console.warn('[computeTrustScores] complaints read failed — scores omit complaint signal:', e && e.message);
+    summary.errors++;
+  }
+
+  // — kindness (#6): ONE global read of the KIND-tagged points-ledger events.
+  //   `where('source','in', [...])` is a single-field query → served by the
+  //   automatic index (NO composite, §7-N-safe) and has NO limit → the newest
+  //   events are never dropped (§7-AAA-safe). Grouped by tenantId — the person id
+  //   carries across rooms/buildings, so Kindness is the tenant's OWN cumulative
+  //   generosity regardless of where they live. Trust ≠ points (§6): this reads
+  //   only the kind-EARN subset (peer-confirmed giving), never the spendable total.
+  const kindnessByTenant = new Map(); // tenantId → [{ source, points }]
+  try {
+    const kSnap = await firestore.collection('pointsLedger')
+      .where('source', 'in', [...KINDNESS_SOURCES]).get();
+    kSnap.forEach((d) => {
+      const e = d.data() || {};
+      if (!e.tenantId) return;
+      const tid = String(e.tenantId);
+      if (!kindnessByTenant.has(tid)) kindnessByTenant.set(tid, []);
+      kindnessByTenant.get(tid).push({ source: e.source, points: e.points });
+      summary.kindnessEventsScanned++;
+    });
+  } catch (e) {
+    // Non-fatal: reputation still computes; kindness falls back to 0/provisional this run.
+    console.warn('[computeTrustScores] pointsLedger read failed — kindness omitted this run:', e && e.message);
     summary.errors++;
   }
 
@@ -147,6 +183,12 @@ async function runTrustScoreSweep({ nowMs } = {}) {
       const result = computeReputation({ bills: roomBills, moveInDate, complaints, now });
       if (result.provisional) summary.provisional++;
 
+      // Kindness (#6) — sum this tenant's kind-tagged ledger events. Additive
+      // fields on the SAME admin-only doc; no tenant mirror yet (that's the v1.x
+      // badge, mirroring how Reputation shipped admin-only first).
+      const kind = computeKindness({ events: kindnessByTenant.get(String(td.tenantId)) || [] });
+      if (kind.provisional) summary.kindnessProvisional++;
+
       const ref = firestore.collection('trustScores').doc(String(td.tenantId));
       batch.set(ref, {
         tenantId: String(td.tenantId),
@@ -155,6 +197,9 @@ async function runTrustScoreSweep({ nowMs } = {}) {
         reputation: result.reputation,
         provisional: result.provisional,
         factors: result.factors,
+        kindness: kind.kindness,
+        kindnessProvisional: kind.provisional,
+        kindnessFactors: kind.factors,
         computedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
