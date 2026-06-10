@@ -14,6 +14,18 @@ real tenants, this is near the floor).
 - ✅ **No CF min-instances** (`minScale` empty on all Gen2/Cloud Run CFs) → no idle 24/7 billing (the usual hidden cost is absent).
 - ✅ All ~17 scheduled jobs are **under the Cloud Functions free tier** (2M invocations/mo). `keepLiffWarm` (/5min, pings 5 CFs) is NOT a meaningful cost.
 
+## Investigation findings (2026-06-10, AFTER billing restored — gcloud unblocked)
+Inspected every gcloud-accessible cost driver — **none is a big waste; the app is genuinely efficient, no single leak to cut:**
+- ❌ **Artifact Registry** `gcf-artifacts` = **only 1.1 GB** (~$0.06 / ฿2 per mo). NOT a driver — the cleanup in Step 3 below is NOT worth doing (first guess was wrong; verified empirically). Image bloat is a non-issue.
+- ✅ No min-instances; schedulers free (confirmed again).
+- ⚠️ **Cloud Build** runs in clusters several times/day (CF deploys on every merge + PR staging) — plausibly a minor contributor, but durations weren't exposed; not quantifiable from `gcloud builds list`. Reducing it = deploy-only-changed-functions (CI rework, risky — defer).
+- ❌ **No BigQuery billing export** (`bq ls` → only `audit_archive`) → the exact per-service breakdown CANNOT be queried; needs the console Reports screenshot (Step 1).
+- ❌ **Budget API not enabled** → can't create a budget via gcloud; do it in console (2 clicks).
+
+**Conclusion:** ฿319/mo is **diffuse normal operating cost** (Firestore reads + Functions compute + egress + Cloud Build + logging, none dominant) — there is no big obvious win. Realistic safe savings are marginal (log exclusion, Firestore read tuning) and need the Step-1 breakdown to justify. **The app is efficient, not wasteful.**
+
+**Recurrence prevention (the actual fix for the disable):** the incident was a PAYMENT failure, which a *budget alert does NOT catch* (budgets watch spend, not payment status). The real prevention is a **backup payment method** on the billing account (Google charges the backup if the primary card fails → no disable) + watching Google's billing-failure emails.
+
 ---
 
 ## Step 0 — restore billing (blocks everything below)
