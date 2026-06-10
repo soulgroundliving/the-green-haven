@@ -209,7 +209,10 @@ function updatePVStats(slips) {
 function renderPVFeed(slips) {
   const feed = document.getElementById('pvFeed');
   if (!feed) return;
-  const filtered = slips.filter(_pvInRange);
+  // Sort newest-first by activity date. Without this the feed kept verifiedSlips' raw
+  // timestamp order (billing-month 5th for manual entries → all June manual tied), so today's
+  // real slip sank to the middle and "7 วันล่าสุด" looked like it excluded today.
+  const filtered = slips.filter(_pvInRange).sort((a, b) => _pvEffectiveDate(b) - _pvEffectiveDate(a));
   if (filtered.length === 0) {
     feed.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--text-muted);">📭 ยังไม่มีการโอนในช่วงนี้</div>';
     return;
