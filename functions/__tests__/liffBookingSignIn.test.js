@@ -96,13 +96,13 @@ Module._load = function (request, parent, ...rest) {
   if (request === 'firebase-admin') return adminStub;
   if (request === 'firebase-functions/v1') {
     return {
-      region: () => ({
-        runWith: () => ({
-          https: {
-            onRequest: (fn) => { capturedHandler = fn; return fn; },
-          },
-        }),
-      }),
+      region: () => {
+        // Tolerate the chain with OR without .runWith(...) (minInstances was
+        // removed 2026-06-10 for cost — the mock shouldn't care either way).
+        const chain = { https: { onRequest: (fn) => { capturedHandler = fn; return fn; } } };
+        chain.runWith = () => chain;
+        return chain;
+      },
     };
   }
   return _origLoad.apply(this, arguments);

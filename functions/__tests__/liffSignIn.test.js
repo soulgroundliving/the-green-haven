@@ -171,11 +171,13 @@ Module._load = function (id, parent, ...rest) {
   if (id === 'firebase-admin') return adminStub;
   if (id === 'firebase-functions/v1') {
     return {
-      region: () => ({
-        runWith: () => ({
-          https: { onRequest: (fn) => fn },
-        }),
-      }),
+      region: () => {
+        // Tolerate the chain with OR without .runWith(...) (minInstances was
+        // removed 2026-06-10 for cost — the mock shouldn't care either way).
+        const chain = { https: { onRequest: (fn) => fn } };
+        chain.runWith = () => chain;
+        return chain;
+      },
     };
   }
   if (id.endsWith('/buildingRegistry') || id === './buildingRegistry') return buildingRegistryStub;

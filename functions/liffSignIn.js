@@ -31,7 +31,9 @@ const LINE_CHANNEL_ID = '2009790149';
 
 exports.liffSignIn = functions
   .region('asia-southeast1')
-  .runWith({ minInstances: 1 })
+  // No minInstances — keepLiffWarm pings this every 5 min (< the ~15-min idle
+  // timeout) so it stays warm at ~$0. A 24/7 idle min-instance was the
+  // "Min Instance Memory Tier 2" SKU = ~40% of the GCP bill (removed 2026-06-10).
   .https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', 'https://the-green-haven.vercel.app');
   if (req.method === 'OPTIONS') {
