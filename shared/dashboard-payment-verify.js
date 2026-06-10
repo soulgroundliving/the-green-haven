@@ -184,11 +184,23 @@ function updatePVStats(slips) {
   set('pv-today-count', paidRoomsToday.size);
   set('pv-month-count', paidRooms.size);
   set('pv-month-total', '฿' + billStorePaidTotal.toLocaleString());
-  // Subtitle: show raw slip-feed counts so admin still sees workflow throughput.
-  // Difference between bill count and slip count = retries / multi-source recordings.
-  const setSub = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n > 0 ? `📄 ${n} slip` : ''; };
-  setSub('pv-today-subcount', todaySlips.length);
-  setSub('pv-month-subcount', monthSlips.length);
+  // Subtitle: break the paid-room tally into slip (SlipOK-verified) vs cash/manual. A room is
+  // "slip" only if it has a non-manual verifiedSlips doc in-window; every other paid room is
+  // cash/manual (admin-recorded with manualEntry, or paid with no slip record). Counted by ROOM
+  // to match the big "ห้องชำระ" number. (The old "📄 N slip" counted manual entries as slips too,
+  // so it read 14 when only 5 were real SlipOK slips — the rest are cash.)
+  const _slipKey = s => `${s.building || 'rooms'}|${String(s.room || '')}`;
+  const slipRoomsToday = new Set(todaySlips.filter(s => !s.manualEntry).map(_slipKey));
+  const slipRoomsMonth = new Set(monthSlips.filter(s => !s.manualEntry).map(_slipKey));
+  const setSub = (id, slipN, cashN) => {
+    const el = document.getElementById(id); if (!el) return;
+    const parts = [];
+    if (slipN > 0) parts.push(`💳 ${slipN} สลิป`);
+    if (cashN > 0) parts.push(`💵 ${cashN} เงินสด`);
+    el.textContent = parts.join(' · ');
+  };
+  setSub('pv-today-subcount', slipRoomsToday.size, Math.max(0, paidRoomsToday.size - slipRoomsToday.size));
+  setSub('pv-month-subcount', slipRoomsMonth.size, Math.max(0, paidRooms.size - slipRoomsMonth.size));
   // Update notification badge
   const badge = document.getElementById('paymentBadge');
   if (badge) { badge.classList.add('u-hidden'); }
