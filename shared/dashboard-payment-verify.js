@@ -40,6 +40,49 @@ window._pvCachedSlips = [];
 // and the feed showed 1.5-2x record count (§7-T writer drift). Removed
 // 2026-05-17: feed now reads verifiedSlips only.
 
+// Augment the verifiedSlips feed with paid bills that have NO slip doc (cash / no-slip
+// payments). Without this the feed lists only slip-backed payments, so "เดือนนี้" looked
+// incomplete — e.g. 19 rooms paid but only 15 shown (4 cash bills 13/16/20/32 missing).
+// Deduped by building|room|billingMonth so a room with both a slip and a bill isn't shown
+// twice. Synthesized rows carry manualEntry:true → counted as cash in the slip/cash split.
+function _pvAugmentBills(slips) {
+  const out = slips.slice();
+  try {
+    const cache = window.BillStore && window.BillStore._cache;
+    if (!cache || typeof cache !== 'object') return out;
+    const SYNTH = window.BillStore.SYNTH_PREFIX || 'SYNTH-';
+    const billMonthKey = s => {
+      if (s.yearBE && s.month) return `${s.yearBE}|${s.month}`;
+      const d = s.timestamp && s.timestamp.toDate ? s.timestamp.toDate() : new Date(s.timestamp || s.verifiedAt || Date.now());
+      return `${d.getFullYear() + 543}|${d.getMonth() + 1}`;
+    };
+    const covered = new Set(slips.map(s => `${s.building || 'rooms'}|${String(s.room)}|${billMonthKey(s)}`));
+    Object.keys(cache).forEach(bld => {
+      const rooms = cache[bld] || {};
+      Object.keys(rooms).forEach(rid => {
+        const byId = rooms[rid] || {};
+        Object.keys(byId).forEach(id => {
+          const b = byId[id];
+          if (!b || typeof b !== 'object') return;
+          if (typeof b.billId === 'string' && b.billId.startsWith(SYNTH)) return;
+          if (String(b.status || '').toLowerCase() !== 'paid' && !b.paidAt) return;
+          const yBE = Number(b.year) < 2400 ? Number(b.year) + 543 : Number(b.year);
+          const m = Number(b.month);
+          if (covered.has(`${bld}|${String(rid)}|${yBE}|${m}`)) return;
+          const amt = Number(b.totalCharge != null ? b.totalCharge : b.totalAmount) || 0;
+          const when = b.paidAt ? new Date(b.paidAt) : new Date(yBE - 543, m - 1, 5, 12, 0, 0);
+          out.push({
+            id: `bill_${bld}_${rid}_${yBE}_${m}`, room: rid, building: bld,
+            amount: amt, expectedAmount: amt, sender: 'เงินสด (ไม่มีสลิป)', bankCode: '',
+            timestamp: when, verifiedAt: when, manualEntry: true, _fromBill: true, yearBE: yBE, month: m
+          });
+        });
+      });
+    });
+  } catch (e) { console.warn('[pv] augment bills failed:', (e && e.message) || e); }
+  return out;
+}
+
 function initPaymentVerify() {
   if (_pvUnsubscribe) { _pvUnsubscribe(); _pvUnsubscribe = null; }
 
@@ -53,7 +96,7 @@ function initPaymentVerify() {
   // hasn't been populated yet (rare: user opens Payment Verify within the
   // first ~800ms of page load before _subscribeGlobalVerifiedSlips runs).
   const renderFromList = (firestoreSlips) => {
-    const slips = firestoreSlips || [];
+    const slips = _pvAugmentBills(firestoreSlips || []);
     window._pvCachedSlips = slips;
     updatePVStats(slips);
     renderPVFeed(slips);
