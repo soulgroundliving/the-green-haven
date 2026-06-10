@@ -4,9 +4,10 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-11) — Meaning Layer **#6 Kindness · tenant tier badge v1.x** · ✅ APPROVED · PR1 server+rules BUILT (all gates green) · ⏳ owner merge+deploy → then PR2 frontend
+## ▶▶▶ ACTIVE PLAN (2026-06-11) — Meaning Layer **#6 Kindness · tenant tier badge v1.x** · ✅ PR1 MERGED (#333 `ddf2fd0`, CF auto-deploy + ⏳ owner rules deploy) · PR2 frontend BUILT (all gates green) · ⏳ owner live-verify
 
-> **Gate (PR1, 2026-06-11):** full functions suite **2288/0** (+7) · rules emulator **332/0** (+2 kindnessTier tamper-proof cases) · `_kindness` 16/0 (+6 kindnessTier) · `recordChecklistConsent` 10/0 (+1 kindness_v1) · sweep 10/0 (mirror assertions updated for combined write) · node --check clean · §7-TT mojibake clean. exportMyData unchanged (DSR already covers trustScores+consents).
+> **Gate (PR1, 2026-06-11):** full functions suite **2288/0** (+7) · rules emulator **332/0** (+2 kindnessTier tamper-proof cases) · `_kindness` 16/0 (+6 kindnessTier) · `recordChecklistConsent` 10/0 (+1 kindness_v1) · sweep 10/0 (mirror assertions updated for combined write) · node --check clean · §7-TT mojibake clean. exportMyData unchanged. **MERGED [#333](https://github.com/soulgroundliving/the-green-haven/pull/333) → CF deploy via CI; owner runs `firebase deploy --only firestore:rules`.**
+> **Gate (PR2, 2026-06-11):** `tenant-kindness` **16/0** · full test:shared **538/0** (+16) · node --check clean · §7-TT mojibake clean · CSP no-regen (external `<script src>` + markup only, §7-II/RR) · **static-harness preview-MCP screenshot: 6 states render correct in LIGHT + DARK** (radiant💚/warm🌿/kind🤲/seed🌱 + consent + muted; dark-mode label contrast fixed §7-W; 0 console errors).
 
 > Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#6**: server + admin **already shipped** (#329/#330/#331, live-verified N101=13). This plan builds the **last sub-phase** — the tenant-facing **Kindness tier badge**: a positive-framed TIER LABEL (never the 0–100 number), consent-gated, on the eco/quest Info tab, beside the reputation badge.
 >

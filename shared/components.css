@@ -863,6 +863,86 @@ body.gh-tour-open {
 .rep-consent__privacy { color: var(--green, #2d8653); text-decoration: underline; }
 .rep-consent__later:hover, .rep-consent__privacy:hover { opacity: 0.75; }
 
+/* ── Tenant Kindness tier badge (Meaning Layer #6 v1.x) ───────────────────────
+   Rendered by shared/tenant-kindness.js into #tenant-kindness-card on the
+   quest-page (under #tenant-reputation-card). Static CSS — never an injected
+   <style> (§7-RR). Muji, positive-ONLY: a green ladder (more green = more น้ำใจ),
+   no harsh colour — there is no "low" face, only the gentle 🌱 seed growth state. */
+.kind-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border-subtle, #ebe9e2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  text-align: left;
+}
+.kind-card__emoji { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+.kind-card__body { min-width: 0; }
+.kind-card__eyebrow {
+  margin: 0 0 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #8a8f98);
+}
+.kind-card__label { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text, #2c2c2c); }
+.kind-card__sub { margin: 2px 0 0; font-size: var(--fs-sm, 0.82rem); color: var(--text-muted, #8a8f98); line-height: 1.4; }
+
+/* Per-tier tint — a gentle green ladder (radiant deepest → seed palest). */
+.kind-card--radiant { background: linear-gradient(180deg, #ecfaf3 0%, var(--card, #fff) 70%); border-color: #b3e3cb; }
+.kind-card--radiant .kind-card__label { color: var(--green-dark, #1a5c38); }
+.kind-card--warm    { background: linear-gradient(180deg, #f1faee 0%, var(--card, #fff) 70%); border-color: #cce6c2; }
+.kind-card--warm    .kind-card__label { color: var(--green, #2d8653); }
+.kind-card--kind    { background: linear-gradient(180deg, #f6faf4 0%, var(--card, #fff) 75%); border-color: #dbe8d2; }
+.kind-card--kind    .kind-card__label { color: var(--green, #2d8653); }
+.kind-card--seed    { background: var(--green-pale, #eef5ee); border-color: #dde8dd; }
+.kind-card--seed    .kind-card__label { color: var(--green-dark, #3a5a44); }
+.kind-card--muted   { background: var(--card, #fff); border-style: dashed; }
+.kind-card--muted   .kind-card__label { color: var(--text-muted, #8a8f98); font-weight: 700; }
+
+/* Consent prompt (shown until the tenant opts in). Column layout. */
+.kind-card--consent { display: block; padding: 18px; }
+.kind-consent__head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.98rem; font-weight: 800; color: var(--text, #2c2c2c);
+  margin-bottom: 8px;
+}
+.kind-consent__text { margin: 0 0 14px; font-size: var(--fs-sm, 0.85rem); line-height: 1.65; color: var(--text-muted, #5f6670); }
+.kind-consent__accept {
+  width: 100%; padding: 12px;
+  background: var(--green, #2d8653); color: #fff;
+  border: none; border-radius: 14px;
+  font-family: inherit; font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; transition: transform 0.12s ease, background-color 0.2s ease;
+}
+.kind-consent__accept:hover { background: var(--green-dark, #1a5c38); }
+.kind-consent__accept:active { transform: scale(0.97); }
+.kind-consent__accept:disabled { opacity: 0.6; cursor: default; }
+.kind-consent__foot { display: flex; justify-content: center; gap: 14px; margin-top: 12px; }
+.kind-consent__later, .kind-consent__privacy {
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: var(--fs-sm, 0.8rem);
+  color: var(--text-muted, #8a8f98); padding: 4px 2px;
+}
+.kind-consent__privacy { color: var(--green, #2d8653); text-decoration: underline; }
+.kind-consent__later:hover, .kind-consent__privacy:hover { opacity: 0.75; }
+
+/* Dark mode — the light-green gradient tops + green-dark labels go muddy on the
+   dark card (§7-W). Re-tint the 3 positive tiers to a subtle dark-green glow with
+   a brighter, readable mint label. seed/consent/muted already read fine (they ride
+   the flipped brand tokens). Light mode is untouched. */
+[data-theme="dark"] .kind-card--radiant { background: linear-gradient(180deg, #1e3d33 0%, var(--card, #162825) 72%); border-color: #2c5446; }
+[data-theme="dark"] .kind-card--radiant .kind-card__label { color: #8fe9c4; }
+[data-theme="dark"] .kind-card--warm    { background: linear-gradient(180deg, #1b352c 0%, var(--card, #162825) 72%); border-color: #294b3e; }
+[data-theme="dark"] .kind-card--warm    .kind-card__label { color: #7ad9ac; }
+[data-theme="dark"] .kind-card--kind    { background: linear-gradient(180deg, #19302a 0%, var(--card, #162825) 78%); border-color: #264539; }
+[data-theme="dark"] .kind-card--kind    .kind-card__label { color: #7ad9ac; }
+
 /* ── Community Quests checklist (Meaning Layer #1) — tenant #urgent-quests-list.
    Static here, never injected via createElement('style') (§7-RR). */
 .quest-card {
