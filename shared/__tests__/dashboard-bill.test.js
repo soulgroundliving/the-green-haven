@@ -36,7 +36,7 @@ function makeForm(fields = {}) {
       const classes = new Set((isObj && spec.classes) || []);
       cache.set(id, {
         value: String(value),
-        classList: { contains: (c) => classes.has(c), add() {}, remove() {} },
+        classList: { contains: (c) => classes.has(c), add() {}, remove() {}, toggle() {} },
       });
     }
     return cache.get(id);
@@ -282,5 +282,54 @@ describe('dashboard-bill.js — PaymentStore BillStore merge', () => {
     //  prototype than this test realm's, which strict deepEqual would reject.)
     assert.equal(Object.keys(sb.window.PaymentStore.listForMonth(2569, 6, 'rooms')).length, 0);
     assert.equal(sb.window.PaymentStore.isPaid('rooms', '13', 2569, 6), false);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// calcBill — keeps window.invoiceData in sync after the invoice is sent.
+//
+// Live bug (2026-06-10): admin pressed "ส่งใบวางบิล" (snapshots window.invoiceData),
+// THEN added ค่าปรับ ฿800. The live preview + QR updated to ฿2512, but the snapshot
+// stayed ฿1712 — and dashboard-bill-slip-verify.js sends invoiceData.total to verifySlip
+// as expectedAmount. SlipOK then rejected a correct ฿2512 slip: "จำนวนเงินไม่ตรงกับยอดบิล
+// (สลิป ฿2512 / ต้องการ ฿1712)" — diff = exactly the late fee. calcBill must propagate the
+// recomputed total back into the snapshot. invoicePanel is stubbed hidden so the fix's
+// doc re-render (buildDocHTML) is skipped — this isolates the invoiceData sync.
+// ────────────────────────────────────────────────────────────────────────────
+describe('dashboard-bill.js — calcBill syncs window.invoiceData', () => {
+  // 19 units × ฿8 = 152, 2 units × ฿20 = 40 → 1500 + 152 + 40 + 20 + lateFee.
+  const BASE_FORM = {
+    'f-rent': '1500',
+    'f-elec-old': '100', 'f-elec-new': '119', 'f-elec-rate': '8',
+    'f-water-old': '50', 'f-water-new': '52', 'f-water-rate': '20',
+    'f-trash': '20', 'f-other': '0',
+    invoicePanel: { classes: ['u-hidden'] }, // skip the doc re-render in the test
+  };
+
+  test('a late fee added after "ส่งใบวางบิล" flows into the stale snapshot', () => {
+    const sb = loadBill();
+    // Snapshot taken at send time, BEFORE the ค่าปรับ was entered.
+    sb.window.invoiceData = { total: 1712, lateFee: 0, room: '15', building: 'rooms', now: new Date() };
+    sb.document = makeForm({ ...BASE_FORM, 'f-latefee': '800' });
+    sb.calcBill();
+    assert.equal(sb.window.invoiceData.total, 2512); // 1712 + 800 — what SlipOK now expects
+    assert.equal(sb.window.invoiceData.lateFee, 800);
+  });
+
+  test('does nothing (no throw) before the invoice is sent', () => {
+    const sb = loadBill();
+    assert.equal(sb.window.invoiceData, null); // load-time default
+    sb.document = makeForm({ ...BASE_FORM, 'f-latefee': '800' });
+    sb.calcBill();
+    assert.equal(sb.window.invoiceData, null); // still null — nothing to sync
+  });
+
+  test('a later edit that lowers the total syncs downward too', () => {
+    const sb = loadBill();
+    sb.window.invoiceData = { total: 2512, lateFee: 800, room: '15', building: 'rooms', now: new Date() };
+    sb.document = makeForm({ ...BASE_FORM, 'f-latefee': '0' }); // admin removes the penalty
+    sb.calcBill();
+    assert.equal(sb.window.invoiceData.total, 1712);
+    assert.equal(sb.window.invoiceData.lateFee, 0);
   });
 });

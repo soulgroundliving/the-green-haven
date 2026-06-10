@@ -251,6 +251,22 @@ function calcBill(){
   const lfEl=document.getElementById('c-latefee');
   if(lfEl) lfEl.textContent='฿'+lateFee.toLocaleString();
   document.getElementById('c-total').textContent='฿'+total.toLocaleString();
+  // Once the invoice was sent (ส่งใบวางบิล snapshots window.invoiceData), a later edit
+  // here — most often ค่าปรับ — must flow back into that snapshot, the re-rendered doc,
+  // AND the QR. Otherwise slip verification keeps the STALE total as expectedAmount and
+  // SlipOK rejects a correct slip "ยอดไม่ตรง" by exactly the late-fee delta (e.g. ฿2512
+  // paid vs stale ฿1712 expected). markRoomPaid/generateReceipt read invoiceData too.
+  if (window.invoiceData) {
+    Object.assign(window.invoiceData, { rent, eNew, eOld, eUnits, eRate, eCost, wNew, wOld, wUnits, wRate, wCost, trash, other, lateFee, total });
+    try {
+      const _inv = document.getElementById('invoicePanel');
+      if (_inv && !_inv.classList.contains('u-hidden')) {
+        const _now = window.invoiceData.now instanceof Date ? window.invoiceData.now : new Date();
+        const _due = new Date(_now); _due.setDate(5); if (_due <= _now) _due.setMonth(_due.getMonth()+1);
+        _inv.innerHTML = buildDocHTML(window.invoiceData, 'invoice', _due.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}));
+      }
+    } catch (e) { console.warn('invoice re-render skipped:', e); }
+  }
   // Live-update QR when invoice panel is already visible (e.g. admin adjusts ค่าปรับ after preview)
   renderQR('qr-payment', total);
 }
