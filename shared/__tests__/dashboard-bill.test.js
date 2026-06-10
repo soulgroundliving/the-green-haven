@@ -283,6 +283,28 @@ describe('dashboard-bill.js — PaymentStore BillStore merge', () => {
     assert.equal(Object.keys(sb.window.PaymentStore.listForMonth(2569, 6, 'rooms')).length, 0);
     assert.equal(sb.window.PaymentStore.isPaid('rooms', '13', 2569, 6), false);
   });
+
+  // §7 (2026-06-10): "รีเซ็ตกลับยังไม่จ่าย" left the room showing ✅ because the grid reads
+  // verifiedSlips via the PaymentStore cache and reset never cleared it. _remove is the cache
+  // drop that the reset (and the subscription 'removed' handler) now call.
+  test('_remove drops a room from the verifiedSlips cache (the reset fix)', () => {
+    const sb = loadBill();
+    const ps = sb.window.PaymentStore;
+    ps._ingest(2569, 6, '19', { status: 'paid', amount: 2512 });
+    assert.equal(ps.isPaid('rooms', '19', 2569, 6), true);
+    assert.equal(ps.listForMonth(2569, 6)['19']?.status, 'paid');
+    ps._remove(2569, 6, '19');
+    assert.equal(ps.isPaid('rooms', '19', 2569, 6), false);
+    assert.equal(ps.listForMonth(2569, 6)['19'], undefined);
+  });
+
+  test('_remove normalizes a CE year to the BE cache key', () => {
+    const sb = loadBill();
+    const ps = sb.window.PaymentStore;
+    ps._ingest(2569, 6, '19', { status: 'paid', amount: 2512 });
+    ps._remove(2026, 6, '19'); // CE 2026 → BE 2569 via _key
+    assert.equal(ps.listForMonth(2569, 6)['19'], undefined);
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────────

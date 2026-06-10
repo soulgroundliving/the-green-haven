@@ -612,8 +612,14 @@ window.PaymentStore = window.PaymentStore || (function(){
     if (!cache[k]) cache[k] = {};
     cache[k][room] = entry;
   }
+  // Drop a room's cached paid-signal — used when a verifiedSlips doc is deleted
+  // (reset/refund) so the ออกบิล grid stops showing it as paid without a reload.
+  function _remove(year, month, room) {
+    const k = _key(year, month);
+    if (cache[k]) delete cache[k][String(room)];
+  }
   function _notify() { listeners.forEach(fn => { try { fn(); } catch(e){} }); }
-  return { isPaid, getSlip, listForMonth, onChange, _ingest, _notify };
+  return { isPaid, getSlip, listForMonth, onChange, _ingest, _remove, _notify };
 })();
 
 // ===== GLOBAL verifiedSlips SYNC → PaymentStore + payment_status + bill pills =====
@@ -635,8 +641,22 @@ function _subscribeGlobalVerifiedSlips(){
       const ps = loadPS();
       let changed = false;
       snap.docChanges().forEach(ch => {
-        if (ch.type === 'removed') return;
         const s = ch.doc.data();
+        if (ch.type === 'removed') {
+          // A reset/refund deleted this slip — drop it from the PaymentStore cache + the
+          // legacy payment_status mirror so the ออกบิล grid reflects it WITHOUT a reload.
+          // (Previously ignored → a reset left the room showing ✅ because the cache held it.)
+          try {
+            const room0 = String(s?.room || '');
+            const ts0 = s?.timestamp?.toDate ? s.timestamp.toDate() : (s?.date ? new Date(s.date) : null);
+            if (room0 && ts0) {
+              const yBE0 = ts0.getFullYear() + 543, m0 = ts0.getMonth() + 1, k0 = `${yBE0}_${m0}`;
+              window.PaymentStore?._remove?.(yBE0, m0, room0);
+              if (ps[k0]?.[room0]) { delete ps[k0][room0]; changed = true; }
+            }
+          } catch (e) { console.warn('[billing] verifiedSlips removed-handler:', e?.message || e); }
+          return;
+        }
         if (!s || s.verified === false) return;
         const room = String(s.room || '');
         if (!room) return;
@@ -1247,9 +1267,52 @@ function _doResetRoomPayment() {
     if(Object.keys(ps[key]).length===0)delete ps[key];
   }
   savePS(ps);
+  // The ออกบิล grid + PaymentStore read verifiedSlips (Firestore) as SoT — flipping the RTDB
+  // bill + clearing localStorage isn't enough: the global subscription re-ingests the slip
+  // (and re-mirrors it into payment_status), so the room re-appears as ✅. Delete the
+  // verifiedSlips doc(s) too. Args captured now so closePayModal()'s state reset can't blank them.
+  _deleteVerifiedSlipsForRoomMonth(/^[Nn]\d/.test(payModalRoomId) ? 'nest' : 'rooms', String(payModalRoomId), payModalYear, payModalMonth);
   closePayModal();
   renderPaymentStatus();
   renderMeterTable();
+}
+
+// Delete every verifiedSlips doc for a room+month — the manual/cash deterministic id AND any
+// SlipOK doc (transactionId id) whose timestamp falls in that month — then drop the
+// PaymentStore cache + legacy mirror and re-render. Lets a reset truly clear the paid signal.
+async function _deleteVerifiedSlipsForRoomMonth(bld, room, year, month) {
+  try {
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    const yBE = Number(year) < 2400 ? Number(year) + 543 : Number(year);
+    const m = Number(month);
+    const ids = new Set([
+      `manual_${bld}_${room}_${year}_${month}`,
+      `manual_${bld}_${room}_${yBE}_${m}`,
+    ]);
+    // SlipOK docs key on the transactionId — find them by room + the month derived from timestamp.
+    try {
+      const snap = await fs.getDocs(fs.query(fs.collection(db, 'verifiedSlips'), fs.where('room', '==', room)));
+      snap.forEach(docSnap => {
+        const s = docSnap.data() || {};
+        const ts = s.timestamp?.toDate ? s.timestamp.toDate() : (s.date ? new Date(s.date) : null);
+        if (ts && (ts.getFullYear() + 543) === yBE && (ts.getMonth() + 1) === m) ids.add(docSnap.id);
+      });
+    } catch (e) { console.warn('[resetRoomPayment] verifiedSlips query failed:', e?.message || e); }
+    await Promise.allSettled([...ids].map(id => fs.deleteDoc(fs.doc(fs.collection(db, 'verifiedSlips'), id))));
+    // Update the in-memory cache + legacy mirror immediately so the grid refreshes without a reload.
+    try { window.PaymentStore?._remove?.(yBE, m, room); } catch (_) {}
+    try {
+      const ps = loadPS();
+      [`${year}_${month}`, `${yBE}_${m}`].forEach(kk => {
+        if (ps[kk]?.[room]) { delete ps[kk][room]; if (!Object.keys(ps[kk]).length) delete ps[kk]; }
+      });
+      savePS(ps);
+    } catch (_) {}
+    try { window.PaymentStore?._notify?.(); } catch (_) {}
+    if (typeof renderPaymentStatus === 'function') renderPaymentStatus();
+  } catch (e) { console.warn('[resetRoomPayment] verifiedSlips cleanup failed:', e?.message || e); }
 }
 
 // ── P1 UX: Filter + Batch invoice ─────────────────────────────────────────────
