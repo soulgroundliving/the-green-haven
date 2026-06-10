@@ -20,13 +20,23 @@ function getBuildingInfo(buildingId) {
   return { firebaseBuilding, metadataArray, displayName };
 }
 
+// Manual per-bill extras (late fee / other charge / note) are NOT derived from room
+// config, so a room/building switch must zero them. Otherwise they carry over to the
+// next room and silently inflate its total, QR and slip expectedAmount — and get
+// recorded as paid (live 2026-06-10: ห้อง 19 inherited the previous room's ค่าปรับ).
+function _resetBillExtras(){
+  const lf=document.getElementById('f-latefee'); if(lf) lf.value=0;
+  const ot=document.getElementById('f-other');   if(ot) ot.value=0;
+  const nt=document.getElementById('f-note');     if(nt) nt.value='';
+}
+
 function onBuildingChange(){
   window.currentBuilding=document.getElementById('f-building').value;
   populateRoomDropdown();
   const canonical = window.CONFIG?.getBuildingConfig?.(currentBuilding) || 'rooms';
   document.getElementById('f-trash').value = canonical === 'nest' ? 40 : 20;
   document.getElementById('f-elec-rate').value=8;
-  const lf=document.getElementById('f-latefee'); if(lf) lf.value=0;
+  _resetBillExtras();
   renderPaymentStatus();
   if (typeof _refreshPromptPayDisplay === 'function') _refreshPromptPayDisplay();
   calcBill(); resetBillFlow(); _updateBillActionPaidState();
@@ -52,6 +62,7 @@ function onRoomChange(){
   const _elecRate=opt.dataset.elec||8;
   document.getElementById('f-elec-rate').value=_elecRate;
   document.getElementById('f-trash').value=opt.dataset.trash||20;
+  _resetBillExtras(); // a new room must not inherit the previous room's ค่าปรับ/extras
   // Update rate chip display labels
   const _dER=document.getElementById('d-elec-rate-lbl'); if(_dER) _dER.textContent='฿'+_elecRate+'/u';
   const _dWR=document.getElementById('d-water-rate-lbl'); if(_dWR) _dWR.textContent='฿'+(opt.dataset.water||20)+'/u';

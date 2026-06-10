@@ -333,3 +333,31 @@ describe('dashboard-bill.js — calcBill syncs window.invoiceData', () => {
     assert.equal(sb.window.invoiceData.lateFee, 0);
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// _resetBillExtras — manual per-bill extras must NOT carry between rooms.
+//
+// Live bug (2026-06-10): ห้อง 19's bill inherited the previous room's leftover ค่าปรับ
+// because onRoomChange reset f-rent/f-elec-rate/f-trash (room-config fields) but NOT the
+// manual extras (late fee / other / note). The fee then inflated the total, QR and slip
+// expectedAmount and was recorded as paid. onRoomChange + onBuildingChange now both call
+// _resetBillExtras so a fresh room starts with zeroed extras.
+// ────────────────────────────────────────────────────────────────────────────
+describe('dashboard-bill.js — _resetBillExtras', () => {
+  test('zeroes f-latefee, f-other and clears f-note', () => {
+    const sb = loadBill();
+    sb.document = makeForm({ 'f-latefee': '800', 'f-other': '50', 'f-note': 'ค้างเดือนก่อน' });
+    sb._resetBillExtras();
+    // (real DOM coerces value to a string; the form stub keeps the raw 0 — assert intent)
+    assert.equal(Number(sb.document.getElementById('f-latefee').value), 0);
+    assert.equal(Number(sb.document.getElementById('f-other').value), 0);
+    assert.equal(sb.document.getElementById('f-note').value, '');
+  });
+
+  test('no throw when the fields are absent (defensive null guards)', () => {
+    const sb = loadBill();
+    // makeForm returns a stub for every id, so emulate "absent" by overriding getElementById.
+    sb.document = { getElementById: () => null, querySelectorAll: () => [], addEventListener() {}, readyState: 'complete' };
+    assert.doesNotThrow(() => sb._resetBillExtras());
+  });
+});
