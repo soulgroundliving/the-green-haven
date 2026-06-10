@@ -166,7 +166,17 @@
     async function _readPet(petId) {
         var c = _ctx();
         if (!c) return null;
-        var snap = await c.fs.getDoc(_petRef(c, petId));
+        // §7-R: a LIFF webview's Firestore connection can hang on a stale TLS
+        // session — race a timeout so a hung getDoc surfaces as an error instead
+        // of an indefinite spinner.
+        var snap = await Promise.race([
+            c.fs.getDoc(_petRef(c, petId)),
+            new Promise(function (_, rej) {
+                setTimeout(function () {
+                    var e = new Error('การเชื่อมต่อหมดเวลา'); e.code = 'timeout'; rej(e);
+                }, 12000);
+            })
+        ]);
         if (!snap || !snap.exists()) return null;
         return Object.assign({ id: snap.id }, snap.data());
     }
@@ -312,8 +322,13 @@
             _setPetName(pet);
             _renderTimeline(pet);
         } catch (e) {
-            console.warn('[pet-health] render failed:', e && e.message);
-            _renderError('โหลดไม่สำเร็จ — กรุณา Reload');                 // §7-N
+            // §7-N + §7-F: surface the ACTUAL Firestore error code so a recurring
+            // "โหลดไม่สำเร็จ" reveals its cause at a glance — permission-denied
+            // (not signed in / claims) vs unavailable / timeout (LIFF §7-R network)
+            // vs failed-precondition — instead of a generic dead-end message.
+            var code = (e && (e.code || e.message)) || 'unknown';
+            console.warn('[pet-health] render failed:', code, e);
+            _renderError('โหลดไม่สำเร็จ — กรุณา Reload (' + code + ')');
         }
     }
 
