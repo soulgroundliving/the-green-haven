@@ -13,8 +13,11 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { computeKindness, KINDNESS_SOURCES, KINDNESS_CONSTANTS } = require('../_kindness');
-const { KINDNESS_TARGET_POINTS, KINDNESS_MIN_EVENTS } = KINDNESS_CONSTANTS;
+const { computeKindness, kindnessTier, KINDNESS_SOURCES, KINDNESS_CONSTANTS } = require('../_kindness');
+const {
+  KINDNESS_TARGET_POINTS, KINDNESS_MIN_EVENTS,
+  KIND_TIER_BOUND_RADIANT, KIND_TIER_BOUND_WARM, KIND_TIER_BOUND_KIND,
+} = KINDNESS_CONSTANTS;
 
 // Build N events of a source, each worth `pts` — handy for hitting thresholds.
 const events = (source, n, pts) => Array.from({ length: n }, () => ({ source, points: pts }));
@@ -130,5 +133,60 @@ describe('computeKindness', () => {
     assert.equal(typeof KINDNESS_MIN_EVENTS, 'number');
     // KINDNESS_SOURCES is frozen — can't be mutated by a consumer.
     assert.throws(() => { KINDNESS_SOURCES.push('giveaway'); });
+  });
+});
+
+describe('kindnessTier — coarse positive-framed enum for the tenant badge', () => {
+  it('maps each band to its tier (bounds aligned with the admin ladder)', () => {
+    assert.equal(kindnessTier(100, false), 'radiant');
+    assert.equal(kindnessTier(KIND_TIER_BOUND_RADIANT, false), 'radiant'); // ≥70
+    assert.equal(kindnessTier(KIND_TIER_BOUND_WARM, false), 'warm');       // ≥40
+    assert.equal(kindnessTier(KIND_TIER_BOUND_KIND, false), 'kind');       // ≥10
+    assert.equal(kindnessTier(0, false), 'seed');                          // <10
+  });
+
+  it('is exact on the band boundaries', () => {
+    assert.equal(kindnessTier(70, false), 'radiant');
+    assert.equal(kindnessTier(69, false), 'warm');
+    assert.equal(kindnessTier(40, false), 'warm');
+    assert.equal(kindnessTier(39, false), 'kind');
+    assert.equal(kindnessTier(10, false), 'kind');
+    assert.equal(kindnessTier(9, false), 'seed');
+  });
+
+  it('provisional collapses into the gentle seed face regardless of score', () => {
+    // Below the accrual gate the score isn't trustworthy yet → always seed.
+    assert.equal(kindnessTier(100, true), 'seed');
+    assert.equal(kindnessTier(55, true), 'seed');
+    assert.equal(kindnessTier(0, true), 'seed');
+  });
+
+  it('non-finite / garbage scores degrade to seed (never throws)', () => {
+    assert.equal(kindnessTier(NaN, false), 'seed');
+    assert.equal(kindnessTier(undefined, false), 'seed');
+    assert.equal(kindnessTier(null, false), 'seed');
+    assert.equal(kindnessTier('nope', false), 'seed');
+  });
+
+  it('positive-only invariant — never a low/negative verdict tier', () => {
+    // Kindness has no "ต่ำ" rung; every output is one of the 4 positive tiers.
+    const allowed = new Set(['radiant', 'warm', 'kind', 'seed']);
+    for (const s of [-50, 0, 5, 10, 25, 40, 55, 70, 90, 100, 9999]) {
+      for (const prov of [true, false]) {
+        assert.ok(allowed.has(kindnessTier(s, prov)), `unexpected tier for (${s}, ${prov})`);
+      }
+    }
+  });
+
+  it('pairs with computeKindness end-to-end (score → tier)', () => {
+    // 3 help events × target/3 → kindness 100, non-provisional → radiant.
+    const big = computeKindness({ events: events('help_completed', 3, KINDNESS_TARGET_POINTS / 3) });
+    assert.equal(big.provisional, false);
+    assert.equal(kindnessTier(big.kindness, big.provisional), 'radiant');
+
+    // 1 small quest → provisional (1 < MIN_EVENTS) → seed, even though it has points.
+    const tiny = computeKindness({ events: [{ source: 'quest', points: 5 }] });
+    assert.equal(tiny.provisional, true);
+    assert.equal(kindnessTier(tiny.kindness, tiny.provisional), 'seed');
   });
 });

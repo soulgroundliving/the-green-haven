@@ -4,6 +4,77 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-11) — Meaning Layer **#6 Kindness · tenant tier badge v1.x** · ✅ APPROVED · PR1 server+rules BUILT (all gates green) · ⏳ owner merge+deploy → then PR2 frontend
+
+> **Gate (PR1, 2026-06-11):** full functions suite **2288/0** (+7) · rules emulator **332/0** (+2 kindnessTier tamper-proof cases) · `_kindness` 16/0 (+6 kindnessTier) · `recordChecklistConsent` 10/0 (+1 kindness_v1) · sweep 10/0 (mirror assertions updated for combined write) · node --check clean · §7-TT mojibake clean. exportMyData unchanged (DSR already covers trustScores+consents).
+
+> Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#6**: server + admin **already shipped** (#329/#330/#331, live-verified N101=13). This plan builds the **last sub-phase** — the tenant-facing **Kindness tier badge**: a positive-framed TIER LABEL (never the 0–100 number), consent-gated, on the eco/quest Info tab, beside the reputation badge.
+>
+> **Approach = mirror the already-shipped Reputation tier badge v1.x EXACTLY** (#288 server+rules / #289 frontend — [[lifecycle_trust_reputation]] "Tenant-visible (v1.x)"). Same MIRROR architecture: the daily sweep maps `kindness`+`kindnessProvisional` → a coarse tier ENUM via a pure `kindnessTier()` and writes ONLY that enum onto the tenant-readable roster doc `tenants/{b}/list/{r}.kindnessTier`; the raw number + factors never leave the admin-only `trustScores` doc. The badge reads the enum off the tenant doc it already loads (`TenantFirebaseSync.loadLease`) — no new subscription, no `trustScores` read-rule change.
+
+### Why
+Completes #6 end-to-end — the tenant now SEES the น้ำใจ they've accrued (quests + food-shares + helping neighbours), reinforcing the pro-social loop the Meaning Layer exists to create. Tier-only + positive-framing avoids the credit-score anxiety the reputation badge guards against. **Why Plan-First (CLAUDE.md §1):** touches `firestore.rules` (protected field) + a consent purpose + sweep CF + 8 files; CF+rules deploy = not single-revert; 2+ real choices (consent gate vs disclosure-only · PR split). Verified-reuse map below from 2 Explore agents (file:line, §7-H/K/O).
+
+### ⭐ Decisions to confirm (before any code)
+**D1 — Consent gate vs disclosure-only · REC: consent-gate (`kindness_v1`, mirror reputation).** Kindness is purely positive so the owner *could* show it to everyone (disclosure-only, less friction). REC keeps the gate: PDPA-consistent (displaying company-derived personal data → §19 consent), matches the roadmap's literal "consent-gated, tier-only", and the gentle prompt doubles as a "here's the kindness we noticed" moment. Alt = disclosure-only (no opt-in) — diverges from spec + reputation precedent.
+
+**D2 — One combined tenant-doc mirror write · REC: yes.** Fold `kindnessTier` into the existing reputation mirror → `batch.set(tDoc.ref, {reputationTier, kindnessTier}, {merge:true})`. One write carries both tiers ⇒ no extra batch op (stays `pending += 2`), single writer (§7-T). Cost: update 1 existing sweep-test assertion (`Object.keys(mirror.data)` `['reputationTier']` → `['reputationTier','kindnessTier']`). Elegant; recommended.
+
+**D3 — PR split · REC: 2 PRs (mirror reputation).** PR1 server+rules (owner-gated deploy, NOT single-revert) · PR2 frontend (single-revert, Vercel auto). Alt = 1 PR (couples non-single-revert rules/CF with revertible frontend) — not recommended.
+
+**Tier enum + labels** (positive-framed; server `kindnessTier(kindness, provisional)` → `radiant|warm|kind|seed`; bounds aligned with admin `kindTier` 70/40/10; provisional or <10 → `seed`):
+| enum | bound | emoji | label | sub |
+|------|-------|-------|-------|-----|
+| radiant | ≥70 | 💚 | น้ำใจล้น | คุณคือผู้ให้ของชุมชน |
+| warm | ≥40 | 🌿 | ใจดี | น้ำใจของคุณช่วยให้ชุมชนอบอุ่น |
+| kind | ≥10 | 🤲 | มีน้ำใจ | ขอบคุณที่แบ่งปันให้เพื่อนบ้าน |
+| seed | <10 / provisional | 🌱 | กำลังสร้างน้ำใจ | เริ่มแบ่งปันเพื่อสะสมน้ำใจ |
+(provisional = <3 kind acts → gentle seed face, mirroring reputation's provisional→seed collapse. Never a "ต่ำ"/red state.)
+
+### Verified-reuse map (2 Explore agents, file:line — §7-H/K/O)
+- `functions/_reputation.js:208` `reputationTier(rep, prov)` (bounds 80/60/40 → `high/good/fair/low/provisional`) — the template for `kindnessTier`.
+- `functions/_kindness.js` (124 LOC) — `computeKindness` + `KINDNESS_SOURCES` + `KINDNESS_CONSTANTS`; module.exports:116; **no tier fn yet**. Sweep imports `{computeKindness, KINDNESS_SOURCES}` at `computeTrustScoresScheduled.js:55`.
+- `computeTrustScoresScheduled.js:~236` — existing reputation mirror `batch.set(tDoc.ref, {reputationTier: reputationTier(...)}, {merge:true})`; kindness already computed at `:211` (`kind.kindness`/`kind.provisional`). Fold kindnessTier here (D2).
+- `firestore.rules` `tenants/{b}/list/{r}` update — protected list `hasAny(['gamification','rentAmount','building','roomId','tenantId','reputationTier'])` → add `'kindnessTier'`.
+- `functions/recordChecklistConsent.js:29` `VALID_PURPOSES = Set(['checklist_v1','account_v1','reputation_v1'])` → add `'kindness_v1'`; writes `consents/{tenantId}_{purpose}`.
+- `functions/exportMyData.js` — already exports `trustScores/{tenantId}` (incl. kindness fields) + `consents` ledger → **NO CHANGE** (DSR §30 already covered).
+- `shared/dashboard-kindness.js:31` admin `kindTier` (70/40/10, radiant💚/warm🌿/kind🤲/budding🌱/seed) — align tenant labels.
+- Frontend template `shared/tenant-reputation.js` (242 LOC, IIFE, `window.TenantReputation`, `tierDisplay`, `_onLiffClaimsReady` + `_tenantAppBuilding/_tenantAppRoom` guard, getDoc own-read, `rep_consent_v1`→consents→prompt→`httpsCallable('recordChecklistConsent')({purpose:'reputation_v1'})`, mount `#tenant-reputation-card`); css `.rep-card*` `components.css:797-864` (static, §7-RR); wired `tenant_app.html:140` `<script defer>` + mount div `:~4186` after `#profile-rewards-card` in `#eco-panel-info`; tests `shared/__tests__/tenant-reputation.test.js` (16). **CSP: external `<script src>` + markup div → NO regen (§7-II/RR confirmed).**
+
+### PR1 — server + rules
+- [ ] `functions/_kindness.js` — add pure `kindnessTier(kindness, provisional)` (named bounds `KIND_TIER_BOUND_RADIANT=70/_WARM=40/_KIND=10`); export it + add bounds to `KINDNESS_CONSTANTS`. *Why: single source of truth for the enum, mirrors `reputationTier()`; pure → unit-testable.*
+- [ ] `functions/computeTrustScoresScheduled.js` — import `kindnessTier`; fold into the existing tenant-doc mirror (D2). *Why: badge needs the enum on the doc it already reads; combined write = no extra op.*
+- [ ] `firestore.rules` — add `'kindnessTier'` to the `tenants/{b}/list/{r}` update protected `hasAny([...])`. *Why: §6 tamper-proof — tenant must NOT fake their tier; CF writes via Admin SDK (bypasses rules).*
+- [ ] `functions/recordChecklistConsent.js` — add `'kindness_v1'` to `VALID_PURPOSES`. *Why: badge consent gate calls this CF; unknown purposes throw.*
+- [ ] `functions/exportMyData.js` — **NO CHANGE** (already exports trustScores+consents; DSR §30 complete).
+- [ ] `functions/__tests__/_kindness.test.js` — `describe('kindnessTier')`: radiant/warm/kind boundary + provisional→seed + non-finite→seed.
+- [ ] `functions/__tests__/computeTrustScoresScheduled.test.js` — update mirror assertion (`:248`) to `['reputationTier','kindnessTier']` + assert the mirrored `kindnessTier` for a scored vs provisional tenant.
+
+### PR2 — frontend
+- [ ] `shared/tenant-kindness.js` (clone `tenant-reputation.js`) — `window.TenantKindness`; pure `tierDisplay(enum)` (table above; unknown/absent→seed); self-wire `_onLiffClaimsReady` + `_tenantAppBuilding/_tenantAppRoom` guard (§7-U) + `_isPlayerMode` defer; own-read `getDoc tenants/{b}/list/{r}` field `kindnessTier` (§7-N catch); consent gate localStorage `kind_consent_v1` → `consents/{tenantId}_kindness_v1` → inline prompt → `httpsCallable('recordChecklistConsent')({purpose:'kindness_v1'})`; mount `#tenant-kindness-card`.
+- [ ] `shared/components.css` — `.kind-card*` block cloned from `.rep-card*` (static external, §7-RR — no CSP impact).
+- [ ] `tenant_app.html` — `<script src="./shared/tenant-kindness.js" defer></script>` after the reputation script; `<div id="tenant-kindness-card"></div>` after `#tenant-reputation-card`. *Markup + external script → NO CSP hash regen.*
+- [ ] `privacy.html` — parallel kindness disclosure in §1/§2/§5 (pure HTML; privacy.html NOT in the 8 CSP-tracked files → no regen).
+- [ ] `shared/__tests__/tenant-kindness.test.js` — mirror the 16 `tierDisplay` tests (3 positive tiers · seed collapse · privacy invariant no-digit/no-"ต่ำ" · display contract).
+
+### Verify / test / deploy
+- [ ] `npm run test:shared` (tenant-kindness) · functions tests (`_kindness`, sweep) · `npm run test:rules` (kindnessTier protected) — all green · mojibake (§7-TT) · CSP no-drift (§7-II §G).
+- [ ] `npm run verify:memory` after updating [[lifecycle_trust_reputation]].
+- [ ] **Deploy (owner-gated):** PR1 merge → CI deploys `computeTrustScoresScheduled` + `recordChecklistConsent`; owner runs `firebase deploy --only firestore:rules`. PR2 merge → Vercel auto.
+- [ ] **§7-J live verify:** after sweep / admin ⟳ recompute → `tenants/{b}/list/{r}.kindnessTier` mirrored; real tenant READs but can't WRITE it; on real LINE → กดยินยอม → badge renders (N101 kindness 13 → 🤲 "มีน้ำใจ").
+- [ ] Update [[lifecycle_trust_reputation]] kindness tenant-badge section + flip roadmap #6 sub-phase → ✅.
+
+### Anti-patterns honoured
+§7-NN (callable not trigger) · §6 (trust ≠ points; tier-only; tamper-proof via protected field) · §7-T (single writer — combined mirror) · §7-U (claim guard before read) · §7-N (own-read permission-denied catch) · §7-A (`_onLiffClaimsReady`) · §7-RR (static CSS) · §7-II (no inline edit → no CSP regen) · §7-J (live-data verify, not empty-collection).
+
+### Out of scope (named)
+player/`people/` path (active-tenant only, mirror reputation) · combining the kindness+reputation consent into one prompt (kept separate per spec) · #7 Verified Helper / #8 Resident Rank (accrual-gated) · capture-CF canonical-tenantId cleanup (the sweep room-key join handles it, §7-J #330).
+
+### Review (appended after execution)
+_(pending approval — no code yet)_
+
+---
+
 ## ▶▶▶ ACTIVE PLAN (2026-06-10) — Meaning Layer **#9: Pet health memory** · ✅ APPROVED — BUILDING PR1
 
 > **Decisions LOCKED (owner 2026-06-10):** (1) **array-on-pet-doc** `healthLog[]` — "เลือกที่ยั่งยืนและต่อยอดได้": built sustainable now, but ALL health data access goes behind a thin module interface (`window.PetHealth.add/list/delete` — repository pattern per [[patterns]]) so a future array→subcollection migration touches only that module, not the UI/consumers. (2) **PDPA lean** — reuse `getDownloadURL` (parity w/ vaccine books) + rely on `account_v1` consent (no new CF/consent); add disclosure + pets→DSR-export. (3) admin read-only view IN. → only `exportMyData` deploys.

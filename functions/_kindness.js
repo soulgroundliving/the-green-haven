@@ -113,11 +113,46 @@ function computeKindness({ events } = {}) {
   };
 }
 
+// Tier bounds for the tenant-facing badge (Meaning Layer #6 v1.x). The tenant
+// sees a positive-framed TIER LABEL only — never the 0–100 number — so the daily
+// sweep maps (kindness, provisional) → this coarse enum via kindnessTier() and
+// mirrors ONLY the enum onto the tenant-readable roster doc. Bounds align with
+// the admin card's display ladder (shared/dashboard-kindness.js kindTier:
+// 70/40/10) so admin + tenant read the same rungs.
+const KIND_TIER_BOUND_RADIANT = 70;   // ≥70 → 'radiant'
+const KIND_TIER_BOUND_WARM    = 40;   // ≥40 → 'warm'
+const KIND_TIER_BOUND_KIND    = 10;   // ≥10 → 'kind'; below (or provisional) → 'seed'
+
+/**
+ * Map a kindness score → a coarse, positive-framed tier enum for the tenant badge.
+ * Pure — mirrors `reputationTier()` in _reputation.js. `provisional` (below the
+ * accrual gate) collapses into the gentle seed state, exactly like reputation's
+ * provisional→seed. There is intentionally NO low/negative tier: kindness is
+ * positive-only, never a "ต่ำ"/red verdict (roadmap §6).
+ *
+ * @param {number}  kindness    0–100
+ * @param {boolean} provisional true below KINDNESS_MIN_EVENTS kind acts
+ * @returns {'radiant'|'warm'|'kind'|'seed'}
+ */
+function kindnessTier(kindness, provisional) {
+  if (provisional) return 'seed';
+  const s = Number(kindness);
+  if (!Number.isFinite(s)) return 'seed';
+  if (s >= KIND_TIER_BOUND_RADIANT) return 'radiant';
+  if (s >= KIND_TIER_BOUND_WARM) return 'warm';
+  if (s >= KIND_TIER_BOUND_KIND) return 'kind';
+  return 'seed';
+}
+
 module.exports = {
   computeKindness,
+  kindnessTier,
   KINDNESS_SOURCES,
   KINDNESS_CONSTANTS: {
     KINDNESS_TARGET_POINTS,
     KINDNESS_MIN_EVENTS,
+    KIND_TIER_BOUND_RADIANT,
+    KIND_TIER_BOUND_WARM,
+    KIND_TIER_BOUND_KIND,
   },
 };
