@@ -230,7 +230,7 @@ describe('runTrustScoreSweep', () => {
     assert.ok(byId('t15') && byId('tA1'));
   });
 
-  it('mirrors the tier enum onto the tenant roster doc — tier-only, no leak (v1.x)', async () => {
+  it('mirrors the tier enums onto the tenant roster doc — tier-only, no leak (v1.x)', async () => {
     world.billsByBuilding = { rooms: { '15': {
       b1: { status: 'paid', dueDate: '2026-05-05', paidAt: Date.parse('2026-05-03Z') },
     } } };
@@ -241,11 +241,13 @@ describe('runTrustScoreSweep', () => {
 
     // trustScores doc keeps the full number + factors (admin-only)…
     assert.equal(byId('t15').data.reputation, 100);
-    // …the tenant roster doc gets ONLY the coarse tier enum (no number/factors leak).
+    // …the tenant roster doc gets ONLY the coarse tier enums (no number/factors leak).
+    // ONE combined mirror write carries BOTH reputationTier + kindnessTier (#6, v1.x).
     const mirror = byMirror('15');
-    assert.ok(mirror, 'wrote reputationTier onto tenants/rooms/list/15');
+    assert.ok(mirror, 'wrote the tier enums onto tenants/rooms/list/15');
     assert.equal(mirror.data.reputationTier, 'high');
-    assert.deepEqual(Object.keys(mirror.data), ['reputationTier']);
+    assert.equal(mirror.data.kindnessTier, 'seed'); // no ledger here → seed
+    assert.deepEqual(Object.keys(mirror.data), ['reputationTier', 'kindnessTier']);
   });
 
   it('mirrors a provisional (0-bill) tenant as the provisional tier', async () => {
@@ -256,6 +258,7 @@ describe('runTrustScoreSweep', () => {
 
     assert.equal(byId('t20').data.provisional, true);
     assert.equal(byMirror('20').data.reputationTier, 'provisional');
+    assert.equal(byMirror('20').data.kindnessTier, 'seed'); // no ledger → provisional → seed (#6)
   });
 
   it('computes kindness (#6) via the tenantId fallback when events carry no building/roomId', async () => {
@@ -293,6 +296,10 @@ describe('runTrustScoreSweep', () => {
     const w16 = byId('t16');
     assert.equal(w16.data.kindnessFactors.totalEvents, 1);
     assert.equal(w16.data.kindnessProvisional, true); // seed state
+
+    // The tenant-doc mirror carries the derived kindnessTier (score → tier → mirror).
+    assert.equal(byMirror('15').data.kindnessTier, 'kind');  // 35pts → kindness 12 (≥10) → kind
+    assert.equal(byMirror('16').data.kindnessTier, 'seed');  // provisional → seed
 
     // Reputation is untouched by the kindness extension (separate concern).
     assert.equal(typeof w15.data.reputation, 'number');

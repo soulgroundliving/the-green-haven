@@ -52,7 +52,7 @@ const firestore = admin.firestore();
 
 const { getAllBuildings } = require('./buildingRegistry');
 const { computeReputation, reputationTier, REPUTATION_CONSTANTS } = require('./_reputation');
-const { computeKindness, KINDNESS_SOURCES } = require('./_kindness');
+const { computeKindness, kindnessTier, KINDNESS_SOURCES } = require('./_kindness');
 
 const { MONTH_MS, COMPLAINT_CLEAN_MAX_MONTHS } = REPUTATION_CONSTANTS;
 
@@ -203,7 +203,8 @@ async function runTrustScoreSweep({ nowMs } = {}) {
       // key first (capture CFs tag by `${building}_${room}`), then by canonical
       // tenantId (player / canonical-only events). Each event is in exactly one
       // index, so the union never double-counts. Additive fields on the SAME
-      // admin-only doc; no tenant mirror yet (v1.x badge — Reputation shipped admin-first).
+      // admin-only doc; the coarse tier is ALSO mirrored onto the tenant doc
+      // below (v1.x badge — see the combined mirror write).
       const kindEvents = [
         ...(kindnessByRoomKey.get(`${building}_${String(roomId)}`) || []),
         ...(kindnessByTenantId.get(String(td.tenantId)) || []),
@@ -225,13 +226,18 @@ async function runTrustScoreSweep({ nowMs } = {}) {
         computedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      // Mirror the coarse tier ENUM onto the tenant-readable roster doc (Phase
-      // 3.2a v1.x). The tenant_app badge reads `reputationTier` off the tenant
-      // doc it already loads (TenantFirebaseSync.loadLease) — no new subscription,
-      // no trustScores read-rule change. Tier-only: the raw number + factors stay
-      // in the admin-only trustScores doc. Same batch = single writer (§7-T); the
-      // rules protected-field block forbids the tenant from writing it (§6).
-      batch.set(tDoc.ref, { reputationTier: reputationTier(result.reputation, result.provisional) }, { merge: true });
+      // Mirror the coarse tier ENUMs onto the tenant-readable roster doc (Phase
+      // 3.2a v1.x — reputation + kindness #6). The tenant_app badges read
+      // `reputationTier` / `kindnessTier` off the tenant doc they already load
+      // (TenantFirebaseSync.loadLease) — no new subscription, no trustScores
+      // read-rule change. Tier-only: the raw numbers + factors stay in the
+      // admin-only trustScores doc. ONE write carries BOTH tiers (single writer,
+      // §7-T); the rules protected-field block forbids the tenant from writing
+      // either (§6 tamper-proof).
+      batch.set(tDoc.ref, {
+        reputationTier: reputationTier(result.reputation, result.provisional),
+        kindnessTier: kindnessTier(kind.kindness, kind.provisional),
+      }, { merge: true });
 
       pending += 2; summary.scored++; written++;   // 2 ops: trustScores + tenant-doc mirror
       if (pending >= BATCH_LIMIT) await flush();

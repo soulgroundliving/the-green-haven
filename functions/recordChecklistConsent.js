@@ -26,7 +26,7 @@ const { resolveTenantClaims, assertTenantAccess } = require('./_authSoT');
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
-const VALID_PURPOSES = new Set(['checklist_v1', 'account_v1', 'reputation_v1']);
+const VALID_PURPOSES = new Set(['checklist_v1', 'account_v1', 'reputation_v1', 'kindness_v1']);
 
 exports.recordChecklistConsent = functions
   .region('asia-southeast1')
