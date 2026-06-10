@@ -31,6 +31,45 @@ Billing restored (`open: true`, app back). Owner sent the **Reports → by Servi
 **Recurrence prevention for the DISABLE (separate from cost):** the incident was a PAYMENT failure (not spend), which a budget alert does NOT catch. Real prevention = a **backup payment method** on the billing account + watch Google's billing-failure emails.
 
 ---
+
+## 🧰 Owner runbook (prepared 2026-06-10) — copy-paste, owner runs in console
+
+> Billing is `open: true` again, so these now work. **These are owner-console actions** (billing/IAM) — Claude prepared them but does not run them. Easiest path: run the `gcloud` blocks in **Cloud Shell** (top-right `>_` in console — pre-authed, no local install). Or use the Console UI steps.
+
+### A. Budget + email alert  (Step 2 — highest value, prevents the next silent surprise)
+
+**Console (easiest, no API/IAM prereq):**
+1. https://console.cloud.google.com/billing/01BC33-EDDDB7-F0C4FF/budgets
+2. **Create budget** → Name `Green Haven ฿500/mo` → Scope: **Project = the-green-haven** → Amount: **Specified amount = 500** (account currency is THB) → Thresholds **50% / 90% / 100%** (actual) → Finish. Alerts email Billing Account admins/users by default.
+
+**gcloud alternative (run in Cloud Shell):**
+```bash
+gcloud billing budgets create --billing-account=01BC33-EDDDB7-F0C4FF --display-name="Green Haven ฿500/mo" --budget-amount=500 --filter-projects=projects/the-green-haven --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0 --threshold-rule=percent=1.0,basis=forecasted-spend
+```
+Prereq for the gcloud route: Cloud Billing Budget API (`billingbudgets.googleapis.com`) enabled + role **Billing Account Administrator**. To also email a specific address (beyond billing admins), create a Cloud Monitoring notification channel and add `--notifications-rule-monitoring-notification-channels=<channel>`.
+
+### B. Artifact Registry cleanup policy  (Step 3 — caps `gcf-artifacts` image growth; also kills the §7-NN stale-image class)
+
+Policy = **keep the 3 most recent versions per function, delete the rest once older than 30 days** (committed as [`tools/gcf-artifacts-cleanup-policy.json`](../tools/gcf-artifacts-cleanup-policy.json)). Keep-rules win over Delete-rules, so the latest 3 builds per CF are always retained.
+
+**⚠️ Run with `--dry-run` FIRST, inspect what it would delete, then re-run with `--no-dry-run` to enforce.** Run in Cloud Shell:
+```bash
+cat > /tmp/gcf-cleanup.json <<'EOF'
+[
+  { "name": "gcf-keep-recent-3", "action": { "type": "Keep" }, "mostRecentVersions": { "keepCount": 3 } },
+  { "name": "gcf-delete-older-than-30d", "action": { "type": "Delete" }, "condition": { "tagState": "any", "olderThan": "2592000s" } }
+]
+EOF
+
+# 1) DRY-RUN — logs what WOULD be deleted, deletes nothing:
+gcloud artifacts repositories set-cleanup-policies gcf-artifacts --location=asia-southeast1 --project=the-green-haven --policy=/tmp/gcf-cleanup.json --dry-run
+
+# 2) After confirming it looks right, ENFORCE:
+gcloud artifacts repositories set-cleanup-policies gcf-artifacts --location=asia-southeast1 --project=the-green-haven --policy=/tmp/gcf-cleanup.json --no-dry-run
+```
+(If gcloud rejects `"2592000s"`, swap it for `"30d"` — both are accepted by most versions.) Console equivalent: Artifact Registry → `gcf-artifacts` → **Cleanup policies** → add a Keep-most-recent=3 rule + a Delete older-than-30-days rule → save in **Dry run** mode → review → switch to **Live**. Prereq: role **Artifact Registry Administrator**. AR is only ~1.1 GB today, so savings are small — the real win is bounding future growth + the stale-image hygiene.
+
+---
 _(Below: the historical plan written while billing was disabled — Step 0–4. Superseded by the RESOLVED section above; kept for the residual marginal wins + the owner-console steps.)_
 
 ---
@@ -48,16 +87,10 @@ Firestore **reads** · networking **egress** · **Cloud Build** (CF deploys) ·
 **Artifact Registry** storage · **Cloud Logging** ingestion.
 
 ## Step 2 — preventive (highest value; do regardless)
-- [ ] **Budget + alert** — Billing → Budgets → create (e.g. ฿500/mo) with 50/90/100% email
-  alerts. Works even while billing is disabled. **Prevents the next silent surprise** — this
-  is the single most valuable action.
+- [ ] **Budget + alert** — ✅ commands prepared → **see "🧰 Owner runbook → A" above** (Console + gcloud, ฿500/mo, 50/90/100%). **Prevents the next silent surprise** — single most valuable action. _Awaiting owner run in console._
 
 ## Step 3 — "same efficiency" wins (zero functionality loss; need billing back)
-- [ ] **Artifact Registry cleanup policy** on `gcf-artifacts` — keep last 2–3 versions, delete
-  older. 100+ Gen2 CFs rebuilt on every CI merge → image storage piles up ($0.10/GB/mo). Also
-  kills the §7-NN stale-image class that broke `unsendMarketplaceMessage` on staging this session.
-  `gcloud artifacts repositories set-cleanup-policies gcf-artifacts --location=asia-southeast1 --project=the-green-haven --policy=<json>`
-  (or Console → Artifact Registry → gcf-artifacts → Cleanup policies).
+- [ ] **Artifact Registry cleanup policy** on `gcf-artifacts` — ✅ policy + commands prepared → **see "🧰 Owner runbook → B" above** (`tools/gcf-artifacts-cleanup-policy.json`, keep-3 + delete-older-than-30d, **`--dry-run` first**). Caps image growth + kills the §7-NN stale-image class. _Awaiting owner run in console._
 - [ ] **Log Router exclusion** — Logging → Log Router → exclude high-volume/low-value logs
   (e.g. `keepLiffWarm` warnings, verbose `console.info`). 50GB/mo free, then $0.50/GB.
 - [ ] **(Only if Reports shows reads dominate) Firestore read audit** — admin dashboard
