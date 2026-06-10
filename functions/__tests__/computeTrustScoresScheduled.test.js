@@ -34,6 +34,7 @@ function resetWorld() {
     leasesByBuilding: {},      // { [building]: [ { roomId, status, moveInDate } ] }
     tenantsByBuilding: {},     // { [building]: [ { roomId, tenantId, status } ] }
     complaints: [],            // [ { building, room, createdAt } ]
+    ledger: [],                // pointsLedger rows: [ { tenantId, source, points } ]
   };
 }
 resetWorld();
@@ -80,6 +81,19 @@ Module._load = function (id, parent, ...rest) {
                     id: t.roomId, ref: { _col: 'tenants', _id: t.roomId }, data: () => t,
                   })),
                 }),
+              }),
+            }),
+          };
+        }
+        if (name === 'pointsLedger') {
+          // .where('source','in',[...]).get() → rows whose source is in the array
+          // (mirrors the real single-field `in` filter the kindness read uses).
+          return {
+            where: (_f, _op, vals) => ({
+              get: async () => ({
+                forEach: (cb) => (world.ledger || [])
+                  .filter((e) => (Array.isArray(vals) ? vals.includes(e.source) : true))
+                  .forEach((e) => cb({ data: () => e })),
               }),
             }),
           };
@@ -146,6 +160,10 @@ describe('runTrustScoreSweep', () => {
     assert.equal(w.data.factors.onTimeBills, 2);
     assert.equal(w.data.factors.lateBills, 0);
     assert.equal(w.data.computedAt, '__ts__');
+    // Kindness (#6) fields are ALWAYS written; no ledger here → seed/provisional.
+    assert.equal(w.data.kindness, 0);
+    assert.equal(w.data.kindnessProvisional, true);
+    assert.equal(w.data.kindnessFactors.totalEvents, 0);
   });
 
   it('skips vacant / unlinked rooms (occupancy gate)', async () => {
@@ -238,6 +256,46 @@ describe('runTrustScoreSweep', () => {
 
     assert.equal(byId('t20').data.provisional, true);
     assert.equal(byMirror('20').data.reputationTier, 'provisional');
+  });
+
+  it('computes kindness (#6) from the kind-tagged ledger, grouped by tenantId', async () => {
+    world.leasesByBuilding = { rooms: [
+      { roomId: '15', status: 'active', moveInDate: monthsAgo(30) },
+      { roomId: '16', status: 'active', moveInDate: monthsAgo(30) },
+    ] };
+    world.tenantsByBuilding = { rooms: [
+      { roomId: '15', tenantId: 't15', status: 'active' },
+      { roomId: '16', tenantId: 't16', status: 'active' },
+    ] };
+    world.ledger = [
+      { tenantId: 't15', source: 'help_completed', points: 20 },
+      { tenantId: 't15', source: 'food_share', points: 10 },
+      { tenantId: 't15', source: 'quest', points: 5 },
+      { tenantId: 't15', source: 'daily_login', points: 1 }, // excluded by the `in` query
+      { tenantId: 't16', source: 'quest', points: 5 },        // single event → provisional
+    ];
+
+    const summary = await runTrustScoreSweep({ nowMs: NOW });
+
+    // daily_login filtered out by the source `in` query → 4 kindness rows scanned.
+    assert.equal(summary.kindnessEventsScanned, 4);
+    assert.equal(summary.kindnessProvisional, 1); // only t16 is below the event floor
+
+    const w15 = byId('t15');
+    assert.equal(w15.data.kindnessFactors.totalPoints, 35);
+    assert.equal(w15.data.kindnessFactors.totalEvents, 3);
+    assert.equal(w15.data.kindnessFactors.helpCompletedPoints, 20);
+    assert.equal(w15.data.kindnessFactors.foodSharePoints, 10);
+    assert.equal(w15.data.kindnessFactors.questPoints, 5);
+    assert.equal(w15.data.kindnessProvisional, false); // 3 events ≥ floor
+    assert.ok(w15.data.kindness > 0, 'positive kindness score');
+
+    const w16 = byId('t16');
+    assert.equal(w16.data.kindnessFactors.totalEvents, 1);
+    assert.equal(w16.data.kindnessProvisional, true); // seed state
+
+    // Reputation is untouched by the kindness extension (separate concern).
+    assert.equal(typeof w15.data.reputation, 'number');
   });
 
   it('exposes the scheduled CF as a callable handler', () => {
