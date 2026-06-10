@@ -10,21 +10,28 @@ real tenants, this is near the floor).
 > CF/rules deploy is possible.** So cost *investigation* and *optimization* are blocked at
 > the source — Step 0 must happen first.
 
-**Verified 2026-06-10 (before billing went down):**
-- ✅ **No CF min-instances** (`minScale` empty on all Gen2/Cloud Run CFs) → no idle 24/7 billing (the usual hidden cost is absent).
-- ✅ All ~17 scheduled jobs are **under the Cloud Functions free tier** (2M invocations/mo). `keepLiffWarm` (/5min, pings 5 CFs) is NOT a meaningful cost.
+## ✅ RESOLVED 2026-06-10 — driver was min-instances; removed (~40% cut, deployed)
 
-## Investigation findings (2026-06-10, AFTER billing restored — gcloud unblocked)
-Inspected every gcloud-accessible cost driver — **none is a big waste; the app is genuinely efficient, no single leak to cut:**
-- ❌ **Artifact Registry** `gcf-artifacts` = **only 1.1 GB** (~$0.06 / ฿2 per mo). NOT a driver — the cleanup in Step 3 below is NOT worth doing (first guess was wrong; verified empirically). Image bloat is a non-issue.
-- ✅ No min-instances; schedulers free (confirmed again).
-- ⚠️ **Cloud Build** runs in clusters several times/day (CF deploys on every merge + PR staging) — plausibly a minor contributor, but durations weren't exposed; not quantifiable from `gcloud builds list`. Reducing it = deploy-only-changed-functions (CI rework, risky — defer).
-- ❌ **No BigQuery billing export** (`bq ls` → only `audit_archive`) → the exact per-service breakdown CANNOT be queried; needs the console Reports screenshot (Step 1).
-- ❌ **Budget API not enabled** → can't create a budget via gcloud; do it in console (2 clicks).
+Billing restored (`open: true`, app back). Owner sent the **Reports → by Service/SKU** breakdown, which pinpointed it.
 
-**Conclusion:** ฿319/mo is **diffuse normal operating cost** (Firestore reads + Functions compute + egress + Cloud Build + logging, none dominant) — there is no big obvious win. Realistic safe savings are marginal (log exclusion, Firestore read tuning) and need the Step-1 breakdown to justify. **The app is efficient, not wasteful.**
+**Per-service breakdown (Reports, May 11 – Jun 9 = ฿340.89):**
+| Service | Subtotal | Note |
+|---|---|---|
+| **Cloud Run Functions (Gen1)** | **฿241 (71%)** | the SKU "**Min Instance Memory Tier 2**" grew **+฿111** |
+| **App Engine** | ฿56 (16%) | NO App Engine app exists (`gcloud app … not found`) → this is the **Gen1-functions backing** (Gen1 bills under both SKUs) |
+| **Cloud Scheduler** | ฿41 (12%) | ~14 jobs × $0.10/mo — the per-**JOB** fee (NOT free past the first 3; invocations ARE free) |
+| Artifact Registry / Storage / Pub/Sub | ~฿3 | negligible (Artifact Registry only 1.1 GB) |
 
-**Recurrence prevention (the actual fix for the disable):** the incident was a PAYMENT failure, which a *budget alert does NOT catch* (budgets watch spend, not payment status). The real prevention is a **backup payment method** on the billing account (Google charges the backup if the primary card fails → no disable) + watching Google's billing-failure emails.
+**Root cause:** `liffSignIn` + `liffBookingSignIn` each held **`.runWith({ minInstances: 1 })`** → one idle instance billed 24/7 per function = the "Min Instance Memory Tier 2" SKU (~40% of the bill). **Redundant:** `keepLiffWarm` already pings both every 5 min (< the ~15-min idle timeout) → they stay warm at ~$0. The min-instance paid twice for warmth keepLiffWarm gives free.
+
+**Fix (shipped `e2a0b17`, CI-deployed):** removed `minInstances` from both → `gcloud functions describe` confirms `minInstances` now empty (0) on both. Sign-in stays warm via keepLiffWarm; near-zero added cold-start risk; auth logic untouched. **Saves ~40% (~฿100-150/mo).** (Local `firebase deploy` hit a firebase-tools 15.13.0 bug — `TypeError: …reading 'ram'` in min-instance cost calc — so the CI toolchain did the deploy instead.)
+
+> ⚠️ **Lesson — auditing min-instances needs BOTH gens.** I first said "no min-instances" because I checked only **Gen2** Cloud Run `minScale` (`gcloud run services list` → all empty). **Gen1 functions set min-instances via `.runWith({ minInstances })` in CODE**, invisible to `gcloud run services list`. Audit with `grep -rn "minInstances" functions/` AND `gcloud functions describe <name> --format="value(minInstances)"`. Also corrected: Cloud Scheduler is NOT "free" (฿41 per-job fee; reducing job COUNT, not frequency, is the only lever — marginal). The empirical lesson held: the Reports-by-SKU screenshot was what surfaced the truth — don't conclude "no waste" from partial gcloud inspection.
+
+**Recurrence prevention for the DISABLE (separate from cost):** the incident was a PAYMENT failure (not spend), which a budget alert does NOT catch. Real prevention = a **backup payment method** on the billing account + watch Google's billing-failure emails.
+
+---
+_(Below: the historical plan written while billing was disabled — Step 0–4. Superseded by the RESOLVED section above; kept for the residual marginal wins + the owner-console steps.)_
 
 ---
 
@@ -63,7 +70,8 @@ Firestore **reads** · networking **egress** · **Cloud Build** (CF deploys) ·
 - ❌ `keepLiffWarm` /5min → /15min: saves ~฿0 (under free tier) but increases sign-in
   cold-start latency. Keep as-is. (The owner asked to reduce cost *without* losing performance.)
 
-## Reality check
-฿319/mo is near the floor for this app's scope. Realistic safe savings ≈ artifact cleanup +
-log exclusion (maybe ฿50–100/mo *if* those are the drivers — confirm via Step 1). The app is
-**efficient, not wasteful** — there is no big obvious leak (no min-instances, schedulers free).
+## Reality check (post-fix)
+The min-instance fix removed the ONE big waste (~40%). What remains (~฿200/mo) is genuine
+diffuse operating cost — Gen1 function compute + Cloud Scheduler per-job fees + small egress.
+Further trims (consolidate ~14 scheduler jobs into fewer; log exclusion) are marginal (~฿20–40)
+and not worth the risk. **Post-fix, the app is efficient — no remaining big leak.**
