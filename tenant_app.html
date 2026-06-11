@@ -2560,6 +2560,29 @@
         .ta-input-sm     { width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 8px; font-size: var(--fs-sm); margin-top: 4px; }
         .ta-input-lg-plain { width: 100%; height: 48px; box-sizing: border-box; padding: 12px; border: 1px solid #eee; border-radius: 12px; font-family: inherit; font-size: var(--fs-md, 0.95rem); }
         .ta-input-lg-white { width: 100%; height: 48px; box-sizing: border-box; padding: 12px; border: 1px solid #eee; border-radius: 12px; background: white; font-family: inherit; font-size: var(--fs-md, 0.95rem); }
+        /* Pet-form fields use the world-map "the box is a <div>" pattern: each control
+           sits inside a fixed-height .ta-fieldbox, so a <select> and an <input type="date">
+           are ALWAYS the exact same 48px — never depending on a native control's intrinsic
+           height (can't drift across browsers / stale cache). The control fills the box,
+           borderless + transparent; the box owns the border, radius and height. */
+        .ta-fieldbox {
+            height: 48px; box-sizing: border-box; display: flex; align-items: center;
+            border: 1px solid #eee; border-radius: 12px; background: #fff;
+            overflow: hidden; min-width: 0;
+        }
+        .card .ta-fieldbox > .ta-fieldctl,
+        .page .ta-fieldbox > .ta-fieldctl {
+            flex: 1 1 auto; width: 100% !important; height: 100% !important;
+            min-height: 0 !important; max-height: 100% !important;
+            border: none !important; background: transparent !important;
+            margin: 0 !important; padding: 0 12px !important; border-radius: 0 !important;
+            box-sizing: border-box !important; font-family: inherit !important;
+            font-size: var(--fs-md) !important; color: inherit;
+        }
+        /* Equal 1fr columns regardless of the date input's wider intrinsic min-width
+           (default min-width:auto on grid items breaks equal fr tracks). */
+        .pet-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .pet-grid-2 > div { min-width: 0; }
         .ta-tab-alt      { flex: 1; padding: 8px; border-radius: 10px; font-size: var(--fs-sm); font-weight: 700; border: 2px solid #ddd; color: #6b7280; background: #f9fafb; cursor: pointer; }
         /* JS innerHTML template-literal classes */
         .ta-err-msg       { padding: 16px; text-align: center; color: var(--text-muted); font-size: var(--fs-sm); }
@@ -4602,46 +4625,51 @@
 
             <label class="ta-md-600-sub">ชื่อน้อง <span
                     class="u-color-red">*</span></label>
-            <input type="text" id="pet-name" placeholder="เช่น น้องมะลิ, ลาเต้"
-                style="width: 100%; height: 48px; box-sizing: border-box; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-bottom: 12px; font-family: inherit; font-size: var(--fs-md, 0.95rem);">
+            <div class="ta-fieldbox" style="margin-bottom: 12px;">
+                <input type="text" id="pet-name" class="ta-fieldctl" placeholder="เช่น น้องมะลิ, ลาเต้">
+            </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="pet-grid-2" style="margin-bottom: 12px;">
                 <div>
                     <label class="ta-md-600-sub">ประเภทสัตว์เลี้ยง</label>
-                    <select id="pet-type" data-action-change="updateBreedOptions"
-                        class="ta-input-lg-white">
-                        <option value="🐶">สุนัข (Dog)</option>
-                        <option value="🐱">แมว (Cat)</option>
-                        <option value="🐰">กระต่าย (Rabbit)</option>
-                        <option value="🐦">นก (Bird)</option>
-                        <option value="🐾">อื่นๆ (Others)</option>
-                    </select>
+                    <div class="ta-fieldbox">
+                        <select id="pet-type" data-action-change="updateBreedOptions" class="ta-fieldctl">
+                            <option value="🐶">สุนัข (Dog)</option>
+                            <option value="🐱">แมว (Cat)</option>
+                            <option value="🐰">กระต่าย (Rabbit)</option>
+                            <option value="🐦">นก (Bird)</option>
+                            <option value="🐾">อื่นๆ (Others)</option>
+                        </select>
+                    </div>
                 </div>
                 <div>
                     <label class="ta-md-600-sub">สายพันธุ์</label>
                     <!-- Combobox: dropdown suggestions filtered by pet type (shared/tenant-pets.js
                          updateBreedOptions repopulates #pet-breed-options) BUT free text is allowed
                          so mixed breeds can be typed in. saveNewPet reads .value unchanged. -->
-                    <input type="text" id="pet-breed" list="pet-breed-options" autocomplete="off"
-                        placeholder="เลือกหรือพิมพ์เอง (พันธุ์ผสมได้)"
-                        class="ta-input-lg-plain">
+                    <div class="ta-fieldbox">
+                        <input type="text" id="pet-breed" list="pet-breed-options" autocomplete="off"
+                            placeholder="เลือกหรือพิมพ์เอง (พันธุ์ผสมได้)" class="ta-fieldctl">
+                    </div>
                     <datalist id="pet-breed-options"></datalist>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+            <div class="pet-grid-2" style="margin-bottom: 15px;">
                 <div>
                     <label class="ta-md-600-sub">เพศ</label>
-                    <select id="pet-gender"
-                        class="ta-input-lg-white">
-                        <option>ผู้</option>
-                        <option>เมีย</option>
-                    </select>
+                    <div class="ta-fieldbox">
+                        <select id="pet-gender" class="ta-fieldctl">
+                            <option>ผู้</option>
+                            <option>เมีย</option>
+                        </select>
+                    </div>
                 </div>
                 <div>
                     <label class="ta-md-600-sub">วันเกิด</label>
-                    <input type="date" id="pet-dob"
-                        class="ta-input-lg-plain">
+                    <div class="ta-fieldbox">
+                        <input type="date" id="pet-dob" class="ta-fieldctl">
+                    </div>
                 </div>
             </div>
 
