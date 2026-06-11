@@ -4682,13 +4682,13 @@
             </div>
 
             <div style="background: #fafafa; padding: 15px; border-radius: 18px; border: 1px solid #f0f0f0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="margin-bottom: 12px;">
                     <span style="font-size: var(--fs-md); font-weight: 600; color: #333;"><i class="fas fa-syringe"
                             style="color:var(--primary-green); margin-right: 5px;"></i> สถานะวัคซีน</span>
-                    <label class="switch">
-                        <input type="checkbox" id="pet-vaccine" checked data-action-change="toggleVaccineInputs">
-                        <span class="slider"></span>
-                    </label>
+                    <!-- สวิตช์เอาออกแล้ว: วัคซีนเป็นข้อมูลบังคับของสัตว์เลี้ยงทุกตัว — คง checkbox ไว้แบบ
+                         ซ่อน+ติ๊ก เพื่อให้ isVaccinated=true เสมอ (วันที่+สมุดวัคซีนจึงบังคับทุกครั้ง);
+                         prepareEditPet ยัง prefill ค่าเดิมตอนแก้ไขได้ -->
+                    <input type="checkbox" id="pet-vaccine" checked hidden>
                 </div>
 
                 <div id="vaccine-inputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
