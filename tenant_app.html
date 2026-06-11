@@ -4592,7 +4592,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                 <div>
                     <label class="ta-md-600-sub">ประเภทสัตว์เลี้ยง</label>
-                    <select id="pet-type"
+                    <select id="pet-type" data-action-change="updateBreedOptions"
                         class="ta-input-lg-white">
                         <option value="🐶">สุนัข (Dog)</option>
                         <option value="🐱">แมว (Cat)</option>
@@ -4603,8 +4603,13 @@
                 </div>
                 <div>
                     <label class="ta-md-600-sub">สายพันธุ์</label>
-                    <input type="text" id="pet-breed" placeholder="เช่น โกลเด้น"
+                    <!-- Combobox: dropdown suggestions filtered by pet type (shared/tenant-pets.js
+                         updateBreedOptions repopulates #pet-breed-options) BUT free text is allowed
+                         so mixed breeds can be typed in. saveNewPet reads .value unchanged. -->
+                    <input type="text" id="pet-breed" list="pet-breed-options" autocomplete="off"
+                        placeholder="เลือกหรือพิมพ์เอง (พันธุ์ผสมได้)"
                         class="ta-input-lg-plain">
+                    <datalist id="pet-breed-options"></datalist>
                 </div>
             </div>
 

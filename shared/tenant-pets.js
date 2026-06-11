@@ -20,6 +20,32 @@
     let _pendingPetPhoto = null;
     let _pendingVaccineBook = null;
 
+    // Breed suggestions per pet type (keyed by the #pet-type emoji value). A
+    // representative — NOT exhaustive — set; the #pet-breed field is an <input list>
+    // combobox, so the tenant can ALWAYS type a custom / mixed breed not listed
+    // here ("พันธุ์ผสม" is also offered explicitly). updateBreedOptions() swaps the
+    // datalist when the type changes.
+    const PET_BREEDS = {
+        '🐶': ['ไทยหลังอาน', 'ไทยบางแก้ว', 'โกลเด้น รีทรีฟเวอร์', 'ลาบราดอร์', 'ปอมเมอเรเนียน', 'ชิวาวา', 'ชิห์สุ', 'พุดเดิ้ล', 'บีเกิ้ล', 'ไซบีเรียน ฮัสกี้', 'เฟรนช์ บูลด็อก', 'อิงลิช บูลด็อก', 'ปั๊ก', 'ชเนาเซอร์', 'ร็อตไวเลอร์', 'เยอรมัน เชพเพิร์ด', 'คอร์กี้', 'ดัชชุน (ไส้กรอก)', 'ค็อกเกอร์ สแปเนียล', 'มอลทีส', 'ชิบะ อินุ', 'พิทบูล', 'โดเบอร์แมน', 'พันธุ์ผสม'],
+        '🐱': ['วิเชียรมาศ (ไทย)', 'ขาวมณี', 'โคราช (สีสวาด)', 'เปอร์เซีย', 'สก็อตติช โฟลด์', 'อเมริกัน ช็อตแฮร์', 'บริติช ช็อตแฮร์', 'เมนคูน', 'แร็กดอลล์', 'สฟิงซ์ (ไร้ขน)', 'เบงกอล', 'มันช์กิน (ขาสั้น)', 'ไซบีเรียน', 'เอ็กโซติก ช็อตแฮร์', 'นอร์วีเจียน ฟอเรสต์', 'ขนสั้นไทย (DSH)', 'พันธุ์ผสม'],
+        '🐰': ['ฮอลแลนด์ ล็อป', 'เนเธอร์แลนด์ ดวอร์ฟ', 'ไลอ้อนเฮด', 'มินิ เร็กซ์', 'เร็กซ์', 'อังโกร่า', 'เฟลมิช ไจแอนท์', 'ดัตช์', 'อิงลิช ล็อป', 'ฮอตอต', 'มินิลอป', 'เจอร์ซีย์ วูลลี่', 'พันธุ์ผสม'],
+        '🐦': ['หงส์หยก (Budgerigar)', 'ค็อกคาเทล', 'เลิฟเบิร์ด', 'ฟอพัส', 'ซัน คอนัวร์', 'นกแก้วแอฟริกัน เกรย์', 'มาคอว์', 'ค็อกคาทู', 'นกเขา', 'นกกระตั้ว', 'ฟินช์', 'พันธุ์ผสม'],
+        '🐾': ['หนูแฮมสเตอร์', 'หนูตะเภา (กินีพิก)', 'เม่นแคระ', 'ชูการ์ ไกลเดอร์', 'ชินชิล่า', 'เฟอร์เร็ต', 'เต่า', 'ปลา', 'กิ้งก่า / สัตว์เลื้อยคลาน', 'งู', 'อื่นๆ'],
+    };
+
+    // Repopulate the breed datalist for the currently-selected type. Wired to
+    // #pet-type via data-action-change="updateBreedOptions" + called on init and
+    // when editing a pet (after the type is set).
+    function updateBreedOptions() {
+        const listEl = document.getElementById('pet-breed-options');
+        if (!listEl) return;
+        const typeEl = document.getElementById('pet-type');
+        const key = (typeEl && typeEl.value) || '🐶';
+        const breeds = PET_BREEDS[key] || PET_BREEDS['🐾'] || [];
+        const esc = window._esc || function (s) { return String(s == null ? '' : s); };
+        listEl.innerHTML = breeds.map(function (b) { return '<option value="' + esc(b) + '"></option>'; }).join('');
+    }
+
     // Subscribe to Firestore pets subcollection so data syncs across devices.
     // Falls back to localStorage on first load if Firestore is slow/unavailable.
     function _subscribePets() {
@@ -258,6 +284,7 @@
         document.getElementById('edit-pet-id').value = pet.id;
         document.getElementById('pet-name').value = pet.name;
         document.getElementById('pet-type').value = pet.typeEmoji;
+        updateBreedOptions();  // swap the datalist to match this pet's type
         document.getElementById('pet-breed').value = pet.breed;
         document.getElementById('pet-gender').value = pet.gender;
         const _dobEl = document.getElementById('pet-dob');
@@ -332,10 +359,13 @@
 
     // Initial render (shows empty-state placeholder until subscription fires)
     renderPetListToProfile();
+    // Populate the breed datalist for the default type (deferred script → DOM parsed).
+    updateBreedOptions();
     // Wire subscription on load (500ms delay matches original behaviour)
     window.addEventListener('load', () => { setTimeout(_subscribePets, 500); });
 
     window.renderPetListToProfile = renderPetListToProfile;
+    window.updateBreedOptions = updateBreedOptions;
     // Exposed for shared/tenant-pet-health.js (#9) so the health timeline reuses
     // the SAME Storage uploader (DRY) — same pets/{b}/{r}/{petId}/ prefix + rules.
     window._taUploadPetFile = _uploadPetFile;
