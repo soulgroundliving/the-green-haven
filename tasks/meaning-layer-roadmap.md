@@ -19,7 +19,7 @@
 
 ---
 
-## Status (8 shipped · #10 PR1 server in flight · 8 pending)
+## Status (9 shipped · 7 pending)
 
 | # | ตัว | Pillar | Status |
 |---|-----|--------|--------|
@@ -34,7 +34,7 @@
 | 8 | Resident Rank | Trust | 🟡 gated on #6+#7 |
 | — | Reputation v2 (engagement dim) | Trust | 🟡 gated ~Aug (pointsLedger accrual) |
 | 9 | Pet health memory | Pet | ✅ SHIPPED (#327 — append-only timeline + DSR export) |
-| 10 | Pet Social Graph | Pet | 🟡 PR1 server SHIPPED+DEPLOYED (`f174f02`, callables+rules live); PR2 frontend pending |
+| 10 | Pet Social Graph | Pet | ✅ SHIPPED — PR1 server (`f174f02`, callables+rules live) + PR2 frontend (`4dd1ba3`, directory+opt-in+friend UI, Vercel deployed); owner real-LINE live-verify pending |
 | 11 | Pet playdate booking | Pet | 🔴 after #10 |
 | 12 | Pet-friendly matching floors | Pet | 🔴 after #10 |
 | 13 | Lost pet alert | Pet | 🔴 buildable now |
@@ -132,7 +132,7 @@ Add the engagement-consistency dimension (pointsLedger event cadence) to #0 once
 **Depends / Reuses:** existing pet registry + Storage `pets/{b}/{r}/{petId}/` (verified: [[lifecycle_pets_registration]]).
 **Gate:** none. **Guardrails:** PDPA (vaccine/health = sensitive); storage.rules claim-match already tightened.
 
-### 10 — Pet Social Graph · 🔴 buildable now
+### 10 — Pet Social Graph · ✅ SHIPPED (PR1 `f174f02` + PR2 `4dd1ba3`)
 **What:** "สร้างโปรไฟล์และผูกความสัมพันธ์ระหว่างสัตว์เลี้ยงในตึก."
 **Captures (proposed):** public pet profile (opt-in) + `petLinks/{id}` (friend edges). Foundation for #11/#12/#14.
 **Depends / Reuses:** pet registry. **Gate:** none. **Guardrails:** owner consent to make a pet profile building-visible (PDPA opt-in).
