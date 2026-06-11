@@ -194,6 +194,18 @@
         const vaccineFile = document.getElementById('file-upload-input')?.files?.[0] || _pendingVaccineBook;
 
         const existing = editId ? petDataList.find(p => p.id === editId) : null;
+        // ติ๊ก "ฉีดแล้ว" = บังคับให้ข้อมูลครบ: วันที่ฉีด + วันหมดอายุ + แนบสมุดวัคซีน
+        // (เงื่อนไขเดียวกับการแนบรูป — เฉพาะตอนเพิ่มใหม่; ตอนแก้ไขค่าถูก prefill ไว้แล้ว)
+        if (isVaccinated && !editId && !vaxDate) {
+            toast('กรุณาเลือกวันที่ฉีดวัคซีนล่าสุดด้วยนะครับ', 'error');
+            document.getElementById('vaccine-date')?.focus();
+            return;
+        }
+        if (isVaccinated && !editId && !vaxExpiry) {
+            toast('กรุณาเลือกวันหมดอายุวัคซีนด้วยนะครับ', 'error');
+            document.getElementById('vaccine-expiry')?.focus();
+            return;
+        }
         if (isVaccinated && !editId && !vaccineFile) {
             toast('กรุณาแนบสมุดวัคซีนเพื่อตรวจสอบนะครับ', 'error');
             return;
