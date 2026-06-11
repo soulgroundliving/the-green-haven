@@ -316,7 +316,7 @@
         actions = '<div class="pet-dir__actions">' +
           '<span class="pet-dir__pill pet-dir__pill--on">✓ แสดงอยู่</span>' +
           '<button type="button" class="pet-dir__btn pet-dir__btn--ghost" data-ps="save-bio" data-pid="' + pid + '"' + (busy ? ' disabled' : '') + '>บันทึกข้อมูล</button>' +
-          '<button type="button" class="pet-dir__btn pet-dir__btn--mute" data-ps="unpublish" data-pid="' + pid + '"' + (busy ? ' disabled' : '') + '>ซ่อน</button>' +
+          '<button type="button" class="pet-dir__btn pet-dir__btn--mute" data-ps="unpublish" data-pid="' + pid + '"' + (busy ? ' disabled' : '') + '>เลิกแสดง</button>' +
           '</div>';
       } else if (pendingConsent) {
         actions = _inlineConsent();
@@ -521,23 +521,23 @@
     }
   }
 
-  // ซ่อนน้อง = ถอนการเผยแพร่ + ยกเลิกเพื่อนสี่ขาทั้งหมด (สิทธิ์ถอนความยินยอม PDPA).
+  // เลิกแสดง = ถอนการเผยแพร่ + ยกเลิกเพื่อนสี่ขาทั้งหมด (สิทธิ์ถอนความยินยอม PDPA).
   // ใช้ GhModal ที่ออกแบบไว้แล้ว แทน window.confirm ของเบราว์เซอร์ — ตัว native โชว์โดเมน
   // the-green-haven.vercel.app ซึ่งดูเหมือน pop-up หลอกลวง (feedback_modal_security).
   function _unpublish(petId) {
     if (!petId) return;
     var msg = 'เพื่อนสี่ขาที่ผูกไว้จะถูกยกเลิกทั้งหมด และน้องจะไม่แสดงให้เพื่อนบ้านเห็น (เปิดใหม่ได้ภายหลัง)';
     if (!window.GhModal || typeof window.GhModal.open !== 'function') {  // defensive fallback
-      if (window.confirm('ซ่อนน้องจากไดเรกทอรี? ' + msg)) _doUnpublish(petId);
+      if (window.confirm('เลิกแสดงน้องจากไดเรกทอรี? ' + msg)) _doUnpublish(petId);
       return;
     }
     window.GhModal.open({
-      title: 'ซ่อนน้องจากไดเรกทอรี?',
+      title: 'เลิกแสดงน้องจากไดเรกทอรี?',
       body: msg,
       size: 'small',
       actions: [
         { label: 'ยกเลิก', variant: 'ghost', onClick: function (m) { m.close(); } },
-        { label: 'ซ่อนน้อง', variant: 'danger', onClick: function (m) { m.close(); _doUnpublish(petId); } },
+        { label: 'เลิกแสดง', variant: 'danger', onClick: function (m) { m.close(); _doUnpublish(petId); } },
       ],
     });
   }
@@ -548,7 +548,7 @@
     _busy['pub_' + petId] = true; _render();
     try {
       await fns.httpsCallable('upsertPetProfile')({ building: _bldg(), roomId: _room(), petId: String(petId), isPublic: false });
-      _toast('ซ่อนน้องจากไดเรกทอรีแล้ว', 'success');
+      _toast('เลิกแสดงน้องแล้ว', 'success');
     } catch (e) {
       _toast(_errMsg(e, 'ดำเนินการไม่สำเร็จ'), 'error');
     } finally {
