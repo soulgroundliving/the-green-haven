@@ -24,11 +24,14 @@ function resetStubs(overrides = {}) {
     docs: {},
     // 'tenants/rooms/list/15/paymentHistory' → [{id, data}]
     subcollections: {},
+    // 'petProfiles|ownerTenantId==TENANT_x' → [{id, data}] (single-field where queries)
+    queries: {},
     batchCommitError: null,
     ...overrides,
   };
   captured = {
     batchOps: [],
+    deleted: [],   // direct ref.delete() paths (pet-social cleanup, §7-DD)
   };
 }
 resetStubs();
@@ -49,15 +52,27 @@ function makeDocRef(path) {
     path,
     collection: (sub) => makeColl(`${path}/${sub}`),
     get: async () => makeSnap(path),
+    delete: async () => { captured.deleted.push(path); },
   };
 }
 
 function makeColl(path) {
-  return {
+  const wheres = [];
+  const coll = {
     path,
     doc: (id) => makeDocRef(`${path}/${id}`),
+    where: (field, op, val) => { wheres.push({ field, op, val }); return coll; },
+    limit: () => coll,
     get: async () => {
-      const subDocs = stubState.subcollections[path] || [];
+      let subDocs;
+      if (wheres.length) {
+        // single-field where query (pet-social cleanup §7-DD) keyed like the
+        // erasure test: `${path}|${field}${op}${val},...`
+        const key = `${path}|` + wheres.map(w => `${w.field}${w.op}${w.val}`).join(',');
+        subDocs = stubState.queries[key] || [];
+      } else {
+        subDocs = stubState.subcollections[path] || [];
+      }
       const docs = subDocs.map(d => ({
         id: d.id,
         data: () => d.data,
@@ -72,6 +87,7 @@ function makeColl(path) {
     // buildingRegistry calls .get() on the buildings collection — empty
     // means we fall through to STATIC_FALLBACK ['rooms','nest']. OK.
   };
+  return coll;
 }
 
 const fsBatch = () => ({
@@ -319,6 +335,18 @@ describe('archiveTenantOnMoveOut — batch shape', () => {
     assert.equal(archSets.length, 2);
     assert.equal(dels.length, 2);
     assert.equal(result.archivedSubdocs, 2);
+  });
+
+  it('cleans up top-level pet-social (petProfiles + petLinks) for the moved-out tenant (§7-DD #10)', async () => {
+    const seed = seedArchivable();
+    stubState.queries[`petProfiles|ownerTenantId==${seed.tenantId}`] = [{ id: 'p1', data: {} }];
+    stubState.queries[`petLinks|requesterTenantId==${seed.tenantId}`] = [{ id: 'p1_p9', data: {} }];
+    stubState.queries[`petLinks|recipientTenantId==${seed.tenantId}`] = [];
+    const result = await archiveTenantOnMoveOut.run(goodInput(), adminContext());
+    assert.equal(result.petSocialProfilesDeleted, 1);
+    assert.equal(result.petSocialLinksDeleted, 1);
+    assert.ok(captured.deleted.includes('petProfiles/p1'), 'profile deleted');
+    assert.ok(captured.deleted.includes('petLinks/p1_p9'), 'link deleted');
   });
 });
 

@@ -539,6 +539,64 @@ describe('foodShares — building-scoped read, CF-only write (Meaning Layer #4)'
   });
 });
 
+describe('petProfiles — building-scoped read, CF-only write (Meaning Layer #10)', () => {
+  it('admin can read any building\'s pet profile', async () => {
+    await seedDoc('petProfiles/p1', { building: 'nest', ownerRoom: 'N1', name: 'มะลิ' });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'petProfiles/p1')));
+  });
+
+  it('LIFF tenant can read a profile in their OWN building', async () => {
+    await seedDoc('petProfiles/p1', { building: 'rooms', ownerRoom: '101', name: 'โกโก้' });
+    await assertSucceeds(getDoc(doc(LIFF_TENANT().firestore(), 'petProfiles/p1')));
+  });
+
+  it('LIFF tenant CANNOT read a profile in a DIFFERENT building (PDPA scope)', async () => {
+    await seedDoc('petProfiles/p1', { building: 'nest', ownerRoom: 'N1', name: 'มะลิ' });
+    await assertFails(getDoc(doc(LIFF_TENANT().firestore(), 'petProfiles/p1')));
+  });
+
+  it('anonymous user (no building claim) CANNOT read', async () => {
+    await seedDoc('petProfiles/p1', { building: 'rooms', ownerRoom: '101', name: 'โกโก้' });
+    await assertFails(getDoc(doc(ANON().firestore(), 'petProfiles/p1')));
+  });
+
+  it('LIFF tenant CANNOT client-write — create or update (CF-only)', async () => {
+    await assertFails(addDoc(collection(LIFF_TENANT().firestore(), 'petProfiles'),
+      { building: 'rooms', ownerRoom: '101', name: 'x' }));
+    await seedDoc('petProfiles/p1', { building: 'rooms', name: 'โกโก้' });
+    await assertFails(updateDoc(doc(LIFF_TENANT().firestore(), 'petProfiles/p1'), { name: 'hacked' }));
+  });
+
+  it('admin CANNOT client-write either (every transition is a callable)', async () => {
+    await assertFails(addDoc(collection(EMAIL_ADMIN().firestore(), 'petProfiles'),
+      { building: 'rooms', name: 'x' }));
+  });
+});
+
+describe('petLinks — building-scoped read, CF-only write (Meaning Layer #10)', () => {
+  it('admin can read any building\'s pet friend edge', async () => {
+    await seedDoc('petLinks/p1_p2', { building: 'nest', status: 'pending', petA: 'p1', petB: 'p2' });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'petLinks/p1_p2')));
+  });
+
+  it('LIFF tenant can read an edge in their OWN building', async () => {
+    await seedDoc('petLinks/p1_p2', { building: 'rooms', status: 'accepted', petA: 'p1', petB: 'p2' });
+    await assertSucceeds(getDoc(doc(LIFF_TENANT().firestore(), 'petLinks/p1_p2')));
+  });
+
+  it('LIFF tenant CANNOT read an edge in a DIFFERENT building (PDPA scope)', async () => {
+    await seedDoc('petLinks/p1_p2', { building: 'nest', status: 'pending', petA: 'p1', petB: 'p2' });
+    await assertFails(getDoc(doc(LIFF_TENANT().firestore(), 'petLinks/p1_p2')));
+  });
+
+  it('LIFF tenant CANNOT client-write — create or update (CF-only)', async () => {
+    await assertFails(addDoc(collection(LIFF_TENANT().firestore(), 'petLinks'),
+      { building: 'rooms', status: 'pending', petA: 'p1', petB: 'p2' }));
+    await seedDoc('petLinks/p1_p2', { building: 'rooms', status: 'pending' });
+    await assertFails(updateDoc(doc(LIFF_TENANT().firestore(), 'petLinks/p1_p2'), { status: 'accepted' }));
+  });
+});
+
 describe('tradeHistory — owner/admin read, CF-only write (Meaning Layer #5)', () => {
   const OWNER_UID = 'line:U00000000000000000000000000000001'; // == LIFF_TENANT() default uid
 

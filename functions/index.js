@@ -215,6 +215,17 @@ exports.cancelFood                 = require('./cancelFood').cancelFood;
 exports.cleanupFoodSharesScheduled = require('./cleanupFoodSharesScheduled').cleanupFoodSharesScheduled;
 exports.cleanupFoodSharesManual    = require('./cleanupFoodSharesScheduled').cleanupFoodSharesManual;
 
+// Pet Social Graph (Meaning Layer #10) — the Pet-pillar shared primitive. A tenant
+// opts a pet into a building-visible directory (petProfiles/{petId}, CF-written
+// safe fields only — health/vaccine never leak), neighbours browse and send pet↔pet
+// friend requests (petLinks/{linkId}, open→accepted/declined). Awards NO points
+// (social-only, like #3). ONE callable per transition (§7-NN); request/respond reuse
+// the existing LINE_CHANNEL_ACCESS_TOKEN secret for the friend-request push (§7-WW).
+exports.upsertPetProfile = require('./upsertPetProfile').upsertPetProfile;
+exports.requestPetLink   = require('./requestPetLink').requestPetLink;
+exports.respondPetLink   = require('./respondPetLink').respondPetLink;
+exports.removePetLink    = require('./removePetLink').removePetLink;
+
 // Immutable admin-action audit trail (Core Readiness Phase 1.1). Client-side admin
 // mutations call this after the write; in-tx CF actions log via _actionAudit directly.
 exports.recordAdminAction = require('./recordAdminAction').recordAdminAction;

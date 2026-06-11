@@ -58,6 +58,7 @@ const firestore = admin.firestore();
 const { getValidBuildings } = require('./buildingRegistry');
 const { appendLog } = require('./_occupancyLog');
 const { deletePetStorageForRoom } = require('./_petStorage');
+const { cleanupPetSocialByTenant } = require('./_petSocialCleanup');
 
 const VALID_REASONS = new Set(['moved_out', 'reassigned', 'admin_action']);
 
@@ -351,6 +352,21 @@ exports.archiveTenantOnMoveOut = functions
       console.error(`archiveTenantOnMoveOut: pet Storage cleanup threw unexpectedly:`, storageErr.message);
     }
 
+    // ── Post-batch: Pet Social Graph cleanup (§7-DD) ───────────────────────
+    // petProfiles/{petId} + petLinks/{linkId} are TOP-LEVEL collections (Meaning
+    // Layer #10), so the tenant-subcollection batch above didn't touch them.
+    // Remove the archived tenant's public pet profiles + every friend edge they
+    // are a party to (keyed on the canonical tenantId) — else a neighbour's
+    // directory would show a ghost pet whose owner has moved out. Fire-and-forget:
+    // the archive batch already committed (the canonical record); a transient
+    // cleanup error must not mask success.
+    let petSocialDeleted = { profiles: 0, links: 0 };
+    try {
+      petSocialDeleted = await cleanupPetSocialByTenant(firestore, tenantId);
+    } catch (petSocialErr) {
+      console.error('archiveTenantOnMoveOut: pet-social cleanup failed (non-fatal):', petSocialErr.message);
+    }
+
     return {
       success: true,
       contractId,
@@ -360,6 +376,8 @@ exports.archiveTenantOnMoveOut = functions
       archivedSubdocs: copiedSubdocs,
       archivedPetStorageFiles: storageDeleted,
       petStorageErrors: storageErrors,
+      petSocialProfilesDeleted: petSocialDeleted.profiles,
+      petSocialLinksDeleted: petSocialDeleted.links,
       reason: archiveReason,
     };
   });

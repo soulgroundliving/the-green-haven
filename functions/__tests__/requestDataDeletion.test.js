@@ -392,6 +392,25 @@ describe('requestDataDeletion — happy admin path', () => {
     assert.equal(res.summary.deleted.bookings, 1);
     assert.equal(state.storageDeletedFiles.length, 2);
   });
+
+  it('cascades pet-social cleanup — petProfiles + petLinks (§7-DD #10)', async () => {
+    state.firestoreQueries['petProfiles|ownerTenantId==T_PLAYER_001'] = [
+      { id: 'p1', data: { ownerTenantId: 'T_PLAYER_001' } },
+      { id: 'p2', data: { ownerTenantId: 'T_PLAYER_001' } },
+    ];
+    state.firestoreQueries['petLinks|requesterTenantId==T_PLAYER_001'] = [
+      { id: 'p1_p9', data: {} },
+    ];
+    state.firestoreQueries['petLinks|recipientTenantId==T_PLAYER_001'] = [
+      { id: 'p2_p7', data: {} },
+    ];
+    const res = await handler(validInput, adminCtx());
+    assert.equal(res.summary.deleted.petProfiles, 2);
+    assert.equal(res.summary.deleted.petLinks, 2);
+    assert.ok(state.firestoreDeletedPaths.includes('petProfiles/p1'));
+    assert.ok(state.firestoreDeletedPaths.includes('petLinks/p1_p9'));
+    assert.ok(state.firestoreDeletedPaths.includes('petLinks/p2_p7'));
+  });
 });
 
 // ── Idempotency ──────────────────────────────────────────────────────────────

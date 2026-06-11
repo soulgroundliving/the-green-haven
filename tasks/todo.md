@@ -4,6 +4,109 @@
 
 ---
 
+## ▶▶▶ ACTIVE PLAN (2026-06-11) — Meaning Layer **#10: Pet Social Graph** · PR1 BUILT + REVIEWED ✅ · ⏳ owner commit/PR + deploy → then PR2
+
+> Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#10 · 🔴 buildable now** — the Pet-pillar **shared primitive** (opt-in building-visible pet profiles + pet↔pet friend links) that **#11 playdate / #12 matching / #14 caretaker** all build on. #9 Pet health opened the Pet pillar; #10 is the next in pillar order. Mirrors the #2/#3/#4 building-scoped-collection + per-transition-callable template wholesale.
+
+### Owner decisions (LOCKED 2026-06-11)
+- **D1 · Scope = FULL #10** — profiles + directory + friend links (the complete graph primitive). Split 2 PRs (PR1 server/rules/PDPA · PR2 frontend), mirror #2.
+- **D2 · Model = separate `petProfiles/{petId}` mirror** — CF-written, **safe fields only** (name/type/breed/photo/room/bio); `healthLog`+vaccine NEVER exposed. Single-field building query (§7-J/N-safe); matches #2/#3/#4. Keeps the private pet doc private.
+
+### RECs I own (baked in — not re-litigated unless you object at approval)
+- **D3 · Dedicated consent `pet_profile_v1` + explicit visibility toggle.** *Why: making a pet (and its owner's room) visible building-wide is a NEW disclosure of personal data (PDPA §19) — stronger than #9 health which stayed private-to-self on `account_v1`. Mirrors reputation/kindness consent. Server-authoritative: `upsertPetProfile` refuses `isPublic:true` if the consent doc is absent.*
+- **D4 · Point-free** (mirror #3 communityRequests). *Why: social connection is self-attested; points = money → a farm surface. Reward = the connection. Do NOT add a `pointsLedger` source.*
+- **D5 · Show room number** (e.g. "🐾 น้องโกโก้ · ห้อง 12"). *Why: consistent with the help/community/food boards (all show room); the room is the social affordance ("ไปคุยเรื่อง playdate กับห้องไหน"). Gated behind the opt-in consent.*
+- **D6 · Admin = read-only v1** — surface bio + "อยู่ในไดเรกทอรี" in the EXISTING pet-approval queue; abuse handled by rejecting the pet (existing flow) → cascade removes the profile. *Why: scope discipline; the pet-approval queue already moderates pets, only `bio` is new free-text. Dedicated admin-remove-profile callable = out-of-scope v1.x.*
+
+### Why Plan-First (CLAUDE.md §1 — all three thresholds)
+2 new top-level collections + 4 callables + `firestore.rules` (2 building-scoped blocks) + consent purpose + §7-DD cleanup in `archiveTenantOnMoveOut` + `requestDataDeletion` + `exportMyData` + tenant directory/friend UI + light admin read + tests + lifecycle doc ≈ **18–22 files**; schema/security/architectural; CF+rules deploy = not single-revert; 2+ valid models (resolved D1/D2 above).
+
+### Verified-reuse map (3 Explore agents, file:line — §7-H/K/O/AA)
+- **§7-O/AA greenfield CONFIRMED:** `petProfiles|petLinks|petSocial|pet_profile_v1` → **0 hits** outside roadmap docs. Nothing orphaned to wire.
+- **Pet doc** `tenants/{b}/list/{r}/pets/{petId}` ([tenant-pets.js:38,188-204](shared/tenant-pets.js)); has `healthLog[]` (#9) + vaccine + `status` approval → these stay PRIVATE. petId = `Date.now().toString()`.
+- **Engine template:** `functions/_communityRequestEngine.js` (point-free precedent — header "awards NO points") + `functions/_helpRequestEngine.js` (guards `canAccept`/`canComplete`/`canCancel`, validators).
+- **Callable template:** `functions/postHelpRequest.js` + `acceptHelpRequest.js` — `functions.region('asia-southeast1').https.onCall` (v1, §7-NN), `assertTenantAccess({building,roomId,context,firestore,HttpsError})` from `_authSoT` (claim fast-path + SoT fallback), anti-spoof `uid=context.auth.uid`, atomic `runTransaction` re-read `status` for single-winner → `failed-precondition` on lost race. Register column-0 in `functions/index.js:184-204` (§7-CCC/LLL).
+- **Rules template:** `firestore.rules:65-93` helpRequests/communityRequests/foodShares blocks — `allow read: if isAdmin() || (isSignedIn() && request.auth.token.building != null && resource.data.building == request.auth.token.building); allow write: if false;`. token.building set by `liffSignIn.js:209`.
+- **Rate-limit:** `functions/_rateLimit.js` `checkRateLimit(uid, action, max, windowSec)`.
+- **LINE notify:** `functions/_notifyHelper.js` `lookupApprovedRoomUsers` + `pushAndRetry` (reuses existing `LINE_CHANNEL_ACCESS_TOKEN`, §7-WW-safe; idempotencyKey `petlink-{linkId}-{transition}-{userId}`).
+- **Consent:** `functions/recordChecklistConsent.js:29` `VALID_PURPOSES` (`checklist_v1/account_v1/reputation_v1/kindness_v1`) → add `pet_profile_v1`; writes `consents/{tenantId}_{purpose}`.
+- **Consent-gate frontend:** `shared/tenant-kindness.js`/`tenant-reputation.js` — localStorage gate → `consents/{tid}_{purpose}` check → inline prompt → `httpsCallable('recordChecklistConsent')({purpose})`; `_onLiffClaimsReady` + `_tenantAppBuilding/_tenantAppRoom` guard (§7-A/U/BB, NOT phantom `_liffClaims`); own-read `getDoc` + §7-N catch.
+- **Sub-page:** `tenant_app.html` `<div id="X-page" class="page">` + `showSubPage(id)` ([tenant-navigation.js:64-98](shared/tenant-navigation.js)) + render hook (`:91-95`) + `_dispatch` cases (`tenant_app.html:5946`; §7-JJJ arg-cases) + script order §7-PP (after tenant-navigation.js).
+- **Cross-room browse:** `shared/tenant-activity-feed.js:165-196` — per-board `onSnapshot(where building==)` + §7-FFF own-filter (room identity, not uid) + §7-U/N/V guards + badge/panel. The browse-other-rooms precedent.
+- **PDPA lifecycle:** pets ∈ ARCHIVED_SUBCOLLECTIONS ([archiveTenantOnMoveOut.js:66-72,262-268](functions/archiveTenantOnMoveOut.js)); `requestDataDeletion.js` (§32 erasure); `exportMyData.js:159-170` (pets+healthLog already exported). **petProfiles/petLinks are TOP-LEVEL → won't auto-ride the pet lifecycle → must add explicit cleanup (§7-DD).**
+- **CSP:** privacy.html NOT in the 8 CSP-tracked files; external `<script src>` + markup `<div>` + static `components.css` = **NO CSP regen** (§7-II/RR).
+
+### Data model
+**`petProfiles/{petId}`** (top-level; petId == pet doc id; CF-only-write; building-scoped read):
+`{ petId, ownerTenantId, ownerRoom, building, name, typeEmoji, breed, gender, ageText, photoURL, bio, createdAt, updatedAt }` — doc EXISTS ⇒ public; opt-out ⇒ CF deletes it. **NEVER** healthLog/vaccine/status/internal paths. Gate: pet `status==='approved'` to publish. CF copies safe fields server-side from the pet doc (anti-spoof); client supplies only `bio` + `isPublic`.
+
+**`petLinks/{linkId}`** (top-level; `linkId = ${minPetId}_${maxPetId}` deterministic dedup; CF-only-write; building-scoped read):
+`{ petA, petB, building, requesterPetId, requesterTenantId, recipientPetId, recipientTenantId, status:'pending'|'accepted'|'declined', createdAt, respondedAt }` — point-free.
+
+No composite index anywhere (directory + friend status = single-field `where building==`, status filtered client-side; cleanup = single-field `where ownerTenantId==`/`where requesterTenantId==`/`where recipientTenantId==`) → §7-J/N-safe.
+
+### Build — PR1 (server + rules + PDPA + tests; owner-deploy-gated, NOT stacked)
+- [ ] `functions/_petSocialEngine.js` (NEW, pure) — `buildLinkId(a,b)` (sorted), `sanitizeBio`/`isValidBio` (MAX_BIO_LEN), profile safe-field whitelist, link guards `canRequest`/`canRespond`/`canRemove`, status validators. *Why: single source of truth, pure → unit-testable; mirrors `_communityRequestEngine` point-free.*
+- [ ] `functions/upsertPetProfile.js` (NEW callable SE1) — own-pet via `assertTenantAccess`; require `consents/{tid}_pet_profile_v1` when `isPublic:true` (server-authoritative §19); copy safe fields from pet doc; `status==='approved'` gate; write OR (`isPublic:false`) delete + cascade-delete its petLinks. *Why: the opt-in writer; anti-spoof + consent enforced server-side.*
+- [ ] `functions/requestPetLink.js` (NEW callable SE1) — own `fromPet`; both pets have public profiles + same building; tx dedup (existing pending/accepted → reject; declined → allow re-request); `checkRateLimit(uid,'requestPetLink',20,86400)`; notify recipient (LINE best-effort). *Why: friend-request transition, single-winner.*
+- [ ] `functions/respondPetLink.js` (NEW callable SE1) — own recipient pet; tx `status==='pending'` → `accepted`/`declined`; notify requester. *Why: accept/decline transition.*
+- [ ] `functions/removePetLink.js` (NEW callable SE1) — either owner → delete (unfriend). *Why: edge removal.*
+- [ ] `functions/index.js` — register 4 callables column-0 (§7-CCC/LLL). *Why: CI deploy-list + global scope.*
+- [ ] `firestore.rules` — `petProfiles/{petId}` + `petLinks/{linkId}` blocks (building-scoped read · write:false) + rule emulator tests. *Why: §6 tamper-proof — tenant reads building's public profiles, never writes; CF (admin SDK) bypasses.*
+- [ ] `functions/recordChecklistConsent.js` — add `'pet_profile_v1'` to `VALID_PURPOSES`. *Why: opt-in gate calls this CF; unknown purposes throw.*
+- [ ] `functions/archiveTenantOnMoveOut.js` — delete `petProfiles where ownerTenantId==tid` + `petLinks where requester/recipientTenantId==tid` (§7-DD — top-level, won't auto-archive). *Why: orphan profiles/links must not survive move-out → a reader would show a ghost pet.*
+- [ ] `functions/requestDataDeletion.js` — same deletion in the §32 erasure path. *Why: DSR erasure must reach the new collections.*
+- [ ] `functions/exportMyData.js` — add `petProfiles` + `petLinks` sections (the tenant's own). *Why: DSR §30 completeness.*
+- [ ] Tests: `functions/__tests__/_petSocialEngine.test.js` (pure) + 4 callable tests (Module._load mock) + rules tests + `exportMyData` extension + `archiveTenantOnMoveOut`/`requestDataDeletion` cleanup assertions.
+- [ ] Gate: `node --check` · functions tests green · `npm run test:rules` green · mojibake (§7-TT) · `verify:memory` · pre-commit.
+- [ ] **OWNER:** merge → CI auto-deploys 4 callables + (owner) `firebase deploy --only firestore:rules`.
+
+### Review — PR1 BUILT + REVIEWED (2026-06-11) ✅ · ⏳ not yet committed
+**Shipped (uncommitted working tree):** 6 new CFs (`_petSocialEngine.js` pure · `_petSocialCleanup.js` §7-DD · `upsertPetProfile`/`requestPetLink`/`respondPetLink`/`removePetLink` callables) + `index.js` (4 registered) + `firestore.rules` (petProfiles + petLinks building-scoped read · write:false) + `recordChecklistConsent.js` (`pet_profile_v1`) + §7-DD cleanup in `archiveTenantOnMoveOut.js` + `requestDataDeletion.js` + §30 export in `exportMyData.js` + 6 new test files + 3 extended (exportMyData/erasure/archive) + rules test (+10) + README counts.
+
+**Gates (all green):** functions **2357/0** (+69) · rules emulator **342/0** (+10 petProfiles/petLinks) · `node --check` clean · §7-TT mojibake CLEAN · `verify:memory` ALL GREEN.
+
+**code-reviewer + security-reviewer (parallel) — all findings resolved:**
+- **HIGH-2 (auth bypass) FIXED** — `upsertPetProfile` opt-out now verifies `profile.ownerRoom===room && building` before delete+unfriend (was: a tenant knowing another room's petId could opt out + wipe its edges). +2 tests (cross-room reject, idempotent no-op).
+- **HIGH-1 FIXED** — `requestPetLink` blocks same-room edges (requester.room ≠ recipient.room always) → the room-based recipient check in `respondPetLink` is now airtight; `canRespondLink` simplified to a pure status-guard (dropped the tautological petId arg, dead-code removed). +1 test (same-room reject); engine test updated.
+- **MEDIUM-3 FIXED** — `checkRateLimit` moved before the profile reads (anti-enumeration + matches the postHelpRequest convention).
+- **MEDIUM-1 addressed** — single-page cleanup kept (matches the project-wide `requestDataDeletion` convention; unreachable at this scale) + a PAGE_SIZE-hit `console.warn` so a future anomaly isn't silent.
+- **MEDIUM-2 (createdAt double-publish race)** — documented intentional (cosmetic ms delta); +1 re-publish-preserves-createdAt test.
+- **LOW** — `buildLinkId` empty-id throw guard + test · link `requesterName/recipientName` re-cap `.slice(0,60)`.
+- **Verified clean:** PDPA safe-field whitelist (no health/vaccine leak, test-asserted) · consent server-enforced · anti-spoof (server-set identity) · §7-NN callables · §6 point-free (no `appendPointsLedger`) · §7-DD cleanup in both archive + erasure (test-asserted) · §7-J/N single-field queries.
+
+**⏳ Next:** owner confirms → commit on a branch → open PR1 → merge (CI deploys 4 callables) → **owner runs `firebase deploy --only firestore:rules`** (CI does NOT deploy rules) → then PR2 (frontend) off main.
+
+### Build — PR2 (frontend; off main AFTER PR1 deploy)
+- [ ] `shared/tenant-pet-social.js` (NEW, IIFE) — directory render (`where building==` on petProfiles, §7-FFF own-filter by ownerTenantId/room) + per-pet friend status (`where building==` on petLinks) + request/respond/remove buttons (optimistic, §7-I) + profile opt-in toggle with `pet_profile_v1` consent gate (clone tenant-kindness flow); `_onLiffClaimsReady`+`_taBuilding/_taRoom` (§7-A/U/BB); §7-N error cb; §7-V unsub-before-rebind; §7-X innerHTML fallback; DOM API for user text ([[feedback_modal_security]]); `window.*` exports (§7-QQ/CC). *Why: the tenant directory + friend surface.*
+- [ ] `tenant_app.html` — `#pet-directory-page` sub-page markup + `<script src="./shared/tenant-pet-social.js" defer>` (after tenant-navigation.js §7-PP) + `_dispatch` cases for `requestPetLink`/`respondPetLink`/`removePetLink` (arg-cases §7-JJJ) + nav entry. *Markup + external script → NO CSP regen (§7-II/RR).*
+- [ ] `shared/tenant-navigation.js` — `showSubPage` render hook `pet-directory-page` → `window.renderPetDirectory`. *Why: lazy-render on open.*
+- [ ] `shared/tenant-pets.js` — per pet card: "แสดงในไดเรกทอรี" toggle (opt-in entry) + "หาเพื่อนให้น้อง 🐾" → opens directory. *Why: the entry points.*
+- [ ] `shared/components.css` — static `.pet-dir-*`/`.pet-social-*` (§7-RR, theme-aware via `--card`/`--text`/`--border` §7-III). *Why: no JS-injected CSS.*
+- [ ] `shared/dashboard-tenant-lease.js` — admin **read-only**: show `bio` + "อยู่ในไดเรกทอรี" in the existing pet card (light `petProfiles` read; `_escapeHTML` on bio). *Why: D6 light moderation, no admin write.*
+- [ ] `privacy.html` + tenant_app privacy section — pet-profile disclosure §1/§2/§5 (text-only, no CSP regen).
+- [ ] Tests: `shared/__tests__/tenant-pet-social.test.js` (pure helpers: link-id, own-filter, status bucketing, bio sanitize).
+- [ ] Gate: `test:shared` green · static-harness preview-MCP screenshot (directory empty/populated, friend states, consent prompt, light+dark) · no CSP drift (§7-II §G) · mojibake.
+
+### Verify / deploy
+- [ ] Update [[lifecycle_pets_registration]] (#10 section) or a new `lifecycle_pet_social.md` + `verify:memory`.
+- [ ] **§7-J live verify (owner, real LINE):** tenant A opts in pet → appears in B's directory (same building) → B sends friend request → A's LINE notify → A accepts → both show "เพื่อนแล้ว" → A opts out → profile + links gone. Cross-building isolation holds. Composite-index N/A (single-field) but verify a populated directory query, not empty (§7-J/K sub-lesson).
+- [ ] Flip roadmap #10 → ✅ + cite PRs same session it ships (§7-K doc-drift).
+
+### Guardrails (§7 + §6 + PDPA)
+§7-NN callables not triggers · §6 trust/social ≠ points (point-free) · §7-T single writer (CF owns both collections; copies safe fields anti-spoof) · §7-DD top-level cleanup in archive+erasure · §7-A/U/BB tenant claim-gated · §7-J/N single-field, no composite, error cb · §7-FFF own-filter by identity not uid · §7-V unsub-before-rebind · §7-X innerHTML fallback · §7-RR static CSS · §7-II/PP/QQ/CC external script + order + window export · §7-JJJ dispatch arg-cases · §7-WW reuse LINE secret · [[feedback_modal_security]] DOM API · PDPA: `pet_profile_v1` consent (server-enforced) + disclosure + DSR export + erasure + move-out cleanup · §7-I tenant-initiated, no auto-click · don't stack PRs ([[feedback_stacked_pr_squash_merge]]).
+
+### Out of scope (named, not dropped)
+player/`people/` path (active-tenant pets only) · dedicated admin-remove-profile callable (v1.x; v1 = reject-pet cascade) · pet photo re-upload in the profile (reuses existing pet photo) · **#11 playdate / #12 matching / #14 caretaker** (consumers of this graph) · pre-existing `firestore.rules` pets read = `isSignedIn()` over-broad (latent — no UI uses it; the mirror sidesteps it; tightening needs the full rule-tighten-trace doctrine → separate task, flagged not folded) · combining pet_profile + account consent prompts.
+
+### Risk
+Mostly additive (2 new collections, 4 callables, frontend). The only edits to LIVE CFs are additive cleanup blocks in `archiveTenantOnMoveOut`/`requestDataDeletion`/`exportMyData` (try/catch-guarded, §7-DD). No money/points path (point-free). Live-verify owner-gated (LIFF); static-harness proves visuals pre-merge.
+
+### Why
+Roadmap #10 — the Pet-pillar shared primitive (#11/#12/#14 lean on it). Builds the opt-in social graph the blueprint's "Emotional Network" needs, privacy-safe (health never leaves the private pet doc), reusing the proven #2/#3/#4 building-scoped-collection template end-to-end.
+
+---
+
 ## ✅ SHIPPED + PROD-VERIFIED (2026-06-11) — Meaning Layer **#6 Kindness · tenant tier badge v1.x** · PR1 #333 (`ddf2fd0` server+rules) · PR2 #334 (`74a8fbb` frontend) · rules deploy + sweep mirror prod-verified · on-device LINE render owner-attested
 
 > **Gate (PR1, 2026-06-11):** full functions suite **2288/0** (+7) · rules emulator **332/0** (+2 kindnessTier tamper-proof cases) · `_kindness` 16/0 (+6 kindnessTier) · `recordChecklistConsent` 10/0 (+1 kindness_v1) · sweep 10/0 (mirror assertions updated for combined write) · node --check clean · §7-TT mojibake clean. exportMyData unchanged. **MERGED [#333](https://github.com/soulgroundliving/the-green-haven/pull/333) → CF deploy via CI; owner runs `firebase deploy --only firestore:rules`.**

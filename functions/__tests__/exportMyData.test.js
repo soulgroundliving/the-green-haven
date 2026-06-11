@@ -17,6 +17,8 @@ let collectionGroupResults;
 let rtdbValues;     // keyed by full path
 let trustScoreDocs; // keyed by tenantId
 let petsDocs;       // keyed by `${building}/${roomId}` → [{ id, data() }]
+let petProfileDocs; // [{ id, data() }] returned for petProfiles where ownerTenantId
+let petLinkDocs;    // [{ id, data() }] returned for petLinks where requester|recipientTenantId
 
 function resetStubs() {
   tenantDocs = {};
@@ -27,6 +29,8 @@ function resetStubs() {
   rtdbValues = {};
   trustScoreDocs = {};
   petsDocs = {};
+  petProfileDocs = [];
+  petLinkDocs = [];
 }
 resetStubs();
 
@@ -103,6 +107,14 @@ Module._load = function (id, parent, ...rest) {
               get: async () => ({ exists: id in trustScoreDocs, data: () => trustScoreDocs[id] }),
             }),
           };
+        }
+        if (name === 'petProfiles') {
+          return { where: () => ({ get: async () => ({ docs: petProfileDocs }) }) };
+        }
+        if (name === 'petLinks') {
+          // queried once per field (requesterTenantId / recipientTenantId); the
+          // SUT dedups by doc id, so returning the same set both times is fine.
+          return { where: () => ({ get: async () => ({ docs: petLinkDocs }) }) };
         }
         throw new Error('unexpected collection: ' + name);
       },
@@ -223,6 +235,27 @@ describe('exportMyData — auth gate', () => {
     tenantDocs['rooms/15'] = { name: 'T15', tenantId: 't-15' };
     const r = await handler({}, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
     assert.deepEqual(r.pets, []);
+  });
+
+  it('includes the tenant\'s petProfiles + petLinks in the DSR export (#10), deduped', async () => {
+    tenantDocs['rooms/15'] = { name: 'T15', tenantId: 't-15' };
+    petProfileDocs = [{ id: 'p1', data: () => ({ petId: 'p1', name: 'มะลิ', ownerTenantId: 't-15' }) }];
+    petLinkDocs = [
+      { id: 'p1_p2', data: () => ({ linkId: 'p1_p2', status: 'accepted', requesterTenantId: 't-15' }) },
+    ];
+    const r = await handler({}, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
+    assert.equal(r.petProfiles.length, 1);
+    assert.equal(r.petProfiles[0].name, 'มะลิ');
+    // queried twice (requester+recipient field) but deduped by id → exactly 1
+    assert.equal(r.petLinks.length, 1);
+    assert.equal(r.petLinks[0].id, 'p1_p2');
+  });
+
+  it('petProfiles + petLinks are empty arrays when the tenant has none (#10)', async () => {
+    tenantDocs['rooms/15'] = { name: 'T15', tenantId: 't-15' };
+    const r = await handler({}, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
+    assert.deepEqual(r.petProfiles, []);
+    assert.deepEqual(r.petLinks, []);
   });
 
   it('export payload sanitises liffIdToken from liffUser', async () => {

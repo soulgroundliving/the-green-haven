@@ -47,6 +47,7 @@ if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
 const { getAllBuildings } = require('./buildingRegistry');
+const { cleanupPetSocialByTenant } = require('./_petSocialCleanup');
 
 const CONFIRMATION_PHRASE = 'ลบข้อมูลของฉัน';
 const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;  // 7 days between erasure requests
@@ -110,6 +111,21 @@ async function deleteConsents(ctx, summary) {
     summary.errors.push({ step: 'consents.query', error: e.message });
   }
   summary.deleted.consents = n;
+}
+
+async function deletePetSocial(ctx, summary) {
+  // Pet Social Graph (Meaning Layer #10) — petProfiles/{petId} + petLinks/{linkId}
+  // are top-level collections keyed on the canonical tenantId. archiveTenantOnMoveOut
+  // already sweeps them at move-out; this is the §32 defense-in-depth pass for any
+  // orphan that survived (e.g. a profile published after the contract archive).
+  if (!ctx.tenantId) return;
+  try {
+    const { profiles, links } = await cleanupPetSocialByTenant(firestore, ctx.tenantId);
+    summary.deleted.petProfiles = profiles;
+    summary.deleted.petLinks = links;
+  } catch (e) {
+    summary.errors.push({ step: 'petSocial', error: e.message });
+  }
 }
 
 async function deleteLiffUser(ctx, summary) {
@@ -439,6 +455,7 @@ async function handler(data, context) {
   const steps = [
     () => deleteChecklistsByRoom(ctx, summary),
     () => deleteConsents(ctx, summary),
+    () => deletePetSocial(ctx, summary),
     () => deleteLiffUser(ctx, summary),
     () => deleteRtdbPaths(ctx, summary),
     () => deleteBookingsByOwner(ctx, summary),
@@ -487,6 +504,7 @@ exports._handler = handler;
 exports._helpers = {
   deleteChecklistsByRoom,
   deleteConsents,
+  deletePetSocial,
   deleteLiffUser,
   deleteRtdbPaths,
   deleteBookingsByOwner,

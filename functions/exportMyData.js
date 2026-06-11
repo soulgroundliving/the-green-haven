@@ -23,6 +23,8 @@
  *   consents: [...],                  // consents/* for this tenantId
  *   trustScore: {...} | null,         // trustScores/{tenantId} (derived reputation)
  *   pets: [...],                      // tenants/{b}/list/{r}/pets/* incl. healthLog[]
+ *   petProfiles: [...],               // petProfiles/* the tenant published (#10)
+ *   petLinks: [...],                  // petLinks/* the tenant is a party to (#10)
  *   complaints: [...],                // RTDB complaints/{building}/{room}
  *   maintenance: [...],               // RTDB maintenance/{building}/{room}
  *   bills: [...]                      // RTDB bills/{building}/{room}
@@ -169,6 +171,35 @@ exports.exportMyData = functions
       console.warn('[exportMyData] pets query failed:', err.message);
     }
 
+    // ---- pet social graph (#10) — public profiles + friend edges ----
+    // The tenant's opt-in directory presence + every friend edge they're a party
+    // to are personal data (pet + owner room published building-wide) — PDPA §30.
+    // Keyed on the canonical tenantId (petProfiles.ownerTenantId /
+    // petLinks.requester|recipientTenantId), all single-field queries (§7-J/N).
+    const petProfiles = [];
+    const petLinks = [];
+    if (effectiveTenantId) {
+      try {
+        const q = await firestore.collection('petProfiles')
+          .where('ownerTenantId', '==', effectiveTenantId).get();
+        q.docs.forEach(d => petProfiles.push({ id: d.id, ...d.data() }));
+      } catch (err) {
+        console.warn('[exportMyData] petProfiles query failed:', err.message);
+      }
+      try {
+        const seen = new Set();
+        for (const field of ['requesterTenantId', 'recipientTenantId']) {
+          const q = await firestore.collection('petLinks')
+            .where(field, '==', effectiveTenantId).get();
+          q.docs.forEach(d => {
+            if (!seen.has(d.id)) { seen.add(d.id); petLinks.push({ id: d.id, ...d.data() }); }
+          });
+        }
+      } catch (err) {
+        console.warn('[exportMyData] petLinks query failed:', err.message);
+      }
+    }
+
     // ---- RTDB: complaints, maintenance, bills ----
     const db = admin.database();
     const [complaints, maintenance, bills] = await Promise.all([
@@ -193,6 +224,8 @@ exports.exportMyData = functions
       consents,
       trustScore,
       pets,
+      petProfiles,
+      petLinks,
       complaints,
       maintenance,
       bills,
