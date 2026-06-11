@@ -1062,6 +1062,13 @@ body.gh-tour-open {
   border: 1px solid var(--border-subtle, #ebe9e2); border-radius: 18px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
+/* Inline variant — rendered INSIDE the own-pet card (in place of the publish
+   button), so it drops the card chrome and just separates with a dashed rule. */
+.pet-dir__consent--inline {
+  margin: 10px 0 0; padding: 12px 0 0;
+  background: transparent; border: none; border-top: 1px dashed var(--border-subtle, #ebe9e2);
+  border-radius: 0; box-shadow: none;
+}
 .pet-dir__consent-head {
   display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
   font-size: 0.98rem; font-weight: 800; color: var(--text, #2c2c2c);

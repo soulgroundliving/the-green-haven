@@ -153,10 +153,14 @@
     } catch (_) { return false; }
   }
 
+  // Open the privacy notice in the LINE in-app browser (external:false) so the
+  // tenant STAYS inside LINE and closes back to this LIFF. external:true opened
+  // the OS browser (Safari), leaving LIFF — and a standalone privacy.html load
+  // there bounced "back" to /login (no LIFF auth). In-app keeps the context.
   function _lineSafeOpen(url) {
     try {
       if (window.liff && typeof liff.isInClient === 'function' && liff.isInClient()) {
-        liff.openWindow({ url: url, external: true });
+        liff.openWindow({ url: url, external: false });
         return;
       }
     } catch (_) { /* fall through */ }
@@ -264,19 +268,18 @@
     var root = document.getElementById(LIST_ID);
     if (!root) return;
     if (!_ready()) { root.innerHTML = _muted('กำลังเตรียมข้อมูล… กรุณาเปิดผ่าน LINE'); return; }
-    root.innerHTML = _consentBanner() + _sectionOwn() + _sectionIncoming() + _sectionNeighbours();
+    root.innerHTML = _sectionOwn() + _sectionIncoming() + _sectionNeighbours();
     _wire(root);
   }
 
-  function _consentBanner() {
-    if (!_pendingConsentPetId) return '';
-    var pet = _ownPetById(_pendingConsentPetId);
-    var name = pet ? ('น้อง' + _esc(pet.name)) : 'สัตว์เลี้ยงของคุณ';
-    return '' +
-      '<div class="pet-dir__consent">' +
-        '<div class="pet-dir__consent-head"><span aria-hidden="true">🐾</span><span>แสดง' + name + 'ในไดเรกทอรีอาคาร</span></div>' +
-        '<p class="pet-dir__consent-text">การเปิดสัตว์เลี้ยงในไดเรกทอรีจะแสดง<b>ชื่อ ประเภท สายพันธุ์ รูป และหมายเลขห้อง</b>ของคุณให้เพื่อนบ้านในอาคารเดียวกันเห็น เพื่อให้น้องๆ หาเพื่อนเล่นได้ — ข้อมูลสุขภาพและวัคซีนจะไม่ถูกเปิดเผย คุณปิดได้ทุกเมื่อ</p>' +
-        '<button type="button" class="pet-dir__btn pet-dir__btn--primary" data-ps="consent-accept">ยินยอมและแสดงน้อง</button>' +
+  // Inline consent step (PDPA §19) — rendered IN PLACE of the publish button on
+  // the pet's own card, so clicking "แสดงในไดเรกทอรี" doesn't scroll away or look
+  // like the form was lost. The typed bio stays visible in the textarea above.
+  function _inlineConsent() {
+    var busy = !!_busy['pub_' + _pendingConsentPetId];
+    return '<div class="pet-dir__consent pet-dir__consent--inline">' +
+        '<p class="pet-dir__consent-text">เปิดน้องในไดเรกทอรีจะแสดง<b>ชื่อ ประเภท สายพันธุ์ รูป และหมายเลขห้อง</b>ให้เพื่อนบ้านในอาคารเดียวกันเห็น เพื่อให้น้องๆ หาเพื่อนเล่นได้ — ข้อมูลสุขภาพและวัคซีนจะไม่ถูกเปิดเผย คุณปิดได้ทุกเมื่อ</p>' +
+        '<button type="button" class="pet-dir__btn pet-dir__btn--primary" data-ps="consent-accept"' + (busy ? ' disabled' : '') + '>' + (busy ? 'กำลังบันทึก…' : 'ยินยอมและแสดงน้อง') + '</button>' +
         '<div class="pet-dir__consent-foot">' +
           '<button type="button" class="pet-dir__link" data-ps="consent-cancel">ไม่ใช่ตอนนี้</button>' +
           '<button type="button" class="pet-dir__link" data-ps="consent-privacy">นโยบายความเป็นส่วนตัว</button>' +
@@ -301,7 +304,11 @@
       }
       var published = _isPublished(p.petId);
       var prof = published ? _profileById(p.petId) : null;
-      var bioVal = published ? _esc((prof && prof.bio) || '') : '';
+      var pendingConsent = String(p.petId) === String(_pendingConsentPetId);
+      // Keep the typed bio visible: published → the saved bio; awaiting consent →
+      // what the tenant just typed (stashed in _pendingPublishBio); else empty.
+      var bioVal = published ? _esc((prof && prof.bio) || '')
+                 : (pendingConsent ? _esc(_pendingPublishBio) : '');
       var busy = !!_busy['pub_' + p.petId];
       var bioBox = '<textarea class="pet-dir__bio" data-ps-bio="' + pid + '" maxlength="' + MAX_BIO_LEN + '" rows="2" placeholder="แนะนำน้องสั้นๆ เช่น นิสัยดี ชอบเล่นกับเพื่อน">' + bioVal + '</textarea>';
       var actions;
@@ -311,6 +318,8 @@
           '<button type="button" class="pet-dir__btn pet-dir__btn--ghost" data-ps="save-bio" data-pid="' + pid + '"' + (busy ? ' disabled' : '') + '>บันทึกข้อมูล</button>' +
           '<button type="button" class="pet-dir__btn pet-dir__btn--mute" data-ps="unpublish" data-pid="' + pid + '"' + (busy ? ' disabled' : '') + '>ซ่อน</button>' +
           '</div>';
+      } else if (pendingConsent) {
+        actions = _inlineConsent();
       } else {
         actions = '<div class="pet-dir__actions">' +
           '<button type="button" class="pet-dir__btn pet-dir__btn--primary" data-ps="publish" data-pid="' + pid + '"' + (busy ? ' disabled' : '') + '>' + (busy ? 'กำลังบันทึก…' : 'แสดงในไดเรกทอรี') + '</button>' +
@@ -425,7 +434,7 @@
       }
       el.addEventListener('click', function () {
         if (kind === 'consent-accept') return _acceptConsent();
-        if (kind === 'consent-cancel') { _pendingConsentPetId = ''; _render(); return; }
+        if (kind === 'consent-cancel') { _pendingConsentPetId = ''; _pendingPublishBio = ''; _render(); return; }
         if (kind === 'consent-privacy') return _lineSafeOpen(PRIVACY_URL);
         if (kind === 'publish') return _onPublishClick(el.getAttribute('data-pid'));
         if (kind === 'save-bio') { var pid = el.getAttribute('data-pid'); return _doPublish(pid, _readBio(pid)); }
@@ -460,24 +469,38 @@
     });
   }
 
-  function _acceptConsent() {
+  async function _acceptConsent() {
     var petId = _pendingConsentPetId;
+    var bio = _pendingPublishBio;
+    if (!petId) { _render(); return; }
     _rememberConsent();
-    // Fire-and-forget PDPA ledger write (consents/{tenantId}_pet_profile_v1).
+    // Loading state on the inline consent button.
+    _busy['pub_' + petId] = true; _render();
+
+    // CRITICAL: upsertPetProfile (publish) REQUIRES the consents/{tenantId}_pet_profile_v1
+    // doc to ALREADY exist server-side (PDPA §19 gate). So the consent write MUST
+    // complete BEFORE the publish — a fire-and-forget here raced the publish, which
+    // hit the gate before the doc existed → failed-precondition → silent failure.
     try {
       var fns = _fns();
-      if (fns && typeof fns.httpsCallable === 'function') {
-        fns.httpsCallable('recordChecklistConsent')({
-          purpose: 'pet_profile_v1',
-          noticeVersion: NOTICE_VERSION,
-          userAgent: (navigator.userAgent || '').slice(0, 256),
-        }).catch(function (e) { console.warn('[pet-social] consent ledger write failed (non-fatal):', e && (e.message || e)); });
-      }
-    } catch (_) { /* CF not wired in this build */ }
-    _pendingConsentPetId = '';
-    var bio = _pendingPublishBio; _pendingPublishBio = '';
-    if (petId) _doPublish(petId, bio);
-    else _render();
+      if (!fns || typeof fns.httpsCallable !== 'function') throw new Error('ระบบยังไม่พร้อม');
+      await fns.httpsCallable('recordChecklistConsent')({
+        purpose: 'pet_profile_v1',
+        noticeVersion: NOTICE_VERSION,
+        userAgent: (navigator.userAgent || '').slice(0, 256),
+      });
+    } catch (e) {
+      // Consent write failed → publish would fail too. Surface + keep the consent
+      // step open (don't clear _pendingConsentPetId) so the tenant can retry.
+      delete _busy['pub_' + petId];
+      _toast(_errMsg(e, 'บันทึกการยินยอมไม่สำเร็จ กรุณาลองใหม่'), 'error');
+      _render();
+      return;
+    }
+
+    // Consent recorded — now publish (busy flag stays set; _doPublish clears it).
+    _pendingConsentPetId = ''; _pendingPublishBio = '';
+    await _doPublish(petId, bio);
   }
 
   async function _doPublish(petId, bio) {
