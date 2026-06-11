@@ -23,6 +23,7 @@ const {
     validateHealthInput,
     buildHealthEntry,
     sortHealthLog,
+    partitionHealthLog,
 } = require('../tenant-pet-health.js');
 
 describe('healthTypeMeta', () => {
@@ -155,5 +156,43 @@ describe('sortHealthLog', () => {
         assert.deepEqual(sortHealthLog(null), []);
         assert.deepEqual(sortHealthLog(undefined), []);
         assert.deepEqual(sortHealthLog('nope'), []);
+    });
+});
+
+describe('partitionHealthLog', () => {
+    const log = [
+        { id: 'past1',  date: '2026-01-01' },
+        { id: 'today',  date: '2026-06-12' },
+        { id: 'soon',   date: '2026-06-16' },
+        { id: 'later',  date: '2026-09-01' },
+        { id: 'past2',  date: '2026-05-30' },
+        { id: 'nodate', date: '' },
+    ];
+    const TODAY = '2026-06-12';
+
+    test('upcoming = date >= today, nearest-first', () => {
+        const { upcoming } = partitionHealthLog(log, TODAY);
+        assert.deepEqual(upcoming.map(e => e.id), ['today', 'soon', 'later']);
+    });
+
+    test('history = date < today (and blank dates), newest-first', () => {
+        const { history } = partitionHealthLog(log, TODAY);
+        assert.deepEqual(history.map(e => e.id), ['past2', 'past1', 'nodate']);
+    });
+
+    test("today's date counts as upcoming (boundary inclusive)", () => {
+        const { upcoming } = partitionHealthLog([{ id: 't', date: TODAY }], TODAY);
+        assert.deepEqual(upcoming.map(e => e.id), ['t']);
+    });
+
+    test('non-array / empty input → two empty buckets', () => {
+        assert.deepEqual(partitionHealthLog(null, TODAY), { upcoming: [], history: [] });
+        assert.deepEqual(partitionHealthLog([], TODAY), { upcoming: [], history: [] });
+    });
+
+    test('blank today → everything falls to history (no crash)', () => {
+        const { upcoming, history } = partitionHealthLog(log, '');
+        assert.equal(upcoming.length, 0);
+        assert.equal(history.length, log.length);
     });
 });

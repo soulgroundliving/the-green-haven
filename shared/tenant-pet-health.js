@@ -123,6 +123,23 @@
         });
     }
 
+    // Split a sorted log into { upcoming, history } relative to `todayISO`
+    // (YYYY-MM-DD string compare). upcoming = date >= today, NEAREST-first;
+    // history = date < today (or blank date), NEWEST-first. Pure + immutable.
+    function partitionHealthLog(log, todayISO) {
+        var sorted = sortHealthLog(log);            // newest-first by date
+        var today = String(todayISO || '');
+        var upcoming = [], history = [];
+        for (var i = 0; i < sorted.length; i++) {
+            var e = sorted[i];
+            var d = (e && e.date) || '';
+            if (today && d && d >= today) upcoming.push(e);
+            else history.push(e);
+        }
+        upcoming.reverse();                          // desc → asc (soonest first)
+        return { upcoming: upcoming, history: history };
+    }
+
     // ── Node realm (unit tests): export pure helpers + stop (no DOM/Firebase) ──
     if (typeof window === 'undefined' || typeof document === 'undefined') {
         if (typeof module !== 'undefined' && module.exports) {
@@ -132,6 +149,7 @@
                 validateHealthInput: validateHealthInput,
                 buildHealthEntry: buildHealthEntry,
                 sortHealthLog: sortHealthLog,
+                partitionHealthLog: partitionHealthLog,
             };
         }
         return;
@@ -140,6 +158,7 @@
     // ── Browser-only below ──────────────────────────────────────────────────
     var _currentPetId = null;
     var _saving = false;
+    var _editingId = null; // non-null ⇒ savePetHealthEntry UPDATES this entry (edit mode)
 
     function _toast(msg, kind) {
         if (typeof window.toast === 'function') window.toast(msg, kind);
@@ -207,6 +226,21 @@
         return log;
     }
 
+    // Surgical edit of ONE entry's user fields (id + createdAt preserved). Wired
+    // ONLY for upcoming (future) entries — history stays append-only.
+    async function updateEntry(petId, entryId, patch) {
+        var pet = await _readPet(petId);
+        if (!pet) throw new Error('ไม่พบข้อมูลสัตว์เลี้ยง');
+        var found = false;
+        var log = (Array.isArray(pet.healthLog) ? pet.healthLog : []).map(function (e) {
+            if (e && e.id === entryId) { found = true; return Object.assign({}, e, patch); }
+            return e;
+        });
+        if (!found) throw new Error('ไม่พบรายการที่จะแก้ไข');
+        await _writeLog(petId, log);
+        return log;
+    }
+
     // ── Rendering (DOM API for user data — feedback_modal_security) ──────────
     function _el(tag, cls, text) {
         var n = document.createElement(tag);
@@ -215,9 +249,9 @@
         return n;
     }
 
-    function _buildEntryCard(entry) {
+    function _buildEntryCard(entry, editable) {
         var meta = healthTypeMeta(entry.type);
-        var card = _el('div', 'ph-entry');
+        var card = _el('div', 'ph-entry' + (editable ? ' ph-entry--upcoming' : ''));
 
         var dot = _el('div', 'ph-entry__dot');
         dot.style.background = meta.color;
@@ -247,26 +281,45 @@
             a.href = entry.fileURL;
             a.target = '_blank';
             a.rel = 'noopener';
+            // A file-link tap must not also open the edit sheet on upcoming cards.
+            a.addEventListener('click', function (ev) { ev.stopPropagation(); });
             chips.appendChild(a);
             hasChip = true;
         }
         if (hasChip) body.appendChild(chips);
 
         card.appendChild(body);
-        // Append-only: NO delete button. A pet health record is a permanent
-        // memory — the owner asked that entries NOT be tenant-deletable so an
-        // accidental tap can never lose vet/vaccine history. (Deliberate
-        // correction of a genuinely-wrong entry → window.PetHealth.removeEntry,
-        // console/admin only — never a tenant UI control.)
+
+        // History (past) entries are APPEND-ONLY: no edit/delete, so an accidental
+        // tap can never lose a vet/vaccine record (owner rule, 2026-06-10). Only
+        // UPCOMING (future) entries are mutable — tap opens an edit/delete sheet
+        // (owner update 2026-06-12: future plans can be rescheduled / cancelled).
+        if (editable) {
+            card.setAttribute('role', 'button');
+            card.setAttribute('tabindex', '0');
+            card.setAttribute('aria-label', 'แก้ไขหรือลบ: ' + (entry.title || meta.label));
+            card.appendChild(_el('span', 'ph-entry__edit-hint', '✏️'));
+            card.addEventListener('click', function () { _openEntryActions(entry); });
+            card.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); _openEntryActions(entry); }
+            });
+        }
         return card;
+    }
+
+    function _sectionHead(emoji, label, count) {
+        var h = _el('div', 'ph-section-head');
+        h.appendChild(_el('span', 'ph-section-head__label', emoji + ' ' + label));
+        h.appendChild(_el('span', 'ph-section-head__count', String(count)));
+        return h;
     }
 
     function _renderTimeline(pet) {
         var box = document.getElementById('pet-health-timeline');
         if (!box) return;
-        var log = sortHealthLog(pet && pet.healthLog);
+        var parts = partitionHealthLog(pet && pet.healthLog, _todayISO());
         box.replaceChildren();
-        if (!log.length) {
+        if (!parts.upcoming.length && !parts.history.length) {
             // §7-X: never leave the slot empty.
             var empty = _el('div', 'ph-empty');
             empty.appendChild(_el('div', 'ph-empty__icon', '📋'));
@@ -275,7 +328,14 @@
             box.appendChild(empty);
             return;
         }
-        for (var i = 0; i < log.length; i++) box.appendChild(_buildEntryCard(log[i]));
+        if (parts.upcoming.length) {
+            box.appendChild(_sectionHead('📅', 'เร็วๆ นี้', parts.upcoming.length));
+            for (var i = 0; i < parts.upcoming.length; i++) box.appendChild(_buildEntryCard(parts.upcoming[i], true));
+        }
+        if (parts.history.length) {
+            box.appendChild(_sectionHead('📜', 'ประวัติ', parts.history.length));
+            for (var j = 0; j < parts.history.length; j++) box.appendChild(_buildEntryCard(parts.history[j], false));
+        }
     }
 
     function _renderError(msg) {
@@ -284,6 +344,95 @@
         box.replaceChildren();
         var e = _el('p', 'ph-error', msg || 'โหลดไม่สำเร็จ — กรุณา Reload');
         box.appendChild(e);
+    }
+
+    // ── Edit/delete action sheet (UPCOMING entries only) ─────────────────────
+    function _closeActionSheet() {
+        var ov = document.getElementById('ph-action-overlay');
+        if (ov) ov.remove();
+    }
+
+    function _openEntryActions(entry) {
+        _closeActionSheet();
+        var meta = healthTypeMeta(entry.type);
+        var ov = _el('div', 'ph-overlay'); ov.id = 'ph-action-overlay';
+        var sheet = _el('div', 'ph-sheet');
+
+        var headRow = _el('div', 'ph-sheet__head');
+        headRow.appendChild(_el('span', 'ph-sheet__emoji', meta.emoji));
+        var ht = _el('div'); ht.style.minWidth = '0';
+        ht.appendChild(_el('div', 'ph-sheet__title', entry.title || '(ไม่มีหัวข้อ)'));
+        ht.appendChild(_el('div', 'ph-sheet__date', meta.label + ' · ' + (entry.date || '')));
+        headRow.appendChild(ht);
+        sheet.appendChild(headRow);
+
+        var editBtn = _el('button', 'ph-sheet__btn ph-sheet__btn--edit', '✏️ แก้ไข');
+        editBtn.type = 'button';
+        editBtn.addEventListener('click', function () { _closeActionSheet(); _beginEdit(entry); });
+        sheet.appendChild(editBtn);
+
+        var delBtn = _el('button', 'ph-sheet__btn ph-sheet__btn--delete', '🗑️ ลบรายการนี้');
+        delBtn.type = 'button';
+        delBtn.addEventListener('click', function () { _confirmDelete(entry); });
+        sheet.appendChild(delBtn);
+
+        var cancelBtn = _el('button', 'ph-sheet__btn ph-sheet__btn--cancel', 'ยกเลิก');
+        cancelBtn.type = 'button';
+        cancelBtn.addEventListener('click', _closeActionSheet);
+        sheet.appendChild(cancelBtn);
+
+        ov.appendChild(sheet);
+        ov.addEventListener('click', function (ev) { if (ev.target === ov) _closeActionSheet(); });
+        document.body.appendChild(ov);
+    }
+
+    function _confirmDelete(entry) {
+        var ov = document.getElementById('ph-action-overlay');
+        var sheet = ov && ov.querySelector('.ph-sheet');
+        if (!sheet) return;
+        sheet.replaceChildren();
+        sheet.appendChild(_el('div', 'ph-sheet__confirm', 'ลบรายการนี้?'));
+        sheet.appendChild(_el('div', 'ph-sheet__confirm-sub', (entry.title || '') + ' · ' + (entry.date || '')));
+        var yes = _el('button', 'ph-sheet__btn ph-sheet__btn--delete', '🗑️ ลบเลย');
+        yes.type = 'button';
+        yes.addEventListener('click', function () { _doDelete(entry.id, yes); });
+        sheet.appendChild(yes);
+        var no = _el('button', 'ph-sheet__btn ph-sheet__btn--cancel', 'ยกเลิก');
+        no.type = 'button';
+        no.addEventListener('click', _closeActionSheet);
+        sheet.appendChild(no);
+    }
+
+    async function _doDelete(entryId, btn) {
+        if (!_currentPetId) { _closeActionSheet(); return; }
+        if (btn) btn.disabled = true;
+        try {
+            await removeEntry(_currentPetId, entryId);
+            _closeActionSheet();
+            _toast('ลบรายการแล้ว');
+            await _renderPage();
+        } catch (e) {
+            console.warn('[pet-health] delete failed:', e && e.message);
+            _toast((e && e.message) || 'ลบไม่สำเร็จ กรุณาลองใหม่', 'error');
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    function _beginEdit(entry) {
+        _editingId = entry.id;
+        var set = function (id, val) { var el = document.getElementById(id); if (el) el.value = val; };
+        set('ph-type', entry.type || 'vet');
+        set('ph-date', entry.date || _todayISO());
+        set('ph-title', entry.title || '');
+        set('ph-note', entry.note || '');
+        set('ph-weight', (entry.weightKg != null) ? String(entry.weightKg) : '');
+        var f = document.getElementById('ph-file'); if (f) f.value = '';
+        var fn = document.getElementById('ph-file-name'); if (fn) fn.textContent = '';
+        var details = document.querySelector('#pet-health-page .ph-add');
+        if (details) details.open = true;
+        var summary = document.querySelector('#pet-health-page .ph-add__summary');
+        if (summary) summary.textContent = '✏️ แก้ไขบันทึก';
+        if (details && typeof details.scrollIntoView === 'function') details.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function _setPetName(pet) {
@@ -302,12 +451,15 @@
     }
 
     function _resetForm() {
+        _editingId = null;
         var ids = ['ph-title', 'ph-note', 'ph-weight'];
         ids.forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
         var t = document.getElementById('ph-type'); if (t) t.value = 'vet';
         var d = document.getElementById('ph-date'); if (d) d.value = _todayISO();
         var f = document.getElementById('ph-file'); if (f) f.value = '';
         var fn = document.getElementById('ph-file-name'); if (fn) fn.textContent = '';
+        var summary = document.querySelector('#pet-health-page .ph-add__summary');
+        if (summary) summary.textContent = '➕ เพิ่มบันทึกสุขภาพ';
     }
 
     async function _renderPage() {
@@ -379,8 +531,17 @@
                 }
             }
             var entry = buildHealthEntry(input, Date.now());
-            await addEntry(_currentPetId, entry);
-            _toast('บันทึกประวัติสุขภาพแล้ว');
+            if (_editingId) {
+                // EDIT mode (upcoming entry): update user fields, keep id+createdAt.
+                var patch = { type: entry.type, date: entry.date, title: entry.title, note: entry.note, weightKg: entry.weightKg };
+                // Only overwrite the attachment if a NEW file was picked this edit.
+                if (input.fileURL) { patch.fileURL = entry.fileURL; patch.filePath = entry.filePath; patch.fileName = entry.fileName; }
+                await updateEntry(_currentPetId, _editingId, patch);
+                _toast('แก้ไขบันทึกแล้ว');
+            } else {
+                await addEntry(_currentPetId, entry);
+                _toast('บันทึกประวัติสุขภาพแล้ว');
+            }
             _resetForm();
             await _renderPage();
         } catch (e) {
@@ -397,18 +558,21 @@
     window.savePetHealthEntry = savePetHealthEntry;
     window.updatePetHealthFilePreview = updatePetHealthFilePreview;
     // Pure helpers + repository ops exposed for tests/console debug (mirrors the
-    // window.TenantReputation convention). NOTE: removeEntry is intentionally NOT
-    // wired to any tenant UI — the timeline is APPEND-ONLY (a health record is a
-    // permanent memory; an accidental tap must never lose vet/vaccine history).
-    // It stays only as the deliberate console/admin path to fix a wrong entry.
+    // window.TenantReputation convention). POLICY (owner, updated 2026-06-12):
+    // HISTORY (past entries) is APPEND-ONLY — removeEntry/updateEntry are wired to
+    // the tenant UI ONLY for UPCOMING (future-dated) entries, so a past vet/vaccine
+    // record can never be lost to an accidental tap. _buildEntryCard(editable=false)
+    // for history renders no action affordance.
     window.PetHealth = {
         HEALTH_TYPES: HEALTH_TYPES,
         healthTypeMeta: healthTypeMeta,
         validateHealthInput: validateHealthInput,
         buildHealthEntry: buildHealthEntry,
         sortHealthLog: sortHealthLog,
+        partitionHealthLog: partitionHealthLog,
         addEntry: addEntry,
         removeEntry: removeEntry,
+        updateEntry: updateEntry,
         _renderPage: _renderPage,
     };
 })();
