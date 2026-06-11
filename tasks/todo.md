@@ -4,7 +4,7 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-11) — Meaning Layer **#10: Pet Social Graph** · PR1 BUILT + REVIEWED ✅ · ⏳ owner commit/PR + deploy → then PR2
+## ▶▶▶ ACTIVE PLAN (2026-06-11) — Meaning Layer **#10: Pet Social Graph** · PR1 SHIPPED ✅ (`f174f02`, 4 callables LIVE) · ⏳ owner rules deploy → then PR2
 
 > Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#10 · 🔴 buildable now** — the Pet-pillar **shared primitive** (opt-in building-visible pet profiles + pet↔pet friend links) that **#11 playdate / #12 matching / #14 caretaker** all build on. #9 Pet health opened the Pet pillar; #10 is the next in pillar order. Mirrors the #2/#3/#4 building-scoped-collection + per-transition-callable template wholesale.
 
@@ -75,7 +75,11 @@ No composite index anywhere (directory + friend status = single-field `where bui
 - **LOW** — `buildLinkId` empty-id throw guard + test · link `requesterName/recipientName` re-cap `.slice(0,60)`.
 - **Verified clean:** PDPA safe-field whitelist (no health/vaccine leak, test-asserted) · consent server-enforced · anti-spoof (server-set identity) · §7-NN callables · §6 point-free (no `appendPointsLedger`) · §7-DD cleanup in both archive + erasure (test-asserted) · §7-J/N single-field queries.
 
-**⏳ Next:** owner confirms → commit on a branch → open PR1 → merge (CI deploys 4 callables) → **owner runs `firebase deploy --only firestore:rules`** (CI does NOT deploy rules) → then PR2 (frontend) off main.
+**✅ SHIPPED 2026-06-11** — commit `f174f02` → push main (admin bypass, documented deploy path) → CI `deploy-functions.yml` run `27347926501` **success** → **4 callables LIVE in prod** (verified `firebase functions:list`: upsertPetProfile/requestPetLink/respondPetLink/removePetLink, v1 callable SE1 nodejs22). Pre-commit hook green (2357 tests + verify:memory + anti-pattern + auth-callback + file-size).
+
+**⏳ ONE owner action before PR2:** `firebase deploy --only firestore:rules` — CI does NOT deploy rules, so the petProfiles/petLinks building-scoped READ rules are committed but not yet in the prod ruleset. The callables work now (admin SDK bypasses rules), but tenants can't READ the directory until rules deploy. Not user-visible yet (no frontend until PR2). Verify after: `gcloud firestore` or a tenant-read test shows petProfiles readable in-building.
+
+**Then:** PR2 (frontend) off main — builds independently but live-verify needs the rules deployed.
 
 ### Build — PR2 (frontend; off main AFTER PR1 deploy)
 - [ ] `shared/tenant-pet-social.js` (NEW, IIFE) — directory render (`where building==` on petProfiles, §7-FFF own-filter by ownerTenantId/room) + per-pet friend status (`where building==` on petLinks) + request/respond/remove buttons (optimistic, §7-I) + profile opt-in toggle with `pet_profile_v1` consent gate (clone tenant-kindness flow); `_onLiffClaimsReady`+`_taBuilding/_taRoom` (§7-A/U/BB); §7-N error cb; §7-V unsub-before-rebind; §7-X innerHTML fallback; DOM API for user text ([[feedback_modal_security]]); `window.*` exports (§7-QQ/CC). *Why: the tenant directory + friend surface.*
