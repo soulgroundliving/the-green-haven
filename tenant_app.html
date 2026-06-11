@@ -4791,6 +4791,13 @@
                 <button id="ph-save-btn" class="ph-save-btn" data-action="savePetHealthEntry">
                     <i class="fas fa-save" style="margin-right:8px;"></i> บันทึก
                 </button>
+                <!-- Shown only in edit mode (tenant-pet-health.js toggles .hidden); lets the
+                     user back out after tapping ✏️ instead of being stuck editing until
+                     save/reopen. Inline-styled (ghost) to avoid the §7-MM CSS-cache churn. -->
+                <button id="ph-cancel-edit-btn" type="button" data-action="cancelPetHealthEdit" hidden
+                    style="width:100%;box-sizing:border-box;background:transparent;color:var(--muted,#586679);border:none;padding:10px;border-radius:14px;font-family:inherit;font-weight:600;font-size:var(--fs-sm,0.85rem);cursor:pointer;margin-top:6px;">
+                    ยกเลิกการแก้ไข
+                </button>
             </div>
         </details>
 
@@ -5925,7 +5932,7 @@
         // Implementation extracted to shared/tenant-pets.js (loaded via <script defer>).
         // Exports: window.renderPetListToProfile, window.updatePetPhotoPreview,
         //          window.saveNewPet, window.prepareEditPet, window.resetPetForm,
-        //          window.toggleVaccineInputs, window.updateFilePreview, window.viewVaccineBook
+        //          window.updateFilePreview, window.viewVaccineBook
 
         // ===== REWARDS SHOP (openRewardsShop / closeRewardsShop) =====
         // Moved to shared/tenant-subscriptions.js — needs _rewardsCache in scope (§7-CC fix).

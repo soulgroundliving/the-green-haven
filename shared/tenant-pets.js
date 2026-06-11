@@ -11,7 +11,7 @@
 // Exports (via window.*):
 //   window.renderPetListToProfile, window.updatePetPhotoPreview,
 //   window.saveNewPet, window.prepareEditPet, window.resetPetForm,
-//   window.toggleVaccineInputs, window.updateFilePreview, window.viewVaccineBook
+//   window.updateFilePreview, window.viewVaccineBook
 
 'use strict';
 (function () {
@@ -323,15 +323,6 @@
         showSubPage('add-pet-page');
     }
 
-    function toggleVaccineInputs() {
-        const isChecked = document.getElementById('pet-vaccine').checked;
-        const inputs = document.getElementById('vaccine-inputs');
-        if (inputs) {
-            inputs.style.opacity = isChecked ? '1' : '0.3';
-            inputs.style.pointerEvents = isChecked ? 'auto' : 'none';
-        }
-    }
-
     function updateFilePreview(input) {
         if (input.files && input.files[0]) {
             document.getElementById('file-name-preview').innerText = '📄 ' + input.files[0].name;
@@ -396,7 +387,6 @@
     window.saveNewPet = saveNewPet;
     window.prepareEditPet = prepareEditPet;
     window.resetPetForm = resetPetForm;
-    window.toggleVaccineInputs = toggleVaccineInputs;
     window.updateFilePreview = updateFilePreview;
     window.viewVaccineBook = viewVaccineBook;
 })();

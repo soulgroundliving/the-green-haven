@@ -431,6 +431,8 @@
         if (details) details.open = true;
         var summary = document.querySelector('#pet-health-page .ph-add__summary');
         if (summary) summary.textContent = '✏️ แก้ไขบันทึก';
+        var cancelBtn = document.getElementById('ph-cancel-edit-btn');
+        if (cancelBtn) cancelBtn.hidden = false;
         if (details && typeof details.scrollIntoView === 'function') details.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -459,6 +461,17 @@
         var fn = document.getElementById('ph-file-name'); if (fn) fn.textContent = '';
         var summary = document.querySelector('#pet-health-page .ph-add__summary');
         if (summary) summary.textContent = '➕ เพิ่มบันทึกสุขภาพ';
+        var cancelBtn = document.getElementById('ph-cancel-edit-btn');
+        if (cancelBtn) cancelBtn.hidden = true;
+    }
+
+    // Back out of edit mode (✏️ tapped, then changed mind). Discards the populated
+    // fields and returns the form to add-new state without saving; keeps the form
+    // open so a fresh entry can be added immediately. Wired via data-action.
+    function cancelPetHealthEdit() {
+        if (!_editingId) return; // already in add mode — nothing to cancel
+        _resetForm();
+        _toast('ยกเลิกการแก้ไขแล้ว');
     }
 
     async function _renderPage() {
@@ -555,6 +568,7 @@
     // ── Exports ─────────────────────────────────────────────────────────────
     window.openPetHealth = openPetHealth;
     window.savePetHealthEntry = savePetHealthEntry;
+    window.cancelPetHealthEdit = cancelPetHealthEdit;
     window.updatePetHealthFilePreview = updatePetHealthFilePreview;
     // Pure helpers + repository ops exposed for tests/console debug (mirrors the
     // window.TenantReputation convention). POLICY (owner, updated 2026-06-12):
