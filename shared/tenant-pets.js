@@ -362,11 +362,22 @@
     function viewVaccineBook(id) {
         const pet = petDataList.find(p => p.id === id);
         if (!pet) return;
-        if (pet.vaccineBookURL) {
-            window.open(pet.vaccineBookURL, '_blank', 'noopener');
+        const url = pet.vaccineBookURL;
+        if (!url) {
+            alert(`📖 ข้อมูลวัคซีนของน้อง${pet.name}\nฉีดล่าสุด: ${pet.vaxDate || '-'}\nหมดอายุ: ${pet.vaxExpiry || '-'}\n\n(ยังไม่ได้แนบสมุดวัคซีน — แก้ไขข้อมูลน้องเพื่อแนบไฟล์)`);
             return;
         }
-        alert(`📖 ข้อมูลวัคซีนของน้อง${pet.name}\nฉีดล่าสุด: ${pet.vaxDate || '-'}\nหมดอายุ: ${pet.vaxExpiry || '-'}\n\n(ยังไม่ได้แนบสมุดวัคซีน — แก้ไขข้อมูลน้องเพื่อแนบไฟล์)`);
+        // เปิดสมุดวัคซีน "ในแอป" ผ่าน FoodLightbox ที่โหลดไว้แล้ว (§7-XX: https URL เท่านั้น)
+        // แทนการเด้งออกไปหน้า Storage ภายนอก. ตรวจชนิดไฟล์จากนามสกุลใน path/ชื่อไฟล์ที่เก็บไว้:
+        // รูปภาพ → ดูในแอป; PDF/อื่นๆ ฝังในแอปไม่ได้ (CSP frame-src ไม่อนุญาต storage origin)
+        // จึงเปิดไฟล์ตรงๆ เป็นทางสำรอง.
+        const ref = String(pet.vaccineBookPath || pet.vaccineBookFileName || url).toLowerCase();
+        const isImage = /\.(jpe?g|png|gif|webp|heic|heif|bmp|avif)(\?|$)/.test(ref);
+        if (isImage && window.FoodLightbox && typeof window.FoodLightbox.open === 'function') {
+            window.FoodLightbox.open([url]);
+            return;
+        }
+        window.open(url, '_blank', 'noopener');
     }
 
     // Initial render (shows empty-state placeholder until subscription fires)
