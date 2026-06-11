@@ -119,12 +119,16 @@ function computeSettlementPreview(deposit, rawBills) {
 // ── REST layer (thin, I/O — untested, like the sibling integrity probe) ─────
 
 function readToken() {
-  const raw = fs.readFileSync(CONFIGSTORE, 'utf8');
-  const obj = JSON.parse(raw);
-  const tokens = obj.tokens;
-  if (!tokens || !tokens.access_token) throw new Error('no access_token in firebase-tools configstore — run `firebase login` first');
+  let raw;
+  try { raw = fs.readFileSync(CONFIGSTORE, 'utf8'); }
+  catch { throw new Error('No Firebase CLI session found (~/.config/configstore/firebase-tools.json).\n  → Run `firebase login` first, then re-run this preflight.'); }
+  const tokens = JSON.parse(raw).tokens;
+  if (!tokens || !tokens.access_token) throw new Error('No access_token in the firebase-tools configstore.\n  → Run `firebase login` first, then re-run this preflight.');
+  // Fail FAST on an expired token: a doomed REST call would return a raw 401, and
+  // calling process.exit() mid-fetch trips a Windows libuv assertion. Bailing here
+  // (before any network handle exists) gives a clear message and a clean exit.
   if (Date.now() >= (tokens.expires_at || 0)) {
-    console.log('  (note) access_token may be expired — run any `firebase` CLI command to refresh, then retry');
+    throw new Error('Firebase CLI access token is EXPIRED.\n  → Refresh it by running any firebase command (e.g. `firebase projects:list`),\n    then re-run `npm run preview:deposit-settlement`.');
   }
   return tokens.access_token;
 }
@@ -280,5 +284,8 @@ async function main() {
 module.exports = { bld, toBE, isArrears, normalizeBill, outstandingFromBills, computeSettlementPreview };
 
 if (require.main === module) {
-  main().catch((e) => { console.error('\nPREFLIGHT FAILED:', e.message, '\n'); process.exit(1); });
+  // Set exitCode (not process.exit()) so the event loop drains naturally — an
+  // abrupt process.exit() while an undici fetch handle is mid-close trips a
+  // Windows libuv assertion (!(handle->flags & UV_HANDLE_CLOSING), async.c:76).
+  main().catch((e) => { console.error('\nPREFLIGHT STOPPED:', e.message, '\n'); process.exitCode = 1; });
 }
