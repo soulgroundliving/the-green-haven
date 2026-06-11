@@ -143,6 +143,7 @@
     <script src="./shared/tenant-maintenance.js" defer></script>
     <script src="./shared/tenant-pets.js" defer></script>
     <script src="./shared/tenant-pet-health.js" defer></script>
+    <script src="./shared/tenant-pet-social.js" defer></script>
     <script src="./shared/tenant-profile-ui.js" defer></script>
     <script src="./shared/tenant-render.js" defer></script>
     <script src="./shared/tenant-auth.js" defer></script>
@@ -4254,6 +4255,20 @@
             <h1 class="ta-card-title">🐾 Pet Park</h1>
         </div>
 
+        <!-- Pet Social directory entry (Meaning Layer #10). Opens #pet-directory-page;
+             generic showSubPage dispatch case — no arg, no hub edit (§7-JJJ-safe). -->
+        <div style="padding:0 16px 4px;">
+            <button type="button" data-action="showSubPage" data-page="pet-directory-page"
+                style="width:100%; display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid var(--border-subtle,#ebe9e2); background:var(--card,#fff); border-radius:18px; cursor:pointer; text-align:left; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <span style="font-size:1.6rem;" aria-hidden="true">🐾</span>
+                <span style="flex:1; min-width:0;">
+                    <strong style="display:block; font-size:var(--fs-md); color:var(--text-dark,#334435);">หาเพื่อนให้น้อง</strong>
+                    <small style="color:var(--text-muted,#8a8f98); font-size:var(--fs-sm);">เปิดน้องในไดเรกทอรี และทำความรู้จักสัตว์เลี้ยงเพื่อนบ้าน</small>
+                </span>
+                <i class="fas fa-chevron-right u-color-green" aria-hidden="true"></i>
+            </button>
+        </div>
+
         <div id="pet-list-container" style="padding:0 16px 24px;">
             <div data-action="showSubPage" data-page="add-pet-page"
                 style="border: 2px dashed #e0e0e0; padding: 30px 20px; border-radius: 25px; text-align: center; cursor: pointer; background: #fff; transition: 0.3s;">
@@ -4724,6 +4739,23 @@
 
         <!-- Timeline — rendered by shared/tenant-pet-health.js (DOM API, escaped) -->
         <div id="pet-health-timeline" class="ph-timeline" style="padding:0 16px 40px;"></div>
+    </div>
+
+    <!-- ===== PET SOCIAL DIRECTORY (Meaning Layer #10) ===== -->
+    <!-- Opt-in directory + pet↔pet friend UI. Rendered by shared/tenant-pet-social.js
+         (window.renderPetDirectory via the showSubPage hook). All content is built
+         by that module (escaped, §7-X non-empty paths); styling is static .pet-dir-*
+         in components.css (§7-RR). Markup-only here → no CSP hash regen (§7-II). -->
+    <div id="pet-directory-page" class="page">
+        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding: 20px 20px 18px;">
+            <div class="ta-icon-circle" data-action="showSubPage" data-page="pet-park-page" aria-label="กลับไปหน้า Pet Park">
+                <i class="fas fa-chevron-left u-color-green"></i>
+            </div>
+            <h1 style="margin:0; font-size: var(--fs-lg); color: var(--text-dark);">🐾 ไดเรกทอรีเพื่อนสัตว์เลี้ยง</h1>
+        </div>
+        <div id="pet-directory-list" class="pet-dir" style="padding:0 16px 48px;">
+            <div class="pet-dir__muted">กำลังโหลด…</div>
+        </div>
     </div>
 
     <div id="add-market-page" class="page u-bg-base" >
@@ -5213,7 +5245,8 @@
                     <p class="ta-mb-0-8"><strong>ข้อมูลสัตว์เลี้ยง</strong><br>
                     • ชื่อ, ประเภท, สายพันธุ์, เพศ, อายุ<br>
                     • สถานะการฉีดวัคซีน, วันที่ฉีดและวันหมดอายุ<br>
-                    • ประวัติสุขภาพที่คุณบันทึกเอง (การพบสัตวแพทย์ น้ำหนัก ยา/วัคซีน วันที่ บันทึก และเอกสารแนบ)</p>
+                    • ประวัติสุขภาพที่คุณบันทึกเอง (การพบสัตวแพทย์ น้ำหนัก ยา/วัคซีน วันที่ บันทึก และเอกสารแนบ)<br>
+                    • โปรไฟล์ไดเรกทอรีสัตว์เลี้ยง (เมื่อคุณเปิดให้แสดง): ชื่อ ประเภท สายพันธุ์ เพศ อายุ รูป หมายเลขห้อง และคำแนะนำตัวที่คุณเขียน — เปิด/ปิดได้เอง ข้อมูลสุขภาพและวัคซีน<u>ไม่</u>ถูกแสดง</p>
                     <p class="ta-mb-0-8"><strong>ข้อมูลการชำระเงิน</strong><br>
                     • ยอดบิลค่าเช่า, ค่าไฟ, ค่าน้ำ<br>
                     • สลิปการโอนเงิน (ภาพ) สำหรับการยืนยันผ่าน SlipOK API<br>
@@ -5243,6 +5276,7 @@
                 • เพื่อยืนยันการชำระเงินและออกใบเสร็จ<br>
                 • เพื่อการอนุมัติสัตว์เลี้ยงและบริการต่างๆ<br>
                 • เพื่อส่งการแจ้งเตือนผ่าน LINE<br>
+                • เพื่อให้สัตว์เลี้ยงของเพื่อนบ้านในอาคารเดียวกันทำความรู้จักและเป็นเพื่อนกันได้ (ไดเรกทอรีสัตว์เลี้ยง — เฉพาะเมื่อคุณยินยอมเปิดให้แสดง)<br>
                 • เพื่อระบบ Gamification สร้างแรงจูงใจในชุมชน</p>
             </details>
 
@@ -5252,6 +5286,7 @@
                 • <strong>SlipOK API</strong>: รับสลิปการโอนเงินเพื่อยืนยัน (ไม่เก็บข้อมูลบัตรเครดิต)<br>
                 • <strong>LINE Corporation</strong>: ผ่าน LIFF SDK สำหรับการแจ้งเตือน<br>
                 • <strong>Google Firebase</strong>: สำหรับการจัดเก็บและซิงค์ข้อมูลแบบ Real-time<br>
+                • <strong>เพื่อนบ้านในอาคารเดียวกัน</strong> (เฉพาะเมื่อคุณยินยอม): หากคุณเปิดสัตว์เลี้ยงในไดเรกทอรี โปรไฟล์น้อง (ชื่อ ประเภท สายพันธุ์ รูป หมายเลขห้อง และคำแนะนำตัว) จะแสดงให้ผู้เช่าในอาคารเดียวกันเห็นเพื่อหาเพื่อนให้น้อง — คุณปิดได้ทุกเมื่อ ข้อมูลสุขภาพ/วัคซีนไม่ถูกแบ่งปัน<br>
                 • เราไม่ขายหรือเผยแพร่ข้อมูลส่วนตัวแก่บุคคลภายนอกเพื่อวัตถุประสงค์ทางการค้า</p>
             </details>
 

@@ -93,6 +93,7 @@ window.showSubPage = function showSubPage(id) {
     if (id === 'helper-board' && typeof window.renderHelperBoard === 'function') window.renderHelperBoard();
     if (id === 'community-requests' && typeof window.renderCommunityRequests === 'function') window.renderCommunityRequests();
     if (id === 'food-share' && typeof window.renderFoodShare === 'function') window.renderFoodShare();
+    if (id === 'pet-directory-page' && typeof window.renderPetDirectory === 'function') window.renderPetDirectory();
 
     window.scrollTo(0, 0);
 };

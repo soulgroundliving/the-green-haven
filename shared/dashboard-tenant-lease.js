@@ -1196,6 +1196,12 @@ function deleteLease(leaseId) {
 // dashboard-tenant-lease.js can read it cross-script.
 window._petsUnsub = null;
 let _petsFromFirestore = [];
+// petProfiles mirror (Meaning Layer #10) — read-only directory state per petId, so
+// the admin pet-approval card can surface the public bio + "อยู่ในไดเรกทอรี" status
+// (D6: admin moderates by rejecting the pet, which cascades the profile removal —
+// no admin write to petProfiles here). Keyed by petId (== pet doc id == profile id).
+window._petProfilesUnsub = null;
+let _petProfilesById = {};
 function initPetApprovalsPage() {
   loadAndRenderPetApprovals();
   if (window._petsUnsub) return;
@@ -1240,6 +1246,20 @@ function initPetApprovalsPage() {
       loadAndRenderPetApprovals();
     }, err => console.warn('pets onSnapshot failed:', err));
   } catch(e) { console.warn('pets subscribe failed:', e); }
+
+  // petProfiles directory mirror (#10) — admin reads ALL (isAdmin rule bypass);
+  // read-only, drives the directory status + bio on each card. §7-N error cb.
+  if (window._petProfilesUnsub) return;
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    window._petProfilesUnsub = fs.onSnapshot(fs.collection(db, 'petProfiles'), snap => {
+      const map = {};
+      snap.docs.forEach(d => { map[d.id] = d.data() || {}; });
+      _petProfilesById = map;
+      loadAndRenderPetApprovals();
+    }, err => console.warn('petProfiles onSnapshot failed:', err && (err.code || err.message)));
+  } catch(e) { console.warn('petProfiles subscribe failed:', e); }
 }
 
 function loadAndRenderPetApprovals() {
@@ -1295,6 +1315,16 @@ function loadAndRenderPetApprovals() {
             }).join('')}
           </div>
         </details>` : '';
+    // Directory state (#10) — read-only. Bio is tenant free-text → _escapeHTML.
+    // Only meaningful once approved (publish is gated on status==='approved').
+    const _prof = _petProfilesById[p.id];
+    const dirBlock = _prof
+      ? `<div style="font-size:0.82rem; margin-bottom:0.8rem; padding:6px 10px; border-radius:8px; background:#eef6f0; color:#1a5c38;">
+          🌐 <strong>อยู่ในไดเรกทอรีอาคาร</strong>${_prof.bio ? ` · <span style="color:var(--text-muted); white-space:pre-wrap;">"${_escapeHTML(_prof.bio)}"</span>` : ''}
+        </div>`
+      : (p.status === 'approved'
+        ? `<div style="font-size:0.8rem; margin-bottom:0.8rem; color:var(--text-muted);">🌐 ไม่ได้แสดงในไดเรกทอรี</div>`
+        : '');
     return `
       <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${statusColor};">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem; gap:0.8rem;">
@@ -1319,6 +1349,7 @@ function loadAndRenderPetApprovals() {
         </div>
         ${vaccineBookBtn ? `<div style="margin-bottom:0.8rem;">${vaccineBookBtn}</div>` : ''}
         ${healthBlock}
+        ${dirBlock}
         ${p.status === 'pending' ? `
           <div style="display: flex; gap: 0.5rem;">
             <button data-action="approvePet" data-id="${p.building}" data-arg="${p.room}" data-arg2="${p.id}" class="compact-btn compact-btn-view">✅ Approve</button>

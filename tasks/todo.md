@@ -4,7 +4,7 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-11) — Meaning Layer **#10: Pet Social Graph** · PR1 SHIPPED ✅ (`f174f02`, 4 callables LIVE) · ⏳ owner rules deploy → then PR2
+## ▶▶▶ ACTIVE PLAN (2026-06-11) — Meaning Layer **#10: Pet Social Graph** · PR1 SHIPPED ✅ (`f174f02`, 4 callables LIVE + rules deployed) · PR2 frontend BUILT ✅ (static-harness verified) · ⏳ owner commit/push + real-LINE live-verify
 
 > Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#10 · 🔴 buildable now** — the Pet-pillar **shared primitive** (opt-in building-visible pet profiles + pet↔pet friend links) that **#11 playdate / #12 matching / #14 caretaker** all build on. #9 Pet health opened the Pet pillar; #10 is the next in pillar order. Mirrors the #2/#3/#4 building-scoped-collection + per-transition-callable template wholesale.
 
@@ -91,6 +91,25 @@ No composite index anywhere (directory + friend status = single-field `where bui
 - [ ] `privacy.html` + tenant_app privacy section — pet-profile disclosure §1/§2/§5 (text-only, no CSP regen).
 - [ ] Tests: `shared/__tests__/tenant-pet-social.test.js` (pure helpers: link-id, own-filter, status bucketing, bio sanitize).
 - [ ] Gate: `test:shared` green · static-harness preview-MCP screenshot (directory empty/populated, friend states, consent prompt, light+dark) · no CSP drift (§7-II §G) · mojibake.
+
+### Review — PR2 BUILT (2026-06-11) ✅ · ⏳ not yet committed
+**Shipped (uncommitted working tree, 6 files + 1 new test):**
+- `shared/tenant-pet-social.js` (NEW IIFE, `window.PetSocial`/`window.renderPetDirectory`) — 3 building-scoped live sources (petProfiles + petLinks onSnapshot, own pets getDocs-on-open). 3 sections: own pets (publish toggle + bio + ซ่อน; pending→รออนุมัติ) · incoming requests (ตอบรับ/ปฏิเสธ) · neighbours (§7-FFF own-filter, friend button by `linkStatusFor` edge state, acting-pet `<select>` when >1 published). 4 callables via `httpsCallable`. `pet_profile_v1` consent step gates publish only. Pure helpers exported.
+- `tenant_app.html` — `#pet-directory-page` sub-page + `<script src defer>` (after tenant-navigation.js §7-PP) + entry button on `#pet-park-page` + privacy disclosure §1/§2/§3.
+- `shared/tenant-navigation.js` — `showSubPage` render hook → `renderPetDirectory`.
+- `shared/components.css` — static `.pet-dir-*` (§7-RR, theme-aware §7-III + dark block).
+- `shared/dashboard-tenant-lease.js` — admin read-only `petProfiles` mirror (`window._petProfilesUnsub`) → "อยู่ในไดเรกทอรี" + escaped bio on the pet-approval card (D6).
+- `privacy.html` — parallel disclosure §1/§2/§3.
+- `shared/__tests__/tenant-pet-social.test.js` (NEW) — 18 pure-helper tests.
+
+**Intentional divergences from the plan (cleaner, all anti-pattern-justified):**
+- **All pet-social UI lives in the directory page** (own-pets Section A holds the publish toggle), NOT on `shared/tenant-pets.js` cards → that file is UNTOUCHED. Single owner, no cross-script toggle-state sync (§7-CC/T avoided); pet-park gets one static entry button instead.
+- **Direct event listeners** (activity-feed precedent), NOT the `_dispatch` data-action hub → NO dispatch arg-cases, NO hub edit → §7-JJJ trap sidestepped entirely.
+- Privacy disclosure in **§3 "การแบ่งปันข้อมูล"** (the sharing/disclosure section), not §5 (retention) — §3 is the correct PDPA disclosure home.
+- `_avatar` uses an `<img>` (not a CSS `background-image`) — §7-G self-review caught that `_esc()` `&`→`&amp;` corrupts a CSS `url()` and `JSON.stringify` would break the `style="…"` attribute; the `<img>` + `_esc(src)` is the codebase-standard correct pattern.
+- Bio threaded explicitly through the consent re-render (`_pendingPublishBio`) so a bio typed before the first-publish consent step isn't lost (§7-G self-review).
+
+**Gates (all green):** `test:shared` **556/0** (+18) · `node --check` clean (4 files) · §7-TT mojibake clean · **CSP no-drift** (`npm run csp:hash` → no `tools/csp-hashes.json` change; markup + external script only, §7-II/RR) · **static-harness preview-MCP screenshot LIGHT + DARK** — 6 states (consent · own published/unpublished/pending · incoming · neighbour none/outgoing/friends), 0 console errors, §7-III aliases + §7-W contrast verified. `verify:memory` ALL GREEN after lifecycle doc update.
 
 ### Verify / deploy
 - [ ] Update [[lifecycle_pets_registration]] (#10 section) or a new `lifecycle_pet_social.md` + `verify:memory`.
