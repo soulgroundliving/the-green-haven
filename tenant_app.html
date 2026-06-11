@@ -2583,6 +2583,14 @@
            (default min-width:auto on grid items breaks equal fr tracks). */
         .pet-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .pet-grid-2 > div { min-width: 0; }
+        /* Combobox input (สายพันธุ์, the only field with list=…) shows a native datalist
+           ▼ indicator. Reserve room on the right + truncate with ellipsis so the
+           placeholder/value never collides with the indicator on a narrow column (iOS). */
+        .card .ta-fieldbox > input[list].ta-fieldctl,
+        .page .ta-fieldbox > input[list].ta-fieldctl {
+            padding-right: 32px !important;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
         .ta-tab-alt      { flex: 1; padding: 8px; border-radius: 10px; font-size: var(--fs-sm); font-weight: 700; border: 2px solid #ddd; color: #6b7280; background: #f9fafb; cursor: pointer; }
         /* JS innerHTML template-literal classes */
         .ta-err-msg       { padding: 16px; text-align: center; color: var(--text-muted); font-size: var(--fs-sm); }
@@ -4649,7 +4657,7 @@
                          so mixed breeds can be typed in. saveNewPet reads .value unchanged. -->
                     <div class="ta-fieldbox">
                         <input type="text" id="pet-breed" list="pet-breed-options" autocomplete="off"
-                            placeholder="เลือกหรือพิมพ์เอง (พันธุ์ผสมได้)" class="ta-fieldctl">
+                            placeholder="เลือก/พิมพ์เอง" class="ta-fieldctl">
                     </div>
                     <datalist id="pet-breed-options"></datalist>
                 </div>
