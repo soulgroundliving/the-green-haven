@@ -29,7 +29,7 @@
 | 3 | Community requests board | Micro-Econ | ✅ SHIPPED (#312 server + UI) |
 | 4 | Food sharing feed | Micro-Econ | ✅ SHIPPED (#314 server + UI) |
 | 5 | Trade history memory | Micro-Econ | ✅ SHIPPED (#325 — achievement, NOT points) |
-| 6 | Kindness score | Trust | ✅ SHIPPED server+admin (#329 engine + #330 §7-J room-join fix + #331 admin card; live-verified N101=13). Tenant tier badge v1.x = pending sub-phase |
+| 6 | Kindness score | Trust | ✅ SHIPPED — server+admin (#329/#330/#331) + tenant tier badge v1.x (#333 server+rules · #334 frontend); prod-verified 2026-06-11 (rules ✅ `kindnessTier` in deployed ruleset · sweep mirrored `nest/N101.kindnessTier=kind`); on-device LINE render owner-attested |
 | 7 | Verified Helper | Trust | 🟡 gated on #2 job history |
 | 8 | Resident Rank | Trust | 🟡 gated on #6+#7 |
 | — | Reputation v2 (engagement dim) | Trust | 🟡 gated ~Aug (pointsLedger accrual) |

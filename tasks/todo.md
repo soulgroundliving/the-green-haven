@@ -4,7 +4,7 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-11) — Meaning Layer **#6 Kindness · tenant tier badge v1.x** · ✅ PR1 MERGED (#333 `ddf2fd0`, CF auto-deploy + ⏳ owner rules deploy) · PR2 frontend BUILT (all gates green) · ⏳ owner live-verify
+## ✅ SHIPPED + PROD-VERIFIED (2026-06-11) — Meaning Layer **#6 Kindness · tenant tier badge v1.x** · PR1 #333 (`ddf2fd0` server+rules) · PR2 #334 (`74a8fbb` frontend) · rules deploy + sweep mirror prod-verified · on-device LINE render owner-attested
 
 > **Gate (PR1, 2026-06-11):** full functions suite **2288/0** (+7) · rules emulator **332/0** (+2 kindnessTier tamper-proof cases) · `_kindness` 16/0 (+6 kindnessTier) · `recordChecklistConsent` 10/0 (+1 kindness_v1) · sweep 10/0 (mirror assertions updated for combined write) · node --check clean · §7-TT mojibake clean. exportMyData unchanged. **MERGED [#333](https://github.com/soulgroundliving/the-green-haven/pull/333) → CF deploy via CI; owner runs `firebase deploy --only firestore:rules`.**
 > **Gate (PR2, 2026-06-11):** `tenant-kindness` **16/0** · full test:shared **538/0** (+16) · node --check clean · §7-TT mojibake clean · CSP no-regen (external `<script src>` + markup only, §7-II/RR) · **static-harness preview-MCP screenshot: 6 states render correct in LIGHT + DARK** (radiant💚/warm🌿/kind🤲/seed🌱 + consent + muted; dark-mode label contrast fixed §7-W; 0 console errors).
@@ -71,8 +71,19 @@ Completes #6 end-to-end — the tenant now SEES the น้ำใจ they've accr
 ### Out of scope (named)
 player/`people/` path (active-tenant only, mirror reputation) · combining the kindness+reputation consent into one prompt (kept separate per spec) · #7 Verified Helper / #8 Resident Rank (accrual-gated) · capture-CF canonical-tenantId cleanup (the sweep room-key join handles it, §7-J #330).
 
-### Review (appended after execution)
-_(pending approval — no code yet)_
+### Review (2026-06-11) — SHIPPED + PROD-VERIFIED (data + security + code layer)
+**Shipped (2 non-stacked PRs off main, both merged):**
+- **PR1 [#333](https://github.com/soulgroundliving/the-green-haven/pull/333) `ddf2fd0`** server+rules — `_kindness.js` `kindnessTier()` enum (radiant/warm/kind/seed, bounds 70/40/10) · `computeTrustScoresScheduled.js` combined mirror (ONE `batch.set` writes `reputationTier`+`kindnessTier`) · `firestore.rules` `kindnessTier` protected · `recordChecklistConsent.js` `kindness_v1` · 3 test files. Gate: functions 2288/0 · rules 332/0 · mojibake clean · CI green.
+- **PR2 [#334](https://github.com/soulgroundliving/the-green-haven/pull/334) `74a8fbb`** frontend — `shared/tenant-kindness.js` (clone of tenant-reputation) · `components.css` `.kind-card*` + dark override · `tenant_app.html` script+mount · `privacy.html` §1/§2/§5 · `tenant-kindness.test.js` 16/0. Gate: test:shared 538/0 · static-harness 6 states LIGHT+DARK · CSP no-regen · CI green.
+
+**Prod verification (next session, 2026-06-11, read-only — §7-J, no writes):**
+- ✅ **Rules deployed** — `kindnessTier` present in the DEPLOYED Firestore ruleset `1a8ebff9-7a50-4431-b5a6-cc8c5b83d40e` (createTime 2026-06-11 03:34 BKK), verified via the Firebase Rules API. Tenant cannot fake their tier (tamper-proof, §6).
+- ✅ **Sweep mirrored** — `tenants/nest/list/N101.kindnessTier = 'kind'` (the exact field the badge reads). Sweep ran 2026-06-11 05:40 BKK (after rules deploy); `trustScores/TENANT_1779340941633_15` kindness=13, not provisional, 4 quests/40pts. N101's canonical tenantId is `TENANT_…_15` — same tenant, resolves the "N101 vs _15" labelling.
+- 🤝 **On-device LINE render = owner-attested** — LIFF-gated, can't drive from dev env; owner closed the prior session "deploy complete". With `kindnessTier='kind'` on the doc, N101 → consent → badge renders 🤲 "มีน้ำใจ".
+
+**Deferred / follow-up (named, not dropped):**
+- Reputation badge dark-mode contrast (`.rep-card--great/good/fair`) — the chip this feature spawned (`task_2fbfedc4`); **✅ shipped by the concurrent session** in `ed2592a` (dark-mode contrast for reputation + kindness tier badges), adopted per [[feedback_concurrent_session_handling]].
+- player/`people/` path · combined kindness+reputation consent prompt · #7 Verified Helper / #8 Resident Rank (accrual-gated).
 
 ---
 
