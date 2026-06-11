@@ -863,6 +863,26 @@ body.gh-tour-open {
 .rep-consent__privacy { color: var(--green, #2d8653); text-decoration: underline; }
 .rep-consent__later:hover, .rep-consent__privacy:hover { opacity: 0.75; }
 
+/* Dark mode — the light-green/amber gradient tops + dark labels go muddy on the
+   dark card (§7-W). --green/--green-dark are intentionally NOT flipped (brand.css
+   keeps teal on both themes), so the teal labels read dark-on-dark, and the amber
+   "good" label (#9a6b12) even more so. Re-tint the 3 earned tiers to a subtle dark
+   glow with a brighter, readable label — mint for the green tiers (great/fair),
+   soft gold for the amber "good" tier. seed/consent/muted already read fine (they
+   ride the flipped brand tokens). Light mode is untouched. Same pattern as the
+   .kind-card dark block below. */
+[data-theme="dark"] .rep-card--great { background: linear-gradient(180deg, #1e3d33 0%, var(--card, #162825) 72%); border-color: #2c5446; }
+[data-theme="dark"] .rep-card--great .rep-card__label { color: #8fe9c4; }
+[data-theme="dark"] .rep-card--good  { background: linear-gradient(180deg, #382f19 0%, var(--card, #162825) 72%); border-color: #4d4226; }
+[data-theme="dark"] .rep-card--good  .rep-card__label { color: #ecc56b; }
+[data-theme="dark"] .rep-card--fair  { background: linear-gradient(180deg, #19302a 0%, var(--card, #162825) 78%); border-color: #264539; }
+[data-theme="dark"] .rep-card--fair  .rep-card__label { color: #7ad9ac; }
+/* seed: keep the flat --green-pale bg (flips dark), but the hardcoded #dde8dd
+   border reads as a bright artifact and the --green-dark label is dark-on-dark.
+   Subtle dark border + a soft sage-mint label (gentler than the earned mints). */
+[data-theme="dark"] .rep-card--seed  { border-color: #264539; }
+[data-theme="dark"] .rep-card--seed  .rep-card__label { color: #9fceba; }
+
 /* ── Tenant Kindness tier badge (Meaning Layer #6 v1.x) ───────────────────────
    Rendered by shared/tenant-kindness.js into #tenant-kindness-card on the
    quest-page (under #tenant-reputation-card). Static CSS — never an injected
@@ -942,6 +962,10 @@ body.gh-tour-open {
 [data-theme="dark"] .kind-card--warm    .kind-card__label { color: #7ad9ac; }
 [data-theme="dark"] .kind-card--kind    { background: linear-gradient(180deg, #19302a 0%, var(--card, #162825) 78%); border-color: #264539; }
 [data-theme="dark"] .kind-card--kind    .kind-card__label { color: #7ad9ac; }
+/* seed: match .rep-card--seed — drop the bright #dde8dd border + dark-on-dark
+   --green-dark label for a subtle dark border + soft sage-mint label. */
+[data-theme="dark"] .kind-card--seed    { border-color: #264539; }
+[data-theme="dark"] .kind-card--seed    .kind-card__label { color: #9fceba; }
 
 /* ── Community Quests checklist (Meaning Layer #1) — tenant #urgent-quests-list.
    Static here, never injected via createElement('style') (§7-RR). */
