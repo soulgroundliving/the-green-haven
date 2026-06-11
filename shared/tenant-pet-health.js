@@ -298,7 +298,6 @@
             card.setAttribute('role', 'button');
             card.setAttribute('tabindex', '0');
             card.setAttribute('aria-label', 'แก้ไขหรือลบ: ' + (entry.title || meta.label));
-            card.appendChild(_el('span', 'ph-entry__edit-hint', '✏️'));
             card.addEventListener('click', function () { _openEntryActions(entry); });
             card.addEventListener('keydown', function (ev) {
                 if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); _openEntryActions(entry); }

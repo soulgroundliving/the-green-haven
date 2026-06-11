@@ -1580,9 +1580,8 @@ body.gh-tour-open {
 .ph-entry--upcoming { cursor: pointer; position: relative; border-color: var(--primary-green, #2d8653); }
 .ph-entry--upcoming:hover { box-shadow: 0 3px 14px rgba(45,134,83,0.14); }
 .ph-entry--upcoming:active { transform: translateY(1px); }
-.ph-entry__edit-hint { position: absolute; top: 8px; right: 10px; font-size: 0.8rem; opacity: 0.5; pointer-events: none; }
-/* Action sheet (bottom popup) for an upcoming entry */
-.ph-overlay { position: fixed; inset: 0; z-index: 11000; background: rgba(0,0,0,0.45); display: flex; align-items: flex-end; justify-content: center; padding: 16px; }
+/* Action sheet (centered popup) for an upcoming entry */
+.ph-overlay { position: fixed; inset: 0; z-index: 11000; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .ph-sheet { width: 100%; max-width: 420px; background: var(--surface-raised, #fff); border-radius: 18px; padding: 14px; box-shadow: 0 18px 50px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 8px; }
 .ph-sheet__head { display: flex; align-items: center; gap: 10px; padding: 4px 6px 10px; border-bottom: 1px solid var(--stone, #eef2f1); }
 .ph-sheet__emoji { font-size: 1.4rem; flex-shrink: 0; }
