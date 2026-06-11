@@ -1763,6 +1763,22 @@
             margin-bottom: 14px !important;
             box-sizing: border-box !important;
         }
+        /* Cap SINGLE-LINE fields to exactly 48px. The min-height above lets a
+           <select> / date input grow taller than a text input (a select's
+           intrinsic height ≈ 50px) — this makes every form field the same 48px
+           app-wide. Textareas are intentionally excluded so they can still grow. */
+        .card select,
+        .card input[type="text"],
+        .card input[type="tel"],
+        .card input[type="email"],
+        .card input[type="date"],
+        .card input[type="number"],
+        .page select:not(.app-bar select),
+        .page input[type="text"]:not(.app-bar input):not(#market-chat-input),
+        .page input[type="date"],
+        .page input[type="number"] {
+            height: 48px !important;
+        }
         .card input[type="date"],
         .page input[type="date"] {
             -webkit-appearance: none !important;
