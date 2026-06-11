@@ -437,7 +437,7 @@
         if (kind === 'consent-cancel') { _pendingConsentPetId = ''; _pendingPublishBio = ''; _render(); return; }
         if (kind === 'consent-privacy') return _lineSafeOpen(PRIVACY_URL);
         if (kind === 'publish') return _onPublishClick(el.getAttribute('data-pid'));
-        if (kind === 'save-bio') { var pid = el.getAttribute('data-pid'); return _doPublish(pid, _readBio(pid)); }
+        if (kind === 'save-bio') { var pid = el.getAttribute('data-pid'); return _doPublish(pid, _readBio(pid), true); }
         if (kind === 'unpublish') return _unpublish(el.getAttribute('data-pid'));
         if (kind === 'request') return _request(el.getAttribute('data-to'));
         if (kind === 'accept') return _respond(el.getAttribute('data-lid'), true);
@@ -503,7 +503,7 @@
     await _doPublish(petId, bio);
   }
 
-  async function _doPublish(petId, bio) {
+  async function _doPublish(petId, bio, resave) {
     if (!petId) return;
     var fns = _fns();
     if (!fns) { _toast('ระบบยังไม่พร้อม กรุณาลองใหม่', 'error'); return; }
@@ -512,7 +512,8 @@
     _busy['pub_' + petId] = true; _render();
     try {
       await fns.httpsCallable('upsertPetProfile')({ building: _bldg(), roomId: _room(), petId: String(petId), bio: bio, isPublic: true });
-      _toast('เปิดน้องในไดเรกทอรีแล้ว 🐾', 'success');
+      // resave = แก้ไขข้อมูลน้องที่เปิดอยู่แล้ว (อย่าใช้ข้อความ "เปิดน้อง…" ซึ่งทำให้เข้าใจผิดว่าไม่มีอะไรเกิดขึ้น)
+      _toast(resave ? 'บันทึกข้อมูลน้องแล้ว ✓' : 'เปิดน้องในไดเรกทอรีแล้ว 🐾', 'success');
     } catch (e) {
       _toast(_errMsg(e, 'บันทึกไม่สำเร็จ กรุณาลองใหม่'), 'error');
     } finally {
@@ -520,9 +521,28 @@
     }
   }
 
-  async function _unpublish(petId) {
+  // ซ่อนน้อง = ถอนการเผยแพร่ + ยกเลิกเพื่อนสี่ขาทั้งหมด (สิทธิ์ถอนความยินยอม PDPA).
+  // ใช้ GhModal ที่ออกแบบไว้แล้ว แทน window.confirm ของเบราว์เซอร์ — ตัว native โชว์โดเมน
+  // the-green-haven.vercel.app ซึ่งดูเหมือน pop-up หลอกลวง (feedback_modal_security).
+  function _unpublish(petId) {
     if (!petId) return;
-    if (!window.confirm('ซ่อนน้องจากไดเรกทอรี? เพื่อนที่ผูกไว้จะถูกยกเลิกทั้งหมด')) return;
+    var msg = 'เพื่อนสี่ขาที่ผูกไว้จะถูกยกเลิกทั้งหมด และน้องจะไม่แสดงให้เพื่อนบ้านเห็น (เปิดใหม่ได้ภายหลัง)';
+    if (!window.GhModal || typeof window.GhModal.open !== 'function') {  // defensive fallback
+      if (window.confirm('ซ่อนน้องจากไดเรกทอรี? ' + msg)) _doUnpublish(petId);
+      return;
+    }
+    window.GhModal.open({
+      title: 'ซ่อนน้องจากไดเรกทอรี?',
+      body: msg,
+      size: 'small',
+      actions: [
+        { label: 'ยกเลิก', variant: 'ghost', onClick: function (m) { m.close(); } },
+        { label: 'ซ่อนน้อง', variant: 'danger', onClick: function (m) { m.close(); _doUnpublish(petId); } },
+      ],
+    });
+  }
+
+  async function _doUnpublish(petId) {
     var fns = _fns();
     if (!fns) { _toast('ระบบยังไม่พร้อม', 'error'); return; }
     _busy['pub_' + petId] = true; _render();
