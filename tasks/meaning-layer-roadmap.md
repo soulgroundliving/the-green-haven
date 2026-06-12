@@ -19,7 +19,7 @@
 
 ---
 
-## Status (9 shipped · 7 pending)
+## Status (10 shipped · 6 pending)
 
 | # | ตัว | Pillar | Status |
 |---|-----|--------|--------|
@@ -39,7 +39,7 @@
 | 12 | Pet-friendly matching floors | Pet | 🔴 after #10 |
 | 13 | Lost pet alert | Pet | 🔴 buildable now |
 | 14 | Emergency caretaker | Pet | 🔴 after #10 |
-| 15 | Life Timeline | Tenant | 🔴 buildable now |
+| 15 | Life Timeline | Tenant | ✅ SHIPPED ([#335](https://github.com/soulgroundliving/the-green-haven/pull/335)) — owner real-LINE verify pending |
 | 16 | Farewell Archive + AI Summary | Tenant | 🔴 buildable now |
 
 **Sequencing logic:** capture flows (1–5) first because they unlock the retention-moat scores (6–8 = blueprint Core Metric 3 "Emotional Lock-in") → then Pet ecosystem (9–14) → then Tenant memory (15–16). Within a pillar, build the shared primitive (e.g. #10 graph) before its consumers (#11/#12/#14).
@@ -159,7 +159,8 @@ Add the engagement-consistency dimension (pointsLedger event cadence) to #0 once
 
 ---
 
-### 15 — Life Timeline · 🔴 buildable now
+### 15 — Life Timeline · ✅ SHIPPED 2026-06-12 (PR #335)
+**Shipped:** read-only tenant "journey" sub-page (Profile → 🪴 ไทม์ไลน์ชีวิต), **DERIVE-only from the tenant's own doc** `tenants/{b}/list/{r}` — no new collection / index / capture. Events: ย้ายเข้า (`lease.moveInDate || startDate`, §7-BBB) · อยู่ครบ N ปี (derived from move-in + wall clock) · ได้รับเหรียญ (`gamification.badges[].earnedAt`) · สัญญาครบกำหนด (`lease.endDate`, future-only accent) + a warm tenure intro. Pure `deriveTimeline()`/`anniversaries()`/`tenureText()` — 17 tests; full `test:shared` 593/0. `shared/tenant-life-timeline.js` + `.tl-*` (components.css, §7-RR) + tile/sub-page/script (tenant_app.html) + `showSubPage` hook (tenant-navigation.js). Static-harness verified (light render + dark computed-values §7-III). **v2 deferred:** cross-room transfers (occupancyLog `getByTenant` needs the `{tenantId,at}` composite index — §7-J — + canonical tenantId + extra include). **Open:** owner real-LINE live-verify (LIFF-gated). Lifecycle: [[lifecycle_life_timeline]].
 **What:** "Move-in journey / First-night welcome / Room memory timeline" — เช่น "อยู่ครบ 1 ปี".
 **Captures:** mostly **reads existing data** (lease start, milestones, events) + a few milestone markers. Low-risk — derive a timeline view from data already captured.
 **Depends / Reuses:** lease (`leases/{b}/list`), occupancyLog, events. **Gate:** none.
@@ -201,3 +202,4 @@ Add the engagement-consistency dimension (pointsLedger event cadence) to #0 once
 - **2026-06-10 — #6 Kindness score SHIPPED (server + admin).** Three PRs, all merged + deployed + live-verified on prod: [#329](https://github.com/soulgroundliving/the-green-haven/pull/329) (`39c0cbb` — `_kindness.js` engine + sweep extension), [#330](https://github.com/soulgroundliving/the-green-haven/pull/330) (`49eac74` — §7-J room-join fix) + [#331](https://github.com/soulgroundliving/the-green-haven/pull/331) (`fe7cd83` — `dashboard-kindness.js` admin card). Sums `{quest, food_share, help_completed}` from `pointsLedger` → `trustScores/{tenantId}.kindness` (0–100) in the daily sweep; admin card in Insights→ผู้เช่า. **The live-verify (§7-J) caught a real bug:** ledger `tenantId` is `${building}_${room}` (`nest_N101`), not the canonical `TENANT_…` the sweep keyed on → kindness=0 despite 4 real quests; #330 joins by room key. **Prod-verified end-to-end via Chrome MCP:** N101 → kindness **13** (4 quests × 10 = 40 → round(40/300×100)). Read-only verify tools `tools/preview-kindness-scores.js` + `tools/read-trustscores.js` (ADC). Tests: kindness engine 10 + sweep 9 + admin-card 8; full CF 2281/0, shared 522/0. **Pending:** tenant tier badge v1.x (consent-gated, mirror #288/#289). Next: #7 Verified Helper (gated on #2 job accrual) or the #6 tenant badge. Lifecycle doc [[lifecycle_trust_reputation]] (extended with kindness).
 - **2026-06-11 — #6 Kindness tenant badge v1.x SHIPPED + on-device verified.** PR1 #333 (server+rules) + PR2 #334 (frontend); rules deployed + sweep mirror prod-verified; **on-device badge 🤲 "มีน้ำใจ" owner-confirmed on real LINE** → #6 fully ✅ end-to-end.
 - **2026-06-11 — #10 Pet Social Graph PR1 (server + rules + PDPA) SHIPPED + DEPLOYED.** Commit `f174f02` → main → CI `27347926501` success. 2 collections (`petProfiles/{petId}` safe-fields mirror — health never leaks + `petLinks/{linkId}` friend edges), 4 callables LIVE (SE1, §7-NN, point-free), rules deployed (ruleset `848727bb`), `pet_profile_v1` consent + §7-DD cleanup (archive + erasure) + §30 export. code+security review: 2 HIGH fixed (opt-out auth bypass, canRespondLink same-room). Gates: functions 2357/0, rules 342/0, mojibake clean, verify:memory green. **Next = #10 PR2 frontend** (directory sub-page + opt-in toggle + friend UI; off main, builds independently). Lifecycle doc [[lifecycle_pet_social]]; handoff [[next_session_handoff_2026_06_11_pet_social_pr1]].
+- **2026-06-12 — #15 Life Timeline SHIPPED (PR [#335](https://github.com/soulgroundliving/the-green-haven/pull/335)).** First **Tenant-pillar** ตัว. Read-only "journey" sub-page derived ENTIRELY from the tenant's own doc `tenants/{b}/list/{r}` — zero new collection/index/capture, so it shipped behind the same claim-gate every tenant read already passes. Events: ย้ายเข้า · อยู่ครบ N ปี · ได้รับเหรียญ · สัญญาครบกำหนด + tenure intro. Pure `deriveTimeline()` 17 tests (full shared 593/0); static-harness verified light + dark (§7-III computed values). Honours §7-A/U/N/V/X/QQ/CC/B/RR. **v2 deferred:** cross-room transfers need occupancyLog `getByTenant` ({tenantId,at} composite index — §7-J). Built in an isolated worktree off `origin/main` (concurrent pet/deposit sessions — no shared files touched). **Open:** owner real-LINE live-verify. Next buildable Tenant ตัว = **#16 Farewell Archive + AI Summary**; Pet ตัว #11/#13 also unblocked. Lifecycle doc [[lifecycle_life_timeline]].

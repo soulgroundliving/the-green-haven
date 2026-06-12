@@ -132,6 +132,7 @@
     <script src="./shared/tenant-community-requests.js" defer></script>
     <script src="./shared/food-lightbox.js" defer></script>
     <script src="./shared/tenant-food-share.js" defer></script>
+    <script src="./shared/tenant-life-timeline.js" defer></script>
     <script src="./shared/tenant-activity-feed.js" defer></script>
     <script src="./shared/tenant-daily-bonus.js" defer></script>
     <script src="./shared/tenant-cleaning.js" defer></script>
@@ -3953,6 +3954,10 @@
                     <div class="ta-stat-val">🍲</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:#9a5a1e;">แบ่งปันอาหาร</div>
                 </div>
+                <div data-action="showSubPage" data-page="life-timeline" style="background:#EEF1FB; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                    <div class="ta-stat-val">🪴</div>
+                    <div style="font-weight:700; font-size:var(--fs-sm); color:#3a4a7a;">ไทม์ไลน์ชีวิต</div>
+                </div>
             </div>
         </div>
     </div>
@@ -4090,6 +4095,21 @@
     </div>
 
     <!-- Food sharing feed (Meaning Layer #4) — ephemeral leftover-food share board -->
+    <!-- Life Timeline (Meaning Layer #15) — read-only tenant journey -->
+    <div id="life-timeline" class="page">
+        <div class="app-bar ta-page-top">
+            <div class="ta-icon-circle" data-action="goBackToProfile">
+                <i class="fas fa-chevron-left u-color-green"></i>
+            </div>
+            <h1 class="ta-card-title">ไทม์ไลน์ชีวิต</h1>
+        </div>
+
+        <div style="padding:0 16px;">
+            <p class="tl-intro" id="tl-intro">เรื่องราวการอยู่อาศัยของคุณที่นี่</p>
+            <div id="tl-list"><div class="tl-empty">กำลังโหลด…</div></div>
+        </div>
+    </div>
+
     <div id="food-share" class="page">
         <div class="app-bar ta-page-top">
             <div class="ta-icon-circle" data-action="goBackToProfile">
