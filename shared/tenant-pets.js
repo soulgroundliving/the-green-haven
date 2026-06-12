@@ -375,8 +375,20 @@
     renderPetListToProfile();
     // Populate the breed datalist for the default type (deferred script → DOM parsed).
     updateBreedOptions();
-    // Wire subscription on load (500ms delay matches original behaviour)
-    window.addEventListener('load', () => { setTimeout(_subscribePets, 500); });
+    // §7-A: the pets read needs token.building/room claims, so wire to claims-ready
+    // (fires on authReady AND liffLinked, + immediately if already ready) — NOT a
+    // fixed load timer. The old load+500ms fired BEFORE a slow / relink-heavy auth
+    // (e.g. N405) had _taBuilding/_taRoom set → _subscribePets hit the claim guard,
+    // returned early, and was never called again → Pet Park showed an empty
+    // "สมาชิกตัวน้อย" list while the directory (which self-wires via claims-ready)
+    // loaded the same pets fine. The claim guard sits BEFORE _petsUnsub is set, so
+    // an early (anon) fire is a safe no-op and the later (claims-ready) fire
+    // subscribes (§7-U-safe). Fallback to the load timer only if the hook is absent.
+    if (typeof window._onLiffClaimsReady === 'function') {
+        window._onLiffClaimsReady(_subscribePets);
+    } else {
+        window.addEventListener('load', () => { setTimeout(_subscribePets, 500); });
+    }
 
     window.renderPetListToProfile = renderPetListToProfile;
     window.updateBreedOptions = updateBreedOptions;
