@@ -197,6 +197,7 @@
       var lq = fs.query(fs.collection(db, 'petLinks'), fs.where('building', '==', b));
       _linksUnsub = fs.onSnapshot(lq, function (snap) {
         _links = snap.docs.map(function (d) { return Object.assign({ linkId: d.id }, d.data()); });
+        _applyPendingLinks();   // §7-KK: hold optimistic friend-link actions until the server snapshot confirms them
         _render();
       }, function (err) {
         if (!/permission/i.test((err && err.message) || '')) console.warn('[pet-social] links sub failed:', err && (err.code || err.message));
@@ -326,6 +327,74 @@
       } else {
         if (server && String(server.bio || '') === String(pending.bio || '')) { delete _pendingPub[pid]; return; }
         _upsertLocalProfile(pending);                        // not propagated yet → keep shown
+      }
+    });
+  }
+
+  // ── optimistic friend-link cache (§7-KK) ────────────────────────────────────
+  // Same CF-write lag as the publish cache above: requestPetLink / respondPetLink
+  // / removePetLink write petLinks/{linkId} SERVER-side, so the petLinks onSnapshot
+  // lags the callable. Without this a neighbour button keeps its old state after a
+  // click (ขอเป็นเพื่อน stays ขอเป็นเพื่อน instead of flipping to รอตอบรับ; an
+  // answered request lingers in คำขอเป็นเพื่อน) until the snapshot arrives — the
+  // same "click twice" feel as the bio save. Mirror the publish layer exactly:
+  // apply on CF success, hold in _pendingLink until a server snapshot confirms.
+  var _pendingLink = {};   // linkId -> optimistic link (request/respond) | null (remove)
+
+  function _linkById(linkId) {
+    for (var i = 0; i < _links.length; i++) if (String(_links[i].linkId) === String(linkId)) return _links[i];
+    return null;
+  }
+  function _upsertLocalLink(link) {
+    for (var i = 0; i < _links.length; i++) {
+      if (String(_links[i].linkId) === String(link.linkId)) { _links[i] = link; return; }
+    }
+    _links = _links.concat([link]);
+  }
+  function _removeLocalLink(linkId) {
+    _links = _links.filter(function (l) { return String(l.linkId) !== String(linkId); });
+  }
+
+  // A just-sent request — mirror the requestPetLink doc shape for the fields the
+  // render reads (status + requester/recipient room+name); recipient meta from the
+  // neighbour's public profile.
+  function _applyOptimisticRequest(acting, toPetId) {
+    var lid = buildLinkId(acting.petId, toPetId);
+    if (!lid) return;
+    var n = _profileById(toPetId) || {};
+    var link = {
+      linkId: lid, status: 'pending', building: _bldg(),
+      requesterPetId: String(acting.petId), requesterRoom: _room(), requesterName: acting.name,
+      recipientPetId: String(toPetId), recipientRoom: String(n.ownerRoom || ''), recipientName: n.name,
+    };
+    _pendingLink[lid] = link;
+    _upsertLocalLink(link);
+  }
+  // accept → 'accepted', decline → 'declined' (respondPetLink tx.update); keep the
+  // rest of the existing edge so requester/recipient meta survives the optimism.
+  function _applyOptimisticRespond(linkId, accept) {
+    var existing = _linkById(linkId);
+    var status = accept ? 'accepted' : 'declined';
+    var link = existing ? Object.assign({}, existing, { status: status }) : { linkId: String(linkId), status: status };
+    _pendingLink[String(linkId)] = link;
+    _upsertLocalLink(link);
+  }
+  // removePetLink deletes the doc → drop it locally now.
+  function _applyOptimisticRemove(linkId) {
+    _pendingLink[String(linkId)] = null;
+    _removeLocalLink(linkId);
+  }
+
+  function _applyPendingLinks() {
+    Object.keys(_pendingLink).forEach(function (lid) {
+      var pending = _pendingLink[lid];
+      var server = _linkById(lid);
+      if (pending === null) {
+        if (!server) { delete _pendingLink[lid]; return; }   // server confirms removal
+        _removeLocalLink(lid);                               // not propagated yet → keep hidden
+      } else {
+        if (server && String(server.status) === String(pending.status)) { delete _pendingLink[lid]; return; }
+        _upsertLocalLink(pending);                           // not propagated yet → keep applied
       }
     });
   }
@@ -641,6 +710,7 @@
     _busy[key] = true; _render();
     try {
       await fns.httpsCallable('requestPetLink')({ building: _bldg(), roomId: _room(), fromPetId: String(acting.petId), toPetId: String(toPetId) });
+      _applyOptimisticRequest(acting, toPetId);   // §7-KK: flip to รอตอบรับ now; onSnapshot lags the CF
       _toast('ส่งคำขอเป็นเพื่อนแล้ว 🐾', 'success');
     } catch (e) {
       _toast(_errMsg(e, 'ส่งคำขอไม่สำเร็จ กรุณาลองใหม่'), 'error');
@@ -656,6 +726,7 @@
     _busy['link_' + linkId] = true; _render();
     try {
       await fns.httpsCallable('respondPetLink')({ building: _bldg(), roomId: _room(), linkId: String(linkId), accept: accept === true });
+      _applyOptimisticRespond(linkId, accept === true);   // §7-KK: settle the row now; onSnapshot lags the CF
       _toast(accept ? 'เป็นเพื่อนกันแล้ว 🎉' : 'ปฏิเสธคำขอแล้ว', 'success');
     } catch (e) {
       _toast(_errMsg(e, 'ดำเนินการไม่สำเร็จ — คำขออาจถูกตอบไปแล้ว'), 'error');
@@ -671,6 +742,7 @@
     _busy['link_' + linkId] = true; _render();
     try {
       await fns.httpsCallable('removePetLink')({ building: _bldg(), roomId: _room(), linkId: String(linkId) });
+      _applyOptimisticRemove(linkId);   // §7-KK: drop the edge now; onSnapshot delete lags the CF
       _toast('ดำเนินการแล้ว', 'success');
     } catch (e) {
       _toast(_errMsg(e, 'ดำเนินการไม่สำเร็จ'), 'error');
