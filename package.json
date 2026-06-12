@@ -18,6 +18,7 @@
     "smoke": "node tools/smoke-test/runner.js",
     "smoke:verify": "node tools/smoke-test/verify.js",
     "preview:deposit-settlement": "node tools/preview-deposit-settlement.js",
+    "preview:pet-social": "node tools/preview-pet-social.js",
     "lint": "eslint .",
     "install:hooks": "node tools/install-git-hooks.js",
     "postinstall": "node tools/install-git-hooks.js",
