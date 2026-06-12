@@ -36,19 +36,25 @@ test('contentHash accepts Buffer and string equivalently', () => {
 });
 
 // ── hashedName ───────────────────────────────────────────────────────────
-test('hashedName infixes only the trailing .js, preserving dir + multi-dot', () => {
+test('hashedName infixes only the trailing .js/.css, preserving dir + multi-dot', () => {
   assert.equal(hashedName('shared/foo.js', 'a1b2c3d4'), 'shared/foo.a1b2c3d4.js');
   assert.equal(hashedName('accounting/tax-export.js', 'deadbeef'), 'accounting/tax-export.deadbeef.js');
   assert.equal(hashedName('shared/a.min.js', '00112233'), 'shared/a.min.00112233.js');
+  assert.equal(hashedName('shared/brand.css', 'a1b2c3d4'), 'shared/brand.a1b2c3d4.css');
+  assert.equal(hashedName('shared/legal-page.css', 'deadbeef'), 'shared/legal-page.deadbeef.css');
 });
 
 // ── isHashable ───────────────────────────────────────────────────────────
-test('isHashable: shared/ + accounting/ .js only, excludes __tests__ and non-js', () => {
+test('isHashable: shared/ + accounting/ .js or .css; excludes __tests__, *.input.css, non-asset', () => {
   assert.equal(isHashable('shared/utils.js'), true);
   assert.equal(isHashable('accounting/tax-filing.js'), true);
+  assert.equal(isHashable('shared/brand.css'), true);        // CSS now hashed (§7-MM fix)
+  assert.equal(isHashable('shared/components.css'), true);
+  assert.equal(isHashable('shared/tailwind.css'), true);     // compiled output IS linked
   assert.equal(isHashable('shared\\utils.js'), true); // Windows backslash normalised
+  assert.equal(isHashable('shared\\brand.css'), true);
   assert.equal(isHashable('shared/__tests__/utils.test.js'), false); // dev-only
-  assert.equal(isHashable('shared/brand.css'), false);
+  assert.equal(isHashable('shared/tailwind.input.css'), false); // Tailwind SOURCE — never linked
   assert.equal(isHashable('shared/bg/nest-day.webp'), false);
   assert.equal(isHashable('functions/index.js'), false); // not a hashable dir
   assert.equal(isHashable('service-worker.js'), false);
@@ -72,6 +78,8 @@ const MANIFEST = {
   'shared/utils.js': 'shared/utils.aaaaaaaa.js',
   'shared/audit.js': 'shared/audit.bbbbbbbb.js',
   'accounting/tax-filing.js': 'accounting/tax-filing.cccccccc.js',
+  'shared/brand.css': 'shared/brand.dddddddd.css',
+  'shared/components.css': 'shared/components.eeeeeeee.css',
 };
 
 test('rewriteHtmlRefs handles ./, bare, and / prefixes — prefix preserved', () => {
@@ -127,6 +135,39 @@ test('rewriteHtmlRefs does not match a prefix-collision sibling', () => {
   assert.equal(rewriteHtmlRefs(html, MANIFEST), html); // audit-log not in manifest → untouched
 });
 
+// ── rewriteHtmlRefs: <link href> CSS (§7-MM cache-bust) ──────────────────
+test('rewriteHtmlRefs rewrites <link href> .css with ./, bare, and / prefixes — rel preserved', () => {
+  assert.equal(
+    rewriteHtmlRefs('<link rel="stylesheet" href="./shared/brand.css">', MANIFEST),
+    '<link rel="stylesheet" href="./shared/brand.dddddddd.css">'
+  );
+  assert.equal(
+    rewriteHtmlRefs('<link rel="stylesheet" href="shared/brand.css">', MANIFEST),
+    '<link rel="stylesheet" href="shared/brand.dddddddd.css">'
+  );
+  assert.equal(
+    rewriteHtmlRefs('<link rel="stylesheet" href="/shared/components.css">', MANIFEST),
+    '<link rel="stylesheet" href="/shared/components.eeeeeeee.css">'
+  );
+});
+
+test('rewriteHtmlRefs leaves cross-origin CDN stylesheets untouched', () => {
+  const html = '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">';
+  assert.equal(rewriteHtmlRefs(html, MANIFEST), html);
+});
+
+test('rewriteHtmlRefs does NOT touch data-href, and leaves a .css absent from the manifest', () => {
+  assert.equal(rewriteHtmlRefs('<div data-href="./shared/brand.css"></div>', MANIFEST), '<div data-href="./shared/brand.css"></div>');
+  assert.equal(rewriteHtmlRefs('<link href="./shared/unknown.css">', MANIFEST), '<link href="./shared/unknown.css">');
+});
+
+test('rewriteHtmlRefs handles JS + CSS refs in the same document', () => {
+  const html = '<link rel="stylesheet" href="/shared/brand.css">\n<script src="./shared/utils.js" defer></script>';
+  const out = rewriteHtmlRefs(html, MANIFEST);
+  assert.ok(out.includes('/shared/brand.dddddddd.css'));
+  assert.ok(out.includes('./shared/utils.aaaaaaaa.js'));
+});
+
 // ── findDanglingRefs (the build-red safety gate) ─────────────────────────
 test('findDanglingRefs: clean when every ref is an emitted hashed path', () => {
   const emitted = new Set(Object.values(MANIFEST));
@@ -153,10 +194,27 @@ test('findDanglingRefs: flags a hashed ref with no matching emitted file', () =>
   assert.equal(problems[0].ref, 'shared/audit.99999999.js');
 });
 
-test('end-to-end: manifest → rewrite → verify is clean', () => {
-  const bytes = { 'shared/a.js': 'AAA', 'accounting/b.js': 'BBB' };
+test('findDanglingRefs: flags a surviving plain (un-rewritten) <link href> .css', () => {
+  const emitted = new Set(Object.values(MANIFEST));
+  const docs = [{ file: 'a.html', html: '<link rel="stylesheet" href="./shared/brand.css">' }];
+  const problems = findDanglingRefs(docs, emitted);
+  assert.equal(problems.length, 1);
+  assert.deepEqual(problems[0], { file: 'a.html', ref: 'shared/brand.css' });
+});
+
+test('findDanglingRefs: clean when CSS + JS refs are all emitted hashed paths', () => {
+  const emitted = new Set(Object.values(MANIFEST));
+  const docs = [{
+    file: 'a.html',
+    html: '<link rel="stylesheet" href="/shared/brand.dddddddd.css"><script src="./shared/utils.aaaaaaaa.js"></script>',
+  }];
+  assert.deepEqual(findDanglingRefs(docs, emitted), []);
+});
+
+test('end-to-end: manifest → rewrite → verify is clean (JS + CSS)', () => {
+  const bytes = { 'shared/a.js': 'AAA', 'accounting/b.js': 'BBB', 'shared/brand.css': 'CCC' };
   const manifest = computeAssetManifest(Object.keys(bytes), (f) => bytes[f]);
-  const srcHtml = '<script src="./shared/a.js" defer></script>\n<script src="accounting/b.js"></script>';
+  const srcHtml = '<link rel="stylesheet" href="/shared/brand.css">\n<script src="./shared/a.js" defer></script>\n<script src="accounting/b.js"></script>';
   const out = rewriteHtmlRefs(srcHtml, manifest);
   const emitted = new Set(Object.values(manifest));
   assert.deepEqual(findDanglingRefs([{ file: 'x.html', html: out }], emitted), []);

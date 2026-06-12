@@ -35,13 +35,18 @@ const STATIC_CACHE = `nh-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `nh-dynamic-${CACHE_VERSION}`;
 
 // Pre-cache the shell so the very first install populates offline assets
-// without needing the tenant to navigate every page.
+// without needing the tenant to navigate every page. NOTE: content-hashed
+// assets (shared/*.css, shared/*.js) are deliberately NOT precached here — at
+// build time '/shared/brand.css' is renamed to '/shared/brand.<hash>.css', so
+// precaching the plain name would 404 and fail the WHOLE install (cache.addAll
+// rejects on any miss). Those assets are cache-first cached on first fetch
+// (isStaticAsset matches .css/.js), so offline first-paint is unaffected. Keep
+// this list to truly stable, un-hashed shell URLs only.
 const PRECACHE_URLS = [
   '/tenant_app.html',
   '/booking.html',
   '/manifest.json',
-  '/shared/pwa-icon.svg',
-  '/shared/brand.css'
+  '/shared/pwa-icon.svg'
 ];
 
 // Origins we're willing to cache. Cross-origin (Firebase API, LINE, Google

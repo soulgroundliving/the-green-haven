@@ -130,13 +130,19 @@ if (!process.env.VERCEL && !process.env.FORCE_BUILD) {
   const pct = ((1 - totalAfter / totalBefore) * 100).toFixed(1);
   console.log(`✅ Minified ${files.length} files: ${(totalBefore / 1024).toFixed(0)}KB → ${(totalAfter / 1024).toFixed(0)}KB (saved ${savedKB}KB, -${pct}%)`);
 
-  // Content-hash referenceable JS so it can ship `immutable` (vercel.json).
-  // Rename each minified shared/*.js + accounting/*.js → <base>.<hash>.js
-  // (hash of the MINIFIED bytes); shared/__tests__ excluded (dev-only). Source
-  // repo keeps plain names — this runs only in Vercel's ephemeral checkout /
-  // FORCE_BUILD, so local dev is unaffected. See tools/asset-hash.js. Pairs
-  // with the HTML ref-rewrite + dangling-ref verify gate below.
-  const hashableFiles = files
+  // Content-hash referenceable JS + CSS so they can ship `immutable`
+  // (vercel.json). Rename each minified shared/*.js + accounting/*.js
+  // → <base>.<hash>.js (hash of the MINIFIED bytes) AND each linked
+  // shared/*.css → <base>.<hash>.css (brand/components/legal-page ship as-is;
+  // tailwind.css was --minify'd above). isHashable excludes shared/__tests__
+  // (dev-only) and *.input.css (Tailwind SOURCE — never linked). Content-hashed
+  // CSS closes §7-MM: a CSS-only change now gets a new URL so the SW cache-first
+  // fetches fresh instead of serving last deploy's stylesheet until activation.
+  // Source repo keeps plain names — this runs only in Vercel's ephemeral
+  // checkout / FORCE_BUILD, so local dev is unaffected. See tools/asset-hash.js.
+  // Pairs with the HTML <script src>/<link href> rewrite + dangling verify gate.
+  const cssFiles = await glob(['shared/**/*.css', 'accounting/**/*.css'], { nodir: true });
+  const hashableFiles = [...files, ...cssFiles]
     .map((f) => f.replace(/\\/g, '/'))
     .filter(assetHash.isHashable);
   const manifest = assetHash.computeAssetManifest(hashableFiles, (f) => fs.readFileSync(f));
@@ -146,10 +152,11 @@ if (!process.env.VERCEL && !process.env.FORCE_BUILD) {
   const emittedHashed = new Set(Object.values(manifest));
 
   // HTML minification: whitespace + comments only, THEN rewrite <script src>
-  // to the hashed names. CRITICAL: minifyCSS and minifyJS stay OFF — inline
-  // <style>/<script> content must remain byte-for-byte identical so pre-committed
-  // CSP hashes stay valid. The rewrite only touches external <script src> values
-  // (never inline content), so CSP hashes are unaffected.
+  // (.js) + <link href> (.css) to the hashed names. CRITICAL: minifyCSS and
+  // minifyJS stay OFF — inline <style>/<script> content must remain
+  // byte-for-byte identical so pre-committed CSP hashes stay valid. The rewrite
+  // only touches external <script src>/<link href> attribute values (never
+  // inline content), so CSP hashes are unaffected.
   const htmlFiles = await glob(['*.html'], { nodir: true });
   if (htmlFiles.length > 0) {
     console.log(`📄 Minifying ${htmlFiles.length} HTML files (whitespace + comments, keep inline scripts/styles)...`);
@@ -178,14 +185,14 @@ if (!process.env.VERCEL && !process.env.FORCE_BUILD) {
     console.log(`✅ HTML: ${(htmlBefore / 1024).toFixed(0)}KB → ${(htmlAfter / 1024).toFixed(0)}KB (saved ${htmlSavedKB}KB, -${htmlPct}%)\n`);
   }
 
-  // Verify gate: no dangling shared/accounting JS ref may survive the rewrite.
-  // A missed ref would 404 in production; fail the build instead (§7-J).
+  // Verify gate: no dangling shared/accounting JS or CSS ref may survive the
+  // rewrite. A missed ref would 404 in production; fail the build instead (§7-J).
   const finalHtmlDocs = htmlFiles.map((f) => ({ file: f, html: fs.readFileSync(f, 'utf8') }));
   const dangling = assetHash.findDanglingRefs(finalHtmlDocs, emittedHashed);
   if (dangling.length > 0) {
-    console.error(`❌ Build aborted: ${dangling.length} dangling shared/accounting JS ref(s) after content-hash rewrite:`);
+    console.error(`❌ Build aborted: ${dangling.length} dangling shared/accounting asset ref(s) after content-hash rewrite:`);
     for (const d of dangling.slice(0, 20)) console.error(`   ${d.file} → ${d.ref}`);
     process.exit(1);
   }
-  console.log(`🔗 Content-hashed ${Object.keys(manifest).length} JS assets; all HTML refs rewritten + verified.`);
+  console.log(`🔗 Content-hashed ${Object.keys(manifest).length} JS+CSS assets; all HTML <script>/<link> refs rewritten + verified.`);
 })();
