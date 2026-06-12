@@ -134,6 +134,7 @@
     <script src="./shared/tenant-food-share.js" defer></script>
     <script src="./shared/tenant-life-timeline.js" defer></script>
     <script src="./shared/tenant-farewell.js" defer></script>
+    <script src="./shared/tenant-neighbor-bonds.js" defer></script>
     <script src="./shared/tenant-activity-feed.js" defer></script>
     <script src="./shared/tenant-daily-bonus.js" defer></script>
     <script src="./shared/tenant-cleaning.js" defer></script>
@@ -4111,6 +4112,10 @@
             <p class="tl-intro" id="tl-intro">เรื่องราวการอยู่อาศัยของคุณที่นี่</p>
             <div id="tlf-card"></div>
             <div id="tl-list"><div class="tl-empty">กำลังโหลด…</div></div>
+            <!-- Neighbour Bonds (Tenant-pillar, derive-only). Rendered by
+                 shared/tenant-neighbor-bonds.js from this building's helpRequests
+                 once LIFF claims are ready. Empty/hidden until there are bonds. -->
+            <div id="neighbor-bonds-card"></div>
         </div>
     </div>
 
