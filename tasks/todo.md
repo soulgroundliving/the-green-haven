@@ -4,7 +4,53 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-11) — Meaning Layer **#10: Pet Social Graph** · PR1 SHIPPED ✅ (`f174f02`, 4 callables LIVE + rules deployed) · PR2 frontend BUILT ✅ (static-harness verified) · ⏳ owner commit/push + real-LINE live-verify
+## ▶▶▶ ACTIVE PLAN (2026-06-12) — Meaning Layer **#7: Verified Helper** (Trust Phase 3.2b/c) · ✅ APPROVED (all RECs) · ✅ **PR1 (server+admin) COMPLETE** — engine 15 + sweep 11 + consent 11 + admin-card 8 tests; functions 2374/0, shared 622/0, no CSP drift; rules test CI-only · ⏳ **PR2 (tenant badge) next**
+
+> Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#7 · 🟡 gated on #2 job history** — now UNBLOCKED (#2 helpRequests SHIPPED). A peer-confirmed **credential**: a tenant who has completed help jobs (requester-confirmed `helpRequests.status=='done'`, helper side) earns a positive "Verified Helper" tier. It is itself the gate for **#8 Resident Rank** (#6+#7). Built on the **exact Trust System template** already shipped twice (Reputation 3.2a + Kindness #6): pure engine → additive to the ONE daily `trustScores` sweep → tenant tier-badge MIRROR (enum only) → consent/PDPA. **Trust ≠ points** (§6): reads the `helpRequests` job history, NOT the spendable `points` balance.
+
+### Distinct from #6 Kindness (the reason #7 is its own dimension)
+- **#6 Kindness** (shipped) = `pointsLedger` `{quest, food_share, help_completed}` POINTS → generosity breadth; capped (`KINDNESS_DAILY_CAP` 60/day = money-adjacent anti-farm).
+- **#7 Verified Helper** = the `helpRequests` JOB HISTORY itself (count of confirmed-done jobs + distinct requesters + appreciation tags) → peer-confirmed competence/reliability as a helper; NOT points-derived, NOT capped by the kindness cap. (Roadmap: "the `helpRequests` job-history + ratings feed #7 Verified Helper.")
+
+### Owner decisions needed (D1–D5 — confirm or adjust at approval; my REC baked in each)
+- **D1 · Scope split = 2 PRs (REC, mirror Reputation/Kindness).** PR1 = server (engine + sweep dimension + rules protected-field + `verified_helper_v1` consent) **+ admin card**; PR2 = tenant tier badge. *Why: CF+rules deploy is not single-revert; isolate it from the pure-frontend badge.* Alt: server+tenant only, skip admin card v1.
+- **D2 · Score basis = volume + DISTINCT requesters, appreciation tags a small bonus (REC).** `score = clamp01( jobs/TARGET_JOBS·0.6 + distinctRequesters/TARGET_DISTINCT·0.4 )·100` + small tag bonus; `TARGET_JOBS=8`, `TARGET_DISTINCT=4`. *Why: distinct-requester breadth is the anti-farm signal — you can't grind a "verified" credential with one buddy (§6 moat). Pure count alone is farmable.* Alt: count-only (simpler), or per-tag quality weight.
+- **D3 · "Verified" accrual gate = 3 confirmed jobs (REC).** Below → `provisional` → gentle newcomer tier (no number shown). *Why: mirrors Kindness's "< 3 kind acts = provisional"; a credential needs a minimum sample.*
+- **D4 · Tenant tier = positive-only 4-rung enum (REC, mirror Kindness — NO low/red rung).** `trusted | seasoned | helper | newcomer`. Thai (REC): 🛡️ ผู้ช่วยที่ไว้ใจได้ / 🤝 ผู้ช่วยมากประสบการณ์ / 🌟 ผู้ช่วยชุมชน / 🌱 ผู้ช่วยหน้าใหม่. *Why: avoids credit-score anxiety; identical framing to shipped reputation/kindness badges.*
+- **D5 · Tenant display = consent-gated (REC, `verified_helper_v1`).** Mirror reputation/kindness: badge renders only after opt-in; admin/company computation is NOT consent-gated (legitimate-interest, the lawful-basis split owner LOCKED 2026-06-07 — do NOT add a consent filter to the sweep/admin). *Why: showing a tenant a "verified" credential is a §19 display disclosure.*
+
+### Why Plan-First (CLAUDE.md §1 — all three thresholds)
+New pure engine + sweep edit + rules protected-field + consent purpose + admin card + tenant badge + `tenant_app.html`/`components.css`/`privacy.html` + tests ≈ **16–20 files**; schema/security/architectural (new tamper-proof mirror + consent + rules); **CF + rules deploy = NOT single-revert**; 2+ valid score models (D2). Mirrors the #10/#288/#329 precedent.
+
+### Verified-reuse map (§7-H/K/O/AA — grounded this session)
+- **§7-J #330 JOIN (load-bearing trap):** `helpRequests.helperTenantId = `${canonicalBuilding}_${roomId}`` (acceptHelpRequest.js:89) — NOT the canonical `TENANT_…` id. The sweep MUST gather/join by `${helperBuilding}_${helperRoom}` room-key (exactly as `kindnessByRoomKey` at computeTrustScoresScheduled.js:118-129,209). An id-only join silently scores 0 (the bug #330 caught for Kindness).
+- **Template to clone (additive sweep):** Kindness — `require('./_kindness')` → gather Map → per-tenant `computeKindness({events})` → write `kindness*` + mirror `kindnessTier` in the SAME `batch.set` (§7-T one write, two tiers). #7 adds a 3rd dimension identically.
+- **helpRequests fields** (lifecycle_helper_requests, grep-verified): `status:'done'`, `helperBuilding`/`helperRoom`, `requesterTenantId`/`requesterRoom` (distinct key), `appreciationTags` (kind/fast/extra/friendly/trusty), `completedAt`.
+- **§7-O/AA greenfield (run before coding):** grep `verifiedHelper|verified_helper|_verifiedHelper` → expect 0 hits outside roadmap/this plan.
+
+### Tasks — PR1 (server + rules + admin) — ✅ DONE
+- [x] **`functions/_verifiedHelper.js`** (NEW pure) — `computeVerifiedHelper({jobs, now})` → `{score, tier, provisional, factors:{completedCount, distinctRequesters, tagCounts, lastCompletedAt}}` + `verifiedHelperTier(score, provisional)` + `VH_CONSTANTS`. No I/O, `now` injected. **Why: tamper-proof determinism + unit-testable, mirrors `_reputation`/`_kindness`.**
+- [ ] **`functions/__tests__/_verifiedHelper.test.js`** — score blend, distinct-requester de-dup, provisional gate, tier bounds, empty→provisional. **Why: pins the anti-farm contract.**
+- [ ] **`functions/computeTrustScoresScheduled.js`** — gather `helpRequests where status=='done'` → `helperByRoomKey`; per-tenant compute; write `verifiedHelper*` + mirror `verifiedHelperTier` in the EXISTING combined `batch.set`. **Why: ONE sweep, one write — no new CF/Eventarc (§7-NN), no extra batch op (§7-T).**
+- [ ] **`firestore.rules`** — add `verifiedHelperTier` to the `tenants/{b}/list/{r}` protected-field block + rules test. **Why: §6 — no self-faked credential.**
+- [ ] **`functions/recordChecklistConsent.js`** — add `verified_helper_v1` to `VALID_PURPOSES` + test. **Why: reuse the purpose-parameterised CF.**
+- [ ] **`functions/exportMyData.js`** — confirm `trustScores` export carries the new fields (likely no change) + DSR test. **Why: §30 derived personal data.**
+- [ ] **Admin card** `shared/dashboard-verified-helper.js` (clone `dashboard-kindness.js`) + `dashboard.html` mount + `dashboard-insights.js` wiring + stats tests; ⟲ reuses `recomputeTrustScores`. **Why: owner visibility; §7-I explicit recompute.**
+- [ ] **Verify gate:** functions + rules tests green · `npm run verify:memory` · §7-TT · grep §7-J join present.
+
+### Tasks — PR2 (tenant badge, single-revert)
+- [ ] **`shared/tenant-verified-helper.js`** (clone `tenant-kindness.js`) — pure `tierDisplay(enum)` → face/label (positive-only, no digit), consent gate `vh_consent_v1` → `consents/{tid}_verified_helper_v1`, own-read `tenants/{b}/list/{r}.verifiedHelperTier` (getDoc, no index), §7-A/U/BB self-wire, mount `#tenant-verified-helper-card` + `tierDisplay` tests.
+- [ ] **`tenant_app.html`** — mount under `#tenant-kindness-card` + `<script src=… defer>` AFTER tenant-kindness.js (§7-PP).
+- [ ] **`shared/components.css`** — static `.vh-card*` + `[data-theme="dark"]` tint (§7-RR/§7-W).
+- [ ] **`privacy.html`** — disclose the credential (PDPA).
+- [ ] **CSP check** (§7-II — expect no `csp-hashes.json` drift) + **static-harness preview** light+dark (4 tiers + provisional + not-consented).
+
+### Owner-gated remainder (after build)
+- CF+rules deploy (merge auto-deploys CFs; `firebase deploy --only firestore:rules` for the protected-field) → `recomputeTrustScores` once → inspect a real `trustScores` doc's `verifiedHelper*` vs a hand-count from `helpRequests` (§7-J live, not empty). A read-only `tools/preview-verified-helper.js` (clone `preview-kindness-scores.js`) de-risks it. Tenant badge real-LINE verify.
+
+---
+
+## ✅ SHIPPED (archived) — Meaning Layer **#10: Pet Social Graph** · PR1+PR2 on origin/main (`f174f02`/`4dd1ba3`+fixes) · owner real-LINE verify pending (asserter + playbook ready, see [[lifecycle_pet_social]])
 
 > Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#10 · 🔴 buildable now** — the Pet-pillar **shared primitive** (opt-in building-visible pet profiles + pet↔pet friend links) that **#11 playdate / #12 matching / #14 caretaker** all build on. #9 Pet health opened the Pet pillar; #10 is the next in pillar order. Mirrors the #2/#3/#4 building-scoped-collection + per-transition-callable template wholesale.
 

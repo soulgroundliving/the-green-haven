@@ -23,6 +23,8 @@
  *                         pet directory (Meaning Layer #10, tenant-pet-social.js).
  *                         PDPA §19 — publishing personal data (pet + owner room)
  *                         building-wide; upsertPetProfile enforces this gate.
+ *         verified_helper_v1 = explicit consent to be shown the server-computed
+ *                         Verified-Helper tier badge (Meaning Layer #7, tenant-verified-helper.js).
  * Returns: { recorded: true, consentedAt }
  */
 const functions = require('firebase-functions/v1');
@@ -32,7 +34,7 @@ const { resolveTenantClaims, assertTenantAccess } = require('./_authSoT');
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
-const VALID_PURPOSES = new Set(['checklist_v1', 'account_v1', 'reputation_v1', 'kindness_v1', 'pet_profile_v1']);
+const VALID_PURPOSES = new Set(['checklist_v1', 'account_v1', 'reputation_v1', 'kindness_v1', 'pet_profile_v1', 'verified_helper_v1']);
 
 exports.recordChecklistConsent = functions
   .region('asia-southeast1')

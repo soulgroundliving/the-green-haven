@@ -65,7 +65,7 @@ For UI verification, push to a branch and check the Vercel preview — Firebase 
 | `git push origin main` | Vercel auto-deploys to production |
 | `npm run build` | esbuild minify + strip console noise from `shared/**/*.js` + `accounting/**/*.js` (Vercel runs this automatically) |
 | `npm run tailwind:build` | Recompile `shared/tailwind.input.css` → `shared/tailwind.css` |
-| `npm run test:rules` | Firestore security rules (324 cases) |
+| `npm run test:rules` | Firestore security rules (325 cases) |
 | `npm run test:storage` | Storage security rules (47 cases) |
 | `npm run test:unit` | Cloud Function unit tests (with coverage) |
 | `npm run verify:memory` | Verify architecture docs against current code (pre-commit hook calls this) |
@@ -87,9 +87,9 @@ Cloud Functions deploy automatically via [`deploy-functions.yml`](.github/workfl
 │   ├── brand.css             # Design tokens (use these, not hardcoded hex)
 │   └── *.js                  # Feature modules
 ├── functions/                # Cloud Functions (Node 22, region SE1)
-│   └── __tests__/            # 124 CF unit-test files
+│   └── __tests__/            # 125 CF unit-test files
 ├── api/                      # Vercel serverless functions
-├── firestore.rules + firestore.rules.test.js  # 324 rule tests
+├── firestore.rules + firestore.rules.test.js  # 325 rule tests
 ├── storage.rules + storage.rules.test.js      # 47 rule tests
 ├── database.rules.json + database.rules.test.js  # 48 rule tests
 ├── tools/                    # Build / migration / verification scripts

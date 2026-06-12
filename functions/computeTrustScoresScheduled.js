@@ -21,6 +21,8 @@
  *   - kindness FS    `pointsLedger` where source in {quest,food_share,help_completed}
  *                    (Meaning Layer #6 — ONE global read; joined to a roster tenant by
  *                    `${building}_${roomId}` first, canonical tenantId as fallback)
+ *   - helper jobs FS `helpRequests` where status=='done' (Meaning Layer #7 — ONE
+ *                    read; joined to a roster tenant by `${helperBuilding}_${helperRoom}`)
  *
  * Doc shape (server-write-only — rule `write: if false`):
  *   trustScores/{tenantId} = {
@@ -33,6 +35,9 @@
  *     kindnessProvisional: bool,             // true below the accrual-gate event count (seed state)
  *     kindnessFactors: { questPoints, foodSharePoints, helpCompletedPoints, totalPoints,
  *                        questCount, foodShareCount, helpCompletedCount, totalEvents },
+ *     verifiedHelper: 0–100,                 // Meaning Layer #7 — peer-confirmed helper credential
+ *     verifiedHelperProvisional: bool,       // true below the accrual-gate job count (seed state)
+ *     verifiedHelperFactors: { completedCount, distinctRequesters, totalTags, tagCounts, lastCompletedAt },
  *     computedAt: serverTimestamp,
  *   }
  *
@@ -53,6 +58,7 @@ const firestore = admin.firestore();
 const { getAllBuildings } = require('./buildingRegistry');
 const { computeReputation, reputationTier, REPUTATION_CONSTANTS } = require('./_reputation');
 const { computeKindness, kindnessTier, KINDNESS_SOURCES } = require('./_kindness');
+const { computeVerifiedHelper, verifiedHelperTier } = require('./_verifiedHelper');
 
 const { MONTH_MS, COMPLAINT_CLEAN_MAX_MONTHS } = REPUTATION_CONSTANTS;
 
@@ -76,7 +82,9 @@ async function runTrustScoreSweep({ nowMs } = {}) {
   const now = Number.isFinite(nowMs) ? nowMs : Date.now();
   const summary = {
     scored: 0, skippedVacant: 0, provisional: 0, complaintsScanned: 0,
-    kindnessProvisional: 0, kindnessEventsScanned: 0, buildings: [], errors: 0,
+    kindnessProvisional: 0, kindnessEventsScanned: 0,
+    verifiedHelperProvisional: 0, verifiedHelperJobsScanned: 0,
+    buildings: [], errors: 0,
   };
 
   // — complaints: one bounded read (single-field range, ISO-string compare, like
@@ -138,6 +146,36 @@ async function runTrustScoreSweep({ nowMs } = {}) {
   } catch (e) {
     // Non-fatal: reputation still computes; kindness falls back to 0/provisional this run.
     console.warn('[computeTrustScores] pointsLedger read failed — kindness omitted this run:', e && e.message);
+    summary.errors++;
+  }
+
+  // — verified helper (#7): ONE global read of CONFIRMED-DONE help jobs.
+  //   `where('status','==','done')` is single-field (automatic index, §7-N-safe)
+  //   with NO limit (§7-AAA-safe). JOIN by `${helperBuilding}_${helperRoom}`: the
+  //   help CFs stamp `helperTenantId` as the `${building}_${room}` form (NOT the
+  //   canonical roster id) — the SAME §7-J #330 trap kindness hit, so an id-join
+  //   would silently score every helper 0. The roster is keyed by building/room →
+  //   room-key is the reliable join. Trust ≠ points (§6): this reads the JOB
+  //   HISTORY (count / distinct requesters / appreciation tags), never points.
+  const helperJobsByRoomKey = new Map(); // `${building}_${room}` → [{ requesterTenantId, requesterRoom, appreciationTags, completedAt }]
+  try {
+    const hSnap = await firestore.collection('helpRequests').where('status', '==', 'done').get();
+    hSnap.forEach((d) => {
+      const h = d.data() || {};
+      if (!h.helperBuilding || h.helperRoom == null || h.helperRoom === '') return;
+      const rk = `${h.helperBuilding}_${String(h.helperRoom)}`;
+      if (!helperJobsByRoomKey.has(rk)) helperJobsByRoomKey.set(rk, []);
+      helperJobsByRoomKey.get(rk).push({
+        requesterTenantId: h.requesterTenantId,
+        requesterRoom: h.requesterRoom,
+        appreciationTags: h.appreciationTags,
+        completedAt: h.completedAt,
+      });
+      summary.verifiedHelperJobsScanned++;
+    });
+  } catch (e) {
+    // Non-fatal: reputation/kindness still compute; verified-helper → 0/provisional this run.
+    console.warn('[computeTrustScores] helpRequests read failed — verified-helper omitted this run:', e && e.message);
     summary.errors++;
   }
 
@@ -212,6 +250,13 @@ async function runTrustScoreSweep({ nowMs } = {}) {
       const kind = computeKindness({ events: kindEvents });
       if (kind.provisional) summary.kindnessProvisional++;
 
+      // Verified Helper (#7) — peer-confirmed helper credential from THIS room's
+      // confirmed-done help jobs (join by room key, §7-J #330). Job-history, not
+      // points (§6). Additive on the same admin-only doc; tier mirrored below.
+      const helperJobs = helperJobsByRoomKey.get(`${building}_${String(roomId)}`) || [];
+      const vh = computeVerifiedHelper({ jobs: helperJobs });
+      if (vh.provisional) summary.verifiedHelperProvisional++;
+
       const ref = firestore.collection('trustScores').doc(String(td.tenantId));
       batch.set(ref, {
         tenantId: String(td.tenantId),
@@ -223,6 +268,9 @@ async function runTrustScoreSweep({ nowMs } = {}) {
         kindness: kind.kindness,
         kindnessProvisional: kind.provisional,
         kindnessFactors: kind.factors,
+        verifiedHelper: vh.score,
+        verifiedHelperProvisional: vh.provisional,
+        verifiedHelperFactors: vh.factors,
         computedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
@@ -237,6 +285,7 @@ async function runTrustScoreSweep({ nowMs } = {}) {
       batch.set(tDoc.ref, {
         reputationTier: reputationTier(result.reputation, result.provisional),
         kindnessTier: kindnessTier(kind.kindness, kind.provisional),
+        verifiedHelperTier: verifiedHelperTier(vh.score, vh.provisional),
       }, { merge: true });
 
       pending += 2; summary.scored++; written++;   // 2 ops: trustScores + tenant-doc mirror

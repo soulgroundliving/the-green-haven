@@ -35,6 +35,7 @@ function resetWorld() {
     tenantsByBuilding: {},     // { [building]: [ { roomId, tenantId, status } ] }
     complaints: [],            // [ { building, room, createdAt } ]
     ledger: [],                // pointsLedger rows: [ { tenantId, source, points } ]
+    helpRequests: [],          // [ { status, helperBuilding, helperRoom, requesterTenantId, requesterRoom, appreciationTags, completedAt } ]
   };
 }
 resetWorld();
@@ -94,6 +95,19 @@ Module._load = function (id, parent, ...rest) {
                 forEach: (cb) => (world.ledger || [])
                   .filter((e) => (Array.isArray(vals) ? vals.includes(e.source) : true))
                   .forEach((e) => cb({ data: () => e })),
+              }),
+            }),
+          };
+        }
+        if (name === 'helpRequests') {
+          // .where('status','==','done').get() → done jobs (single-field filter,
+          // mirrors the real verified-helper read §7).
+          return {
+            where: (_f, _op, val) => ({
+              get: async () => ({
+                forEach: (cb) => (world.helpRequests || [])
+                  .filter((h) => h.status === val)
+                  .forEach((h) => cb({ data: () => h })),
               }),
             }),
           };
@@ -164,6 +178,10 @@ describe('runTrustScoreSweep', () => {
     assert.equal(w.data.kindness, 0);
     assert.equal(w.data.kindnessProvisional, true);
     assert.equal(w.data.kindnessFactors.totalEvents, 0);
+    // Verified Helper (#7) fields are ALWAYS written; no help jobs here → seed/provisional.
+    assert.equal(w.data.verifiedHelper, 0);
+    assert.equal(w.data.verifiedHelperProvisional, true);
+    assert.equal(w.data.verifiedHelperFactors.completedCount, 0);
   });
 
   it('skips vacant / unlinked rooms (occupancy gate)', async () => {
@@ -242,12 +260,13 @@ describe('runTrustScoreSweep', () => {
     // trustScores doc keeps the full number + factors (admin-only)…
     assert.equal(byId('t15').data.reputation, 100);
     // …the tenant roster doc gets ONLY the coarse tier enums (no number/factors leak).
-    // ONE combined mirror write carries BOTH reputationTier + kindnessTier (#6, v1.x).
+    // ONE combined mirror write carries reputationTier + kindnessTier (#6) + verifiedHelperTier (#7).
     const mirror = byMirror('15');
     assert.ok(mirror, 'wrote the tier enums onto tenants/rooms/list/15');
     assert.equal(mirror.data.reputationTier, 'high');
     assert.equal(mirror.data.kindnessTier, 'seed'); // no ledger here → seed
-    assert.deepEqual(Object.keys(mirror.data), ['reputationTier', 'kindnessTier']);
+    assert.equal(mirror.data.verifiedHelperTier, 'newcomer'); // no help jobs → provisional → newcomer
+    assert.deepEqual(Object.keys(mirror.data), ['reputationTier', 'kindnessTier', 'verifiedHelperTier']);
   });
 
   it('mirrors a provisional (0-bill) tenant as the provisional tier', async () => {
@@ -330,6 +349,39 @@ describe('runTrustScoreSweep', () => {
     assert.equal(w.data.kindnessFactors.totalPoints, 40);
     assert.equal(w.data.kindnessProvisional, false); // 4 events ≥ floor
     assert.ok(w.data.kindness > 0, 'kindness joined via room key, not 0');
+  });
+
+  it('computes verified-helper (#7) joining helpRequests by ${helperBuilding}_${helperRoom} (§7-J #330)', async () => {
+    // helpRequests stamp helperTenantId as `${building}_${room}` (acceptHelpRequest.js),
+    // NOT the canonical roster tenantId — the same §7-J trap kindness hit. The sweep
+    // must join the helper's done jobs to the roster room by room key, or score 0.
+    world.buildings = ['nest'];
+    world.leasesByBuilding = { nest: [{ roomId: 'N101', status: 'active', moveInDate: monthsAgo(30) }] };
+    world.tenantsByBuilding = { nest: [{ roomId: 'N101', tenantId: 'TENANT_canon_15', status: 'occupied' }] };
+    world.helpRequests = [
+      // 4 confirmed-done jobs by the N101 helper across 3 DISTINCT requesters (+ tags)
+      { status: 'done', helperBuilding: 'nest', helperRoom: 'N101', requesterTenantId: 'req_a', appreciationTags: ['kind', 'fast'], completedAt: '2026-05-01T00:00:00Z' },
+      { status: 'done', helperBuilding: 'nest', helperRoom: 'N101', requesterTenantId: 'req_b', appreciationTags: ['friendly'], completedAt: '2026-06-02T00:00:00Z' },
+      { status: 'done', helperBuilding: 'nest', helperRoom: 'N101', requesterTenantId: 'req_c', appreciationTags: [], completedAt: '2026-06-10T00:00:00Z' },
+      { status: 'done', helperBuilding: 'nest', helperRoom: 'N101', requesterTenantId: 'req_a', appreciationTags: ['trusty'], completedAt: '2026-06-11T00:00:00Z' },
+      // noise: an OPEN job (not done) must be ignored, and another room's job
+      { status: 'open', helperBuilding: 'nest', helperRoom: 'N101', requesterTenantId: 'req_z' },
+      { status: 'done', helperBuilding: 'nest', helperRoom: 'N999', requesterTenantId: 'req_y', appreciationTags: ['kind'], completedAt: '2026-06-01T00:00:00Z' },
+    ];
+
+    const summary = await runTrustScoreSweep({ nowMs: NOW });
+
+    assert.equal(summary.verifiedHelperJobsScanned, 5); // 5 DONE jobs (the open one excluded)
+    const w = byId('TENANT_canon_15');
+    assert.ok(w, 'wrote trustScores for the canonical tenantId');
+    assert.equal(w.data.verifiedHelperFactors.completedCount, 4);   // N999 job is a different room
+    assert.equal(w.data.verifiedHelperFactors.distinctRequesters, 3); // req_a/b/c (a counted once)
+    assert.equal(w.data.verifiedHelperFactors.totalTags, 4);
+    assert.equal(w.data.verifiedHelperProvisional, false); // 4 ≥ VH_MIN_JOBS
+    assert.ok(w.data.verifiedHelper > 0, 'verified-helper joined via room key, not 0');
+    assert.equal(w.data.verifiedHelperFactors.lastCompletedAt, '2026-06-11T00:00:00Z');
+    // tenant-doc mirror carries the derived verifiedHelperTier
+    assert.ok(['helper', 'seasoned', 'trusted'].includes(byMirror('N101').data.verifiedHelperTier));
   });
 
   it('exposes the scheduled CF as a callable handler', () => {

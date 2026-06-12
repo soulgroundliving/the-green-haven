@@ -314,6 +314,8 @@
     if (window._ins.reputation) window._ins.reputation.renderReputation();
     // Meaning Layer #6 — Kindness score card (same trustScores/* docs as Reputation).
     if (window._ins.kindness) window._ins.kindness.renderKindness();
+    // Meaning Layer #7 — Verified Helper credential card (same trustScores/* docs).
+    if (window._ins.verifiedHelper) window._ins.verifiedHelper.renderVerifiedHelper();
   }
   function initOperationsInsights() {
     if (_opsInited) return;
@@ -339,6 +341,7 @@
     else if (target === 'behavioralTenure') { cacheClear('behavioral_archives'); window._ins.behavioralTenure.renderTenureInsights(); }
     else if (target === 'reputation') { cacheClear('trust_scores'); window._ins.reputation.renderReputation(); }
     else if (target === 'kindness') { cacheClear('trust_scores'); window._ins.kindness.renderKindness(); }
+    else if (target === 'verifiedHelper') { cacheClear('trust_scores'); window._ins.verifiedHelper.renderVerifiedHelper(); }
     else if (target === 'engagementTrend') { cacheClear('engagement_ledger'); window._ins.behavioralEngagement.renderEngagementTrend(); }
     else if (target === 'energyPattern') { cacheClear('behavioral_energy'); window._ins.behavioralEnergy.renderEnergyTrend(); }
     else if (target === 'repairSeason') { cacheClear('behavioral_repair'); window._ins.behavioralRepair.renderRepairSeason(); }
@@ -361,6 +364,7 @@
     if (a === 'refreshInsight') { refreshInsight(el.dataset.target); return; }
     if (a === 'recomputeTrust') { if (window._ins.reputation) window._ins.reputation.recompute(); return; }
     if (a === 'recomputeKindness') { if (window._ins.kindness) window._ins.kindness.recompute(); return; }
+    if (a === 'recomputeVerifiedHelper') { if (window._ins.verifiedHelper) window._ins.verifiedHelper.recompute(); return; }
     if (a === 'showWellnessRooms') { showWellnessRoomsModal(el.dataset.article); return; }
     if (a === 'showInactiveRooms') { showInactiveRoomsModal(); return; }
     if (a === 'showHealthDetail') { showHealthDetailModal(el.dataset.key); return; }
