@@ -967,6 +967,88 @@ body.gh-tour-open {
 [data-theme="dark"] .kind-card--seed    { border-color: #264539; }
 [data-theme="dark"] .kind-card--seed    .kind-card__label { color: #9fceba; }
 
+/* ── Tenant Verified-Helper tier badge (Meaning Layer #7 v1) ──────────────────
+   Rendered by shared/tenant-verified-helper.js into #tenant-verified-helper-card
+   on the quest-page (under #tenant-kindness-card). Static CSS — never an injected
+   <style> (§7-RR). Muji, positive-ONLY: the SAME green ladder as the kindness +
+   reputation badges (D4 — all three Trust badges read the same rungs), no harsh
+   colour — there is no "low" face, only the gentle 🌱 newcomer growth state. */
+.vh-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border-subtle, #ebe9e2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  text-align: left;
+}
+.vh-card__emoji { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+.vh-card__body { min-width: 0; }
+.vh-card__eyebrow {
+  margin: 0 0 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #8a8f98);
+}
+.vh-card__label { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text, #2c2c2c); }
+.vh-card__sub { margin: 2px 0 0; font-size: var(--fs-sm, 0.82rem); color: var(--text-muted, #8a8f98); line-height: 1.4; }
+
+/* Per-tier tint — a gentle green ladder (trusted deepest → newcomer palest). */
+.vh-card--trusted  { background: linear-gradient(180deg, #ecfaf3 0%, var(--card, #fff) 70%); border-color: #b3e3cb; }
+.vh-card--trusted  .vh-card__label { color: var(--green-dark, #1a5c38); }
+.vh-card--seasoned { background: linear-gradient(180deg, #f1faee 0%, var(--card, #fff) 70%); border-color: #cce6c2; }
+.vh-card--seasoned .vh-card__label { color: var(--green, #2d8653); }
+.vh-card--helper   { background: linear-gradient(180deg, #f6faf4 0%, var(--card, #fff) 75%); border-color: #dbe8d2; }
+.vh-card--helper   .vh-card__label { color: var(--green, #2d8653); }
+.vh-card--newcomer { background: var(--green-pale, #eef5ee); border-color: #dde8dd; }
+.vh-card--newcomer .vh-card__label { color: var(--green-dark, #3a5a44); }
+.vh-card--muted    { background: var(--card, #fff); border-style: dashed; }
+.vh-card--muted    .vh-card__label { color: var(--text-muted, #8a8f98); font-weight: 700; }
+
+/* Consent prompt (shown until the tenant opts in). Column layout. */
+.vh-card--consent { display: block; padding: 18px; }
+.vh-consent__head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.98rem; font-weight: 800; color: var(--text, #2c2c2c);
+  margin-bottom: 8px;
+}
+.vh-consent__text { margin: 0 0 14px; font-size: var(--fs-sm, 0.85rem); line-height: 1.65; color: var(--text-muted, #5f6670); }
+.vh-consent__accept {
+  width: 100%; padding: 12px;
+  background: var(--green, #2d8653); color: #fff;
+  border: none; border-radius: 14px;
+  font-family: inherit; font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; transition: transform 0.12s ease, background-color 0.2s ease;
+}
+.vh-consent__accept:hover { background: var(--green-dark, #1a5c38); }
+.vh-consent__accept:active { transform: scale(0.97); }
+.vh-consent__accept:disabled { opacity: 0.6; cursor: default; }
+.vh-consent__foot { display: flex; justify-content: center; gap: 14px; margin-top: 12px; }
+.vh-consent__later, .vh-consent__privacy {
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: var(--fs-sm, 0.8rem);
+  color: var(--text-muted, #8a8f98); padding: 4px 2px;
+}
+.vh-consent__privacy { color: var(--green, #2d8653); text-decoration: underline; }
+.vh-consent__later:hover, .vh-consent__privacy:hover { opacity: 0.75; }
+
+/* Dark mode — mirror the .kind-card dark block: re-tint the 3 positive tiers to a
+   subtle dark-green glow with a brighter, readable mint label (§7-W). newcomer/
+   consent/muted already read fine (they ride the flipped brand tokens). */
+[data-theme="dark"] .vh-card--trusted  { background: linear-gradient(180deg, #1e3d33 0%, var(--card, #162825) 72%); border-color: #2c5446; }
+[data-theme="dark"] .vh-card--trusted  .vh-card__label { color: #8fe9c4; }
+[data-theme="dark"] .vh-card--seasoned { background: linear-gradient(180deg, #1b352c 0%, var(--card, #162825) 72%); border-color: #294b3e; }
+[data-theme="dark"] .vh-card--seasoned .vh-card__label { color: #7ad9ac; }
+[data-theme="dark"] .vh-card--helper   { background: linear-gradient(180deg, #19302a 0%, var(--card, #162825) 78%); border-color: #264539; }
+[data-theme="dark"] .vh-card--helper   .vh-card__label { color: #7ad9ac; }
+[data-theme="dark"] .vh-card--newcomer { border-color: #264539; }
+[data-theme="dark"] .vh-card--newcomer .vh-card__label { color: #9fceba; }
+
 /* ── Pet Social directory (Meaning Layer #10) — tenant #pet-directory-list.
    Rendered by shared/tenant-pet-social.js. Static here, never injected via
    createElement('style') (§7-RR). Theme-aware through the flipped brand tokens

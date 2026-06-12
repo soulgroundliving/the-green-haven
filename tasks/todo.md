@@ -4,7 +4,7 @@
 
 ---
 
-## ▶▶▶ ACTIVE PLAN (2026-06-12) — Meaning Layer **#7: Verified Helper** (Trust Phase 3.2b/c) · ✅ APPROVED (all RECs) · ✅ **PR1 (server+admin) COMPLETE** — engine 15 + sweep 11 + consent 11 + admin-card 8 tests; functions 2374/0, shared 622/0, no CSP drift; rules test CI-only · ⏳ **PR2 (tenant badge) next**
+## ▶▶▶ ACTIVE PLAN (2026-06-12) — Meaning Layer **#7: Verified Helper** (Trust Phase 3.2b/c) · ✅ APPROVED (all RECs) · ✅ **PR1 (server+admin) COMPLETE** — engine 15 + sweep 11 + consent 11 + admin-card 8 tests; functions 2374/0, shared 622/0, no CSP drift; rules test CI-only · ✅ **PR2 (tenant badge) COMPLETE** — tenant-verified-helper.js (16 tests) + mount + .vh-card* CSS + privacy disclosure; shared 650/0, no CSP drift, static-harness light+dark verified. Frontend ships on merge (Vercel); live badge gated on `verifiedHelperTier` accrual.
 
 > Roadmap ([meaning-layer-roadmap.md](meaning-layer-roadmap.md)) item **#7 · 🟡 gated on #2 job history** — now UNBLOCKED (#2 helpRequests SHIPPED). A peer-confirmed **credential**: a tenant who has completed help jobs (requester-confirmed `helpRequests.status=='done'`, helper side) earns a positive "Verified Helper" tier. It is itself the gate for **#8 Resident Rank** (#6+#7). Built on the **exact Trust System template** already shipped twice (Reputation 3.2a + Kindness #6): pure engine → additive to the ONE daily `trustScores` sweep → tenant tier-badge MIRROR (enum only) → consent/PDPA. **Trust ≠ points** (§6): reads the `helpRequests` job history, NOT the spendable `points` balance.
 
@@ -39,11 +39,11 @@ New pure engine + sweep edit + rules protected-field + consent purpose + admin c
 - [ ] **Verify gate:** functions + rules tests green · `npm run verify:memory` · §7-TT · grep §7-J join present.
 
 ### Tasks — PR2 (tenant badge, single-revert)
-- [ ] **`shared/tenant-verified-helper.js`** (clone `tenant-kindness.js`) — pure `tierDisplay(enum)` → face/label (positive-only, no digit), consent gate `vh_consent_v1` → `consents/{tid}_verified_helper_v1`, own-read `tenants/{b}/list/{r}.verifiedHelperTier` (getDoc, no index), §7-A/U/BB self-wire, mount `#tenant-verified-helper-card` + `tierDisplay` tests.
-- [ ] **`tenant_app.html`** — mount under `#tenant-kindness-card` + `<script src=… defer>` AFTER tenant-kindness.js (§7-PP).
-- [ ] **`shared/components.css`** — static `.vh-card*` + `[data-theme="dark"]` tint (§7-RR/§7-W).
-- [ ] **`privacy.html`** — disclose the credential (PDPA).
-- [ ] **CSP check** (§7-II — expect no `csp-hashes.json` drift) + **static-harness preview** light+dark (4 tiers + provisional + not-consented).
+- [x] **`shared/tenant-verified-helper.js`** (clone `tenant-kindness.js`) — pure `tierDisplay(enum)` → face/label (positive-only, no digit), consent gate `vh_consent_v1` → `consents/{tid}_verified_helper_v1`, own-read `tenants/{b}/list/{r}.verifiedHelperTier` (getDoc, no index), §7-A/U/BB self-wire, mount `#tenant-verified-helper-card` + `tierDisplay` tests (16, pass).
+- [x] **`tenant_app.html`** — mount under `#tenant-kindness-card` + `<script src=… defer>` AFTER tenant-kindness.js (§7-PP).
+- [x] **`shared/components.css`** — static `.vh-card*` + `[data-theme="dark"]` tint (§7-RR/§7-W), same green ladder as kindness (D4).
+- [x] **`privacy.html`** — disclose the credential (PDPA): data-type + purpose + retention.
+- [x] **CSP check** (§7-II — NO `csp-hashes.json` drift, only external `<script src>`+`<div>`) + **static-harness preview** light+dark (4 tiers + muted + consent — all render, dark-flip verified via real module).
 
 ### Owner-gated remainder (after build)
 - CF+rules deploy (merge auto-deploys CFs; `firebase deploy --only firestore:rules` for the protected-field) → `recomputeTrustScores` once → inspect a real `trustScores` doc's `verifiedHelper*` vs a hand-count from `helpRequests` (§7-J live, not empty). A read-only `tools/preview-verified-helper.js` (clone `preview-kindness-scores.js`) de-risks it. Tenant badge real-LINE verify.
