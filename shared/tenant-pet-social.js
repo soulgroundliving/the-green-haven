@@ -138,8 +138,15 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function _consentedLocally() { try { return localStorage.getItem(LS_CONSENT) === '1'; } catch (_) { return false; } }
-  function _rememberConsent() { try { localStorage.setItem(LS_CONSENT, '1'); } catch (_) { /* storage off */ } }
+  // Consent is PER-TENANT (the server doc is consents/{tenantId}_pet_profile_v1), so the
+  // local "already consented" shortcut MUST be keyed by tenantId too. A device-global key
+  // leaked across tenants: tenant A consents on a device → tenant B (same device, e.g. owner
+  // testing a 2nd room) skipped the consent step → upsertPetProfile's server gate rejected the
+  // publish (failed-precondition "ต้องยินยอมก่อนแสดง…"). Empty tenantId → not-consented (fall
+  // through to the server check + opt-in step). §7-LLL family (local consent state ≠ server).
+  function _consentKey() { return LS_CONSENT + '_' + _tenantId; }
+  function _consentedLocally() { try { return !!_tenantId && localStorage.getItem(_consentKey()) === '1'; } catch (_) { return false; } }
+  function _rememberConsent() { try { if (_tenantId) localStorage.setItem(_consentKey(), '1'); } catch (_) { /* storage off */ } }
 
   // Reading a non-existent consents/{id} throws permission-denied (the rule needs
   // resource.data) → treat ANY failure as "not consented yet" (§7-N: not an error,
