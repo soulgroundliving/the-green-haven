@@ -1049,6 +1049,92 @@ body.gh-tour-open {
 [data-theme="dark"] .vh-card--newcomer { border-color: #264539; }
 [data-theme="dark"] .vh-card--newcomer .vh-card__label { color: #9fceba; }
 
+/* ── Tenant Resident Rank badge (Meaning Layer #8 v1) ─────────────────────────
+   Rendered by shared/tenant-resident-rank.js into #tenant-resident-rank-card on
+   the quest-page (under #tenant-verified-helper-card). Static CSS — never an
+   injected <style> (§7-RR). Muji, positive-ONLY: a 5-step green GROWTH ladder
+   (taproot deepest → seed palest), no harsh colour — there is no "low" face, only
+   the gentle 🌱 seed growth state. */
+.rr-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border-subtle, #ebe9e2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  text-align: left;
+}
+.rr-card__emoji { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+.rr-card__body { min-width: 0; }
+.rr-card__eyebrow {
+  margin: 0 0 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #8a8f98);
+}
+.rr-card__label { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text, #2c2c2c); }
+.rr-card__sub { margin: 2px 0 0; font-size: var(--fs-sm, 0.82rem); color: var(--text-muted, #8a8f98); line-height: 1.4; }
+
+/* Per-rung tint — a 5-step green growth ladder (taproot deepest → seed palest). */
+.rr-card--taproot { background: linear-gradient(180deg, #e7f8ef 0%, var(--card, #fff) 68%); border-color: #a6dec0; }
+.rr-card--taproot .rr-card__label { color: var(--green-dark, #1a5c38); }
+.rr-card--canopy  { background: linear-gradient(180deg, #ecfaf3 0%, var(--card, #fff) 70%); border-color: #b9e4cd; }
+.rr-card--canopy  .rr-card__label { color: var(--green-dark, #1a5c38); }
+.rr-card--rooted  { background: linear-gradient(180deg, #f1faee 0%, var(--card, #fff) 72%); border-color: #cce6c2; }
+.rr-card--rooted  .rr-card__label { color: var(--green, #2d8653); }
+.rr-card--sprout  { background: linear-gradient(180deg, #f6faf4 0%, var(--card, #fff) 76%); border-color: #dbe8d2; }
+.rr-card--sprout  .rr-card__label { color: var(--green, #2d8653); }
+.rr-card--seed    { background: var(--green-pale, #eef5ee); border-color: #dde8dd; }
+.rr-card--seed    .rr-card__label { color: var(--green-dark, #3a5a44); }
+.rr-card--muted   { background: var(--card, #fff); border-style: dashed; }
+.rr-card--muted   .rr-card__label { color: var(--text-muted, #8a8f98); font-weight: 700; }
+
+/* Consent prompt (shown until the tenant opts in). Column layout. */
+.rr-card--consent { display: block; padding: 18px; }
+.rr-consent__head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.98rem; font-weight: 800; color: var(--text, #2c2c2c);
+  margin-bottom: 8px;
+}
+.rr-consent__text { margin: 0 0 14px; font-size: var(--fs-sm, 0.85rem); line-height: 1.65; color: var(--text-muted, #5f6670); }
+.rr-consent__accept {
+  width: 100%; padding: 12px;
+  background: var(--green, #2d8653); color: #fff;
+  border: none; border-radius: 14px;
+  font-family: inherit; font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; transition: transform 0.12s ease, background-color 0.2s ease;
+}
+.rr-consent__accept:hover { background: var(--green-dark, #1a5c38); }
+.rr-consent__accept:active { transform: scale(0.97); }
+.rr-consent__accept:disabled { opacity: 0.6; cursor: default; }
+.rr-consent__foot { display: flex; justify-content: center; gap: 14px; margin-top: 12px; }
+.rr-consent__later, .rr-consent__privacy {
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: var(--fs-sm, 0.8rem);
+  color: var(--text-muted, #8a8f98); padding: 4px 2px;
+}
+.rr-consent__privacy { color: var(--green, #2d8653); text-decoration: underline; }
+.rr-consent__later:hover, .rr-consent__privacy:hover { opacity: 0.75; }
+
+/* Dark mode — mirror the .kind-card / .vh-card dark blocks: re-tint the 4 gradient
+   rungs to a subtle dark-green glow with a brighter, readable mint label (§7-W).
+   seed/consent/muted already read fine (they ride the flipped brand tokens). */
+[data-theme="dark"] .rr-card--taproot { background: linear-gradient(180deg, #1e3d33 0%, var(--card, #162825) 70%); border-color: #2c5446; }
+[data-theme="dark"] .rr-card--taproot .rr-card__label { color: #8fe9c4; }
+[data-theme="dark"] .rr-card--canopy  { background: linear-gradient(180deg, #1c3a30 0%, var(--card, #162825) 72%); border-color: #2a503f; }
+[data-theme="dark"] .rr-card--canopy  .rr-card__label { color: #8fe9c4; }
+[data-theme="dark"] .rr-card--rooted  { background: linear-gradient(180deg, #1b352c 0%, var(--card, #162825) 74%); border-color: #294b3e; }
+[data-theme="dark"] .rr-card--rooted  .rr-card__label { color: #7ad9ac; }
+[data-theme="dark"] .rr-card--sprout  { background: linear-gradient(180deg, #19302a 0%, var(--card, #162825) 78%); border-color: #264539; }
+[data-theme="dark"] .rr-card--sprout  .rr-card__label { color: #7ad9ac; }
+[data-theme="dark"] .rr-card--seed    { border-color: #264539; }
+[data-theme="dark"] .rr-card--seed    .rr-card__label { color: #9fceba; }
+
 /* ── Pet Social directory (Meaning Layer #10) — tenant #pet-directory-list.
    Rendered by shared/tenant-pet-social.js. Static here, never injected via
    createElement('style') (§7-RR). Theme-aware through the flipped brand tokens
