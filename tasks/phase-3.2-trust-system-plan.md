@@ -38,7 +38,7 @@ So Trust feeds retention AND two revenue lines. It must be **tamper-proof** (ser
 ### 3.2a — Reputation Score · 🟡 mostly buildable, one dimension data-gated
 **Inputs (all server-verifiable):** on-time-payment ratio · tenure months · complaint-free streak · account standing · engagement consistency (pointsLedger event cadence).
 - v1 (buildable **soon**): payment + tenure + complaint-free — these have **back-history today** (bills/leases/complaints aren't purged). Ship a `computeReputation` callable + daily recompute → store `trustScores/{tenantId}.reputation` (0–100) + factor breakdown.
-- v2: add the engagement-consistency dimension once `pointsLedger` has **~1–3 mo** of accrual (the only data-gated part).
+- v2: ✅ **SHIPPED 2026-06-13 (#343), EARLY** — added the engagement-consistency dimension as an ADDITIVE, positive-only bonus (`min(100, v1_base + round(activeWeeks/8·10))`, +10 max; §6 presence-not-points; self-safe so no accrual gate needed — `daily_login` already had history). Detail: [[lifecycle_trust_reputation]] (Reputation v2 section).
 - **Compute = CF, never client** (mirror `redeemReward` never trusting client balance). Read path: admin dashboard card + tenant_app badge (claim-gated, `_onLiffClaimsReady` §7-A/U).
 
 ### 3.2b — Kindness Score + Verified Helper · 🔴 needs NEW capture first
@@ -66,7 +66,7 @@ Composite `round(0.40·reputation + 0.30·kindness + 0.30·verifiedHelper)` (**o
 | Sub-phase | Blocker | Earliest |
 |-----------|---------|----------|
 | 3.2a v1 (pay+tenure+complaint) | none — history exists | **now-ish** (next core sprint) |
-| 3.2a v2 (engagement dim) | ~1–3 mo `pointsLedger` accrual | ~2026-08+ |
+| 3.2a v2 (engagement dim) | ~1–3 mo `pointsLedger` accrual | ✅ SHIPPED 2026-06-13 (#343, early) |
 | 3.2b (Kindness + Verified Helper) | build Community Quests + Helper lifecycle first | after 3.2a |
 | 3.2c (Resident Rank) | needs 3.2a + 3.2b live | ✅ SHIPPED 2026-06-12 (#338 + #339) |
 
