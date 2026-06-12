@@ -19,6 +19,7 @@ const Module = require('module');
 const { REPUTATION_CONSTANTS: C } = require('../_reputation');
 const NOW = Date.parse('2026-06-07T00:00:00.000Z');
 const monthsAgo = (n) => NOW - n * C.MONTH_MS;
+const weeksAgo = (n) => NOW - n * C.WEEK_MS - C.DAY_MS; // mid-week of bucket n
 
 // ── Mutable test world + captured writes ─────────────────────────────────────
 let world;
@@ -432,6 +433,36 @@ describe('runTrustScoreSweep', () => {
     assert.equal(summary.residentRankProvisional, 0);
     // The tenant-doc mirror carries the derived rung (62 ≥ 55 → canopy).
     assert.equal(byMirror('N101').data.residentRankTier, 'canopy');
+  });
+
+  it('applies the Reputation v2 engagement bonus, joining pointsLedger by room key (§6 cadence)', async () => {
+    // A no-bills (provisional) tenant: 6mo tenure (25) + 6mo complaint-free (50),
+    // payment null → renorm base 34. 4 daily_login events across 4 DISTINCT weeks →
+    // engagement 4/8 → +5 → reputation 39. daily_login is an ENGAGEMENT source but
+    // NOT a kindness source, so kindness stays 0 (clean isolation).
+    world.buildings = ['nest'];
+    world.leasesByBuilding = { nest: [{ roomId: 'N101', status: 'active', moveInDate: monthsAgo(6) }] };
+    world.tenantsByBuilding = { nest: [{ roomId: 'N101', tenantId: 'TENANT_canon_15', status: 'active' }] };
+    world.ledger = [
+      // §7-J: tagged by `${building}_${room}` (nest_N101), NOT the canonical tenantId
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'daily_login', points: 1, at: weeksAgo(0) },
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'daily_login', points: 1, at: weeksAgo(1) },
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'daily_login', points: 1, at: weeksAgo(2) },
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'daily_login', points: 1, at: weeksAgo(3) },
+      // an OLD event (out of the 8-week window) must NOT count
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'daily_login', points: 1, at: weeksAgo(20) },
+    ];
+
+    const summary = await runTrustScoreSweep({ nowMs: NOW });
+
+    assert.equal(summary.engagementEventsScanned, 5); // all 5 daily_login rows read
+    const w = byId('TENANT_canon_15');
+    assert.ok(w, 'wrote trustScores for the canonical tenantId');
+    assert.equal(w.data.factors.baseReputation, 34);          // v1 base
+    assert.equal(w.data.factors.engagementActiveWeeks, 4);    // weeks 0-3 (week 20 out of window)
+    assert.equal(w.data.factors.engagementBonus, 5);          // 4/8 → +5
+    assert.equal(w.data.reputation, 39);                      // 34 + 5
+    assert.equal(w.data.kindness, 0);                         // daily_login is NOT a kindness source
   });
 
   it('exposes the scheduled CF as a callable handler', () => {

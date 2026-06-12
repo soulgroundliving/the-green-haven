@@ -23,6 +23,9 @@
  *                    `${building}_${roomId}` first, canonical tenantId as fallback)
  *   - helper jobs FS `helpRequests` where status=='done' (Meaning Layer #7 — ONE
  *                    read; joined to a roster tenant by `${helperBuilding}_${helperRoom}`)
+ *   - engagement FS  `pointsLedger` where source in ENGAGEMENT_SOURCES (Reputation v2 —
+ *                    ONE read; the `at` timestamps feed the additive engagement-cadence
+ *                    bonus; joined by `${building}_${roomId}`, §6 presence not value)
  *
  * Doc shape (server-write-only — rule `write: if false`):
  *   trustScores/{tenantId} = {
@@ -59,7 +62,7 @@ const rtdb = admin.database();
 const firestore = admin.firestore();
 
 const { getAllBuildings } = require('./buildingRegistry');
-const { computeReputation, reputationTier, REPUTATION_CONSTANTS } = require('./_reputation');
+const { computeReputation, reputationTier, ENGAGEMENT_SOURCES, REPUTATION_CONSTANTS } = require('./_reputation');
 const { computeKindness, kindnessTier, KINDNESS_SOURCES } = require('./_kindness');
 const { computeVerifiedHelper, verifiedHelperTier } = require('./_verifiedHelper');
 const { computeResidentRank } = require('./_residentRank');
@@ -88,7 +91,7 @@ async function runTrustScoreSweep({ nowMs } = {}) {
     scored: 0, skippedVacant: 0, provisional: 0, complaintsScanned: 0,
     kindnessProvisional: 0, kindnessEventsScanned: 0,
     verifiedHelperProvisional: 0, verifiedHelperJobsScanned: 0,
-    residentRankProvisional: 0,
+    residentRankProvisional: 0, engagementEventsScanned: 0,
     buildings: [], errors: 0,
   };
 
@@ -184,6 +187,40 @@ async function runTrustScoreSweep({ nowMs } = {}) {
     summary.errors++;
   }
 
+  // — engagement cadence (Reputation v2): ONE global read of the tenant-ACTION
+  //   ledger sources (a SUPERSET of the kindness sources — quest/help/food overlap
+  //   is intentional + harmless: a separate bucket, the §7-J-fragile kindness read
+  //   is left untouched). We keep only the `at` timestamp per event → computeEngagement
+  //   counts DISTINCT active WEEKS (presence), never the points value (§6). Single-field
+  //   `in` (6 values ≤ 30) → automatic index (§7-N), no limit (§7-AAA). JOIN by
+  //   `${building}_${roomId}` first, canonical tenantId fallback — the same §7-J #330
+  //   room-key join kindness uses (capture CFs tag ledger tenantId as `${b}_${room}`).
+  const engagementByRoomKey = new Map();  // `${building}_${roomId}` → [{ at }]
+  const engagementByTenantId = new Map(); // tenantId → [{ at }]
+  try {
+    const eSnap = await firestore.collection('pointsLedger')
+      .where('source', 'in', [...ENGAGEMENT_SOURCES]).get();
+    eSnap.forEach((d) => {
+      const e = d.data() || {};
+      const ev = { at: e.at };
+      if (e.building && e.roomId != null && e.roomId !== '') {
+        const rk = `${e.building}_${String(e.roomId)}`;
+        if (!engagementByRoomKey.has(rk)) engagementByRoomKey.set(rk, []);
+        engagementByRoomKey.get(rk).push(ev);
+        summary.engagementEventsScanned++;
+      } else if (e.tenantId) {
+        const tid = String(e.tenantId);
+        if (!engagementByTenantId.has(tid)) engagementByTenantId.set(tid, []);
+        engagementByTenantId.get(tid).push(ev);
+        summary.engagementEventsScanned++;
+      }
+    });
+  } catch (e) {
+    // Non-fatal: reputation falls back to the v1 base (bonus 0) this run.
+    console.warn('[computeTrustScores] pointsLedger engagement read failed — reputation omits the v2 bonus this run:', e && e.message);
+    summary.errors++;
+  }
+
   const buildings = await getAllBuildings();
   let batch = firestore.batch();
   let pending = 0;
@@ -239,7 +276,14 @@ async function runTrustScoreSweep({ nowMs } = {}) {
       const moveInDate = moveInByRoom.get(String(roomId)) || td.moveInDate || td.leaseStart || null;
       const complaints = complaintsByRoom.get(`${building}_${roomId}`) || [];
 
-      const result = computeReputation({ bills: roomBills, moveInDate, complaints, now });
+      // Engagement events for THIS room (v2 additive bonus). Same room-key-first
+      // join as kindness/helper; each event lands in exactly one bucket → no double
+      // count. Empty → computeReputation's bonus is 0 = the v1 score (self-safe).
+      const engagementEvents = [
+        ...(engagementByRoomKey.get(`${building}_${String(roomId)}`) || []),
+        ...(engagementByTenantId.get(String(td.tenantId)) || []),
+      ];
+      const result = computeReputation({ bills: roomBills, moveInDate, complaints, engagementEvents, now });
       if (result.provisional) summary.provisional++;
 
       // Kindness (#6) — sum this tenant's kind-tagged ledger events. JOIN by room

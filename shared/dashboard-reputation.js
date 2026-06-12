@@ -150,6 +150,10 @@
           : `💳 ${fac.paymentScore} (${fac.onTimeBills}✓/${fac.lateBills}✗)`;
         const tenure = `📅 ${fac.tenureScore == null ? '—' : fac.tenureScore}`;
         const comp = `🙂 ${fac.complaintScore == null ? '—' : fac.complaintScore}`;
+        // v2 engagement-consistency bonus — shown only when earned (additive, +N).
+        const eng = Number(fac.engagementBonus) > 0
+          ? ` · <span style="color:var(--green,#2d8653);font-weight:600;" title="โบนัสความสม่ำเสมอ: ใช้งาน ${_f(fac.engagementActiveWeeks)}/${_f(fac.engagementWindowWeeks)} สัปดาห์">⚡ +${fac.engagementBonus}</span>`
+          : '';
         const prov = d.provisional
           ? ` <span style="font-size:.64rem;font-weight:600;color:var(--accent,${typeof DashColors !== 'undefined' ? DashColors.ORANGE_MED : '#d99a3f'});background:var(--green-pale);padding:1px 6px;border-radius:999px;">ชั่วคราว</span>`
           : '';
@@ -158,7 +162,7 @@
             <span style="font-variant-numeric:tabular-nums;font-weight:700;font-size:1.05rem;color:${t.color};width:38px;text-align:center;flex-shrink:0;">${d.reputation}</span>
             <div style="flex:1;min-width:0;">
               <div style="font-size:.84rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.esc(d.roomId)} <span style="color:var(--text-muted);font-size:.72rem;font-weight:400;">${u.buildingLabel(d.building)}${name ? ' · ' + u.esc(name) : ''}</span>${prov}</div>
-              <div style="font-size:.7rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pay} · ${tenure} · ${comp}</div>
+              <div style="font-size:.7rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pay} · ${tenure} · ${comp}${eng}</div>
             </div>
             <span style="font-size:.68rem;font-weight:600;color:${t.color};flex-shrink:0;">${t.emoji} ${t.label}</span>
           </div>`;

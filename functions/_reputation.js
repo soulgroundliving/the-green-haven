@@ -11,12 +11,25 @@
  * `points` balance — only verifiable events (paid bills, lease tenure, complaint
  * record). Reputation must not be buyable or the moat collapses.
  *
- * Factor model (each → 0–100, then weighted):
+ * Factor model (each → 0–100, then weighted) — the v1 base:
  *   payment   60%  on-time-payment ratio  (paidAt ≤ dueDate cutoff)
  *   tenure    25%  min(tenureMonths / 24, 1)
  *   complaint 15%  min(complaintFreeMonths / 12, 1)
  * 0 ratable bills → paymentScore null + provisional:true + the surviving
  * weights renormalised so reputation still spans 0–100.
+ *
+ * v2 — engagement consistency (Roadmap Phase 3.2a v2, owner "additive bonus"
+ * 2026-06-13): an ADDITIVE, positive-only bonus on top of the v1 base —
+ *   reputation = min(100, round(v1) + engagementBonus)
+ * where engagementBonus = round(engagementScore/100 · ENGAGEMENT_BONUS_MAX) and
+ * engagementScore = activeWeeks / ENGAGEMENT_WINDOW_WEEKS · 100 (distinct weeks in
+ * the last N with ≥1 engagement event). The bonus can only RAISE reputation, never
+ * lower it — so the live investor metric + tenant tiers are safe, and a tenant with
+ * no engagement history (or a young pointsLedger) simply gets bonus 0 = the v1
+ * score (the additive model is self-safe for the data-readiness gate — no special
+ * case needed). §6 (Trust ≠ points): engagement counts PRESENCE per week (cadence),
+ * NEVER the points VALUE — it is not buyable/farmable (volume in one week earns the
+ * same single active-week as one event).
  *
  * All thresholds are named constants (REPUTATION_CONSTANTS) — tunable at review
  * once the real distribution is visible. `now` is injected, never Date.now(),
@@ -28,6 +41,7 @@
 'use strict';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
 // Average Gregorian month (365.25 / 12 days). Tenure + complaint streaks are
 // scored against whole-month caps, so an approximate-but-stable month length is
 // intentional — calendar-exact month diffs add complexity with no scoring gain.
@@ -36,6 +50,19 @@ const MONTH_MS = 30.4375 * DAY_MS;
 const WEIGHT_PAYMENT = 0.60;
 const WEIGHT_TENURE = 0.25;
 const WEIGHT_COMPLAINT = 0.15;
+
+// v2 engagement-consistency bonus (additive, positive-only). Rolling cadence
+// window in weeks + the max bonus (points added at full consistency). The bonus is
+// applied ON TOP of the v1 weighted base and clamped to 100 — review-tunable.
+const ENGAGEMENT_WINDOW_WEEKS = 8;     // count distinct active weeks in the last 8
+const ENGAGEMENT_BONUS_MAX = 10;       // full consistency → +10 reputation (never penalises)
+
+// pointsLedger `source` values that signal a tenant SHOWED UP (a presence/cadence
+// signal for the v2 engagement bonus). Tenant-ACTION sources only: excludes
+// `payment` (Trust ≠ points), `redeem` (spending), and `complaint_free_month`
+// (system-awarded monthly, not a tenant action). The sweep reads these with their
+// `at` timestamps and passes them to computeReputation as `engagementEvents`.
+const ENGAGEMENT_SOURCES = ['daily_login', 'wellness_quiz', 'contract_quiz', 'quest', 'help_completed', 'food_share'];
 
 const TENURE_MAX_MONTHS = 24;          // 2yr tenure → full tenure score
 const COMPLAINT_CLEAN_MAX_MONTHS = 12; // 1yr complaint-free → full complaint score
@@ -128,19 +155,66 @@ function _scorePayment(bills, nowMs) {
   return { onTimeBills, lateBills, onTimeRatio };
 }
 
+// ─── Engagement consistency (v2) ────────────────────────────────────────────────
+
+/**
+ * Compute the engagement-consistency bonus from a tenant's already-gathered
+ * pointsLedger engagement events. Pure + deterministic.
+ *
+ * §6 (Trust ≠ points): this counts PRESENCE — the number of DISTINCT weeks (in the
+ * last ENGAGEMENT_WINDOW_WEEKS) that have ≥1 engagement event — NEVER the points
+ * value or event count. 100 events in one week and 1 event in one week both score
+ * that single week, so the signal is consistency-of-showing-up, not volume — it is
+ * not buyable/farmable. The caller filters `events` to engagement sources
+ * (daily_login / quizzes / quest / help / food — tenant-action signals; excludes
+ * payment, redeem, system-awarded complaint_free_month).
+ *
+ * @param {object}   input
+ * @param {object[]} [input.events] engagement events: [{ at }] (epoch | ISO | Date | Timestamp)
+ * @param {*}         input.now     "now" reference (injected for determinism)
+ * @returns {{ engagementScore:number, activeWeeks:number, windowWeeks:number, bonus:number }}
+ */
+function computeEngagement({ events, now } = {}) {
+  const nowMs = _ms(now);
+  const windowWeeks = ENGAGEMENT_WINDOW_WEEKS;
+  const list = Array.isArray(events) ? events : [];
+
+  // Distinct week-buckets (0 = the current week, windowWeeks-1 = oldest counted)
+  // relative to now. A bucket is "active" if any event fell in it. Future events
+  // (at > now) and events older than the window are ignored.
+  const activeWeekBuckets = new Set();
+  if (Number.isFinite(nowMs)) {
+    for (const e of list) {
+      if (!e || typeof e !== 'object') continue;
+      const t = _ms(e.at);
+      if (!Number.isFinite(t)) continue;
+      const ageMs = nowMs - t;
+      if (ageMs < 0) continue;                         // future event — skip
+      const wk = Math.floor(ageMs / WEEK_MS);
+      if (wk >= 0 && wk < windowWeeks) activeWeekBuckets.add(wk);
+    }
+  }
+
+  const activeWeeks = activeWeekBuckets.size;
+  const engagementScore = windowWeeks > 0 ? _clamp01(activeWeeks / windowWeeks) * 100 : 0;
+  const bonus = Math.round((engagementScore / 100) * ENGAGEMENT_BONUS_MAX);
+  return { engagementScore: _round1(engagementScore), activeWeeks, windowWeeks, bonus };
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
  * Compute a tenant's reputation from already-gathered signals. Pure + deterministic.
  *
  * @param {object}   input
- * @param {object[]} [input.bills]      RTDB bill objects: { status, dueDate, paidAt }
- * @param {*}        [input.moveInDate] lease move-in (epoch ms | ISO | Date | Timestamp)
- * @param {object[]} [input.complaints] complaint objects: { createdAt }
- * @param {*}         input.now         "now" reference (injected for determinism)
+ * @param {object[]} [input.bills]            RTDB bill objects: { status, dueDate, paidAt }
+ * @param {*}        [input.moveInDate]       lease move-in (epoch ms | ISO | Date | Timestamp)
+ * @param {object[]} [input.complaints]       complaint objects: { createdAt }
+ * @param {object[]} [input.engagementEvents] v2 engagement events: [{ at }] (additive bonus; omit → bonus 0 = v1 score)
+ * @param {*}         input.now               "now" reference (injected for determinism)
  * @returns {{ reputation:number, factors:object, provisional:boolean }}
  */
-function computeReputation({ bills, moveInDate, complaints, now } = {}) {
+function computeReputation({ bills, moveInDate, complaints, engagementEvents, now } = {}) {
   const nowMs = _ms(now);
 
   // — payment punctuality —
@@ -187,7 +261,13 @@ function computeReputation({ bills, moveInDate, complaints, now } = {}) {
   } else {
     reputation = WEIGHT_PAYMENT * rawPayment + WEIGHT_TENURE * rawTenure + WEIGHT_COMPLAINT * rawComplaint;
   }
-  reputation = Math.max(0, Math.min(100, Math.round(reputation)));
+  const baseReputation = Math.max(0, Math.min(100, Math.round(reputation)));
+
+  // — v2 engagement-consistency bonus (additive, positive-only; clamps to 100) —
+  // Applied AFTER the v1 base so it can only RAISE the score. No engagement events
+  // → bonus 0 → reputation === the v1 base (data-readiness-safe by construction).
+  const eng = computeEngagement({ events: engagementEvents, now });
+  reputation = Math.max(0, Math.min(100, baseReputation + eng.bonus));
 
   return {
     reputation,
@@ -201,6 +281,12 @@ function computeReputation({ bills, moveInDate, complaints, now } = {}) {
       lateBills,
       tenureMonths: _round1(tenureMonths),
       complaintFreeMonths: _round1(complaintFreeMonths),
+      // v2 engagement (additive bonus). baseReputation = the pre-bonus v1 score.
+      baseReputation,
+      engagementScore: eng.engagementScore,
+      engagementActiveWeeks: eng.activeWeeks,
+      engagementWindowWeeks: eng.windowWeeks,
+      engagementBonus: eng.bonus,
     },
   };
 }
@@ -234,11 +320,14 @@ function reputationTier(reputation, provisional) {
 
 module.exports = {
   computeReputation,
+  computeEngagement,
   reputationTier,
+  ENGAGEMENT_SOURCES,
   REPUTATION_CONSTANTS: {
     WEIGHT_PAYMENT, WEIGHT_TENURE, WEIGHT_COMPLAINT,
     TENURE_MAX_MONTHS, COMPLAINT_CLEAN_MAX_MONTHS, PAYMENT_GRACE_DAYS,
     TIER_BOUND_HIGH, TIER_BOUND_GOOD, TIER_BOUND_FAIR,
-    DAY_MS, MONTH_MS,
+    ENGAGEMENT_WINDOW_WEEKS, ENGAGEMENT_BONUS_MAX,
+    DAY_MS, WEEK_MS, MONTH_MS,
   },
 };
