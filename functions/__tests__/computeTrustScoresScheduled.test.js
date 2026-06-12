@@ -182,6 +182,12 @@ describe('runTrustScoreSweep', () => {
     assert.equal(w.data.verifiedHelper, 0);
     assert.equal(w.data.verifiedHelperProvisional, true);
     assert.equal(w.data.verifiedHelperFactors.completedCount, 0);
+    // Resident Rank (#8) — derived from the three dims (here reputation 100 only).
+    // 0.40·100 + 0.30·0 + 0.30·0 = 40. NOT provisional (reputation is real, has bills).
+    assert.equal(w.data.residentRank, 40);
+    assert.equal(w.data.residentRankProvisional, false);
+    assert.equal(w.data.residentRankFactors.reputation, 100);
+    assert.deepEqual(w.data.residentRankFactors.weights, { reputation: 0.40, kindness: 0.30, verifiedHelper: 0.30 });
   });
 
   it('skips vacant / unlinked rooms (occupancy gate)', async () => {
@@ -260,13 +266,16 @@ describe('runTrustScoreSweep', () => {
     // trustScores doc keeps the full number + factors (admin-only)…
     assert.equal(byId('t15').data.reputation, 100);
     // …the tenant roster doc gets ONLY the coarse tier enums (no number/factors leak).
-    // ONE combined mirror write carries reputationTier + kindnessTier (#6) + verifiedHelperTier (#7).
+    // ONE combined mirror write carries reputationTier + kindnessTier (#6) +
+    // verifiedHelperTier (#7) + residentRankTier (#8).
     const mirror = byMirror('15');
     assert.ok(mirror, 'wrote the tier enums onto tenants/rooms/list/15');
     assert.equal(mirror.data.reputationTier, 'high');
     assert.equal(mirror.data.kindnessTier, 'seed'); // no ledger here → seed
     assert.equal(mirror.data.verifiedHelperTier, 'newcomer'); // no help jobs → provisional → newcomer
-    assert.deepEqual(Object.keys(mirror.data), ['reputationTier', 'kindnessTier', 'verifiedHelperTier']);
+    // reputation 100 + kindness 0 + vh 0 → composite 40 → rooted (the settled-resident rung)
+    assert.equal(mirror.data.residentRankTier, 'rooted');
+    assert.deepEqual(Object.keys(mirror.data), ['reputationTier', 'kindnessTier', 'verifiedHelperTier', 'residentRankTier']);
   });
 
   it('mirrors a provisional (0-bill) tenant as the provisional tier', async () => {
@@ -382,6 +391,47 @@ describe('runTrustScoreSweep', () => {
     assert.equal(w.data.verifiedHelperFactors.lastCompletedAt, '2026-06-11T00:00:00Z');
     // tenant-doc mirror carries the derived verifiedHelperTier
     assert.ok(['helper', 'seasoned', 'trusted'].includes(byMirror('N101').data.verifiedHelperTier));
+  });
+
+  it('computes resident rank (#8) as the 40/30/30 blend of the three dims + mirrors the rung', async () => {
+    // One tenant with real signal in ALL THREE dims: on-time bills (reputation 100),
+    // 4 kind quest events (kindness 13), 4 confirmed help jobs across 3 requesters
+    // (verifiedHelper 60). Composite = 0.40·100 + 0.30·13 + 0.30·60 = 61.9 → 62 → canopy.
+    world.buildings = ['nest'];
+    world.billsByBuilding = { nest: { N101: {
+      b1: { status: 'paid', dueDate: '2026-05-05', paidAt: Date.parse('2026-05-03Z') },
+    } } };
+    world.leasesByBuilding = { nest: [{ roomId: 'N101', status: 'active', moveInDate: monthsAgo(30) }] };
+    world.tenantsByBuilding = { nest: [{ roomId: 'N101', tenantId: 'TENANT_canon_15', status: 'active' }] };
+    world.ledger = [
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'quest', points: 10 },
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'quest', points: 10 },
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'quest', points: 10 },
+      { tenantId: 'nest_N101', building: 'nest', roomId: 'N101', source: 'quest', points: 10 },
+    ];
+    world.helpRequests = [
+      { status: 'done', helperBuilding: 'nest', helperRoom: 'N101', requesterTenantId: 'req_a', appreciationTags: [], completedAt: '2026-05-01T00:00:00Z' },
+      { status: 'done', helperBuilding: 'nest', helperRoom: 'N101', requesterTenantId: 'req_b', appreciationTags: [], completedAt: '2026-06-02T00:00:00Z' },
+      { status: 'done', helperBuilding: 'nest', helperRoom: 'N101', requesterTenantId: 'req_c', appreciationTags: [], completedAt: '2026-06-10T00:00:00Z' },
+      { status: 'done', helperBuilding: 'nest', helperRoom: 'N101', requesterTenantId: 'req_a', appreciationTags: [], completedAt: '2026-06-11T00:00:00Z' },
+    ];
+
+    const summary = await runTrustScoreSweep({ nowMs: NOW });
+
+    const w = byId('TENANT_canon_15');
+    assert.ok(w, 'wrote trustScores for the canonical tenantId');
+    assert.equal(w.data.reputation, 100);
+    assert.equal(w.data.kindness, 13);        // 40pts/300 → 13
+    assert.equal(w.data.verifiedHelper, 60);  // 4 jobs / 3 distinct, no tags → base 0.6
+    // 0.40·100 + 0.30·13 + 0.30·60 = 61.9 → 62
+    assert.equal(w.data.residentRank, 62);
+    assert.equal(w.data.residentRankProvisional, false); // reputation real (has bills)
+    assert.equal(w.data.residentRankFactors.reputation, 100);
+    assert.equal(w.data.residentRankFactors.kindness, 13);
+    assert.equal(w.data.residentRankFactors.verifiedHelper, 60);
+    assert.equal(summary.residentRankProvisional, 0);
+    // The tenant-doc mirror carries the derived rung (62 ≥ 55 → canopy).
+    assert.equal(byMirror('N101').data.residentRankTier, 'canopy');
   });
 
   it('exposes the scheduled CF as a callable handler', () => {

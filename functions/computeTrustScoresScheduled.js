@@ -38,6 +38,9 @@
  *     verifiedHelper: 0–100,                 // Meaning Layer #7 — peer-confirmed helper credential
  *     verifiedHelperProvisional: bool,       // true below the accrual-gate job count (seed state)
  *     verifiedHelperFactors: { completedCount, distinctRequesters, totalTags, tagCounts, lastCompletedAt },
+ *     residentRank: 0–100,                   // Meaning Layer #8 — DERIVED composite standing (40/30/30 blend)
+ *     residentRankProvisional: bool,         // true only when ALL three dims are still provisional (brand-new)
+ *     residentRankFactors: { reputation, kindness, verifiedHelper, weights },
  *     computedAt: serverTimestamp,
  *   }
  *
@@ -59,6 +62,7 @@ const { getAllBuildings } = require('./buildingRegistry');
 const { computeReputation, reputationTier, REPUTATION_CONSTANTS } = require('./_reputation');
 const { computeKindness, kindnessTier, KINDNESS_SOURCES } = require('./_kindness');
 const { computeVerifiedHelper, verifiedHelperTier } = require('./_verifiedHelper');
+const { computeResidentRank } = require('./_residentRank');
 
 const { MONTH_MS, COMPLAINT_CLEAN_MAX_MONTHS } = REPUTATION_CONSTANTS;
 
@@ -84,6 +88,7 @@ async function runTrustScoreSweep({ nowMs } = {}) {
     scored: 0, skippedVacant: 0, provisional: 0, complaintsScanned: 0,
     kindnessProvisional: 0, kindnessEventsScanned: 0,
     verifiedHelperProvisional: 0, verifiedHelperJobsScanned: 0,
+    residentRankProvisional: 0,
     buildings: [], errors: 0,
   };
 
@@ -257,6 +262,21 @@ async function runTrustScoreSweep({ nowMs } = {}) {
       const vh = computeVerifiedHelper({ jobs: helperJobs });
       if (vh.provisional) summary.verifiedHelperProvisional++;
 
+      // Resident Rank (#8) — DERIVED composite of the three Trust dims above
+      // (reputation 40% / kindness 30% / verifiedHelper 30%, owner "สมดุล"). No
+      // new capture; pure blend → 5-rung growth ladder. `provisional` here means
+      // the resident has no real signal in ANY dimension yet (brand-new), and is
+      // informational only — it does NOT force the rung (§8 / _residentRank.js).
+      const rank = computeResidentRank({
+        reputation: result.reputation,
+        kindness: kind.kindness,
+        verifiedHelper: vh.score,
+        reputationProvisional: result.provisional,
+        kindnessProvisional: kind.provisional,
+        verifiedHelperProvisional: vh.provisional,
+      });
+      if (rank.provisional) summary.residentRankProvisional++;
+
       const ref = firestore.collection('trustScores').doc(String(td.tenantId));
       batch.set(ref, {
         tenantId: String(td.tenantId),
@@ -271,21 +291,25 @@ async function runTrustScoreSweep({ nowMs } = {}) {
         verifiedHelper: vh.score,
         verifiedHelperProvisional: vh.provisional,
         verifiedHelperFactors: vh.factors,
+        residentRank: rank.score,
+        residentRankProvisional: rank.provisional,
+        residentRankFactors: rank.factors,
         computedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
       // Mirror the coarse tier ENUMs onto the tenant-readable roster doc (Phase
-      // 3.2a v1.x — reputation + kindness #6). The tenant_app badges read
-      // `reputationTier` / `kindnessTier` off the tenant doc they already load
+      // 3.2a v1.x — reputation + kindness #6 + verifiedHelper #7 + residentRank #8).
+      // The tenant_app badges read these tiers off the tenant doc they already load
       // (TenantFirebaseSync.loadLease) — no new subscription, no trustScores
       // read-rule change. Tier-only: the raw numbers + factors stay in the
-      // admin-only trustScores doc. ONE write carries BOTH tiers (single writer,
+      // admin-only trustScores doc. ONE write carries ALL FOUR tiers (single writer,
       // §7-T); the rules protected-field block forbids the tenant from writing
-      // either (§6 tamper-proof).
+      // any of them (§6 tamper-proof).
       batch.set(tDoc.ref, {
         reputationTier: reputationTier(result.reputation, result.provisional),
         kindnessTier: kindnessTier(kind.kindness, kind.provisional),
         verifiedHelperTier: verifiedHelperTier(vh.score, vh.provisional),
+        residentRankTier: rank.tier,
       }, { merge: true });
 
       pending += 2; summary.scored++; written++;   // 2 ops: trustScores + tenant-doc mirror
