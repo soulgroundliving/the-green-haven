@@ -6,7 +6,7 @@ Loaded at every session start. Overrides any default behavior — follow exactly
 
 Two docs auto-load at session start; they are **complementary, not duplicates**:
 
-- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-III** (project-specific lessons that auto-load every session).
+- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-LLL** (project-specific lessons that auto-load every session).
 - **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, archive.
 
 **Boundary rule for new content:**
@@ -1640,6 +1640,39 @@ grep -rn "manualEntry\|verifiedAt\|paidAt\|_pvEffectiveDate\|_remove" shared/das
 ```
 
 Family: §7-T (writer/reader field drift), §7-DD (lifecycle must update every sibling reader falls through to), §7-E (year-format traps in bill matching), §7-N/V/KK (onSnapshot lifecycle — error cb, unsub-before-rebind, cached-tick guard). Fixed across `9e68fb0`→`9bf6257`.
+
+### LLL. Fire-and-forget consent/prerequisite write that a CF GATES on must be `await`ed before the gated call — else a `failed-precondition` race
+
+`recordChecklistConsent({purpose})` is fired **fire-and-forget** in the kindness/reputation badge flows — SAFE there, because nothing downstream gates on the consent doc; it only reveals a local tenant badge. Cloning that pattern into a flow where a CF **server-gates on the consent doc already existing** breaks: the unawaited write races the gated call and loses.
+
+Incident 2026-06-11 (#10 Pet Social, commit `afc00c0`): `_acceptConsent` (cloned from `tenant-kindness.js`) fired `recordChecklistConsent({purpose:'pet_profile_v1'})` fire-and-forget, then immediately called `_doPublish` → `upsertPetProfile`. But `upsertPetProfile` enforces the PDPA §19 disclosure gate server-side — it reads `consents/{tenantId}_pet_profile_v1` and throws `failed-precondition` if absent (functions/upsertPetProfile.js — "consent gate — must be recorded BEFORE going public"). The publish raced the consent write → hit `failed-precondition` BEFORE the consent doc landed → the pet stayed unpublished with only a transient toast (owner symptom: กดเปิดน้องแล้วไม่ขึ้น). Root cause = the unawaited consent write, NOT the gate.
+
+**Rule:** a fire-and-forget write is safe ONLY when nothing downstream gates on it. The moment a CF (or a later client step) reads that doc as a precondition, the write MUST be `await`ed before the gated call:
+
+```js
+// ❌ WRONG — a safe badge-reveal pattern cloned into a consent-GATED publish
+recordChecklistConsent({ purpose: 'pet_profile_v1' });   // fire-and-forget
+upsertPetProfile({ isPublic: true });                    // server reads the consent doc → races → failed-precondition
+
+// ✅ CORRECT — await the prerequisite, THEN the gated call (afc00c0)
+async function _acceptConsent() {
+  await fns.httpsCallable('recordChecklistConsent')({ purpose: 'pet_profile_v1', /* … */ });
+  await _doPublish(petId, bio);   // consent doc now exists → the server gate passes
+}
+```
+
+Also preserve any user input across the consent re-render — `_pendingPublishBio` stashes the typed bio so the gated step never looks like data loss.
+
+**Detection tripwire:** the `npm run preview:pet-social` asserter's **INV2** — every published `petProfiles/{petId}` must have a matching `consents/{ownerTenantId}_pet_profile_v1`. A published pet with NO consent doc is this race firing (`tools/preview-pet-social.js` → prints `🔴 NO CONSENT DOC (§7-LLL race?)`).
+
+**Detection recipe** — a client consent write is suspect when a CF reads the same purpose as a precondition:
+```bash
+grep -rn "recordChecklistConsent" shared/*.js          # each call: awaited, or fire-and-forget?
+grep -rln "_pet_profile_v1\|consents/" functions/      # which purposes does a CF read as a gate?
+# A purpose written fire-and-forget on the client AND read server-side as a precondition = this race.
+```
+
+The kindness/reputation `recordChecklistConsent` callers stay fire-and-forget **by design** (nothing gates on them) — do NOT "fix" those to await. Family: §7-Z/FF (Firebase auth/consent state has >1 place that must line up before the next step trusts it), §7-KK (optimistic write vs the read that races it), §7-DD (a transition must settle every sibling doc a downstream reader depends on).
 
 ---
 
