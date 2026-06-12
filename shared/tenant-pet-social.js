@@ -197,7 +197,7 @@
       var lq = fs.query(fs.collection(db, 'petLinks'), fs.where('building', '==', b));
       _linksUnsub = fs.onSnapshot(lq, function (snap) {
         _links = snap.docs.map(function (d) { return Object.assign({ linkId: d.id }, d.data()); });
-        _applyPendingLinks();   // §7-KK: hold optimistic friend-link actions until the server snapshot confirms them
+        _applyPendingLinks(snap.metadata && snap.metadata.fromCache);   // §7-KK: trust server snapshots, bridge only on cache
         _render();
       }, function (err) {
         if (!/permission/i.test((err && err.message) || '')) console.warn('[pet-social] links sub failed:', err && (err.code || err.message));
@@ -385,17 +385,21 @@
     _removeLocalLink(linkId);
   }
 
-  function _applyPendingLinks() {
+  // A SERVER (non-cache) snapshot is authoritative and post-dates our CF write, so
+  // trust it outright and drop the optimism. petLinks are SHARED — the OTHER party
+  // can accept / decline / remove the edge — so forcing our optimistic value past a
+  // server snapshot is exactly what got the two views stuck out of sync (one side
+  // unfriended/declined, the other stayed "เพื่อนแล้ว"/"รอตอบรับ"). Only a CACHED
+  // snapshot (which can pre-date our own write) keeps bridging the optimism set by
+  // _applyOptimisticRequest/Respond/Remove. (§7-KK: act on server-confirmed
+  // snapshots, ignore cached ones. The exact-status-match version this replaces
+  // never matched once the other party moved the edge — and for a deleted edge it
+  // re-added it (server===null + non-null pending) — so it re-applied forever.)
+  function _applyPendingLinks(fromCache) {
+    if (!fromCache) { _pendingLink = {}; return; }
     Object.keys(_pendingLink).forEach(function (lid) {
       var pending = _pendingLink[lid];
-      var server = _linkById(lid);
-      if (pending === null) {
-        if (!server) { delete _pendingLink[lid]; return; }   // server confirms removal
-        _removeLocalLink(lid);                               // not propagated yet → keep hidden
-      } else {
-        if (server && String(server.status) === String(pending.status)) { delete _pendingLink[lid]; return; }
-        _upsertLocalLink(pending);                           // not propagated yet → keep applied
-      }
+      if (pending === null) _removeLocalLink(lid); else _upsertLocalLink(pending);
     });
   }
 
