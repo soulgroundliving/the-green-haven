@@ -94,6 +94,7 @@ window.showSubPage = function showSubPage(id) {
     if (id === 'community-requests' && typeof window.renderCommunityRequests === 'function') window.renderCommunityRequests();
     if (id === 'food-share' && typeof window.renderFoodShare === 'function') window.renderFoodShare();
     if (id === 'life-timeline' && typeof window.renderLifeTimeline === 'function') window.renderLifeTimeline();
+    if (id === 'life-timeline' && typeof window.renderFarewell === 'function') window.renderFarewell();
     if (id === 'pet-directory-page' && typeof window.renderPetDirectory === 'function') window.renderPetDirectory();
 
     window.scrollTo(0, 0);
