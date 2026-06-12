@@ -199,4 +199,12 @@ describe('recordChecklistConsent', () => {
     assert.equal(consentWrites[0].id, 't-15_verified_helper_v1');
     assert.equal(consentWrites[0].payload.purpose, 'verified_helper_v1');
   });
+
+  it('resident_rank_v1 purpose → records consent to show the resident-rank badge (Meaning Layer #8 v1)', async () => {
+    const r = await handler({ purpose: 'resident_rank_v1' }, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
+    assert.equal(r.recorded, true);
+    assert.equal(consentWrites.length, 1);
+    assert.equal(consentWrites[0].id, 't-15_resident_rank_v1');
+    assert.equal(consentWrites[0].payload.purpose, 'resident_rank_v1');
+  });
 });

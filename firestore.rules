@@ -463,16 +463,16 @@ service cloud.firestore {
       // booking prospect — could overwrite name/phone/email/nationalId of
       // any tenant's room doc since the affectedKeys block alone leaves
       // every PII field writable.
-      // `reputationTier` + `kindnessTier` + `verifiedHelperTier` are server-mirrored
-      // from trustScores by the trust sweep CF (Phase 3.2a v1.x reputation + Meaning
-      // Layer #6 kindness + #7 verified-helper). All MUST stay in the protected block
-      // so a self-owned tenant can't fake their own tier via devtools (§6 tamper-proof;
-      // the CF writes via Admin SDK, bypassing rules).
+      // `reputationTier` + `kindnessTier` + `verifiedHelperTier` + `residentRankTier`
+      // are server-mirrored from trustScores by the trust sweep CF (Phase 3.2a v1.x
+      // reputation + Meaning Layer #6 kindness + #7 verified-helper + #8 resident-rank).
+      // All MUST stay in the protected block so a self-owned tenant can't fake their
+      // own tier via devtools (§6 tamper-proof; the CF writes via Admin SDK, bypassing rules).
       allow update: if (
           isAdmin()
           || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid)
         )
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['gamification', 'rentAmount', 'building', 'roomId', 'tenantId', 'reputationTier', 'kindnessTier', 'verifiedHelperTier']);
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['gamification', 'rentAmount', 'building', 'roomId', 'tenantId', 'reputationTier', 'kindnessTier', 'verifiedHelperTier', 'residentRankTier']);
       allow create, delete: if isAdmin();
       allow write: if isAdmin();
 

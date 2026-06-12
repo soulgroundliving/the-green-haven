@@ -225,14 +225,27 @@ describe('tenants — sensitive field protection', () => {
     }));
   });
 
-  it('email admin CAN modify any tenant field including gamification + reputationTier + kindnessTier + verifiedHelperTier', async () => {
+  it('LIFF-linked tenant CANNOT fake their own residentRankTier (Meaning Layer #8 §6 tamper-proof)', async () => {
+    // residentRankTier is server-mirrored from trustScores by the trust sweep CF
+    // (the SAME combined mirror write as the other three tiers). It's in the
+    // protected affectedKeys block so a self-owned tenant can't promote themselves
+    // to a top community rung via devtools — even though they own the doc.
+    await seedTenant({ linkedAuthUid: 'linked-uid-1' });
+    const db = ANON('linked-uid-1').firestore();
+    await assertFails(updateDoc(doc(db, 'tenants/rooms/list/101'), {
+      residentRankTier: 'taproot'
+    }));
+  });
+
+  it('email admin CAN modify any tenant field including gamification + reputationTier + kindnessTier + verifiedHelperTier + residentRankTier', async () => {
     const db = EMAIL_ADMIN().firestore();
     await assertSucceeds(updateDoc(doc(db, 'tenants/rooms/list/101'), {
       gamification: { points: 500 },
       rentAmount: 6000,
       reputationTier: 'good',
       kindnessTier: 'warm',
-      verifiedHelperTier: 'seasoned'
+      verifiedHelperTier: 'seasoned',
+      residentRankTier: 'canopy'
     }));
   });
 
