@@ -187,6 +187,7 @@
       var pq = fs.query(fs.collection(db, 'petProfiles'), fs.where('building', '==', b));
       _profilesUnsub = fs.onSnapshot(pq, function (snap) {
         _profiles = snap.docs.map(function (d) { return Object.assign({ petId: d.id }, d.data()); });
+        _applyPendingProfiles();   // §7-KK: hold optimistic saves until the server snapshot confirms them
         _render();
       }, function (err) {
         if (!/permission/i.test((err && err.message) || '')) console.warn('[pet-social] profiles sub failed:', err && (err.code || err.message));
@@ -264,6 +265,69 @@
   function _incoming() {
     var r = _room();
     return _links.filter(function (l) { return l.status === 'pending' && String(l.recipientRoom) === r; });
+  }
+
+  // ── optimistic publish cache (§7-KK) ────────────────────────────────────────
+  // upsertPetProfile writes petProfiles/{petId} SERVER-side (a CF), so it gets NO
+  // client latency compensation — the onSnapshot above lags the callable by up to
+  // a few seconds. Without this, the _render() right after a successful save reads
+  // the STALE _profiles cache → a just-published pet shows its old/unpublished
+  // state (empty textarea, "แสดงในไดเรกทอรี") even though the save succeeded, so
+  // the owner thinks nothing happened and saves again ("save twice"). We reflect
+  // the result locally on success and HOLD it (via _pendingPub) until a server
+  // snapshot confirms it — so a stale/concurrent snapshot can't revert it
+  // mid-flight, and the authoritative snapshot clears the pending entry.
+  var _pendingPub = {};   // petId -> optimistic profile (publish) | null (unpublish)
+
+  function _upsertLocalProfile(profile) {
+    for (var i = 0; i < _profiles.length; i++) {
+      if (String(_profiles[i].petId) === String(profile.petId)) { _profiles[i] = profile; return; }
+    }
+    _profiles = _profiles.concat([profile]);
+  }
+  function _removeLocalProfile(petId) {
+    _profiles = _profiles.filter(function (p) { return String(p.petId) !== String(petId); });
+  }
+
+  // Build the optimistic public profile from the own-pet doc + the new bio,
+  // mirroring the CF payload shape (empty bio → null, exactly as the CF stores it).
+  // The own section renders name/type from _ownPets, so bio + existence are what
+  // actually drive the post-save view; the rest is carried for completeness.
+  function _optimisticProfile(petId, bio) {
+    var pet = _ownPetById(petId) || {};
+    return {
+      petId: String(petId), building: _bldg(), ownerRoom: _room(), ownerTenantId: _tenantId,
+      name: pet.name, type: pet.type, typeEmoji: pet.typeEmoji, breed: pet.breed,
+      gender: pet.gender, age: pet.age, photoURL: pet.photoURL,
+      bio: (bio == null || bio === '') ? null : bio,
+    };
+  }
+
+  function _applyOptimisticPublish(petId, bio) {
+    var prof = _optimisticProfile(petId, bio);
+    _pendingPub[String(petId)] = prof;
+    _upsertLocalProfile(prof);
+  }
+  function _applyOptimisticUnpublish(petId) {
+    _pendingPub[String(petId)] = null;
+    _removeLocalProfile(petId);
+  }
+
+  // Re-apply each un-confirmed optimistic result after a fresh server snapshot,
+  // dropping it once the server agrees (bio matches / doc gone). Guards the just-
+  // saved state from flickering back on a stale or unrelated petProfiles snapshot.
+  function _applyPendingProfiles() {
+    Object.keys(_pendingPub).forEach(function (pid) {
+      var pending = _pendingPub[pid];
+      var server = _profileById(pid);
+      if (pending === null) {
+        if (!server) { delete _pendingPub[pid]; return; }   // server confirms removal
+        _removeLocalProfile(pid);                            // not propagated yet → keep hidden
+      } else {
+        if (server && String(server.bio || '') === String(pending.bio || '')) { delete _pendingPub[pid]; return; }
+        _upsertLocalProfile(pending);                        // not propagated yet → keep shown
+      }
+    });
   }
 
   // ── render (§7-X: every section + path writes non-empty content) ────────────
@@ -519,6 +583,9 @@
     _busy['pub_' + petId] = true; _render();
     try {
       await fns.httpsCallable('upsertPetProfile')({ building: _bldg(), roomId: _room(), petId: String(petId), bio: bio, isPublic: true });
+      // Reflect the save immediately — the onSnapshot lags this CF write (§7-KK),
+      // so without this the finally _render() below shows the stale (pre-save) state.
+      _applyOptimisticPublish(petId, bio);
       // resave = แก้ไขข้อมูลน้องที่เปิดอยู่แล้ว (อย่าใช้ข้อความ "เปิดน้อง…" ซึ่งทำให้เข้าใจผิดว่าไม่มีอะไรเกิดขึ้น)
       _toast(resave ? 'บันทึกข้อมูลน้องแล้ว ✓' : 'เปิดน้องในไดเรกทอรีแล้ว 🐾', 'success');
     } catch (e) {
@@ -555,6 +622,7 @@
     _busy['pub_' + petId] = true; _render();
     try {
       await fns.httpsCallable('upsertPetProfile')({ building: _bldg(), roomId: _room(), petId: String(petId), isPublic: false });
+      _applyOptimisticUnpublish(petId);   // §7-KK: drop locally now; onSnapshot delete lags the CF
       _toast('เลิกแสดงน้องแล้ว', 'success');
     } catch (e) {
       _toast(_errMsg(e, 'ดำเนินการไม่สำเร็จ'), 'error');
