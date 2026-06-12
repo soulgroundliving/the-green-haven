@@ -1614,3 +1614,15 @@ body.gh-tour-open {
 .tl-item--future .tl-item__icon { border-color: var(--brand-primary, #2d8653); }
 .tl-item--future .tl-item__body { border-color: var(--brand-primary, #2d8653); border-left-width: 3px; }
 .tl-empty { padding: 26px 18px; text-align: center; font-size: var(--fs-sm, 0.82rem); color: var(--text-muted, #8a8f98); background: var(--surface-sunken, #eef6f2); border-radius: 14px; }
+
+/* ── Farewell / journey-summary card (Meaning Layer #16) — top of timeline ──── */
+.tlf-card { background: var(--card, #fff); border: 1px solid var(--border, #ece9e0); border-radius: 16px; padding: 16px 18px; margin-bottom: 18px; }
+.tlf-card--farewell { border-color: var(--brand-primary, #2d8653); border-width: 1.5px; }
+.tlf-card__title { margin: 0 0 10px; font-size: var(--fs-md, 0.95rem); font-weight: 700; color: var(--text, #2c2c2c); }
+.tlf-hero { margin: 0 0 12px; font-size: var(--fs-md, 0.95rem); color: var(--text, #2c2c2c); }
+.tlf-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.tlf-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; background: var(--surface-sunken, #eef6f2); border-radius: 12px; padding: 10px 8px; }
+.tlf-stat__emoji { font-size: 1.1rem; line-height: 1; }
+.tlf-stat__val { font-size: var(--fs-md, 0.95rem); font-weight: 700; color: var(--text, #2c2c2c); }
+.tlf-stat__label { font-size: var(--fs-xs, 0.72rem); color: var(--text-muted, #8a8f98); }
+.tlf-msg { margin: 0; font-size: var(--fs-sm, 0.82rem); color: var(--text-muted, #8a8f98); line-height: 1.5; }

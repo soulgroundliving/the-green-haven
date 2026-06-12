@@ -19,7 +19,7 @@
 
 ---
 
-## Status (10 shipped · 6 pending)
+## Status (11 shipped · 5 pending)
 
 | # | ตัว | Pillar | Status |
 |---|-----|--------|--------|
@@ -40,7 +40,7 @@
 | 13 | Lost pet alert | Pet | 🔴 buildable now |
 | 14 | Emergency caretaker | Pet | 🔴 after #10 |
 | 15 | Life Timeline | Tenant | ✅ SHIPPED ([#335](https://github.com/soulgroundliving/the-green-haven/pull/335)) — owner real-LINE verify pending |
-| 16 | Farewell Archive + AI Summary | Tenant | 🔴 buildable now |
+| 16 | Farewell Archive + AI Summary | Tenant | 🟡 v1 SHIPPED ([#336](https://github.com/soulgroundliving/the-green-haven/pull/336)) — AI summary = v2 |
 
 **Sequencing logic:** capture flows (1–5) first because they unlock the retention-moat scores (6–8 = blueprint Core Metric 3 "Emotional Lock-in") → then Pet ecosystem (9–14) → then Tenant memory (15–16). Within a pillar, build the shared primitive (e.g. #10 graph) before its consumers (#11/#12/#14).
 
@@ -165,8 +165,9 @@ Add the engagement-consistency dimension (pointsLedger event cadence) to #0 once
 **Captures:** mostly **reads existing data** (lease start, milestones, events) + a few milestone markers. Low-risk — derive a timeline view from data already captured.
 **Depends / Reuses:** lease (`leases/{b}/list`), occupancyLog, events. **Gate:** none.
 
-### 16 — Farewell Archive + AI Summary · 🔴 buildable now
-**What:** on move-out — "Memory wall" + AI summary of the tenant's life in the community, gifted before they leave.
+### 16 — Farewell Archive + AI Summary · 🟡 v1 SHIPPED 2026-06-12 (PR #336)
+**Shipped (v1, no AI):** a derive-only farewell / journey-summary card at the top of the 🪴 Life Timeline page (`#tlf-card`) — built ENTIRELY from the tenant's own doc `tenants/{b}/list/{r}` (no new collection / index / capture / CF). Tenure + a 2×2 stat grid (🏅 badges · ✨ points · 🤝 trades · 🔥 streak) + a warm message that shifts to a FAREWELL tone when `lease.endDate ≤ 45d` or `status:ended` (the only client-readable move-out signal — `leaseRequests` is admin-read-only). Always visible (testable now). `shared/tenant-farewell.js` (pure `deriveFarewell()` 12 tests) + `.tlf-*` (components.css) + `#tlf-card` slot + `showSubPage` hook. Static-harness light + dark (§7-III). **Open:** owner real-LINE live-verify. Lifecycle: [[lifecycle_farewell]] (write on merge).
+**What (v2):** on move-out — "Memory wall" + AI summary of the tenant's life in the community, gifted before they leave.
 **Captures / Reuses:** `archiveTenantOnMoveOut` already moves docs to `archive/{contractId}/*` (verified earlier) — add a memory-wall compose + AI summary step (callable). **Depends:** #15 helps. **Gate:** none. **Guardrails:** PDPA (summary = personal data, consent + DSR); AI cost/latency = callable not inline.
 
 ---
@@ -203,3 +204,4 @@ Add the engagement-consistency dimension (pointsLedger event cadence) to #0 once
 - **2026-06-11 — #6 Kindness tenant badge v1.x SHIPPED + on-device verified.** PR1 #333 (server+rules) + PR2 #334 (frontend); rules deployed + sweep mirror prod-verified; **on-device badge 🤲 "มีน้ำใจ" owner-confirmed on real LINE** → #6 fully ✅ end-to-end.
 - **2026-06-11 — #10 Pet Social Graph PR1 (server + rules + PDPA) SHIPPED + DEPLOYED.** Commit `f174f02` → main → CI `27347926501` success. 2 collections (`petProfiles/{petId}` safe-fields mirror — health never leaks + `petLinks/{linkId}` friend edges), 4 callables LIVE (SE1, §7-NN, point-free), rules deployed (ruleset `848727bb`), `pet_profile_v1` consent + §7-DD cleanup (archive + erasure) + §30 export. code+security review: 2 HIGH fixed (opt-out auth bypass, canRespondLink same-room). Gates: functions 2357/0, rules 342/0, mojibake clean, verify:memory green. **Next = #10 PR2 frontend** (directory sub-page + opt-in toggle + friend UI; off main, builds independently). Lifecycle doc [[lifecycle_pet_social]]; handoff [[next_session_handoff_2026_06_11_pet_social_pr1]].
 - **2026-06-12 — #15 Life Timeline SHIPPED (PR [#335](https://github.com/soulgroundliving/the-green-haven/pull/335)).** First **Tenant-pillar** ตัว. Read-only "journey" sub-page derived ENTIRELY from the tenant's own doc `tenants/{b}/list/{r}` — zero new collection/index/capture, so it shipped behind the same claim-gate every tenant read already passes. Events: ย้ายเข้า · อยู่ครบ N ปี · ได้รับเหรียญ · สัญญาครบกำหนด + tenure intro. Pure `deriveTimeline()` 17 tests (full shared 593/0); static-harness verified light + dark (§7-III computed values). Honours §7-A/U/N/V/X/QQ/CC/B/RR. **v2 deferred:** cross-room transfers need occupancyLog `getByTenant` ({tenantId,at} composite index — §7-J). Built in an isolated worktree off `origin/main` (concurrent pet/deposit sessions — no shared files touched). **Open:** owner real-LINE live-verify. Next buildable Tenant ตัว = **#16 Farewell Archive + AI Summary**; Pet ตัว #11/#13 also unblocked. Lifecycle doc [[lifecycle_life_timeline]].
+- **2026-06-12 — #16 Farewell card v1 SHIPPED (PR [#336](https://github.com/soulgroundliving/the-green-haven/pull/336)).** Derive-only farewell / journey-summary card atop the 🪴 Life Timeline page (`#tlf-card`): tenure + 2×2 stat grid (badges/points/trades/streak) + a message that turns FAREWELL-toned when `lease.endDate ≤ 45d` / ended. From the tenant's own doc only — no new collection/index/capture/CF/**AI**. `shared/tenant-farewell.js` pure `deriveFarewell()` 12 tests; full shared 611/0; static-harness light+dark (§7-III). Worktree off origin/main, rebased onto `37fe555` (pet-social asserter — no shared files touched). **v2 deferred:** move-out hook (admin gift at archive) + AI prose + archive read. **Open:** owner real-LINE verify; write `lifecycle_farewell.md` on merge. **Both Tenant-pillar ตัว (#15+#16) now shipped** — next buildable = Pet #11/#13 (collide w/ pet session) or accrual-gated Trust #7/#8.
