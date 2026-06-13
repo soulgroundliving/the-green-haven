@@ -246,6 +246,14 @@ exports.voidInvoice = require('./voidInvoice').voidInvoice;
 // must never be untraceable); idempotent via a deterministic audit key. Admin-gated.
 exports.refundBill = require('./refundBill').refundBill;
 
+// Admin-only server-side MANUAL payment record (cash / bank-statement override) → writes
+// verifiedSlips/{docId} with a dedup guard + audit. Replaces 2 client-side setDoc paths so
+// verifiedSlips can become CF-only-write. See tasks/todo-verifiedslips-cf-only.md.
+exports.recordManualPayment = require('./recordManualPayment').recordManualPayment;
+// Admin-only server-side reset of a room+month's verifiedSlips (deletes manual+SlipOK docs)
+// with a PAYMENT_RESET audit row. Replaces the client-side _deleteVerifiedSlipsForRoomMonth.
+exports.clearRoomPaymentSlips = require('./clearRoomPaymentSlips').clearRoomPaymentSlips;
+
 // (verifyRefundSlip removed 2026-06-05: SlipOK verifies INCOMING payments to the
 // registered account; a deposit refund is an OUTGOING transfer from any bank, so
 // it can't be SlipOK-verified. The refund slip is still uploaded + kept as evidence.

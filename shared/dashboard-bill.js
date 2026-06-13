@@ -1284,30 +1284,22 @@ function _doResetRoomPayment() {
   renderMeterTable();
 }
 
-// Delete every verifiedSlips doc for a room+month — the manual/cash deterministic id AND any
-// SlipOK doc (transactionId id) whose timestamp falls in that month — then drop the
-// PaymentStore cache + legacy mirror and re-render. Lets a reset truly clear the paid signal.
+// Clear every verifiedSlips doc for a room+month via the admin-gated clearRoomPaymentSlips CF
+// (deletes the manual/cash deterministic ids AND any SlipOK doc matched by room+billing-month,
+// server-side, + a PAYMENT_RESET audit row), then drop the PaymentStore cache + legacy mirror
+// and re-render. The CF replaces the old client-side query+delete — verifiedSlips is no longer
+// client-writable (see tasks/todo-verifiedslips-cf-only.md). Lets a reset truly clear the paid signal.
 async function _deleteVerifiedSlipsForRoomMonth(bld, room, year, month) {
   try {
-    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-    const fs = window.firebase.firestoreFunctions;
-    const db = window.firebase.firestore();
     const yBE = Number(year) < 2400 ? Number(year) + 543 : Number(year);
     const m = Number(month);
-    const ids = new Set([
-      `manual_${bld}_${room}_${year}_${month}`,
-      `manual_${bld}_${room}_${yBE}_${m}`,
-    ]);
-    // SlipOK docs key on the transactionId — find them by room + the month derived from timestamp.
-    try {
-      const snap = await fs.getDocs(fs.query(fs.collection(db, 'verifiedSlips'), fs.where('room', '==', room)));
-      snap.forEach(docSnap => {
-        const s = docSnap.data() || {};
-        const ts = s.timestamp?.toDate ? s.timestamp.toDate() : (s.date ? new Date(s.date) : null);
-        if (ts && (ts.getFullYear() + 543) === yBE && (ts.getMonth() + 1) === m) ids.add(docSnap.id);
-      });
-    } catch (e) { console.warn('[resetRoomPayment] verifiedSlips query failed:', e?.message || e); }
-    await Promise.allSettled([...ids].map(id => fs.deleteDoc(fs.doc(fs.collection(db, 'verifiedSlips'), id))));
+    // Server-side delete (admin CF, SE1). year is BE 4-digit (CF normalises); bld is rooms/nest.
+    const fb = window.firebase;
+    if (fb?.functions?.httpsCallable) {
+      try {
+        await fb.functions.httpsCallable('clearRoomPaymentSlips')({ building: bld, room: String(room), year, month: m });
+      } catch (e) { console.warn('[resetRoomPayment] clearRoomPaymentSlips CF failed:', e?.message || e); }
+    }
     // Update the in-memory cache + legacy mirror immediately so the grid refreshes without a reload.
     try { window.PaymentStore?._remove?.(yBE, m, room); } catch (_) {}
     try {

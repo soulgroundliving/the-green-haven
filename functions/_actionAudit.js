@@ -59,6 +59,7 @@ const VALID_ACTIONS = new Set([
   'BILL_VOIDED',           // admin voids an issued invoice (Phase 1.3)
   'BILL_REFUNDED',         // admin refunds a PAID bill — money returned (Phase 2)
   'DEPOSIT_RETURNED',      // admin settles + returns a security deposit at move-out (Slice C)
+  'PAYMENT_RESET',         // admin resets a room's payment — deletes its verifiedSlips (clearRoomPaymentSlips)
 ]);
 
 // Firestore doc IDs cannot contain '/' or start with '.'. Build a safe segment.
