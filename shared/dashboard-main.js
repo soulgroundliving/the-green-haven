@@ -1002,6 +1002,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'showConfirmMoveInModal')  { typeof showConfirmMoveInModal === 'function' && showConfirmMoveInModal(el.dataset.building, el.dataset.room); return; }
     if (a === 'closeConfirmMoveInModal') { document.getElementById('confirmMoveInModal')?.remove(); return; }
     if (a === 'confirmMoveIn')           { typeof window._confirmMoveIn === 'function' && window._confirmMoveIn(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'createTenantFromReserve') { typeof window._createTenantFromReserve === 'function' && window._createTenantFromReserve(el.dataset.id, el.dataset.arg); return; }
     if (a === 'showForfeitDepositModal') { typeof showForfeitDepositModal === 'function' && showForfeitDepositModal(el.dataset.building, el.dataset.room); return; }
     if (a === 'closeForfeitDepositModal'){ document.getElementById('forfeitDepositModal')?.remove(); return; }
     if (a === 'forfeitReservedDeposit')  { typeof window._forfeitReservedDeposit === 'function' && window._forfeitReservedDeposit(el.dataset.id, el.dataset.arg); return; }

@@ -176,6 +176,7 @@ function openTenantModal(building, roomId) {
         setIfEmpty('modalTenantPhone', pr.phone);
         setIfEmpty('modalTenantLineID', pr.lineId);
         setIfEmpty('modalTenantNickname', pr.nickname);
+        setIfEmpty('modalTenantMoveIn', dep.expectedMoveInDate);  // คาดย้ายเข้า → วันเข้าพัก (admin edits if it differs)
         if (filled && typeof showToast === 'function') showToast('👤 เติมข้อมูลจากว่าที่ผู้เช่า (มัดจำ) ให้แล้ว — ตรวจก่อนบันทึก');
       } catch (_) {}
     })();

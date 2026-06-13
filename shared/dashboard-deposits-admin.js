@@ -932,6 +932,16 @@ window._saveLumpDeposit = _saveLumpDeposit;
 function showConfirmMoveInModal(building, roomId) {
   const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
   if (!dep) return;
+  // confirmMoveIn (CF) REQUIRES a real tenant (tenantId + active lease); the pre-move-in flow only
+  // captured a prospect (ว่าที่ผู้เช่า). If the room has no confirmable tenant yet, guide the admin to
+  // create one first — the เพิ่มผู้เช่า form auto-fills from dep.prospect — rather than let the CF reject
+  // with "Tenant has no tenantId". Unknown occupancy (TenantLookup not ready) → fall through; the CF
+  // still validates server-side.
+  const occ = (window.TenantLookup && window.TenantLookup.getRoomOccupancyInfo)
+    ? window.TenantLookup.getRoomOccupancyInfo(building, roomId) : null;
+  if (occ && !(occ.isOccupied && occ.lease && occ.lease.tenantId)) {
+    showCreateTenantBeforeMoveInModal(building, roomId, dep); return;
+  }
   const due = window.DepositCalc ? window.DepositCalc.depositDue(dep) : 0;
   const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
   const today = new Date().toISOString().slice(0, 10);
@@ -960,6 +970,47 @@ function showConfirmMoveInModal(building, roomId) {
   document.body.appendChild(modal);
 }
 window.showConfirmMoveInModal = showConfirmMoveInModal;
+
+// No confirmable tenant yet (only a prospect) — guide the admin to create the tenant first. The
+// เพิ่มผู้เช่า form auto-fills ชื่อ/เบอร์/LINE/คาดย้ายเข้า from dep.prospect (dashboard-tenant-modal.js),
+// so the admin only completes ค่าเช่า/วันสัญญา → บันทึก → then "ยืนยันย้ายเข้า" succeeds. §7-I: explicit click.
+function showCreateTenantBeforeMoveInModal(building, roomId, dep) {
+  const who = _prospectLabel(dep && dep.prospect) || '';
+  document.getElementById('confirmMoveInModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'confirmMoveInModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.28);overflow:hidden;">
+      <div style="padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
+        <h3 style="margin:0;font-size:1.05rem;color:#334435;font-weight:800;">✓ ยืนยันย้ายเข้าจริง</h3>
+        <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">ห้อง ${roomId} <span style="color:#9ca3af;">· ${building}</span></div>
+        ${who ? `<div style="font-size:var(--fs-sm);color:#1e40af;font-weight:700;margin-top:4px;">👤 ${who}</div>` : ''}
+      </div>
+      <div style="padding:16px 22px;">
+        <div style="background:#fef9ec;border:1px solid #fde68a;border-radius:10px;padding:12px;font-size:var(--fs-sm);color:#92400e;line-height:1.6;">
+          ⚠️ <strong>ยังไม่มีผู้เช่าในห้องนี้</strong><br>
+          ต้องสร้างผู้เช่าก่อนยืนยันย้ายเข้า — ระบบดึงข้อมูลจากว่าที่ผู้เช่า (ชื่อ · เบอร์ · LINE · คาดย้ายเข้า) มาให้ในฟอร์มแล้ว เติมค่าเช่า/วันสัญญาให้ครบ → บันทึก → แล้วกด "ยืนยันย้ายเข้า" อีกครั้ง
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;padding:14px 22px;border-top:1px solid #eef0ee;">
+        <button data-action="closeConfirmMoveInModal" style="flex:1;padding:11px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">ยกเลิก</button>
+        <button data-action="createTenantFromReserve" data-id="${building}" data-arg="${roomId}" style="flex:2;padding:11px;background:#1e40af;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">➕ สร้างผู้เช่า</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+window.showCreateTenantBeforeMoveInModal = showCreateTenantBeforeMoveInModal;
+
+// "➕ สร้างผู้เช่า" → close the guide + open the tenant form (auto-fills from dep.prospect). Two explicit
+// steps (create tenant, then re-confirm) — no auto-chain into the financial confirm (§7-I).
+function _createTenantFromReserve(building, roomId) {
+  document.getElementById('confirmMoveInModal')?.remove();
+  if (typeof window.openTenantModal === 'function') window.openTenantModal(building, roomId);
+  else if (typeof showToast === 'function') showToast('ฟอร์มเพิ่มผู้เช่ายังไม่พร้อม', 'error');
+  else alert('ฟอร์มเพิ่มผู้เช่ายังไม่พร้อม');
+}
+window._createTenantFromReserve = _createTenantFromReserve;
 
 async function _confirmMoveIn(building, roomId) {
   const moveInDate = document.getElementById('dep-confirm-movein-date')?.value || '';
