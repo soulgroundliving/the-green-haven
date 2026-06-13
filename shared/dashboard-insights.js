@@ -330,6 +330,8 @@
     if (window._ins.behavioralEnergy) window._ins.behavioralEnergy.renderEnergyTrend();
     // Phase 3.1 Behavioral Intelligence — peak repair season (maintenanceArchive #270).
     if (window._ins.behavioralRepair) window._ins.behavioralRepair.renderRepairSeason();
+    // Behavioral Analytics Phase 1c — dead-feature detector (behavioralRollup/adoption).
+    if (window._ins.behavioralAdoption) window._ins.behavioralAdoption.renderAdoption();
     window._ins.operations.renderProviderScore();
   }
   function refreshInsight(target) {
@@ -351,6 +353,7 @@
     else if (target === 'behavioralTiming') { cacheClear('engagement_ledger'); window._ins.behavioralTiming.renderTimingHeatmap(); }
     else if (target === 'energyPattern') { cacheClear('behavioral_energy'); window._ins.behavioralEnergy.renderEnergyTrend(); }
     else if (target === 'repairSeason') { cacheClear('behavioral_repair'); window._ins.behavioralRepair.renderRepairSeason(); }
+    else if (target === 'behavioralAdoption') { cacheClear('behavioral_adoption'); window._ins.behavioralAdoption.renderAdoption(); }
     else if (target === 'petPatterns') { cacheClear('behavioral_pets'); window._ins.behavioralPets.renderPetPatterns(); }
     else if (target === 'operations') { cacheClear('ops_insights'); window._ins.operations.renderOperationsInsights(); }
     else if (target === 'meterSpike') { cacheClear('meter_spike'); window._ins.operations.renderMeterSpike(); }
