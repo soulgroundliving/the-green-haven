@@ -229,6 +229,7 @@ function renderDepositsPage() {
         <div>
           <div style="font-weight:700;color:#334435;font-size:var(--fs-md);">ห้อง ${r.roomId} <span style="font-size:11px;color:#9ca3af;font-weight:400;">${r.building}</span></div>
           ${_prospectLabel(r.prospect) ? `<div style="font-size:var(--fs-sm);color:#1e40af;font-weight:600;margin-top:2px;">👤 ${_prospectLabel(r.prospect)}</div>` : ''}
+          ${_prospectContact(r.prospect) ? `<div style="font-size:10px;color:#6b7280;margin-top:1px;">${_prospectContact(r.prospect)}</div>` : ''}
           <div style="font-size:var(--fs-sm);color:${DashColors.TEXT_SECONDARY};margin-top:3px;">${isReserved ? 'คาดย้ายเข้า' : 'รับเมื่อ'}: ${_fmtDepDate(isReserved ? r.expectedMoveInDate : r.receivedAt)} · ${statusBadge(r.status)}${(phase === 'holding' || isReserved) && depDue > 0 ? ` <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">ค้างมัดจำ ${fmt(depDue)}</span>` : ''}</div>
           ${(r.deductions||[]).length ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};margin-top:4px;">หัก: ${(r.deductions||[]).map(d=>`${_dedDesc(d)}${d.photo?' 📎':''} (${fmt(d.amount)})`).join(', ')}</div>` : ''}
           ${r.notes ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">หมายเหตุ: ${r.notes}</div>` : ''}
@@ -517,6 +518,11 @@ function _prospectLabel(p) {
   const nick = (p.nickname || '').trim();
   return [full, nick ? `(${nick})` : ''].filter(Boolean).join(' ');
 }
+// "📞 081… · LINE: x · FB: y" from a prospect — the contact channels (kept so they don't get lost).
+function _prospectContact(p) {
+  if (!p) return '';
+  return [p.phone && `📞 ${p.phone}`, p.lineId && `LINE: ${p.lineId}`, p.facebook && `FB: ${p.facebook}`].filter(Boolean).join(' · ');
+}
 
 function showReserveDepositModal(building, roomId) {
   const existing = (building && roomId)
@@ -533,6 +539,28 @@ function showReserveDepositModal(building, roomId) {
   const bField = isAdd
     ? `<input id="dep-res-building" type="hidden" value="${building}"><div style="padding:9px 12px;background:#f3f4f6;border-radius:9px;font-size:var(--fs-sm);">${building}</div>`
     : `<select id="dep-res-building" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">${buildings.map(b => `<option value="${b}">${b}</option>`).join('')}</select>`;
+  // ว่าที่ผู้เช่า section — shown + editable in BOTH modes (fresh reserve AND ชำระเพิ่ม, pre-filled
+  // from the existing doc) so prospect contact info can be added/edited any time. _esc guards the
+  // value="" attributes against user-entered quotes/angle brackets.
+  const p = (existing && existing.prospect) || {};
+  const _esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const _inp = `width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);`;
+  const prospectSection = `
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px;">
+          <div style="font-size:11px;color:#475569;font-weight:700;margin-bottom:8px;">👤 ว่าที่ผู้เช่า (เก็บไว้กันลืม · ใช้ตอนยืนยันย้ายเข้า)</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <input id="dep-res-fname" type="text" placeholder="ชื่อ" value="${_esc(p.firstName)}" style="flex:1;min-width:0;${_inp}">
+            <input id="dep-res-lname" type="text" placeholder="นามสกุล" value="${_esc(p.lastName)}" style="flex:1;min-width:0;${_inp}">
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <input id="dep-res-nick" type="text" placeholder="ชื่อเล่น" value="${_esc(p.nickname)}" style="flex:1;min-width:0;${_inp}">
+            <input id="dep-res-phone" type="text" inputmode="tel" placeholder="เบอร์โทร" value="${_esc(p.phone)}" style="flex:1;min-width:0;${_inp}">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input id="dep-res-line" type="text" placeholder="LINE ID" value="${_esc(p.lineId)}" style="flex:1;min-width:0;${_inp}">
+            <input id="dep-res-fb" type="text" placeholder="ชื่อ Facebook" value="${_esc(p.facebook)}" style="flex:1;min-width:0;${_inp}">
+          </div>
+        </div>`;
   modal.innerHTML = `
     <div style="background:#fff;border-radius:16px;width:100%;max-width:420px;max-height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);">
       <div style="flex-shrink:0;padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
@@ -544,14 +572,9 @@ function showReserveDepositModal(building, roomId) {
         <div style="display:flex;gap:10px;margin-bottom:12px;">
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">อาคาร</label>${bField}</div>
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">ห้อง</label><select id="dep-res-room" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"><option value="">— เลือกห้อง —</option></select></div>
-        </div>
-        <div style="display:flex;gap:10px;margin-bottom:12px;">
-          <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">ชื่อ</label><input id="dep-res-fname" type="text" placeholder="ชื่อจริง" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
-          <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">นามสกุล</label><input id="dep-res-lname" type="text" placeholder="นามสกุล" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
-        </div>
-        <div style="margin-bottom:12px;">
-          <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">ชื่อเล่น</label><input id="dep-res-nick" type="text" placeholder="ไว้เรียกง่าย ๆ ตอนยืนยันย้ายเข้า" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
-        </div>
+        </div>`}
+        ${prospectSection}
+        ${isAdd ? '' : `
         <div style="display:flex;gap:10px;margin-bottom:12px;">
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">มัดจำทั้งหมด (2 เดือน)</label><input id="dep-res-amount" type="number" min="0" placeholder="บาท" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">คาดย้ายเข้า</label><input id="dep-res-movein" type="date" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
@@ -632,6 +655,16 @@ async function _saveReserveDeposit() {
   const docId = `${building}_${roomId}`;
   const existing = _depositsCache.find(r => r.building === building && r.roomId === roomId) || null;
 
+  // ว่าที่ผู้เช่า — captured/edited in both modes (fresh reserve + ชำระเพิ่ม).
+  const prospect = {
+    firstName: (document.getElementById('dep-res-fname')?.value || '').trim(),
+    lastName:  (document.getElementById('dep-res-lname')?.value || '').trim(),
+    nickname:  (document.getElementById('dep-res-nick')?.value || '').trim(),
+    phone:     (document.getElementById('dep-res-phone')?.value || '').trim(),
+    lineId:    (document.getElementById('dep-res-line')?.value || '').trim(),
+    facebook:  (document.getElementById('dep-res-fb')?.value || '').trim(),
+  };
+
   let baseDoc;
   if (ctx.isAdd) {
     if (!existing) { alert('ไม่พบรายการมัดจำเดิม'); return; }
@@ -641,11 +674,6 @@ async function _saveReserveDeposit() {
     const amount = Number(document.getElementById('dep-res-amount')?.value) || 0;
     const movein = document.getElementById('dep-res-movein')?.value || '';
     if (amount <= 0) { alert('กรุณากรอกยอดมัดจำทั้งหมด'); return; }
-    const prospect = {
-      firstName: (document.getElementById('dep-res-fname')?.value || '').trim(),
-      lastName:  (document.getElementById('dep-res-lname')?.value || '').trim(),
-      nickname:  (document.getElementById('dep-res-nick')?.value || '').trim(),
-    };
     baseDoc = {
       building, roomId, amount, status: 'reserved',
       reservedAt: new Date().toISOString(), expectedMoveInDate: movein || null,
@@ -653,6 +681,13 @@ async function _saveReserveDeposit() {
       paidSoFar: 0, payments: [], deductions: [], refundBank: '', notes: '',
       updatedAt: new Date().toISOString(),
     };
+  }
+
+  // For ชำระเพิ่ม (doc exists), persist prospect edits up-front so they stick regardless of the
+  // payment method (the ตรวจสลิป path defers the rest of the write to the CF). Only when there's data.
+  if (ctx.isAdd && Object.values(prospect).some(v => v)) {
+    try { await fs.setDoc(fs.doc(db, 'deposits', docId), { prospect, updatedAt: new Date().toISOString() }, { merge: true }); }
+    catch (e) { console.warn('[deposit] prospect merge failed:', e?.message || e); }
   }
 
   const saveBtn = document.querySelector('#reserveDepositModal [data-action="saveReserveDeposit"]');
