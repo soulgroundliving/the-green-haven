@@ -55,6 +55,7 @@ delete require.cache[require.resolve('../_billWrite.js')];
 const {
   toBE, billIdFor, moveInBoundaryYM, isBeforeMoveIn, findBillForMonth, buildCanonicalBill,
   writeCanonicalBillIdempotent, writeBillOnIssue,
+  daysInMonth, moveInDay, isMoveInMonth, proratedMoveInRent,
 } = require('../_billWrite.js');
 
 after(() => { Module._load = _origLoad; });
@@ -289,5 +290,111 @@ describe('_billWrite — writeBillOnIssue (boundary + integration)', () => {
       building: 'rooms', roomId: '15', bill: sampleBill(), tenantData: {}, nowMs: NOW_JUN_2026,
     });
     assert.equal(r.action, 'created');
+  });
+});
+
+describe('_billWrite — move-in proration helpers (pure)', () => {
+  it('daysInMonth handles 30/31-day + leap Feb', () => {
+    assert.equal(daysInMonth(202604), 30); // Apr
+    assert.equal(daysInMonth(202605), 31); // May
+    assert.equal(daysInMonth(202602), 28); // Feb 2026
+    assert.equal(daysInMonth(202802), 29); // Feb 2028 (leap)
+  });
+  it('moveInDay reads the day from the occupancy date (nested/flat), 0 when unknown', () => {
+    assert.equal(moveInDay({ lease: { moveInDate: '2026-05-15' } }), 15);
+    assert.equal(moveInDay({ moveInDate: '2026-05-01' }), 1);
+    assert.equal(moveInDay({ lease: { startDate: '2026-05-09' } }), 9);
+    assert.equal(moveInDay({}), 0);
+    assert.equal(moveInDay({ lease: { contractStart: '2026-05-09' } }), 0); // §7-BBB: never contractStart
+  });
+  it('isMoveInMonth true only for the occupancy month', () => {
+    const td = { lease: { moveInDate: '2026-05-15' } };
+    assert.equal(isMoveInMonth(td, 202605), true);
+    assert.equal(isMoveInMonth(td, 202606), false);
+    assert.equal(isMoveInMonth({}, 202605), false);
+  });
+  describe('proratedMoveInRent (rent/30 × daysOccupied, ≤5 grace, cap = 1 month)', () => {
+    it('day 15 of a 31-day month → rent/30 × 17', () => {
+      assert.equal(proratedMoveInRent(3000, 15, 202605), 1700); // 31−15+1=17 → round(100×17)
+    });
+    it('day 1 of a 30-day month → exactly full rent', () => {
+      assert.equal(proratedMoveInRent(3000, 1, 202604), 3000); // 30 days → round(100×30)
+    });
+    it('day 1 of a 31-day month → CAPPED at full rent (not 3100)', () => {
+      assert.equal(proratedMoveInRent(3000, 1, 202605), 3000); // raw 3100 → min(3000,3100)
+    });
+    it('day 26 of a 31-day month → 6 days billed', () => {
+      assert.equal(proratedMoveInRent(3000, 26, 202605), 600); // 31−26+1=6
+    });
+    it('day 27 of a 31-day month → grace (5 days ≤ 5 = free)', () => {
+      assert.equal(proratedMoveInRent(3000, 27, 202605), 0);
+    });
+    it('last day → grace (1 day = free)', () => {
+      assert.equal(proratedMoveInRent(3000, 31, 202605), 0);
+    });
+    it('unknown day (0) or zero rent → no proration', () => {
+      assert.equal(proratedMoveInRent(3000, 0, 202605), 3000);
+      assert.equal(proratedMoveInRent(0, 15, 202605), 0);
+    });
+  });
+});
+
+describe('_billWrite — buildCanonicalBill move-in proration', () => {
+  it('prorates RENT for the move-in month + adjusts total; utilities untouched', () => {
+    const b = buildCanonicalBill(sampleBill(), { tenantData: { lease: { moveInDate: '2026-05-15' } } });
+    assert.equal(b.charges.rent, 1700);
+    assert.equal(b.totalCharge, 2220);          // 3520 − (3000−1700)
+    assert.equal(b.totalAmount, 2220);
+    assert.equal(b.charges.electric.cost, 400); // untouched
+    assert.equal(b.charges.water.cost, 100);    // untouched
+    assert.equal(b.charges.trash, 20);          // untouched
+    assert.deepEqual(b.rentProration, { moveInDay: 15, daysOccupied: 17, graced: false, capped: false, fullRent: 3000, proratedRent: 1700 });
+  });
+  it('grace: a ≤5-day move-in month bills 0 rent (meter charges only)', () => {
+    const b = buildCanonicalBill(sampleBill(), { tenantData: { lease: { moveInDate: '2026-05-27' } } });
+    assert.equal(b.charges.rent, 0);
+    assert.equal(b.totalCharge, 520);           // 3520 − 3000
+    assert.equal(b.rentProration.graced, true);
+    assert.equal(b.rentProration.daysOccupied, 5);
+  });
+  it('day-1 of a 31-day month → full rent, capped flag set', () => {
+    const b = buildCanonicalBill(sampleBill(), { tenantData: { lease: { moveInDate: '2026-05-01' } } });
+    assert.equal(b.charges.rent, 3000);
+    assert.equal(b.totalCharge, 3520);
+    assert.equal(b.rentProration.capped, true);
+    assert.equal(b.rentProration.graced, false);
+  });
+  it('a NON-move-in month bills full rent with NO rentProration field', () => {
+    const b = buildCanonicalBill(sampleBill(), { tenantData: { lease: { moveInDate: '2026-01-21' } } }); // bill is month 5
+    assert.equal(b.charges.rent, 3000);
+    assert.equal(b.totalCharge, 3520);
+    assert.equal(b.rentProration, undefined);
+  });
+  it('NO tenantData → unchanged (backfill / legacy callers)', () => {
+    const b = buildCanonicalBill(sampleBill());
+    assert.equal(b.charges.rent, 3000);
+    assert.equal(b.totalCharge, 3520);
+    assert.equal(b.rentProration, undefined);
+  });
+  it('§7-BBB: a future contractStart never triggers proration', () => {
+    const b = buildCanonicalBill(sampleBill(), { tenantData: { lease: { contractStart: '2026-05-01' } } });
+    assert.equal(b.charges.rent, 3000);         // contractStart ignored → not a move-in month
+    assert.equal(b.rentProration, undefined);
+  });
+});
+
+describe('_billWrite — writeBillOnIssue prorates the move-in month', () => {
+  beforeEach(() => { resetRtdb(); });
+  const NOW_JUN_2026 = Date.UTC(2026, 5, 8);
+  it('writes a prorated rent for the move-in-month bill', async () => {
+    const r = await writeBillOnIssue({
+      building: 'rooms', roomId: '15', bill: sampleBill(),                 // month 5 / 2026-05
+      tenantData: { lease: { moveInDate: '2026-05-10' } }, nowMs: NOW_JUN_2026,
+    });
+    assert.equal(r.action, 'created');
+    const stored = rtdbStore['bills/rooms/15/TGH-256905-15'];
+    assert.equal(stored.charges.rent, 2200);    // 31−10+1=22 → round(100×22)
+    assert.equal(stored.totalCharge, 2720);     // 3520 − 800
+    assert.equal(stored.rentProration.daysOccupied, 22);
   });
 });

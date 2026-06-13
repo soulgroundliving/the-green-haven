@@ -83,17 +83,99 @@ function isBeforeMoveIn(billCeYM, boundaryYM, nowCeYM) {
   return boundaryYM > 0 && boundaryYM <= nowCeYM && billCeYM < boundaryYM;
 }
 
+// ── Move-in-month rent proration (owner FINAL spec 2026-06-13) ───────────────
+// The move-in month bills rent at a daily rate (monthlyRent/30 × days occupied),
+// with a ≤5-day grace (free) and a hard cap of one full month. Every later month
+// bills full rent. RENT ONLY — utilities/water/electric/trash always bill actual.
+
+/** Days in a CE YYYYMM month (handles leap Feb). ceYM = year*100 + month. */
+function daysInMonth(ceYM) {
+  const y = Math.floor(Number(ceYM) / 100);
+  const m = Number(ceYM) % 100;
+  if (y <= 0 || m < 1 || m > 12) return 30;             // defensive default
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();      // day 0 of next month = last day of this
+}
+
+/**
+ * Day-of-month (1–31) the tenant's occupancy starts, or 0 when unknown. Same field
+ * precedence as moveInBoundaryYM (moveInDate → startDate, NEVER contractStart §7-BBB).
+ */
+function moveInDay(tenantData) {
+  if (!tenantData) return 0;
+  const lease = tenantData.lease || {};
+  const start = lease.moveInDate || tenantData.moveInDate || lease.startDate || tenantData.startDate;
+  if (!start) return 0;
+  const d = new Date(start);
+  if (isNaN(d.getTime())) return 0;
+  return d.getUTCDate();
+}
+
+/**
+ * True when `billCeYM` (CE YYYYMM int) IS the tenant's move-in month — the only
+ * month rent is prorated. Uses the occupancy boundary; a future renewal date never
+ * counts (moveInBoundaryYM already excludes contractStart, §7-BBB).
+ */
+function isMoveInMonth(tenantData, billCeYM) {
+  const b = moveInBoundaryYM(tenantData);
+  return b > 0 && b === Number(billCeYM);
+}
+
+/**
+ * Move-in-month rent (pure). daysOccupied = daysInMonth − moveInDay + 1;
+ *   daysOccupied ≤ 5  → 0 (grace)
+ *   else              → min(monthlyRent, round(monthlyRent/30 × daysOccupied))
+ * The cap stops a day-1 move-in into a 31-day month from billing >100% of a month.
+ * Unknown day (0) or non-positive rent → full rent unchanged (no proration).
+ */
+function proratedMoveInRent(monthlyRent, day, billCeYM) {
+  const rent = Number(monthlyRent) || 0;
+  const d = Number(day) || 0;
+  if (rent <= 0 || d < 1) return rent;
+  const daysOccupied = daysInMonth(billCeYM) - d + 1;
+  if (daysOccupied <= 5) return 0;                            // ≤5-day grace → free
+  return Math.min(rent, Math.round((rent / 30) * daysOccupied)); // cap at one full month
+}
+
 /**
  * Build the canonical RTDB bill object from a computeBill() result.
  * Pure — no I/O. `bill` is the `_billFlex.computeBill` output (year = 4-digit BE).
+ *
+ * `tenantData` (optional): when supplied AND the bill is FOR the tenant's move-in
+ * month, the RENT line is daily-prorated (owner FINAL spec 2026-06-13) — utilities,
+ * water, electric + trash always bill actual. Omit it (or for any later month) and the
+ * bill is byte-identical to the pre-proration behaviour (full rent). The live path
+ * (writeBillOnIssue ← notifyTenantOnMeterUpload) passes it; the backfill tool does not.
  */
-function buildCanonicalBill(bill, { invoiceNo = null, status = 'pending', source = 'cf:notifyTenantOnMeterUpload', generatedBy = 'meter_upload_cf', meterDocId = null } = {}) {
+function buildCanonicalBill(bill, { invoiceNo = null, status = 'pending', source = 'cf:notifyTenantOnMeterUpload', generatedBy = 'meter_upload_cf', meterDocId = null, tenantData = null } = {}) {
   const beYear = toBE(bill.year);
   const ceYear = beYear - 543;
   const month = Number(bill.month);
   const mm = String(month).padStart(2, '0');
   const nowIso = new Date().toISOString();
-  return {
+  const billCeYM = ceYear * 100 + month;
+
+  // ── Move-in-month rent proration (RENT only) ───────────────────────────────
+  const fullRent = Number(bill.rent) || 0;
+  let rentValue = fullRent;
+  let rentProration = null;
+  if (tenantData && isMoveInMonth(tenantData, billCeYM)) {
+    const day = moveInDay(tenantData);
+    const daysOccupied = daysInMonth(billCeYM) - day + 1;
+    rentValue = proratedMoveInRent(fullRent, day, billCeYM);
+    rentProration = {
+      moveInDay: day,
+      daysOccupied,
+      graced: daysOccupied <= 5,                                                  // ≤5 days → free
+      capped: daysOccupied > 5 && Math.round((fullRent / 30) * daysOccupied) > fullRent, // day-1 of a 31-day month etc.
+      fullRent,
+      proratedRent: rentValue,
+    };
+  }
+  // Proration only lowers (or holds) rent → adjust the bill total by the delta so the
+  // metered charges are never disturbed. computeBill's totalCharge included full rent.
+  const totalCharge = (Number(bill.totalCharge) || 0) + (rentValue - fullRent);
+
+  const obj = {
     billId: billIdFor(beYear, month, bill.room),
     room: String(bill.room),
     building: bill.building,
@@ -102,10 +184,10 @@ function buildCanonicalBill(bill, { invoiceNo = null, status = 'pending', source
     status,
     billDate: `${ceYear}-${mm}-01`,            // first of the bill's own month (CE), deterministic
     dueDate: bill.dueDate || null,
-    totalCharge: Number(bill.totalCharge) || 0,
-    totalAmount: Number(bill.totalCharge) || 0,
+    totalCharge,
+    totalAmount: totalCharge,
     charges: {
-      rent: Number(bill.rent) || 0,
+      rent: rentValue,
       rentLabel: 'ค่าเช่าห้อง',
       electric: {
         cost: Number(bill.eCost) || 0, old: Number(bill.eOld) || 0,
@@ -132,6 +214,8 @@ function buildCanonicalBill(bill, { invoiceNo = null, status = 'pending', source
     createdAt: nowIso,
     source,
   };
+  if (rentProration) obj.rentProration = rentProration; // self-describing audit of the move-in-month rent
+  return obj;
 }
 
 /**
@@ -195,6 +279,7 @@ async function writeCanonicalBillIdempotent(rtdb, { building, roomId, billObject
       updatedAt: new Date().toISOString(),
     };
     if (billObject.invoiceNo) update.invoiceNo = billObject.invoiceNo;  // don't clobber a real number with null
+    if (billObject.rentProration) update.rentProration = billObject.rentProration; // keep move-in-month metadata in sync on a meter correction
     await roomRef.child(match.id).update(update);
     return { action: 'updated', billId: match.id };
   }
@@ -226,7 +311,7 @@ async function writeBillOnIssue({ building, roomId, bill, invoiceNo = null, tena
     return { action: 'skipped_before_movein', billId: billIdFor(beYear, month, bill.room) };
   }
 
-  const billObject = buildCanonicalBill(bill, { invoiceNo, status, meterDocId });
+  const billObject = buildCanonicalBill(bill, { invoiceNo, status, meterDocId, tenantData });
   return writeCanonicalBillIdempotent(admin.database(), { building, roomId, billObject });
 }
 
@@ -235,6 +320,10 @@ module.exports = {
   billIdFor,
   moveInBoundaryYM,
   isBeforeMoveIn,
+  daysInMonth,
+  moveInDay,
+  isMoveInMonth,
+  proratedMoveInRent,
   findBillForMonth,
   buildCanonicalBill,
   writeCanonicalBillIdempotent,
