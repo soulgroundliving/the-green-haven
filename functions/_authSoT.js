@@ -198,8 +198,12 @@ async function resolveTenantClaims({ context, firestore, HttpsError }) {
       const peopleSnap = await firestore.collection('people').doc(tenantId).get();
       if (peopleSnap.exists) {
         const p = peopleSnap.data() || {};
-        const pBuilding = String(p.building || '');
-        const pRoom     = String(p.room     || p.roomId || '');
+        // People docs store currentBuilding/currentRoom (+ activeBuilding/activeRoom),
+        // written by transferTenant et al. — never a bare `building`/`room`. Read the
+        // canonical names first; bare building/room/roomId are legacy fallbacks only.
+        // Without this, the §7-Z claim-strip fallback never resolved (#2, 2026-06-13).
+        const pBuilding = String(p.currentBuilding || p.activeBuilding || p.building || '');
+        const pRoom     = String(p.currentRoom || p.activeRoom || p.room || p.roomId || '');
         if (pBuilding && pRoom) {
           building = pBuilding;
           roomId   = pRoom;

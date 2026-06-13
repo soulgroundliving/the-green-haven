@@ -367,8 +367,10 @@ describe('resolveTenantClaims', () => {
     assert.equal(r.roomId, '15');
   });
 
-  it('people-doc path: claims missing but tenantId valid', async () => {
-    peopleDocs['t-15'] = { building: 'rooms', room: '15', name: 'Tenant 15' };
+  it('people-doc path: canonical currentBuilding/currentRoom (real shape — #2 regression)', async () => {
+    // Real people docs store currentBuilding/currentRoom (transferTenant writer),
+    // NOT a bare building/room. Pre-#2 this returned 'none' → §7-Z fallback dead.
+    peopleDocs['t-15'] = { currentBuilding: 'rooms', currentRoom: '15', name: 'Tenant 15' };
     const r = await resolveTenantClaims({
       context: ctx({ uid: 'line:U15', tenantId: 't-15' }),
       firestore: firestoreStub, HttpsError,
@@ -378,7 +380,18 @@ describe('resolveTenantClaims', () => {
     assert.equal(r.roomId, '15');
   });
 
-  it('people-doc path accepts roomId as alt field name', async () => {
+  it('people-doc path: activeBuilding/activeRoom fallback', async () => {
+    peopleDocs['t-15'] = { activeBuilding: 'nest', activeRoom: 'N101' };
+    const r = await resolveTenantClaims({
+      context: ctx({ uid: 'line:U', tenantId: 't-15' }),
+      firestore: firestoreStub, HttpsError,
+    });
+    assert.equal(r.resolvedVia, 'people-doc');
+    assert.equal(r.building, 'nest');
+    assert.equal(r.roomId, 'N101');
+  });
+
+  it('people-doc path: legacy bare building/roomId still accepted (back-compat)', async () => {
     peopleDocs['t-15'] = { building: 'nest', roomId: 'N101' };
     const r = await resolveTenantClaims({
       context: ctx({ uid: 'line:U', tenantId: 't-15' }),
