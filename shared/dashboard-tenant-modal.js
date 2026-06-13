@@ -154,6 +154,30 @@ function openTenantModal(building, roomId) {
   const evEl = document.getElementById('modalTenantEmailVerified');
   if (evEl) evEl.textContent = tenant.email ? (tenant.emailVerified ? '✅ ยืนยันแล้ว' : '(ยังไม่ยืนยัน)') : '';
   document.getElementById('modalTenantLicensePlate').value = tenant.licensePlate || '';
+
+  // #1 — pre-fill a NEW tenant from the room's reserved-deposit ว่าที่ผู้เช่า so the admin doesn't
+  // re-type ชื่อ/เบอร์/LINE captured at reserve time. Vacant room only; fills empty fields only;
+  // async so it never blocks the modal; reads deposits/{b}_{r} directly (works even if the deposits
+  // page wasn't opened this session).
+  if (!isOccupied) {
+    (async () => {
+      try {
+        const fsx = window.firebase?.firestoreFunctions, dbx = window.firebase?.firestore?.();
+        if (!fsx || !dbx) return;
+        const snap = await fsx.getDoc(fsx.doc(fsx.collection(dbx, 'deposits'), `${building}_${roomId}`));
+        if (!snap.exists()) return;
+        const dep = snap.data() || {};
+        if (dep.status !== 'reserved' || !dep.prospect) return;
+        const pr = dep.prospect; let filled = false;
+        const setIfEmpty = (id, v) => { const el = document.getElementById(id); if (el && !el.value && v) { el.value = v; filled = true; } };
+        setIfEmpty('modalTenantFirstName', pr.firstName);
+        setIfEmpty('modalTenantLastName', pr.lastName);
+        setIfEmpty('modalTenantPhone', pr.phone);
+        setIfEmpty('modalTenantLineID', pr.lineId);
+        if (filled && typeof showToast === 'function') showToast('👤 เติมข้อมูลจากว่าที่ผู้เช่า (มัดจำ) ให้แล้ว — ตรวจก่อนบันทึก');
+      } catch (_) {}
+    })();
+  }
   // Normalize anything (full ISO from renewLease/transferTenant, Date object,
   // YYYY-MM-DD already, or empty) to YYYY-MM-DD — <input type="date"> silently
   // rejects values it can't parse, leaving the field blank. renewLease.js +
