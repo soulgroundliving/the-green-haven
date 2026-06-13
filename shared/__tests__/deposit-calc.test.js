@@ -158,3 +158,98 @@ describe('DepositCalc — PromptPay refund target (Slice C follow-up)', () => {
     assert.equal(payload.slice(-4), (c & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'), 'appended CRC matches body');
   });
 });
+
+describe('DepositCalc — depositPhase (pre-move-in lifecycle, Phase 1)', () => {
+  it('legacy doc with no status reads as holding (§7-L)', () => {
+    assert.equal(D.depositPhase({ amount: 3000 }), 'holding');
+    assert.equal(D.depositPhase(null), 'holding');
+  });
+
+  it('returns the explicit lifecycle state', () => {
+    assert.equal(D.depositPhase({ status: 'reserved' }), 'reserved');
+    assert.equal(D.depositPhase({ status: 'holding' }), 'holding');
+    assert.equal(D.depositPhase({ status: 'returned' }), 'returned');
+    assert.equal(D.depositPhase({ status: 'forfeited' }), 'forfeited');
+  });
+
+  it('unknown status falls back to holding (defensive)', () => {
+    assert.equal(D.depositPhase({ status: 'weird' }), 'holding');
+  });
+});
+
+describe('DepositCalc — recordDepositPayment (2-chunk accrual)', () => {
+  it('first chunk (จอง 500, cash) on a fresh reserved doc → paidSoFar 500', () => {
+    const dep = { amount: 8000, status: 'reserved', paidSoFar: 0 };
+    const patch = D.recordDepositPayment(dep, { label: 'จอง', amount: 500, method: 'cash' });
+    assert.equal(patch.paidSoFar, 500);
+    assert.equal(patch.payments.length, 1);
+    assert.equal(patch.payments[0].method, 'cash');
+    assert.equal(patch.payments[0].label, 'จอง');
+  });
+
+  it('second chunk (slip) accrues on top of the first → fully paid', () => {
+    const dep = { amount: 8000, status: 'reserved', paidSoFar: 500, payments: [{ label: 'จอง', amount: 500, method: 'cash' }] };
+    const patch = D.recordDepositPayment(dep, { label: 'มัดจำ', amount: 7500, method: 'slip', slipPath: 'deposits/nest/N101/payment_1.jpg' });
+    assert.equal(patch.paidSoFar, 8000);
+    assert.equal(patch.payments.length, 2);
+    assert.equal(patch.payments[1].slipPath, 'deposits/nest/N101/payment_1.jpg');
+  });
+
+  it('absent paidSoFar in the recording flow means 0, NOT "fully paid"', () => {
+    const patch = D.recordDepositPayment({ amount: 8000, status: 'reserved' }, { amount: 500 });
+    assert.equal(patch.paidSoFar, 500);
+  });
+
+  it('overpay clamps paidSoFar to the deposit amount', () => {
+    const patch = D.recordDepositPayment({ amount: 8000, status: 'reserved', paidSoFar: 7500 }, { amount: 9999 });
+    assert.equal(patch.paidSoFar, 8000);
+  });
+
+  it('carries lumpRef + SlipOK txid through (lump slip verified via SlipOK)', () => {
+    const patch = D.recordDepositPayment({ amount: 8000, status: 'reserved', paidSoFar: 0 }, { amount: 8000, method: 'slip', lumpRef: 'LUMP-2026-06-13-A', txid: 'SLIPOK-TX-123' });
+    assert.equal(patch.payments[0].lumpRef, 'LUMP-2026-06-13-A');
+    assert.equal(patch.payments[0].txid, 'SLIPOK-TX-123');
+    assert.equal(patch.payments[0].method, 'slip');
+  });
+
+  it('does NOT mutate the input dep (immutable)', () => {
+    const dep = { amount: 8000, status: 'reserved', paidSoFar: 0, payments: [] };
+    D.recordDepositPayment(dep, { amount: 500 });
+    assert.equal(dep.paidSoFar, 0);
+    assert.equal(dep.payments.length, 0);
+  });
+
+  it('defaults method to slip and label to มัดจำ', () => {
+    const patch = D.recordDepositPayment({ amount: 8000, status: 'reserved', paidSoFar: 0 }, { amount: 100 });
+    assert.equal(patch.payments[0].method, 'slip');
+    assert.equal(patch.payments[0].label, 'มัดจำ');
+  });
+});
+
+describe('DepositCalc — splitLumpCash (multi-room single payment)', () => {
+  it('valid when allocations sum to the lump total', () => {
+    const r = D.splitLumpCash(16000, [
+      { building: 'nest', roomId: 'N101', amount: 8000 },
+      { building: 'nest', roomId: 'N102', amount: 8000 },
+    ]);
+    assert.equal(r.valid, true);
+    assert.equal(r.allocated, 16000);
+    assert.equal(r.remainder, 0);
+  });
+
+  it('invalid when the split does not add up to the total', () => {
+    const r = D.splitLumpCash(16000, [{ building: 'nest', roomId: 'N101', amount: 8000 }]);
+    assert.equal(r.valid, false);
+    assert.equal(r.remainder, 8000);
+  });
+
+  it('tolerates ฿1 rounding', () => {
+    assert.equal(D.splitLumpCash(10000, [{ building: 'rooms', roomId: '7', amount: 9999.5 }]).valid, true);
+  });
+
+  it('invalid: a row missing room, an empty list, or a non-positive amount', () => {
+    assert.equal(D.splitLumpCash(5000, [{ building: 'nest', amount: 5000 }]).valid, false);
+    assert.equal(D.splitLumpCash(0, []).valid, false);
+    assert.equal(D.splitLumpCash(5000, [{ building: 'nest', roomId: 'N1', amount: 0 }]).valid, false);
+  });
+});

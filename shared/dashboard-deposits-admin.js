@@ -132,6 +132,11 @@ async function _reconcileDepositForRoom(fs, db, building, d, depSnap) {
   }
   const dd = depSnap.data() || {};
 
+  // Pre-move-in lifecycle (Phase 1): a 'reserved' (deposit taken before move-in,
+  // not guaranteed to convert) or 'forfeited' (no-show) doc is admin-managed — the
+  // SSoT seed must NEVER overwrite it. confirmMoveIn (Phase 2 CF) flips reserved→holding.
+  if (dd.status === 'reserved' || dd.status === 'forfeited') return;
+
   // Backfill tenantId onto a holding doc that predates tenant-awareness.
   if (dd.status !== 'returned' && !dd.tenantId && curTenantId) {
     await fs.setDoc(fs.doc(db, 'deposits', docId), { tenantId: curTenantId }, { merge: true });
@@ -167,32 +172,40 @@ function renderDepositsPage() {
   if (filterBuilding !== 'all') rows = rows.filter(r => r.building === filterBuilding);
   if (filterStatus   !== 'all') rows = rows.filter(r => r.status === filterStatus);
 
-  const holding  = _depositsCache.filter(r => r.status !== 'returned').length;
-  const returned = _depositsCache.filter(r => r.status === 'returned').length;
-  const total    = _depositsCache.filter(r => r.status !== 'returned').reduce((s, r) => s + (Number(r.amount) || 0), 0);
-  const outstandingDue = _depositsCache.filter(r => r.status !== 'returned')
+  const _phase = r => window.DepositCalc ? window.DepositCalc.depositPhase(r) : (r.status === 'returned' ? 'returned' : 'holding');
+  const holding  = _depositsCache.filter(r => _phase(r) === 'holding').length;
+  const reserved = _depositsCache.filter(r => _phase(r) === 'reserved').length;
+  const returned = _depositsCache.filter(r => _phase(r) === 'returned').length;
+  const total    = _depositsCache.filter(r => _phase(r) === 'holding').reduce((s, r) => s + (Number(r.amount) || 0), 0);
+  const outstandingDue = _depositsCache.filter(r => _phase(r) === 'holding' || _phase(r) === 'reserved')
     .reduce((s, r) => s + (window.DepositCalc ? window.DepositCalc.depositDue(r) : 0), 0);
   const setEl = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
   setEl('dep-kpi-holding',  String(holding));
+  setEl('dep-kpi-reserved', String(reserved));
   setEl('dep-kpi-returned', String(returned));
   setEl('dep-kpi-total', '฿' + total.toLocaleString());
   setEl('dep-kpi-due', outstandingDue > 0 ? 'ค้างรับ ฿' + outstandingDue.toLocaleString() : '');
 
   const list = document.getElementById('depList');
   if (!list) return;
+  const createBtn = `<div style="margin-bottom:12px;display:flex;justify-content:flex-end;"><button data-action="showReserveDepositModal" style="padding:7px 14px;background:#1e40af;color:#fff;border:none;border-radius:9px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">+ บันทึกมัดจำก่อนย้ายเข้า</button></div>`;
   if (!rows.length) {
-    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">ไม่มีรายการมัดจำ</div>';
+    list.innerHTML = createBtn + '<div style="text-align:center;padding:2rem;color:var(--text-muted);">ไม่มีรายการมัดจำ</div>';
     return;
   }
   const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
-  const statusBadge = s => s === 'returned'
-    ? '<span style="background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;">✅ คืนแล้ว</span>'
-    : '<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;">💰 ถือมัดจำ</span>';
+  const statusBadge = s =>
+      s === 'returned'  ? '<span style="background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;">✅ คืนแล้ว</span>'
+    : s === 'reserved'  ? '<span style="background:#dbeafe;color:#1e40af;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;">🕒 รอย้ายเข้า</span>'
+    : s === 'forfeited' ? '<span style="background:#f3f4f6;color:#6b7280;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;">⛔ ริบแล้ว</span>'
+    :                     '<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;">💰 ถือมัดจำ</span>';
 
-  list.innerHTML = rows.map(r => {
+  list.innerHTML = createBtn + rows.map(r => {
     const deductTotal = _dedTotal(r.deductions);
     const finalBillTotal = Number(r.finalBillTotal) || 0; // absorbed final/unpaid bill (spec §1.3)
     const isReturned = r.status === 'returned';
+    const phase = window.DepositCalc ? window.DepositCalc.depositPhase(r) : (isReturned ? 'returned' : 'holding');
+    const isReserved = phase === 'reserved';
     const hasEvidence = (r.deductions || []).some(d => d.photo) || !!r.refundSlip; // any stored damage photo / refund slip
     const hasHistory = (Number(r.historyCount) || 0) > 0; // archived prior tenancies (Item B step 4) — viewable on holding rooms too
     const evLabel = (isReturned && hasEvidence ? 'ดูหลักฐาน' : 'ดูประวัติ') + (hasHistory ? ` (${r.historyCount})` : '');
@@ -203,16 +216,17 @@ function renderDepositsPage() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
         <div>
           <div style="font-weight:700;color:#334435;font-size:var(--fs-md);">ห้อง ${r.roomId} <span style="font-size:11px;color:#9ca3af;font-weight:400;">${r.building}</span></div>
-          <div style="font-size:var(--fs-sm);color:${DashColors.TEXT_SECONDARY};margin-top:3px;">รับเมื่อ: ${_fmtDepDate(r.receivedAt)} · ${statusBadge(r.status)}${!isReturned && depDue > 0 ? ` <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">ค้างมัดจำ ${fmt(depDue)}</span>` : ''}</div>
+          <div style="font-size:var(--fs-sm);color:${DashColors.TEXT_SECONDARY};margin-top:3px;">${isReserved ? 'คาดย้ายเข้า' : 'รับเมื่อ'}: ${_fmtDepDate(isReserved ? r.expectedMoveInDate : r.receivedAt)} · ${statusBadge(r.status)}${(phase === 'holding' || isReserved) && depDue > 0 ? ` <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">ค้างมัดจำ ${fmt(depDue)}</span>` : ''}</div>
           ${(r.deductions||[]).length ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};margin-top:4px;">หัก: ${(r.deductions||[]).map(d=>`${_dedDesc(d)}${d.photo?' 📎':''} (${fmt(d.amount)})`).join(', ')}</div>` : ''}
           ${r.notes ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">หมายเหตุ: ${r.notes}</div>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-size:1.15rem;font-weight:800;color:#334435;">${fmt(r.amount)}</div>
-          ${!isReturned && depDue > 0 ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};">ชำระแล้ว ${fmt(depPaid)} · ค้าง <strong style="color:#dc2626;">${fmt(depDue)}</strong></div>` : ''}
+          ${(phase === 'holding' || isReserved) && depDue > 0 ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};">ชำระแล้ว ${fmt(depPaid)} · ค้าง <strong style="color:#dc2626;">${fmt(depDue)}</strong></div>` : ''}
           ${(deductTotal || finalBillTotal) ? `${finalBillTotal ? `<div style="font-size:11px;color:#dc2626;">บิลเดือนสุดท้าย ${fmt(finalBillTotal)}</div>` : ''}${deductTotal ? `<div style="font-size:11px;color:#dc2626;">หักเสียหาย ${fmt(deductTotal)}</div>` : ''}<div style="font-size:var(--fs-sm);font-weight:700;color:#059669;">คืนสุทธิ ${fmt(netRefund)}</div>` : ''}
           <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap;">
-            ${!isReturned ? `<button data-action="showReturnDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">บันทึกคืนมัดจำ</button>` : ''}
+            ${phase === 'holding' ? `<button data-action="showReturnDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">บันทึกคืนมัดจำ</button>` : ''}
+            ${isReserved ? `<button data-action="showReserveDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#1e40af;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">💵 บันทึกชำระเพิ่ม</button>` : ''}
             ${(isReturned && hasEvidence) || hasHistory ? `<button data-action="showDepositEvidence" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#eef2f6;color:#334435;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📎 ${evLabel}</button>` : ''}
             ${isReturned ? `<button data-action="exportDepositReceipt" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📄 ใบรับเงิน</button>` : ''}
           </div>
@@ -472,6 +486,130 @@ async function _saveDepositInstallment(building, roomId) {
   }
 }
 window._saveDepositInstallment = _saveDepositInstallment;
+
+// ── Pre-move-in deposit (Phase 1): record a deposit TAKEN BEFORE move-in ─────
+// A 'reserved' deposit is money held before the tenant is guaranteed to move in
+// (จอง ฿500 → ส่วนที่เหลือ). Admin-recorded; NOT seeded from the tenant SSoT (the
+// tenant doc may not exist yet). confirmMoveIn (Phase 2 CF) flips it to 'holding';
+// a no-show is forfeited (Phase 2). Slip/cash evidence only here — SlipOK
+// verification of a slip is the Phase 2 verifyDepositSlip CF. No args = create a
+// new reserved deposit; (building, roomId) = record a further chunk on an existing one.
+function showReserveDepositModal(building, roomId) {
+  const existing = (building && roomId)
+    ? _depositsCache.find(r => r.building === building && r.roomId === roomId) : null;
+  const isAdd = !!existing;
+  const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
+  const due = isAdd && window.DepositCalc ? window.DepositCalc.depositDue(existing) : 0;
+  const buildings = (window.BuildingRegistry?.list?.() || [{ id: 'rooms' }, { id: 'nest' }]).map(b => b.id);
+
+  document.getElementById('reserveDepositModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'reserveDepositModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  const bField = isAdd
+    ? `<input id="dep-res-building" type="hidden" value="${building}"><div style="padding:9px 12px;background:#f3f4f6;border-radius:9px;font-size:var(--fs-sm);">${building}</div>`
+    : `<select id="dep-res-building" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">${buildings.map(b => `<option value="${b}">${b}</option>`).join('')}</select>`;
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:420px;max-height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);">
+      <div style="flex-shrink:0;padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
+        <h3 style="margin:0;font-size:1.05rem;color:#334435;font-weight:800;">🕒 ${isAdd ? 'บันทึกชำระมัดจำเพิ่ม' : 'บันทึกมัดจำก่อนย้ายเข้า'}</h3>
+        <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">${isAdd ? `ห้อง ${roomId} · ${building} · ค้าง <strong style="color:${due > 0 ? '#dc2626' : '#059669'};">${fmt(due)}</strong>` : 'มัดจำที่รับไว้ก่อนผู้เช่าย้ายเข้าจริง (ยังไม่การันตี)'}</div>
+      </div>
+      <div style="flex:1 1 auto;overflow-y:auto;padding:16px 22px;">
+        ${isAdd ? '' : `
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">อาคาร</label>${bField}</div>
+          <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">ห้อง</label><input id="dep-res-room" type="text" placeholder="เช่น N101" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">มัดจำทั้งหมด (2 เดือน)</label><input id="dep-res-amount" type="number" min="0" placeholder="บาท" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
+          <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">คาดย้ายเข้า</label><input id="dep-res-movein" type="date" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
+        </div>`}
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;">
+          <div style="font-size:11px;color:#1e40af;font-weight:700;margin-bottom:8px;">บันทึกการชำระ${isAdd ? '' : ' (ก้อนแรก เช่น จอง ฿500)'}</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <input id="dep-res-pay-label" type="text" value="${isAdd ? 'มัดจำ' : 'จอง'}" style="width:84px;flex-shrink:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;">
+            <input id="dep-res-pay-amount" type="number" min="0" placeholder="บาท" value="${isAdd ? '' : '500'}" style="flex:1;min-width:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;">
+            <select id="dep-res-pay-method" style="width:84px;flex-shrink:0;padding:8px 6px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;"><option value="cash">เงินสด</option><option value="slip">สลิป</option></select>
+          </div>
+          <input id="dep-res-pay-slip" type="file" accept="image/*,application/pdf" style="width:100%;font-size:10px;font-family:inherit;color:#6b7280;">
+          <div style="font-size:10px;color:#9ca3af;margin-top:6px;">📎 สลิป = เก็บเป็นหลักฐาน (ตรวจ SlipOK ขั้น Phase 2)</div>
+        </div>
+      </div>
+      <div style="flex-shrink:0;display:flex;gap:10px;padding:14px 22px;border-top:1px solid #eef0ee;">
+        <button data-action="closeReserveDepositModal" style="flex:1;padding:11px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">ยกเลิก</button>
+        <button data-action="saveReserveDeposit" style="flex:2;padding:11px;background:#1e40af;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">✅ บันทึก</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  window._depReserveCtx = { isAdd, building: building || '', roomId: roomId || '' };
+}
+window.showReserveDepositModal = showReserveDepositModal;
+
+async function _saveReserveDeposit() {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  const ctx = window._depReserveCtx || { isAdd: false };
+  const D = window.DepositCalc;
+
+  const building = ctx.isAdd ? ctx.building : (document.getElementById('dep-res-building')?.value || '').trim();
+  const roomId   = ctx.isAdd ? ctx.roomId   : (document.getElementById('dep-res-room')?.value || '').trim();
+  if (!building || !roomId) { alert('กรุณาเลือกอาคารและกรอกห้อง'); return; }
+
+  const payLabel  = (document.getElementById('dep-res-pay-label')?.value || 'มัดจำ').trim();
+  const payAmount = Number(document.getElementById('dep-res-pay-amount')?.value) || 0;
+  const payMethod = document.getElementById('dep-res-pay-method')?.value === 'slip' ? 'slip' : 'cash';
+  const slipFile  = document.getElementById('dep-res-pay-slip')?.files?.[0] || null;
+  if (payAmount <= 0) { alert('กรุณากรอกจำนวนเงินที่ชำระ'); return; }
+
+  const docId = `${building}_${roomId}`;
+  const existing = _depositsCache.find(r => r.building === building && r.roomId === roomId) || null;
+
+  let baseDoc;
+  if (ctx.isAdd) {
+    if (!existing) { alert('ไม่พบรายการมัดจำเดิม'); return; }
+    baseDoc = existing;
+  } else {
+    if (existing) { alert('ห้องนี้มีรายการมัดจำอยู่แล้ว — ใช้ปุ่ม "บันทึกชำระเพิ่ม" บนการ์ดห้องนั้น'); return; }
+    const amount = Number(document.getElementById('dep-res-amount')?.value) || 0;
+    const movein = document.getElementById('dep-res-movein')?.value || '';
+    if (amount <= 0) { alert('กรุณากรอกยอดมัดจำทั้งหมด'); return; }
+    baseDoc = {
+      building, roomId, amount, status: 'reserved',
+      reservedAt: new Date().toISOString(), expectedMoveInDate: movein || null,
+      paidSoFar: 0, payments: [], deductions: [], refundBank: '', notes: '',
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  const saveBtn = document.querySelector('#reserveDepositModal [data-action="saveReserveDeposit"]');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'กำลังบันทึก…'; }
+
+  // Slip stored as evidence (Phase 1); SlipOK verification = Phase 2 verifyDepositSlip CF.
+  let slipPath = '';
+  if (payMethod === 'slip' && slipFile) {
+    try { slipPath = await _uploadDepositFile(building, roomId, slipFile, 'payment'); }
+    catch (e) { console.warn('[deposit] payment slip upload failed:', e?.message || e); }
+  }
+
+  const patch = D
+    ? D.recordDepositPayment(baseDoc, { label: payLabel, amount: payAmount, method: payMethod, slipPath })
+    : { paidSoFar: (Number(baseDoc.paidSoFar) || 0) + payAmount, payments: (baseDoc.payments || []).concat([{ label: payLabel, amount: payAmount, method: payMethod }]) };
+
+  try {
+    const write = ctx.isAdd
+      ? { paidSoFar: patch.paidSoFar, payments: patch.payments, updatedAt: new Date().toISOString() }
+      : { ...baseDoc, paidSoFar: patch.paidSoFar, payments: patch.payments };
+    await fs.setDoc(fs.doc(db, 'deposits', docId), write, { merge: true });
+    document.getElementById('reserveDepositModal')?.remove();
+    if (typeof showToast === 'function') showToast(ctx.isAdd ? '✅ บันทึกชำระมัดจำเพิ่มแล้ว' : '✅ บันทึกมัดจำก่อนย้ายเข้าแล้ว');
+  } catch (e) {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✅ บันทึก'; }
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  }
+}
+window._saveReserveDeposit = _saveReserveDeposit;
 
 async function _saveDepositReturn(building, roomId) {
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
