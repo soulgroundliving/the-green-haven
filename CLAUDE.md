@@ -6,7 +6,7 @@ Loaded at every session start. Overrides any default behavior — follow exactly
 
 Two docs auto-load at session start; they are **complementary, not duplicates**:
 
-- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-pattern STUBS A-LLL** (recognise + rule + detection grep — auto-load every session). Full incident/code/debugging-signature for each lives in `tasks/lessons_antipatterns.md` (repo-committed, on-demand) — the two-tier split keeps per-session context lean while the detail travels with the repo.
+- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-pattern STUBS A-MMM** (recognise + rule + detection grep — auto-load every session). Full incident/code/debugging-signature for each lives in `tasks/lessons_antipatterns.md` (repo-committed, on-demand) — the two-tier split keeps per-session context lean while the detail travels with the repo.
 - **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, archive.
 
 **Boundary rule for new content:**
@@ -542,6 +542,12 @@ Each pattern cost 2–5 sessions to debug. Check the relevant one BEFORE writing
 **Rule:** `recordChecklistConsent` is fire-and-forget where nothing downstream gates on it (kindness/reputation — keep those). But where a CF server-gates on the consent doc existing (`upsertPetProfile` reads `consents/{tid}_pet_profile_v1` → `failed-precondition` if absent), the consent write MUST be `await`ed BEFORE the gated call — else the publish races the write and the pet stays unpublished.
 **Detect:** `grep -rn "recordChecklistConsent" shared/*.js` (awaited or not?) × `grep -rln "consents/" functions/` (read as a gate?). Tripwire: `npm run preview:pet-social` INV2. Family: §7-Z, §7-FF, §7-KK, §7-DD.
 ↳ #10 pet publish (`afc00c0`) → `tasks/lessons_antipatterns.md` §LLL
+
+### MMM. Two auth gates with mismatched persistence lifetimes bounce a logged-in user — one durable source of truth, ephemeral caches re-hydrate
+**Rule:** a page guarded by TWO independent auth checks with different storage lifetimes bounces an authed user whenever the shorter-lived one lapses. dashboard had Gate 1 (Firebase Auth, IndexedDB — persistent) + Gate 2 (`checkAuthentication` → `SecurityUtils.getSecureSession`, sessionStorage **2h TTL / dies on tab close**) → Firebase still authed but sessionStorage gone → bounced the admin to `/login` (intermittent; incognito fine = fresh in-session login). Make the DURABLE check the source of truth (Firebase admin **custom claim** — server-issued, matches Firestore rules); the ephemeral session is a UI cache that **re-hydrates** from it, never independently redirects.
+**Also (cost 2 failed fixes):** `window.firebaseReady` ≠ auth-state RESTORED (only means the SDK objects exist); `auth.authStateReady` may be ABSENT in a given SDK build → a synchronous `auth.currentUser` read races the restore (null → false bounce). Wait for **`onAuthStateChanged`** to fire with the user (the only reliable restore signal — same as the §7-VV gate), with a timeout cap.
+**Detect:** a page with >1 redirect-to-login from different auth sources — `grep -n "getSecureSession\|onAuthStateChanged\|currentUser\|/login" dashboard.html`. Family: §7-VV, §7-A/U/Z/HH (auth/claims timing), §7-MM (stale nav-cache masked the live verify), §7-F (the incognito+after-deploy+main-browser observation cracked it after 2 wrong guesses).
+↳ login→dashboard flap, 3 fix iterations (#359→#361) + empirical-verify recipe → `tasks/lessons_antipatterns.md` §MMM
 
 ## 6. Cross-references — where to look in MEMORY.md
 
