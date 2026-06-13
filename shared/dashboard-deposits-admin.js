@@ -228,6 +228,7 @@ function renderDepositsPage() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
         <div>
           <div style="font-weight:700;color:#334435;font-size:var(--fs-md);">ห้อง ${r.roomId} <span style="font-size:11px;color:#9ca3af;font-weight:400;">${r.building}</span></div>
+          ${_prospectLabel(r.prospect) ? `<div style="font-size:var(--fs-sm);color:#1e40af;font-weight:600;margin-top:2px;">👤 ${_prospectLabel(r.prospect)}</div>` : ''}
           <div style="font-size:var(--fs-sm);color:${DashColors.TEXT_SECONDARY};margin-top:3px;">${isReserved ? 'คาดย้ายเข้า' : 'รับเมื่อ'}: ${_fmtDepDate(isReserved ? r.expectedMoveInDate : r.receivedAt)} · ${statusBadge(r.status)}${(phase === 'holding' || isReserved) && depDue > 0 ? ` <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">ค้างมัดจำ ${fmt(depDue)}</span>` : ''}</div>
           ${(r.deductions||[]).length ? `<div style="font-size:10px;color:${DashColors.TEXT_SECONDARY};margin-top:4px;">หัก: ${(r.deductions||[]).map(d=>`${_dedDesc(d)}${d.photo?' 📎':''} (${fmt(d.amount)})`).join(', ')}</div>` : ''}
           ${r.notes ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">หมายเหตุ: ${r.notes}</div>` : ''}
@@ -508,6 +509,15 @@ window._saveDepositInstallment = _saveDepositInstallment;
 // a no-show is forfeited (Phase 2). Slip/cash evidence only here — SlipOK
 // verification of a slip is the Phase 2 verifyDepositSlip CF. No args = create a
 // new reserved deposit; (building, roomId) = record a further chunk on an existing one.
+// "สมหญิง ใจดี (หญิง)" from a prospect {firstName,lastName,nickname}; '' when none — shown on the
+// reserved card + the confirm-move-in modal so the admin can tell whose reservation it is.
+function _prospectLabel(p) {
+  if (!p) return '';
+  const full = [p.firstName, p.lastName].filter(Boolean).join(' ');
+  const nick = (p.nickname || '').trim();
+  return [full, nick ? `(${nick})` : ''].filter(Boolean).join(' ');
+}
+
 function showReserveDepositModal(building, roomId) {
   const existing = (building && roomId)
     ? _depositsCache.find(r => r.building === building && r.roomId === roomId) : null;
@@ -534,6 +544,13 @@ function showReserveDepositModal(building, roomId) {
         <div style="display:flex;gap:10px;margin-bottom:12px;">
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">อาคาร</label>${bField}</div>
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">ห้อง</label><select id="dep-res-room" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"><option value="">— เลือกห้อง —</option></select></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">ชื่อ</label><input id="dep-res-fname" type="text" placeholder="ชื่อจริง" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
+          <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">นามสกุล</label><input id="dep-res-lname" type="text" placeholder="นามสกุล" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">ชื่อเล่น</label><input id="dep-res-nick" type="text" placeholder="ไว้เรียกง่าย ๆ ตอนยืนยันย้ายเข้า" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
         </div>
         <div style="display:flex;gap:10px;margin-bottom:12px;">
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">มัดจำทั้งหมด (2 เดือน)</label><input id="dep-res-amount" type="number" min="0" placeholder="บาท" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
@@ -624,9 +641,15 @@ async function _saveReserveDeposit() {
     const amount = Number(document.getElementById('dep-res-amount')?.value) || 0;
     const movein = document.getElementById('dep-res-movein')?.value || '';
     if (amount <= 0) { alert('กรุณากรอกยอดมัดจำทั้งหมด'); return; }
+    const prospect = {
+      firstName: (document.getElementById('dep-res-fname')?.value || '').trim(),
+      lastName:  (document.getElementById('dep-res-lname')?.value || '').trim(),
+      nickname:  (document.getElementById('dep-res-nick')?.value || '').trim(),
+    };
     baseDoc = {
       building, roomId, amount, status: 'reserved',
       reservedAt: new Date().toISOString(), expectedMoveInDate: movein || null,
+      prospect,                            // ว่าที่ผู้เช่า — label so confirm-move-in knows who it is
       paidSoFar: 0, payments: [], deductions: [], refundBank: '', notes: '',
       updatedAt: new Date().toISOString(),
     };
@@ -832,6 +855,7 @@ function showConfirmMoveInModal(building, roomId) {
       <div style="padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
         <h3 style="margin:0;font-size:1.05rem;color:#334435;font-weight:800;">✓ ยืนยันย้ายเข้าจริง</h3>
         <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">ห้อง ${roomId} <span style="color:#9ca3af;">· ${building}</span></div>
+        ${_prospectLabel(dep.prospect) ? `<div style="font-size:var(--fs-sm);color:#1e40af;font-weight:700;margin-top:4px;">👤 ${_prospectLabel(dep.prospect)}</div>` : ''}
       </div>
       <div style="padding:16px 22px;">
         <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">วันที่ย้ายเข้าจริง</label>
