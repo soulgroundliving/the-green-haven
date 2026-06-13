@@ -712,7 +712,18 @@ async function _saveReserveDeposit() {
       if (!callable) throw new Error('ฟังก์ชันยังไม่พร้อม');
       const res = await callable({ allocations: [{ building, roomId, amount: payAmount, label: payLabel }], file: dataUrl });
       const out = (res && res.data) || res || {};
-      if (out.success === false && out.retryable) { _reEnable(); alert(out.message || 'สลิปยังตรวจไม่ได้ กรุณารอสักครู่แล้วลองใหม่'); return; }
+      if (out.success === false && out.retryable) {
+        if (!ctx.isAdd) {
+          // The reserved room shell was already written above (the CF needs the doc to exist), so a
+          // plain "retry" would then be blocked ("ห้องนี้มีรายการมัดจำอยู่แล้ว"). Tell the user the
+          // room IS reserved + to add the amount via 💵 ชำระเพิ่ม, and close the modal so the card shows.
+          document.getElementById('reserveDepositModal')?.remove();
+          if (typeof showToast === 'function') showToast('🕒 จองห้องแล้ว — SlipOK ขอ ~2 นาที กด 💵 ชำระเพิ่ม เพื่อลงยอด');
+          alert((out.message || 'SlipOK ยังตรวจสลิปไม่ได้ (ขอ ~2 นาทีหลังโอน)') + '\n\n✅ ห้องถูกจองไว้แล้ว — กดปุ่ม "💵 ชำระเพิ่ม" บนการ์ดห้องนี้ เพื่อลงยอด ฿' + payAmount.toLocaleString() + ' (รอ ~2 นาทีแล้วเลือก "ตรวจสลิป" อีกที หรือเลือก "สลิป" เก็บหลักฐานไปเลย)');
+          return;
+        }
+        _reEnable(); alert(out.message || 'สลิปยังตรวจไม่ได้ กรุณารอสักครู่แล้วลองใหม่'); return;
+      }
       document.getElementById('reserveDepositModal')?.remove();
       if (typeof showToast === 'function') showToast('✅ ตรวจสลิป SlipOK + บันทึกมัดจำแล้ว');
     } catch (e) {
