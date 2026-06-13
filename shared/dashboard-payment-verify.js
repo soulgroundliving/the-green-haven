@@ -329,8 +329,8 @@ window.openManualVerifyModal = function(){
           <option value="">อื่นๆ</option>
         </select></div>
     </div>
-    <div style="margin-bottom:.7rem;"><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">เลขอ้างอิงสลิป (ถ้าอ่านได้)</label>
-      <input type="text" id="mv-txid" placeholder="เช่น 2024...หรือ ref number" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+    <div style="margin-bottom:.7rem;"><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">เลขอ้างอิงธุรกรรม/สลิป <span style="color:var(--red);">*</span></label>
+      <input type="text" id="mv-txid" placeholder="เช่น 2024...หรือ ref number (ใช้อ้างอิงใน audit)" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
     <div style="margin-bottom:1.2rem;"><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">เหตุผลการยืนยันเอง <span style="color:var(--red);">*</span></label>
       <input type="text" id="mv-reason" placeholder="เช่น SlipOK SCB delay ยาว, สลิปไม่คมชัด, มีค่าปรับที่ไม่ได้บันทึก..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
     <div style="display:flex;gap:.6rem;">
@@ -356,53 +356,42 @@ window.submitManualVerify = async function(){
     window.ghAlert('ต้องเช็ค bank statement จริงก่อน แล้วกด ✅ ยืนยัน — สลิปอาจปลอมได้ อย่าเชื่อแค่ภาพสลิป', { title: '⚠️ ตรวจ bank statement ก่อน' });
     return;
   }
-  if(!building || !room || !amount || amount <= 0 || !reason){
-    window.ghAlert('กรุณากรอก: ตึก, ห้อง, จำนวนเงิน, เหตุผล', { title: 'ข้อมูลไม่ครบ' });
+  if(!building || !room || !amount || amount <= 0 || !reason || !txid){
+    window.ghAlert('กรุณากรอก: ตึก, ห้อง, จำนวนเงิน, เลขอ้างอิงธุรกรรม, เหตุผล', { title: 'ข้อมูลไม่ครบ' });
     return;
   }
-  const adminName = window.SecurityUtils?.getSecureSession()?.name || 'Admin';
-  const id = 'mv_' + Date.now();
-  const slipDoc = {
-    transactionId: txid || id,
-    building, room: String(room),
-    amount, expectedAmount: amount,
-    sender: sender || '(บันทึกโดย admin)',
-    receiver: '',
-    date: dateStr,
-    bankCode: bankCode || '',
-    timestamp: new Date(dateStr + 'T12:00:00'),
-    verifiedAt: new Date(),
-    verified: true,
-    manualOverride: true,
-    bankStatementConfirmed: true,
-    verifiedBy: adminName,
-    overrideReason: reason
-  };
-  if(!window.firebase?.firestore){
+  const fb = window.firebase;
+  if(!fb?.functions?.httpsCallable){
     window.ghAlert('Firebase ยังไม่พร้อม — ไม่สามารถบันทึกได้', { title: 'ขัดข้อง' });
     return;
   }
+  // Billing month derives from the transfer date (BE). verifiedBy/timestamp/ip are server-stamped.
+  const d = new Date(dateStr);
+  const year = d.getFullYear() + 543;
+  const month = d.getMonth() + 1;
   try {
-    const db = window.firebase.firestore();
-    const fs = window.firebase.firestoreFunctions;
-    await fs.setDoc(fs.doc(fs.collection(db, 'verifiedSlips'), id), slipDoc);
-    // Also mark payment_status for that month (so สถานะชำระรายเดือน shows ✅)
-    const d = new Date(dateStr);
-    const year = d.getFullYear() + 543;
-    const month = d.getMonth() + 1;
+    // Admin-gated recordManualPayment CF (override mode): the slip image may be forged, so the
+    // admin asserts they checked the real bank statement — txid + reason are the audit trail.
+    // verifiedSlips is no longer client-writable (see tasks/todo-verifiedslips-cf-only.md).
+    const res = await fb.functions.httpsCallable('recordManualPayment')({
+      building, room: String(room), year, month, amount,
+      mode: 'override', txid, sender, bankCode, overrideReason: reason,
+    });
+    const docId = res?.data?.docId || ('mv_' + txid);
+    // Also mark payment_status for that month (so สถานะชำระรายเดือน shows ✅) — client cache only.
     const ps = loadPS();
     const key = `${year}_${month}`;
     if(!ps[key]) ps[key] = {};
     ps[key][room] = {
       status: 'paid', amount, date: new Date().toISOString(),
-      receiptNo: id, manualOverride: true, overrideReason: reason,
+      receiptNo: docId, manualOverride: true, overrideReason: reason,
       slip: { amount, sender, bankCode, ref: txid, transferDate: d.toISOString() }
     };
     savePS(ps);
     document.getElementById('mv-modal').remove();
     window.ghAlert('บันทึกการชำระเรียบร้อย', { title: '✅ สำเร็จ' });
   } catch(e) {
-    window.ghAlert('บันทึกไม่สำเร็จ: ' + e.message, { title: 'ขัดข้อง' });
+    window.ghAlert('บันทึกไม่สำเร็จ: ' + ((e && e.message) || e), { title: 'ขัดข้อง' });
   }
 };
 

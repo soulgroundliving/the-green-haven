@@ -1,6 +1,6 @@
 # Plan — Make `verifiedSlips` truly CF-only, then deny client writes
 
-**Status:** APPROVED + IN PROGRESS. **Phases 1+2 DONE** (`9d4b81b`, branch `verifiedslips-cf-only` off `origin/main`): both CFs (`recordManualPayment` + `clearRoomPaymentSlips`) + 19 tests + `PAYMENT_RESET` audit + index registration — server-side, NO prod impact until deployed (suite 2428/2428). **REMAINING: Phase 3 (rewire the 3 client sites) + Phase 4 (flip the rule + rules test) — one unit, must deploy in LOCKSTEP with the CFs.** Phase 4 needs the Firestore emulator for `npm run test:rules`.
+**Status:** **Phases 1–4 DONE** (branch `verifiedslips-cf-only` off `origin/main`). Phase 1+2 = both CFs (`recordManualPayment` + `clearRoomPaymentSlips`) + 19 tests + `PAYMENT_RESET` audit + index registration (`9d4b81b`). **Phase 3 = the 3 client sites rewired to call the CFs; Phase 4 = rule flipped to `allow write: if false` + rules test inverted.** Verified green: `test:rules` **344/344** (incl. the inverted "email admin CANNOT write directly"); payment-family functions tests **58/58** (recordManualPayment + clearRoomPaymentSlips + verifySlip + verifyDepositSlip). Still NO prod impact until deployed. **REMAINING: Phase 5 — owner-gated deploy in LOCKSTEP (CFs first, then rule).**
 **Origin:** security review of `verifyDepositSlip.js` flagged `verifiedSlips/{id}` `allow write: if isAdmin();` lets a live admin browser token poison/forge/delete the SlipOK dedup fence (block a legit verify, plant a fake dedup record, corrupt the audit).
 **Why the obvious one-liner was rejected:** grep gate (`feedback_rule_tighten_trace_clients`) found **3 live, wired admin client write/delete paths** that depend on the current rule. Flipping to `write: if false` would break all three AND fail `npm run test:rules` (the `email admin can write` → `assertSucceeds` test). Unlike the `actionAudit` sibling — which has **zero** client writers — `verifiedSlips` does.
 
@@ -39,18 +39,18 @@ Path-1 SlipOK branch is redundant server-side (`verifySlip` already wrote the ca
 - [ ] **Add `'PAYMENT_RESET'`** to `VALID_ACTIONS` in `functions/_actionAudit.js:53` (+ one-line comment). *(NOTE: `_actionAudit.js` is already modified on the deposit branch — see Risks re: branch.)*
 - [ ] **Export** at top-level in `functions/index.js`. **Unit test** `functions/__tests__/clearRoomPaymentSlips.test.js`.
 
-### Phase 3 — Rewire the 3 client sites to call the CFs
-- [ ] Find the dashboard's existing `httpsCallable` helper (how `refundBill`/`voidInvoice` are invoked from `shared/dashboard-*.js`) — reuse it, SE1 region.
-- [ ] `_mirrorPaymentToVerifiedSlips` → call `recordManualPayment` (keep non-fatal `.catch()` for the cash mirror so a paid-mark UI never hard-fails on a mirror hiccup).
-- [ ] `submitManualVerify` → call `recordManualPayment` with `mode:'override'`; keep the `bankStatementConfirmed` gate + `ghAlert` UX; surface CF errors in the existing `catch`.
-- [ ] `_deleteVerifiedSlipsForRoomMonth` → call `clearRoomPaymentSlips`; keep the local cache/`PaymentStore._remove`/`payment_status` cleanup + re-render (those are client-state, stay client-side).
-- [ ] **Self-conflict check (§7-G):** re-read all session diffs end-to-end — the paid-mark → grid-refresh → reset flow spans these 3 files + PaymentStore; confirm no broken assumption (e.g. a caller awaiting a return value the old `setDoc` gave).
+### Phase 3 — Rewire the 3 client sites to call the CFs — ✅ DONE
+- [x] Reused the existing helper `window.firebase.functions.httpsCallable('<name>')` (set up SE1 at `dashboard.html:129` `getFunctions(app,'asia-southeast1')` → `:170`), same as `refundBill`/`voidInvoice`.
+- [x] `_mirrorPaymentToVerifiedSlips` (`shared/dashboard-bill-payment-status.js`) → cash branch calls `recordManualPayment({mode:'cash'})`; **SlipOK branch now early-returns** (verifySlip already wrote the canonical doc — the old client mirror was pure redundancy). Kept non-fatal `.catch()` at the `markRoomPaid` call site.
+- [x] `submitManualVerify` (`shared/dashboard-payment-verify.js`) → calls `recordManualPayment({mode:'override'})`; kept `bankConfirmed` gate + `ghAlert` UX; **made `txid` required** (the CF requires a bank ref in override mode — added to the field check + a `*` on the label); `receiptNo` now from `res.data.docId`; CF errors surface in the existing `catch`.
+- [x] `_deleteVerifiedSlipsForRoomMonth` (`shared/dashboard-bill.js`) → calls `clearRoomPaymentSlips`; kept the client-state cleanup (`PaymentStore._remove`/`payment_status`/`_notify`/`renderPaymentStatus`).
+- [x] **Self-conflict check (§7-G):** re-read all 3 diffs end-to-end — cash docId `manual_<bld>_<r>_<yearBE>_<m>` written by the markRoomPaid CF == the deterministic id the reset CF deletes (year is BE 4-digit, CF `toBE` no-ops); override `mv_<txid>` found by the reset's room+billing-month query. No broken assumption; the 3 callers don't consume a return value the old `setDoc`/`deleteDoc` gave. All 3 files pass `node --check`.
 
-### Phase 4 — Flip the rule + tests (the actual ask)
-- [ ] `firestore.rules:319` → `allow write: if false;` + fix the stale comment (`// CF writes, admin reads` → note admin writes go via `recordManualPayment`/`clearRoomPaymentSlips` callables).
-- [ ] `firestore.rules.test.js:367-375` → `'email admin can write'` becomes **admin direct-write now FAILS** (`assertFails`); keep anon-cannot-write; keep admin-can-read. Update the header-comment line 17.
-- [ ] `npm run test:rules` → **green**.
-- [ ] `npm test` (functions) → new CF tests + existing verifySlip/verifyDepositSlip/verifyBookingSlip suites green.
+### Phase 4 — Flip the rule + tests (the actual ask) — ✅ DONE
+- [x] `firestore.rules:317-320` → `allow write: if false;` + rewrote the comment (admin writes now go via the `recordManualPayment`/`clearRoomPaymentSlips` callables).
+- [x] `firestore.rules.test.js` → `'email admin CANNOT write directly (CF-only via Admin SDK)'` is now `assertFails`; kept anon-cannot-write; admin-can-read untouched (separate block). Updated header-comment line 17.
+- [x] `firebase emulators:exec --only firestore --project=demo-test 'npm run test:rules'` → **344/344 green**.
+- [x] Payment-family functions tests → **58/58 green** (recordManualPayment + clearRoomPaymentSlips + verifySlip + verifyDepositSlip). No `functions/` code touched this phase, so the rest of the 2428-suite is unaffected.
 
 ### Phase 5 — Hand off for deploy (owner-gated)
 - [ ] Deploy is owner-only and **must be all together** (rules + 2 CFs in lockstep — flipping the rule before the CFs deploy would break the 3 admin flows): `firebase deploy --only functions:recordManualPayment,functions:clearRoomPaymentSlips` **then** `firebase deploy --only firestore:rules`. I will NOT deploy — hand off with this exact sequence + a live-verify checklist (mark a cash payment, do a manual override, reset a room → all succeed; anon/admin direct console write → denied).

@@ -313,10 +313,13 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // ===== VERIFIED SLIPS (CF writes, admin reads) =====
+    // ===== VERIFIED SLIPS (CF-only writes via Admin SDK; admin reads) =====
+    // Admin manual writes/deletes go through the recordManualPayment / clearRoomPaymentSlips
+    // callables (Admin SDK bypasses rules) so a live admin browser token can no longer forge,
+    // poison, or delete the SlipOK dedup-fence docs directly. See tasks/todo-verifiedslips-cf-only.md.
     match /verifiedSlips/{id} {
       allow read:  if isAdmin();
-      allow write: if isAdmin();
+      allow write: if false;
     }
 
     // ===== TAX SUMMARY (CF writes via admin SDK) =====
