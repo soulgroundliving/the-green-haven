@@ -91,7 +91,7 @@
   // Import Firebase SDKs
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getDatabase, ref, set, get, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-  import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+  import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
   import { getFirestore, collection, collectionGroup, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, updateDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
   import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
   import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
@@ -441,11 +441,22 @@
     // re-hydrate the ephemeral session from Firebase when it has lapsed.
     let user = window.SecurityUtils.getSecureSession();
     if (!user || user.userType !== 'admin') {
-      // Wait for Firebase init (window.firebaseReady ⇒ the module `auth` is set),
-      // then let the durable admin claim — not the ephemeral session — decide.
+      // Wait for Firebase to RESTORE the auth state. window.firebaseReady only means
+      // the SDK objects exist (getAuth ran); the IndexedDB session restore lands later
+      // and is signalled by onAuthStateChanged — NOT firebaseReady, NOT a synchronous
+      // currentUser read (that races the restore — the bug in v1 of this fix that still
+      // flapped admins). Mirrors the onAuthStateChanged approach the §VV gate above uses.
       for (let i = 0; i < 50 && !window.firebaseReady; i++) await new Promise(r => setTimeout(r, 100));
-      try { if (auth && typeof auth.authStateReady === 'function') await auth.authStateReady(); } catch (_) {}
-      const fbUser = auth?.currentUser || null;
+      const fbUser = await new Promise((resolve) => {
+        if (!auth) return resolve(null);
+        let done = false;
+        const finish = (u) => { if (!done) { done = true; resolve(u || null); } };
+        try {
+          const unsub = onAuthStateChanged(auth, (u) => { finish(u); try { unsub(); } catch (_) {} });
+        } catch (_) { finish(auth.currentUser); }
+        try { auth.authStateReady?.().then(() => finish(auth.currentUser)); } catch (_) {}
+        setTimeout(() => finish(auth && auth.currentUser), 8000); // hard cap so we never hang
+      });
       let isAdmin = false;
       if (fbUser) {
         try { isAdmin = (await fbUser.getIdTokenResult()).claims?.admin === true; } catch (_) {}
