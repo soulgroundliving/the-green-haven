@@ -600,7 +600,7 @@ function showReserveDepositModal(building, roomId) {
           <div style="font-size:11px;color:#1e40af;font-weight:700;margin-bottom:8px;">บันทึกการชำระ${isAdd ? '' : ' (ก้อนแรก เช่น จอง ฿500)'}</div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
             <input id="dep-res-pay-label" type="text" value="${isAdd ? 'มัดจำ' : 'จอง'}" ${isAdd ? 'readonly' : ''} style="width:84px;flex-shrink:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;${isAdd ? 'background:#f3f4f6;color:#6b7280;cursor:not-allowed;' : ''}">
-            <input id="dep-res-pay-amount" type="number" min="0" placeholder="บาท" value="${isAdd ? '' : '500'}" style="flex:1;min-width:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;">
+            <input id="dep-res-pay-amount" type="number" min="0" placeholder="บาท" value="${isAdd ? (due > 0 ? due : '') : '500'}" style="flex:1;min-width:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;">
             <select id="dep-res-pay-method" style="width:92px;flex-shrink:0;padding:8px 6px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;"><option value="cash">เงินสด</option><option value="slip">สลิป</option><option value="slipverify">ตรวจสลิป</option></select>
           </div>
           <input id="dep-res-pay-slip" type="file" accept="image/*,application/pdf" style="width:100%;font-size:10px;font-family:inherit;color:#6b7280;">
