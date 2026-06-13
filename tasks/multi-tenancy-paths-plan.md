@@ -120,12 +120,37 @@ C is not throwaway: **C1's "extract the 41-file hardcoded config" IS Path A's Ph
 
 ---
 
-## Recommendation (sequencing)
+## Recommendation (sequencing) — blueprint-aligned
 
-1. **Now:** Path B (sell the *service* — manage buildings under the one org; BuildingRegistry already scales buildings) for immediate revenue with zero re-architecture.
-2. **First external client(s):** Path C — clone-per-client. Start with **C1 config extraction** (reusable, low-risk). Land 2-3 clients, learn the real per-org config surface.
-3. **Only if** C demand validates a self-serve product AND there's runway: **Path A**, reusing C1 as Phase 1, treating A3 (rules/claims + doubled test suite) as the gated, staging-first, no-feature-freeze investment.
+The blueprint (extracted 2026-06-13, §Blueprint alignment below) makes the org dimension a **stated Year-2 requirement**, not speculation — so this is no longer "don't build on spec":
 
-**The through-line:** product depth (Meaning Layer, PDPA, trust, automation) is far ahead of multi-tenancy plumbing. The constraint to selling is not features — it's the org-isolation foundation. Don't build A on spec; let C fund and de-risk it.
+1. **Now (= blueprint Phase 1 "Sandbox Proof"):** Path B — prove Unit Economics on the org's own buildings (occupancy→~0%, ~0 arrears). Zero re-architecture; BuildingRegistry already scales buildings. This IS the VC proof, not a detour.
+2. **First 1-3 flagship / Enterprise licensees:** Path C — clone-per-client, starting with **C1 config extraction**. C is the **bridge only**: onboards a handful of high-touch clients + surfaces the real per-org config surface — it CANNOT reach the blueprint's Year-2 target (5-10k units across many small/medium landlords; C breaks at ~5-10 clients).
+3. **The Year-2 vehicle (= blueprint Phase 2 "Powered By" Scale-out):** Path A — multi-org SaaS is **required** to license to small/medium landlords at 5-10k-unit volume with Starter/Pro/Enterprise tiers. Reuse C1 as Phase 1; A3 (rules/claims + doubled test suite) stays the gated, staging-first investment. Gate the START of A on Sandbox traction + Series-A funding — NOT on "is multi-org wanted" (the blueprint says yes).
 
-> Caveat: the `proptech_unicorn_living_os_blueprint.pdf` could not be text-extracted (font-subset, no text layer) — this plan is grounded in the codebase + the general SaaS bar, not the blueprint's specific targets. If the PDF names concrete multi-org/scale goals, re-weight A vs C accordingly.
+**Two requirements the blueprint adds beyond raw multi-tenancy:**
+- **Per-org feature-tiering** (Starter = accounting+maintenance; Pro = +Quests/Trust/Pet; Enterprise = +AI/Auto-tax/Custom API) → Path A needs per-org subscription + feature flags, not just data isolation.
+- **Tier-2 FinTech fee** (1-1.5% of rent/utility payments) → a SEPARATE, bigger workstream: today's `verifySlip` only *verifies* slips; capturing a transaction fee means funds flow THROUGH the platform (real payment-gateway integration). This — not multi-tenancy — is where the "unicorn" GMV math lives.
+
+**The through-line:** product depth is far ahead of the business plumbing. The blueprint's PRODUCT Phases 1-2 (Foundation + Meaning Layer) are largely **shipped** — the "Emotional Lock-in" moat already exists. The gap is purely the BUSINESS Phase 2 (multi-org licensing) + the FinTech fee rail.
+
+---
+
+## Blueprint alignment (`proptech_unicorn_living_os_blueprint.pdf`, extracted 2026-06-13)
+
+Extracted via `pdftotext` (6 pages, Thai, clean — the earlier "can't read it" was a compressed-object-stream limitation of the manual inflate, not a scan). It's a Series-A-pitch strategy doc. Mapping its phases to the codebase:
+
+| Blueprint | What it is | Project state |
+|---|---|---|
+| **Product Phase 1 — Foundation** | Accounting/Tax (invoice numbering, void, refund, VAT/non-VAT classify), Legal/PDPA (consent, evidence log, retention), Admin (dashboard, tenant lifecycle) | ✅ **shipped** — matches the repo's invoice/refund/audit/PDPA/dashboard work |
+| **Product Phase 2 — Meaning Layer** | Trust/Reputation/Kindness/Verified-helper/rank, Community Quests, Pet Social Graph + health, Micro-economy (trade/requests/food-share), Life Timeline, Farewell + AI summary | ✅ **mostly shipped** (Meaning Layer #1-16, trust pillar, pet social) — Farewell **AI summary** is the notable not-yet bit |
+| **Product Phase 3 — Future** | Churn/retention prediction, pattern recognition, Auto bill/tax/late-fee, AI contract/triage/support, context-aware + empathy mode | ⏳ **partial** (behavioral-energy/insights exist; AI/autonomous mostly not) |
+| **Business Phase 1 — Sandbox Proof (Yr 1)** | own units; prove Unit Economics; occupancy→~0%, ~0 arrears for VC | = **Path B** (current single-org state) |
+| **Business Phase 2 — "Powered By" Scale-out (Yr 2)** | LICENSE the system to small/medium landlords w/o dev teams → **5,000-10,000 units** | = **Path A** (REQUIRES multi-org; C can't reach this scale) |
+| **Business Phase 3 — Data-as-Asset (Yr 3+)** | sell PDPA-compliant behavioral insight to big developers | later; depends on A's data volume |
+
+**Revenue model (3 tiers):** Tier 1 B2B SaaS (per-unit, Starter/Pro/Enterprise) → Path A + feature-tiering. Tier 2 FinTech (1-1.5% payment fee, late-fee share, micro-insurance commission) → separate payment-gateway workstream. Tier 3 Community Economy (marketplace fee, hyper-local ads) → builds on the shipped marketplace.
+
+**Core VC metrics:** CAC, LTV (target >3× CAC), **Switching Cost = "Emotional Lock-in"** (won't move out → would lose Reputation/social/pet profile). That lock-in moat = the Meaning Layer, **already built**.
+
+**Net:** the blueprint CONFIRMS the org dimension is a stated business requirement (Phase 2 / Tier-1 SaaS), not speculation — which is why the recommendation treats Path A as the gated Year-2 vehicle, with C as the flagship-client bridge.
