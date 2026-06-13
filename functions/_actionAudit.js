@@ -61,6 +61,7 @@ const VALID_ACTIONS = new Set([
   'DEPOSIT_RETURNED',      // admin settles + returns a security deposit at move-out (Slice C)
   'DEPOSIT_FORFEITED',     // admin forfeits a reserved pre-move-in deposit on no-show (Phase 2)
   'DEPOSIT_VERIFIED',      // admin SlipOK-verifies a pre-move-in deposit payment (Phase 2 verifyDepositSlip)
+  'PAYMENT_RESET',         // admin resets a room's payment — deletes its verifiedSlips (clearRoomPaymentSlips)
 ]);
 
 // Firestore doc IDs cannot contain '/' or start with '.'. Build a safe segment.

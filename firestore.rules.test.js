@@ -14,7 +14,7 @@
  *   3. Anonymous tenants CAN update their own non-sensitive fields (phone, email, lineID)
  *   4. taxSummary is NEVER client-writable (CF-only via admin SDK)
  *   5. rateLimits is fully sealed (CF-only)
- *   6. verifiedSlips: admin write only
+ *   6. verifiedSlips: CF-only writes (admin direct-write denied), admin reads
  *   7. leaseRequests: LIFF tenant creates own room only, only admin updates
  *   8. complaints: any auth creates, only admin modifies/deletes
  *   9. rewards / system / wellness_articles: admin write only (announcements = CF-only since S3)
@@ -364,13 +364,16 @@ describe('rateLimits — fully sealed', () => {
   });
 });
 
-describe('verifiedSlips — admin write only', () => {
+describe('verifiedSlips — CF-only writes (admin direct-write denied)', () => {
   it('anonymous tenant cannot write', async () => {
     await assertFails(addDoc(collection(ANON().firestore(), 'verifiedSlips'), { amount: 99999 }));
   });
 
-  it('email admin can write', async () => {
-    await assertSucceeds(addDoc(collection(EMAIL_ADMIN().firestore(), 'verifiedSlips'), { amount: 100 }));
+  // Admin manual writes/deletes now go through the recordManualPayment / clearRoomPaymentSlips
+  // callables (Admin SDK bypasses rules) — a live admin browser token must NOT write directly,
+  // else it could forge/poison the SlipOK dedup fence. See tasks/todo-verifiedslips-cf-only.md.
+  it('email admin CANNOT write directly (CF-only via Admin SDK)', async () => {
+    await assertFails(addDoc(collection(EMAIL_ADMIN().firestore(), 'verifiedSlips'), { amount: 100 }));
   });
 });
 

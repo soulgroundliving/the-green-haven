@@ -23,10 +23,12 @@ function markRoomPaid(d){
   savePS(ps);
   renderPaymentStatus();
 
-  // ===== Mirror to Firestore verifiedSlips so PaymentStore picks up + survives cache clear.
-  // SlipOK case: CF already wrote at functions/verifySlip.js:248. Our setDoc+merge with the
-  // same transactionId is idempotent. Manual case: synthetic deterministic docId
-  // `manual_<building>_<room>_<year>_<month>` so re-marking same month overwrites cleanly.
+  // ===== Record the paid-mark into Firestore verifiedSlips (PaymentStore SoT) via a CF.
+  // SlipOK case: verifySlip already wrote the canonical dedup doc server-side — nothing to do.
+  // Manual/cash case: the admin-gated recordManualPayment CF upserts the deterministic
+  // `manual_<bld>_<room>_<yearBE>_<m>` doc + a BILL_PAID_MANUAL audit row (verifiedSlips is no
+  // longer client-writable — see tasks/todo-verifiedslips-cf-only.md). Non-fatal: a paid-mark
+  // UI must never hard-fail on a mirror hiccup.
   _mirrorPaymentToVerifiedSlips(d).catch(e =>
     console.warn('[billing] verifiedSlips mirror failed:', e?.message));
 
@@ -62,46 +64,33 @@ function markRoomPaid(d){
   saveBillToFirebase(d);
 }
 
-// Mirror admin manual paid-mark to Firestore verifiedSlips so PaymentStore subscription
-// (Phase 2b SoT) picks it up — survives localStorage cache clear. Idempotent:
-//   • SlipOK case: real transactionId; setDoc+merge no-ops if CF already wrote.
-//   • Manual case: deterministic synthetic ID; re-marking same month overwrites.
-// Doc shape mirrors functions/verifySlip.js:248 so PaymentStore subscription parses uniformly.
+// Record an admin paid-mark into Firestore verifiedSlips (PaymentStore SoT) so the bill grid
+// picks it up + it survives a localStorage cache clear. The write now goes through the
+// admin-gated recordManualPayment CF (Admin SDK) — verifiedSlips is no longer client-writable.
+//   • SlipOK case: verifySlip already wrote the canonical dedup doc → nothing to mirror.
+//   • Manual/cash case: the CF upserts the deterministic manual_<bld>_<room>_<yearBE>_<m> doc,
+//     server-stamps verifiedBy/ip, and writes a BILL_PAID_MANUAL audit row. The CF's dedup
+//     guard refuses to clobber a CF-written SlipOK record.
 async function _mirrorPaymentToVerifiedSlips(d) {
-  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-    console.warn('[billing] Firebase not ready — skipping verifiedSlips mirror');
+  // SlipOK: the canonical verifiedSlips doc already exists (verifySlip CF) — no mirror needed.
+  if (window.slipVerified && window.slipData?.ref) return;
+
+  const fb = window.firebase;
+  if (!fb?.functions?.httpsCallable) {
+    console.warn('[billing] Firebase functions not ready — skipping manual payment record');
     return;
   }
-  const fs = window.firebase.firestoreFunctions;
-  const db = window.firebase.firestore();
-  const isSlipOk = !!(window.slipVerified && window.slipData?.ref);
-  const docId = isSlipOk
-    ? String(window.slipData.ref)
-    : `manual_${d.building}_${d.room}_${d.year}_${d.month}`;
-  // Construct timestamp inside the billing month (CE year, 5th @ noon BKK) so PaymentStore
-  // subscription's yearBE/month derivation (timestamp.year/month → +543) keys correctly,
-  // even when admin marks paid in a different calendar month than the bill belongs to.
-  const yearCE = parseInt(d.year) - 543;
-  const billingTs = new Date(yearCE, parseInt(d.month) - 1, 5, 12, 0, 0);
-  const ref = fs.doc(fs.collection(db, 'verifiedSlips'), docId);
-  await fs.setDoc(ref, {
-    transactionId: docId,
+  // Admin-gated CF (SE1). building is canonical (rooms/nest); year is BE 4-digit (CF normalises);
+  // the CF stamps the billing-month timestamp + verifiedBy/ip server-side.
+  await fb.functions.httpsCallable('recordManualPayment')({
     building: d.building,
     room: String(d.room),
+    year: d.year,
+    month: d.month,
     amount: d.total,
-    expectedAmount: d.total,
-    sender: isSlipOk ? window.slipData.sender : '(บันทึกโดย admin)',
-    receiver: isSlipOk ? (window.slipData.receiver || '') : '',
-    bankCode: isSlipOk ? (window.slipData.bankCode || '') : '',
-    date: isSlipOk && window.slipData.tDate ? window.slipData.tDate : billingTs.toISOString(),
-    timestamp: billingTs,
-    verifiedAt: new Date(),
-    verified: true,
+    mode: 'cash',
     receiptNo: d.no,
-    manualEntry: !isSlipOk,
-    yearBE: parseInt(d.year),
-    month: parseInt(d.month)
-  }, { merge: true });
+  });
 }
 
 async function saveBillToFirebase(d){
