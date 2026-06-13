@@ -535,6 +535,7 @@ function showReserveDepositModal(building, roomId) {
   const isAdd = !!existing;
   const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
   const due = isAdd && window.DepositCalc ? window.DepositCalc.depositDue(existing) : 0;
+  const existingMoveIn = (isAdd && existing && existing.expectedMoveInDate) ? existing.expectedMoveInDate : '';
   const buildings = (window.BuildingRegistry?.list?.() || [{ id: 'rooms' }, { id: 'nest' }]).map(b => b.id);
 
   document.getElementById('reserveDepositModal')?.remove();
@@ -590,7 +591,11 @@ function showReserveDepositModal(building, roomId) {
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">ห้อง</label><select id="dep-res-room" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"><option value="">— เลือกห้อง —</option></select></div>
         </div>`}
         ${prospectSection}
-        ${isAdd ? '' : `
+        ${isAdd ? `
+        <div style="margin-bottom:12px;">
+          <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">คาดย้ายเข้า</label>
+          <input id="dep-res-movein" type="date" value="${existingMoveIn}" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
+        </div>` : `
         <div style="display:flex;gap:10px;margin-bottom:12px;">
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">มัดจำทั้งหมด (2 เดือน)</label><input id="dep-res-amount" type="number" min="0" placeholder="บาท" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">คาดย้ายเข้า</label><input id="dep-res-movein" type="date" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
@@ -714,11 +719,18 @@ async function _saveReserveDeposit() {
     };
   }
 
-  // For ชำระเพิ่ม (doc exists), persist prospect edits up-front so they stick regardless of the
-  // payment method (the ตรวจสลิป path defers the rest of the write to the CF). Only when there's data.
-  if (ctx.isAdd && Object.values(prospect).some(v => v)) {
-    try { await fs.setDoc(fs.doc(db, 'deposits', docId), { prospect, updatedAt: new Date().toISOString() }, { merge: true }); }
-    catch (e) { console.warn('[deposit] prospect merge failed:', e?.message || e); }
+  // For ชำระเพิ่ม (doc exists), persist prospect edits + คาดย้ายเข้า up-front so they stick regardless of
+  // the payment method (the ตรวจสลิป path defers the rest of the write to the CF). Only when there's data.
+  if (ctx.isAdd) {
+    const moveinEdit = (document.getElementById('dep-res-movein')?.value || '').trim();
+    const merge = {};
+    if (Object.values(prospect).some(v => v)) merge.prospect = prospect;
+    if (moveinEdit) merge.expectedMoveInDate = moveinEdit;  // only overwrite when a date is set (don't clobber with '')
+    if (Object.keys(merge).length) {
+      merge.updatedAt = new Date().toISOString();
+      try { await fs.setDoc(fs.doc(db, 'deposits', docId), merge, { merge: true }); }
+      catch (e) { console.warn('[deposit] prospect/movein merge failed:', e?.message || e); }
+    }
   }
 
   const saveBtn = document.querySelector('#reserveDepositModal [data-action="saveReserveDeposit"]');
