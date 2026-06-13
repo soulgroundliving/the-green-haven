@@ -561,6 +561,17 @@ function showReserveDepositModal(building, roomId) {
             <input id="dep-res-fb" type="text" placeholder="ชื่อ Facebook" value="${_esc(p.facebook)}" style="flex:1;min-width:0;${_inp}">
           </div>
         </div>`;
+  // ชำระเพิ่ม: show the prior payments + their uploaded slips (📎 ดูสลิป opens via getDownloadURL).
+  const _payRows = (isAdd && existing && Array.isArray(existing.payments)) ? existing.payments : [];
+  const payHistory = isAdd ? `
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:#475569;font-weight:700;margin-bottom:6px;">ประวัติการชำระ${_payRows.length ? ` (${_payRows.length})` : ''}</div>
+          ${_payRows.length ? _payRows.map(pm => `
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 9px;background:#f8fafc;border:1px solid #eef0ee;border-radius:8px;margin-bottom:5px;font-size:var(--fs-sm);">
+              <span>${_esc(pm.label || 'มัดจำ')} · ฿${(Number(pm.amount) || 0).toLocaleString()} <span style="color:#9ca3af;font-size:10px;">${pm.method === 'cash' ? 'เงินสด' : (pm.txid ? 'SlipOK' : 'สลิป')}</span></span>
+              ${pm.slipPath ? `<button type="button" data-action="viewDepPaymentSlip" data-path="${_esc(pm.slipPath)}" style="padding:3px 9px;background:#eef2f6;color:#1e40af;border:1px solid #bfdbfe;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">📎 ดูสลิป</button>` : '<span style="font-size:10px;color:#cbd5e1;">ไม่มีสลิป</span>'}
+            </div>`).join('') : '<div style="font-size:11px;color:#9ca3af;">ยังไม่มีการชำระ</div>'}
+        </div>` : '';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:16px;width:100%;max-width:420px;max-height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);">
       <div style="flex-shrink:0;padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
@@ -579,10 +590,11 @@ function showReserveDepositModal(building, roomId) {
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">มัดจำทั้งหมด (2 เดือน)</label><input id="dep-res-amount" type="number" min="0" placeholder="บาท" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">คาดย้ายเข้า</label><input id="dep-res-movein" type="date" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
         </div>`}
+        ${payHistory}
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;">
           <div style="font-size:11px;color:#1e40af;font-weight:700;margin-bottom:8px;">บันทึกการชำระ${isAdd ? '' : ' (ก้อนแรก เช่น จอง ฿500)'}</div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
-            <input id="dep-res-pay-label" type="text" value="${isAdd ? 'มัดจำ' : 'จอง'}" style="width:84px;flex-shrink:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;">
+            <input id="dep-res-pay-label" type="text" value="${isAdd ? 'มัดจำ' : 'จอง'}" ${isAdd ? 'readonly' : ''} style="width:84px;flex-shrink:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;${isAdd ? 'background:#f3f4f6;color:#6b7280;cursor:not-allowed;' : ''}">
             <input id="dep-res-pay-amount" type="number" min="0" placeholder="บาท" value="${isAdd ? '' : '500'}" style="flex:1;min-width:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;">
             <select id="dep-res-pay-method" style="width:92px;flex-shrink:0;padding:8px 6px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;"><option value="cash">เงินสด</option><option value="slip">สลิป</option><option value="slipverify">ตรวจสลิป</option></select>
           </div>
@@ -1159,6 +1171,16 @@ async function _viewDepPendingPhoto(idx) {
   }
 }
 window._viewDepPendingPhoto = _viewDepPendingPhoto;
+
+// View a payment slip stored on a deposit's payments[].slipPath (the ชำระเพิ่ม history list).
+async function _viewDepPaymentSlip(path) {
+  if (!path) return;
+  const sf = window.firebase?.storageFunctions, st = window.firebase?.storage?.();
+  if (!sf || !st) { alert('Storage ยังไม่พร้อม'); return; }
+  try { window.open(await sf.getDownloadURL(sf.ref(st, path)), '_blank', 'noopener,noreferrer'); }
+  catch (e) { console.warn('[deposit] payment slip load failed:', e?.message || e); alert('เปิดสลิปไม่สำเร็จ'); }
+}
+window._viewDepPaymentSlip = _viewDepPaymentSlip;
 
 // Preview the currently-selected refund slip File before upload — same lightbox
 // as the damage photos. Lets the admin confirm the right slip was picked.
