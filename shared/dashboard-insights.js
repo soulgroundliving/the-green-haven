@@ -256,6 +256,8 @@
     window._ins.community.renderStreakLeaderboard();
     // Phase 3.1 Behavioral Intelligence — community engagement trend (pointsLedger).
     if (window._ins.behavioralEngagement) window._ins.behavioralEngagement.renderEngagementTrend();
+    // Behavioral Analytics Phase 0 — activity timing heatmap (same pointsLedger 90d window, aggregate-only).
+    if (window._ins.behavioralTiming) window._ins.behavioralTiming.renderTimingHeatmap();
     // Phase 3.1 Behavioral Intelligence — pet patterns & vaccine compliance (collectionGroup pets).
     if (window._ins.behavioralPets) window._ins.behavioralPets.renderPetPatterns();
   }
@@ -346,6 +348,7 @@
     else if (target === 'verifiedHelper') { cacheClear('trust_scores'); window._ins.verifiedHelper.renderVerifiedHelper(); }
     else if (target === 'residentRank') { cacheClear('trust_scores'); window._ins.residentRank.renderResidentRank(); }
     else if (target === 'engagementTrend') { cacheClear('engagement_ledger'); window._ins.behavioralEngagement.renderEngagementTrend(); }
+    else if (target === 'behavioralTiming') { cacheClear('engagement_ledger'); window._ins.behavioralTiming.renderTimingHeatmap(); }
     else if (target === 'energyPattern') { cacheClear('behavioral_energy'); window._ins.behavioralEnergy.renderEnergyTrend(); }
     else if (target === 'repairSeason') { cacheClear('behavioral_repair'); window._ins.behavioralRepair.renderRepairSeason(); }
     else if (target === 'petPatterns') { cacheClear('behavioral_pets'); window._ins.behavioralPets.renderPetPatterns(); }
