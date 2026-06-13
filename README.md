@@ -91,7 +91,7 @@ Cloud Functions deploy automatically via [`deploy-functions.yml`](.github/workfl
 ├── api/                      # Vercel serverless functions
 ├── firestore.rules + firestore.rules.test.js  # 326 rule tests
 ├── storage.rules + storage.rules.test.js      # 47 rule tests
-├── database.rules.json + database.rules.test.js  # 48 rule tests
+├── database.rules.json + database.rules.test.js  # 54 rule tests
 ├── tools/                    # Build / migration / verification scripts
 └── .github/workflows/        # CI: rules, deploy, validate, npm-audit
 ```

@@ -221,6 +221,40 @@ describe('maintenance/{building}/{room}', () => {
   });
 });
 
+// ── 5b. behaviorEvents/{building}/{room} — write-own, admin-read-only (Phase 1a) ──
+
+describe('behaviorEvents/{building}/{room}', () => {
+  const PATH = '/behaviorEvents/rooms/15/E001';
+
+  it('tenant writes own room events (flush)', async () => {
+    await assertSucceeds(set(ref(TENANT().database(), PATH),
+      { events: [{ t: 'pv', p: 'home', ts: 1 }], flushedAt: 2, n: 1 }));
+  });
+
+  it('tenant CANNOT write another room events', async () => {
+    await assertFails(set(ref(TENANT().database(), '/behaviorEvents/rooms/99/E001'),
+      { events: [], flushedAt: 1 }));
+  });
+
+  it('tenant CANNOT read its own events (admin-only analytics)', async () => {
+    await seed(PATH, { events: [{ t: 'pv' }], flushedAt: 1 });
+    await assertFails(get(ref(TENANT().database(), PATH)));
+  });
+
+  it('admin reads all behaviorEvents (top-level)', async () => {
+    await seed(PATH, { events: [{ t: 'pv' }], flushedAt: 1 });
+    await assertSucceeds(get(ref(ADMIN().database(), '/behaviorEvents')));
+  });
+
+  it('validate rejects a flush missing required children', async () => {
+    await assertFails(set(ref(TENANT().database(), PATH), { foo: 'bar' }));
+  });
+
+  it('unauthenticated cannot write behaviorEvents', async () => {
+    await assertFails(set(ref(UNAUTH().database(), PATH), { events: [], flushedAt: 1 }));
+  });
+});
+
 // ── 6. housekeeping/{building}/{room} ─────────────────────────────────────────
 
 describe('housekeeping/{building}/{room}', () => {

@@ -5859,6 +5859,10 @@
 
     <!-- LIFF auth scaffold extracted from inline script -->
     <script src="./shared/tenant-liff-auth.js"></script>
+    <!-- Behavioral Analytics Phase 1a — instrument + sink. Self-contained: wraps
+         window.showPage + adds its own [data-action] click listener at DOMContentLoaded.
+         No inline-script edits → no CSP-hash churn (§7-II). -->
+    <script src="./shared/tenant-analytics.js" defer></script>
     <script>
         // ==========================================
         // 1. GLOBAL VARIABLES & CONFIG

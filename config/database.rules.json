@@ -55,6 +55,18 @@
       }
     },
 
+    "behaviorEvents": {
+      ".read": "auth != null && auth.token.admin == true",
+      "$building": {
+        "$room": {
+          ".write": "auth != null && (auth.token.admin == true || (auth.token.room == $room && auth.token.building == $building))",
+          "$pushId": {
+            ".validate": "newData.hasChildren(['events', 'flushedAt']) || !newData.exists()"
+          }
+        }
+      }
+    },
+
     "meter_readings": {
       "$building": {
         "$room": {
