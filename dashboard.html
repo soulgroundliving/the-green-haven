@@ -431,20 +431,38 @@
     checkAuthentication();
   });
 
-  function checkAuthentication() {
-    // Use secure session utility with expiration checking
-    const user = window.SecurityUtils.getSecureSession();
-    if (!user) {
-      // Not logged in or session expired - redirect to login
-      window.location.href = '/login';
-      return;
-    }
-
-    // Check if user is admin
-    if (user.userType !== 'admin') {
-      alert('เฉพาะ Admin เท่านั้นที่สามารถเข้าถึง Dashboard');
-      window.location.href = '/login';
-      return;
+  async function checkAuthentication() {
+    // Auth source of truth = Firebase Auth + admin custom claim (persistent in
+    // IndexedDB, server-issued, matches Firestore rules). The SecurityUtils session
+    // (sessionStorage, 2h TTL) is a UI cache ONLY — it must NOT independently bounce
+    // an authenticated admin. Bug (2026-06-13): sessionStorage dies on tab close /
+    // after 2h while Firebase persists in IndexedDB → this gate flapped signed-in
+    // admins to /login. Fix: consult the durable admin claim before bouncing, and
+    // re-hydrate the ephemeral session from Firebase when it has lapsed.
+    let user = window.SecurityUtils.getSecureSession();
+    if (!user || user.userType !== 'admin') {
+      // Wait for Firebase init (window.firebaseReady ⇒ the module `auth` is set),
+      // then let the durable admin claim — not the ephemeral session — decide.
+      for (let i = 0; i < 50 && !window.firebaseReady; i++) await new Promise(r => setTimeout(r, 100));
+      try { if (auth && typeof auth.authStateReady === 'function') await auth.authStateReady(); } catch (_) {}
+      const fbUser = auth?.currentUser || null;
+      let isAdmin = false;
+      if (fbUser) {
+        try { isAdmin = (await fbUser.getIdTokenResult()).claims?.admin === true; } catch (_) {}
+      }
+      if (fbUser && isAdmin) {
+        // Authenticated admin whose ephemeral session lapsed → re-hydrate, don't bounce.
+        const name = fbUser.displayName || (fbUser.email || '').split('@')[0] || 'Admin';
+        user = { name, email: fbUser.email, userType: 'admin' };
+        try { window.SecurityUtils.saveSecureSession(user); } catch (_) {}
+      } else {
+        // No valid session AND Firebase is not an authed admin → genuinely not allowed.
+        if (fbUser && !isAdmin) {
+          alert('เฉพาะ Admin เท่านั้นที่สามารถเข้าถึง Dashboard');
+        }
+        window.location.href = '/login';
+        return;
+      }
     }
 
     // Show user info in header and sidebar
