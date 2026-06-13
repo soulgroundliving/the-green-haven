@@ -889,6 +889,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ===== BEHAVIORAL ROLLUP (Behavioral Analytics Phase 1b — dead-feature detector) =====
+    // behavioralRollup/{id} (id='adoption') — identity-free adoption aggregate (per-page /
+    // per-action counts + distinct-room COUNTS, never room ids) written ONLY by
+    // rollupBehaviorEventsScheduled via the Admin SDK. Admin-read for the dashboard card;
+    // client write is NEVER allowed (server-computed aggregate).
+    match /behavioralRollup/{id} {
+      allow read:  if isAdmin();
+      allow write: if false;
+    }
+
     // ===== ACTION AUDIT (Core Readiness Phase 1.1) =====
     // actionAudit/{autoId} — immutable, server-side record of admin actions
     // (tenant edit, payment verify, meter-import approve, bill paid, …). Replaces

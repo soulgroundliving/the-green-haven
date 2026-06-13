@@ -276,6 +276,10 @@ exports.clearRoomPaymentSlips = require('./clearRoomPaymentSlips').clearRoomPaym
 exports.computeTrustScoresScheduled = require('./computeTrustScoresScheduled').computeTrustScoresScheduled;
 exports.recomputeTrustScores        = require('./recomputeTrustScores').recomputeTrustScores;
 
+// Behavioral Analytics Phase 1b — daily rollup of RTDB behaviorEvents → identity-free
+// behavioralRollup/adoption (the dead-feature detector). §7-NN scheduled (Firestore SE3).
+exports.rollupBehaviorEventsScheduled = require('./rollupBehaviorEventsScheduled').rollupBehaviorEventsScheduled;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ANNOUNCEMENTS — unified notice/event/banner (C4 — replaces broadcastMessages)
 // ═══════════════════════════════════════════════════════════════════════════

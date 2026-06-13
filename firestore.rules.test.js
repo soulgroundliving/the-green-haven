@@ -1559,6 +1559,35 @@ describe('maintenanceArchive — closed-ticket archive, admin-read-only (Phase 3
   });
 });
 
+describe('behavioralRollup — identity-free adoption aggregate, admin-read-only, CF-write-only (Behavioral Analytics 1b)', () => {
+  const sample = {
+    windowDays: 30, occupiedRooms: 8, totalEvents: 40, totalFlushes: 12, activeRooms: 6,
+    pages: [{ k: 'home', count: 30, rooms: 6, pct: 75 }],
+    actions: [{ k: 'claimDaily', count: 10, rooms: 4, pct: 50 }],
+  };
+
+  it('admin reads behavioralRollup/adoption (the dead-feature card)', async () => {
+    await seedDoc('behavioralRollup/adoption', sample);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'behavioralRollup/adoption')));
+  });
+
+  it('a logged-in tenant CANNOT read behavioralRollup (admin-only)', async () => {
+    await seedDoc('behavioralRollup/adoption', sample);
+    const ctx = testEnv.authenticatedContext('line:t1', { room: '15', building: 'rooms' });
+    await assertFails(getDoc(doc(ctx.firestore(), 'behavioralRollup/adoption')));
+  });
+
+  it('unauth CANNOT read behavioralRollup', async () => {
+    await seedDoc('behavioralRollup/adoption', sample);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'behavioralRollup/adoption')));
+  });
+
+  it('client CANNOT write behavioralRollup (CF / Admin-SDK only)', async () => {
+    await assertFails(setDoc(doc(EMAIL_ADMIN().firestore(), 'behavioralRollup/adoption'), sample));
+    await assertFails(setDoc(doc(ANON().firestore(), 'behavioralRollup/adoption'), sample));
+  });
+});
+
 describe('trustScores — server-computed reputation, admin-read-only, CF-write-only (Roadmap Phase 3.2a)', () => {
   // LIFF tenant whose tenantId claim matches the doc id — proves even the SUBJECT
   // of the score has NO read access in admin-only v1 (tenant self-view is deferred).
