@@ -106,7 +106,7 @@
   let _unsub = null;
   let _key = '';
   let _loaded = false;
-  let _state = { lease: {}, gamification: {} };
+  let _state = { lease: {}, gamification: {}, farewellSummary: null };
 
   function _fs() { const f = window.firebase; return (f && f.firestoreFunctions) ? f.firestoreFunctions : null; }
   function _db() { const f = window.firebase; return (f && f.firestore) ? f.firestore() : null; }
@@ -127,7 +127,7 @@
     const ref = fs.doc(db, 'tenants', b, 'list', r);
     _unsub = fs.onSnapshot(ref, snap => {
       const d = (snap && snap.data && snap.data()) || {};
-      _state = { lease: d.lease || {}, gamification: d.gamification || {} };
+      _state = { lease: d.lease || {}, gamification: d.gamification || {}, farewellSummary: d.farewellSummary || null };
       _loaded = true;
       _render();
     }, err => {                            // §7-N
@@ -168,6 +168,25 @@
       hero.className = 'tlf-hero';
       hero.textContent = '🌿 อยู่กับเราที่นี่มาแล้ว ' + vm.tenure;
       card.appendChild(hero);
+    }
+
+    // v2: published AI farewell prose (Meaning Layer #16-v2). Shown above the
+    // stat grid only when an admin has published it. DOM-API render — the model
+    // text goes into textContent (escaped), never innerHTML.
+    const fs = _state.farewellSummary;
+    const aiText = (fs && fs.status === 'published') ? String(fs.text || '').trim() : '';
+    if (aiText) {
+      const ai = document.createElement('div');
+      ai.className = 'tlf-ai';
+      const label = document.createElement('span');
+      label.className = 'tlf-ai__label';
+      label.textContent = '🎁 ข้อความจาก Nature Haven';
+      const body = document.createElement('p');
+      body.className = 'tlf-ai__text';
+      body.textContent = aiText;
+      ai.appendChild(label);
+      ai.appendChild(body);
+      card.appendChild(ai);
     }
 
     const stats = document.createElement('div');
