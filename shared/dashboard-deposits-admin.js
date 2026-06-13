@@ -549,12 +549,12 @@ function showReserveDepositModal(building, roomId) {
         <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px;">
           <div style="font-size:11px;color:#475569;font-weight:700;margin-bottom:8px;">👤 ว่าที่ผู้เช่า (เก็บไว้กันลืม · ใช้ตอนยืนยันย้ายเข้า)</div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
-            <input id="dep-res-fname" type="text" placeholder="ชื่อ" value="${_esc(p.firstName)}" style="flex:1;min-width:0;${_inp}">
+            <input id="dep-res-fname" type="text" placeholder="ชื่อ${isAdd ? '' : ' *'}" value="${_esc(p.firstName)}" style="flex:1;min-width:0;${_inp}">
             <input id="dep-res-lname" type="text" placeholder="นามสกุล" value="${_esc(p.lastName)}" style="flex:1;min-width:0;${_inp}">
           </div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
             <input id="dep-res-nick" type="text" placeholder="ชื่อเล่น" value="${_esc(p.nickname)}" style="flex:1;min-width:0;${_inp}">
-            <input id="dep-res-phone" type="text" inputmode="tel" placeholder="เบอร์โทร" value="${_esc(p.phone)}" style="flex:1;min-width:0;${_inp}">
+            <input id="dep-res-phone" type="text" inputmode="tel" maxlength="10" placeholder="เบอร์โทร 10 หลัก${isAdd ? '' : ' *'}" value="${_esc(p.phone)}" style="flex:1;min-width:0;${_inp}">
           </div>
           <div style="display:flex;gap:8px;">
             <input id="dep-res-line" type="text" placeholder="LINE ID" value="${_esc(p.lineId)}" style="flex:1;min-width:0;${_inp}">
@@ -609,6 +609,10 @@ function showReserveDepositModal(building, roomId) {
     </div>`;
   document.body.appendChild(modal);
   window._depReserveCtx = { isAdd, building: building || '', roomId: roomId || '' };
+
+  // เบอร์โทร: keep digits only, cap at 10 (Thai) — live, both modes.
+  const _phoneEl = modal.querySelector('#dep-res-phone');
+  _phoneEl?.addEventListener('input', () => { _phoneEl.value = _phoneEl.value.replace(/\D/g, '').slice(0, 10); });
 
   // ห้อง dropdown + auto-fill (fresh reserve only — the อาคาร/ห้อง/มัดจำ fields exist when !isAdd).
   // Picking a room fills มัดจำทั้งหมด = its rentPrice × 2 (the standard 2-month deposit); admin can
@@ -676,6 +680,16 @@ async function _saveReserveDeposit() {
     lineId:    (document.getElementById('dep-res-line')?.value || '').trim(),
     facebook:  (document.getElementById('dep-res-fb')?.value || '').trim(),
   };
+
+  // เบอร์โทร: normalize to digits + validate Thai 10-digit (0XXXXXXXXX); ชื่อ+เบอร์ required on a fresh reserve.
+  if (prospect.phone) {
+    prospect.phone = prospect.phone.replace(/\D/g, '');
+    if (!/^0\d{9}$/.test(prospect.phone)) { alert('เบอร์โทรไม่ถูกต้อง — ต้องเป็นเลข 10 หลัก ขึ้นต้นด้วย 0 (เช่น 0812345678)'); return; }
+  }
+  if (!ctx.isAdd) {
+    if (!prospect.firstName) { alert('กรุณากรอก "ชื่อ" ว่าที่ผู้เช่า'); return; }
+    if (!prospect.phone)     { alert('กรุณากรอก "เบอร์โทร" ว่าที่ผู้เช่า'); return; }
+  }
 
   let baseDoc;
   if (ctx.isAdd) {
