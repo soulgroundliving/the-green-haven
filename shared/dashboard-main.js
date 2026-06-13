@@ -1018,6 +1018,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     }
     if (a === 'viewDepPendingPhoto')  { typeof window._viewDepPendingPhoto === 'function' && window._viewDepPendingPhoto(parseInt(el.dataset.index)); return; }
     if (a === 'viewDepPaymentSlip')   { typeof window._viewDepPaymentSlip === 'function' && window._viewDepPaymentSlip(el.dataset.path); return; }
+    if (a === 'cancelReservedDeposit'){ typeof window._cancelReservedDeposit === 'function' && window._cancelReservedDeposit(el.dataset.building, el.dataset.room); return; }
     if (a === 'showDepositEvidence')  { typeof window.showDepositEvidence === 'function' && window.showDepositEvidence(el.dataset.building, el.dataset.room); return; }
     if (a === 'closeDepEvidenceModal'){ document.getElementById('depEvidenceModal')?.remove(); return; }
 
