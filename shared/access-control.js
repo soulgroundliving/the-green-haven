@@ -163,7 +163,7 @@ class AccessControl {
     // Not authenticated - redirect to login
     if (!user) {
       console.warn('⚠️ Access denied: Not authenticated');
-      window.location.href = '/login.html';
+      window.location.href = '/login';
       return false;
     }
 
@@ -260,7 +260,7 @@ class AccessControl {
     const user = this.getCurrentUser();
 
     if (!user) {
-      window.location.href = '/login.html';
+      window.location.href = '/login';
       return;
     }
 
@@ -275,7 +275,7 @@ class AccessControl {
         window.location.href = `/tenant_app.html?room=${user.roomNumber || ''}`;
         break;
       default:
-        window.location.href = '/login.html';
+        window.location.href = '/login';
     }
   }
 
@@ -309,11 +309,11 @@ class AccessControl {
         window.SecurityUtils.secureLogout();
       } else {
         sessionStorage.clear();
-        window.location.href = '/login.html';
+        window.location.href = '/login';
       }
     } catch (error) {
       console.error('Logout error:', error);
-      window.location.href = '/login.html';
+      window.location.href = '/login';
     }
   }
 

@@ -749,7 +749,7 @@ function showTaxPage(pageName, btn) {
  */
 function handleLogout() {
   if (confirm('คุณแน่ใจหรือว่าต้องการออกจากระบบ?')) {
-    window.location.href = '../../login.html';
+    window.location.href = '/login';
   }
 }
 
