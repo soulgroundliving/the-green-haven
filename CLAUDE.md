@@ -452,11 +452,12 @@ Each pattern cost 2–5 sessions to debug. Check the relevant one BEFORE writing
 **Detect:** `firebase functions:secrets:get X --project the-green-haven` (metadata only, never `:access`) + `gcloud secrets describe`. Can't run gcloud in-session → don't merge, hand to user. Family: §7-Z, §7-FF, §7-NN.
 ↳ IQAIR revert `adae1cc` (PR #216) → `tasks/lessons_antipatterns.md` §WW
 
-### XX. Live CSP `img-src` omits `blob:` (Vercel-UI override ≠ vercel.json) — preview Files via `data:`, never `URL.createObjectURL`
+### XX. Preview a local File via `data:` (FileReader), not `blob:` (createObjectURL) — and verify the LIVE CSP, not vercel.json
 
-**Rule:** the LIVE dashboard CSP `img-src` is set in the Vercel UI (overrides vercel.json) and omits `blob:` — preview a local File as `<img>` via `FileReader.readAsDataURL` (`data:` is allowed), never `URL.createObjectURL` (`blob:` blocked). `blob:` is fine for downloads/canvas. PDFs can't preview inline → defer to the stored-evidence view (https: `getDownloadURL`).
-**Detect:** `grep -rn "createObjectURL" shared/ *.html` + `curl -sI <url> | grep -i content-security` (the REAL img-src, not vercel.json's). Family: §7-Y, §7-II, [[feedback_vercel_ui_overrides_json]].
-↳ deposit evidence #259 → `tasks/lessons_antipatterns.md` §XX
+**Rule:** preview a just-picked File as `<img>` via `FileReader.readAsDataURL` (`data:`), never `URL.createObjectURL` (`blob:`) — `data:` is the narrower grant and survives a CSP `img-src` that omits `blob:`. `blob:` stays fine for downloads/canvas. PDFs can't preview inline → defer to the stored-evidence view (https: `getDownloadURL`).
+**Verify LIVE, not vercel.json:** a Vercel-UI *header* override CAN diverge from vercel.json — it did 2026-06-04 (live `img-src` omitted `blob:`). *2026-06-13 re-audit: live === vercel.json byte-identical (incl. `blob:` + all 24 hashes) on login/dashboard/tenant_app → that override is DORMANT + the CSP hash pipeline IS effective live. Still verify, don't assume.*
+**Detect:** `grep -rn "createObjectURL" shared/ *.html` + `curl -sSIL <url> | grep -i content-security` (the REAL img-src). Family: §7-Y, §7-II, [[feedback_vercel_ui_overrides_json]].
+↳ #259 + 2026-06-13 header-drift audit → `tasks/lessons_antipatterns.md` §XX
 
 ### YY. Node 22 undici `fetch` can't serialize the `form-data` npm package — multipart uploads must use **global `FormData` + `Blob`**
 
