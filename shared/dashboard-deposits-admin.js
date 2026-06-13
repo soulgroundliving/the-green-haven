@@ -518,10 +518,15 @@ function _prospectLabel(p) {
   const nick = (p.nickname || '').trim();
   return [full, nick ? `(${nick})` : ''].filter(Boolean).join(' ');
 }
-// "📞 081… · LINE: x · FB: y" from a prospect — the contact channels (kept so they don't get lost).
+// Format a stored 10-digit Thai phone for display as xxx-xxx-xxxx (partial as you type too).
+function _fmtThaiPhone(s) {
+  const d = String(s == null ? '' : s).replace(/\D/g, '').slice(0, 10);
+  return d.length > 6 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : d.length > 3 ? `${d.slice(0, 3)}-${d.slice(3)}` : d;
+}
+// "📞 081-234-5678 · LINE: x · FB: y" from a prospect — the contact channels (kept so they don't get lost).
 function _prospectContact(p) {
   if (!p) return '';
-  return [p.phone && `📞 ${p.phone}`, p.lineId && `LINE: ${p.lineId}`, p.facebook && `FB: ${p.facebook}`].filter(Boolean).join(' · ');
+  return [p.phone && `📞 ${_fmtThaiPhone(p.phone)}`, p.lineId && `LINE: ${p.lineId}`, p.facebook && `FB: ${p.facebook}`].filter(Boolean).join(' · ');
 }
 
 function showReserveDepositModal(building, roomId) {
@@ -554,7 +559,7 @@ function showReserveDepositModal(building, roomId) {
           </div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
             <input id="dep-res-nick" type="text" placeholder="ชื่อเล่น" value="${_esc(p.nickname)}" style="flex:1;min-width:0;${_inp}">
-            <input id="dep-res-phone" type="text" inputmode="tel" maxlength="10" placeholder="เบอร์โทร 10 หลัก${isAdd ? '' : ' *'}" value="${_esc(p.phone)}" style="flex:1;min-width:0;${_inp}">
+            <input id="dep-res-phone" type="text" inputmode="tel" maxlength="12" placeholder="เบอร์โทร${isAdd ? '' : ' *'}" value="${_fmtThaiPhone(p.phone)}" style="flex:1;min-width:0;${_inp}">
           </div>
           <div style="display:flex;gap:8px;">
             <input id="dep-res-line" type="text" placeholder="LINE ID" value="${_esc(p.lineId)}" style="flex:1;min-width:0;${_inp}">
@@ -612,7 +617,7 @@ function showReserveDepositModal(building, roomId) {
 
   // เบอร์โทร: keep digits only, cap at 10 (Thai) — live, both modes.
   const _phoneEl = modal.querySelector('#dep-res-phone');
-  _phoneEl?.addEventListener('input', () => { _phoneEl.value = _phoneEl.value.replace(/\D/g, '').slice(0, 10); });
+  _phoneEl?.addEventListener('input', () => { _phoneEl.value = _fmtThaiPhone(_phoneEl.value); });
 
   // ห้อง dropdown + auto-fill (fresh reserve only — the อาคาร/ห้อง/มัดจำ fields exist when !isAdd).
   // Picking a room fills มัดจำทั้งหมด = its rentPrice × 2 (the standard 2-month deposit); admin can

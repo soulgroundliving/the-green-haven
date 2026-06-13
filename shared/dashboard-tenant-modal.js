@@ -154,6 +154,7 @@ function openTenantModal(building, roomId) {
   const evEl = document.getElementById('modalTenantEmailVerified');
   if (evEl) evEl.textContent = tenant.email ? (tenant.emailVerified ? '✅ ยืนยันแล้ว' : '(ยังไม่ยืนยัน)') : '';
   document.getElementById('modalTenantLicensePlate').value = tenant.licensePlate || '';
+  { const _nk = document.getElementById('modalTenantNickname'); if (_nk) _nk.value = tenant.nickname || ''; }
 
   // #1 — pre-fill a NEW tenant from the room's reserved-deposit ว่าที่ผู้เช่า so the admin doesn't
   // re-type ชื่อ/เบอร์/LINE captured at reserve time. Vacant room only; fills empty fields only;
@@ -174,6 +175,7 @@ function openTenantModal(building, roomId) {
         setIfEmpty('modalTenantLastName', pr.lastName);
         setIfEmpty('modalTenantPhone', pr.phone);
         setIfEmpty('modalTenantLineID', pr.lineId);
+        setIfEmpty('modalTenantNickname', pr.nickname);
         if (filled && typeof showToast === 'function') showToast('👤 เติมข้อมูลจากว่าที่ผู้เช่า (มัดจำ) ให้แล้ว — ตรวจก่อนบันทึก');
       } catch (_) {}
     })();
@@ -617,6 +619,7 @@ function saveTenantInfo() {
     licensePlate:  document.getElementById('modalTenantLicensePlate')?.value || '',
     address:       document.getElementById('modalTenantAddress')?.value || '',
     lineID:        document.getElementById('modalTenantLineID').value,
+    nickname:      document.getElementById('modalTenantNickname')?.value?.trim() || '',
     moveInDate:    document.getElementById('modalTenantMoveIn').value,
     contractStart: document.getElementById('modalTenantContractStart')?.value || '',
     contractMonths: parseInt(document.getElementById('modalTenantContractMonths')?.value || '', 10) || null,
@@ -727,6 +730,7 @@ function saveTenantInfo() {
       name: fullName,
       firstName,
       lastName,
+      nickname: inputs.nickname || '',
       phone: inputs.phone || '',
       email: inputs.email || '',
       lineUserId: inputs.lineID || '',
