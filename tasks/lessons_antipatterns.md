@@ -127,7 +127,7 @@ grep -rn "prefetchAllPeople\|getPersonSync" shared/ *.html  # who actually calls
 - For destructive cleanup, use `FieldValue.delete()` in an explicit migration script (see `tools/migrate-tenant-doc-to-slim.js` template).
 
 ### M. "Loadable in browser" ≠ "in production flow"
-`payment.html` (923 lines) is in the CSP hash list, has Sentry monitoring, has SRI scripts — looks like a production page. Reading the code: uses `SecurityUtils.getSecureSession()` (NOT Firebase Auth), localStorage-only slip flow (NOT verifySlip CF), no LIFF SDK at all. It's a standalone legacy portal.
+*(⚰️ `payment.html` was decommissioned in #149, 2026-05-29 — kept here as the dated case study; the lesson stands.)* `payment.html` (923 lines) WAS in the CSP hash list, had Sentry monitoring + SRI scripts — looked like a production page. But the code used `SecurityUtils.getSecureSession()` (NOT Firebase Auth), a localStorage-only slip flow (NOT verifySlip CF), and no LIFF SDK at all — a standalone legacy portal, never in the real payment flow.
 
 **Rule:** Build pipelines (CSP, SRI, Sentry, bundling) don't distinguish "live in production" from "still loadable in browser". Before claiming file X integrates with flow Y:
 - Read auth model: Firebase Auth? SecurityUtils? LIFF?
@@ -772,7 +772,7 @@ CSP hashes in `vercel.json` for inline `<style>` and `<script>` blocks must be r
 
 Incident 2026-05-23: fervent-kare merged with `Content-Security-Policy` enforce flip. Login.html (commit `4ad53ce fix(login): pin input text color`), dashboard.html, tenant_app.html, tax-filing.html, audit-log-viewer.html, payment.html, booking.html, index.html — all 8 had `<style>` and/or `<script>` edits since `54ce1cb fix(csp): roll back to Report-Only mode`. None regenerated CSP hashes. Result: production-wide CSS failure on first user load after the enforce flip. User sent a before/after screenshot of login.html with "page broken" symptoms — root cause took ~3 minutes to find once the verify-via-grep doctrine pointed at `vercel.json` history.
 
-**Rule:** ANY edit to an inline `<style>` or `<script>` block in ANY tracked HTML (8 files: `index/login/dashboard/tenant_app/tax-filing/audit-log-viewer/payment/booking.html`) MUST be followed by hash regen in the same commit:
+**Rule:** ANY edit to an inline `<style>` or `<script>` block in ANY tracked HTML (7 files: `index/login/dashboard/tenant_app/tax-filing/audit-log-viewer/booking.html` — `payment.html` was in this list until decommissioned #149, 2026-05-29) MUST be followed by hash regen in the same commit:
 
 ```bash
 npm run csp:hash                     # rebuilds tools/csp-hashes.json
@@ -794,7 +794,7 @@ diff <(jq -S . tools/csp-hashes.json) <(jq -S . /tmp/new.json)
 # Non-empty diff = hashes drifted → run update-vercel-csp.js
 ```
 
-**Pre-commit hook (landed 2026-05-23):** `tools/git-hooks/pre-commit` §G now detects this automatically — staging any of the 8 tracked HTMLs triggers a regen + drift compare against current `tools/csp-hashes.json` and `vercel.json`. Drift blocks the commit with the exact regen instructions. The hook backs up + restores both files so a blocked commit leaves no mutation behind. Re-installed via `npm run install:hooks` (also runs on `npm install` postinstall).
+**Pre-commit hook (landed 2026-05-23):** `tools/git-hooks/pre-commit` §G now detects this automatically — staging any of the 7 tracked HTMLs triggers a regen + drift compare against current `tools/csp-hashes.json` and `vercel.json`. Drift blocks the commit with the exact regen instructions. The hook backs up + restores both files so a blocked commit leaves no mutation behind. Re-installed via `npm run install:hooks` (also runs on `npm install` postinstall).
 
 **Debugging signature** (this bug class is sneaky because the symptom looks like a CSS file failure, not a CSP problem):
 

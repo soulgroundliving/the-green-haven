@@ -229,8 +229,8 @@ Each pattern cost 2–5 sessions to debug. Check the relevant one BEFORE writing
 
 ### M. "Loadable in browser" ≠ "in production flow"
 
-**Rule:** build-pipeline membership (CSP/SRI/Sentry/bundle) doesn't prove a file is live in production. Before claiming file X integrates with flow Y, read its auth model (Firebase Auth? SecurityUtils? LIFF?), CF calls, and data source — `payment.html` looks production but is a standalone legacy localStorage portal.
-**Detect:** check auth + CF + data-source primitives, not the build list. See [[payment_html_legacy]].
+**Rule:** build-pipeline membership (CSP/SRI/Sentry/bundle) doesn't prove a file is live in production. Before claiming file X integrates with flow Y, read its auth model (Firebase Auth? SecurityUtils? LIFF?), CF calls, and data source — the textbook case was `payment.html`: in the CSP/SRI/Sentry build list yet a standalone legacy localStorage portal never in the real payment flow (since decommissioned #149, 2026-05-29).
+**Detect:** check auth + CF + data-source primitives, not the build list. See [[payment_html_legacy]] (⚰️ decommissioned — kept as the dated record).
 ↳ `tasks/lessons_antipatterns.md` §M
 
 ### N. onSnapshot must have error callback
@@ -363,8 +363,8 @@ Each pattern cost 2–5 sessions to debug. Check the relevant one BEFORE writing
 
 ### II. CSP hash drift accumulates silently during Report-Only era, bombs on enforce flip
 
-🔒 **pre-commit §G BLOCKS** this: staging any of the 8 tracked HTMLs regen-compares CSP hashes.
-**Rule:** ANY edit to an inline `<style>`/`<script>` in the 8 tracked HTMLs (index/login/dashboard/tenant_app/tax-filing/audit-log-viewer/payment/booking) needs hash regen in the SAME commit: `npm run csp:hash && node tools/update-vercel-csp.js && git add vercel.json tools/csp-hashes.json`.
+🔒 **pre-commit §G BLOCKS** this: staging any of the 7 tracked HTMLs regen-compares CSP hashes.
+**Rule:** ANY edit to an inline `<style>`/`<script>` in the 7 tracked HTMLs (index/login/dashboard/tenant_app/tax-filing/audit-log-viewer/booking) needs hash regen in the SAME commit: `npm run csp:hash && node tools/update-vercel-csp.js && git add vercel.json tools/csp-hashes.json`.
 **Signature:** the deployed page renders with NATIVE browser styling (CSS files 200; inline `<style>` present in source but not applied); the violation shows only in DevTools → Issues, not console. Family: §7-W, §7-RR, §7-OO, §7-J.
 ↳ incident `9f29338` + 6-point debugging signature + "ห้องแถว labels lied" lesson → `tasks/lessons_antipatterns.md` §II
 
