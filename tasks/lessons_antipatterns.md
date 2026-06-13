@@ -1538,3 +1538,26 @@ grep -rln "_pet_profile_v1\|consents/" functions/      # which purposes does a C
 The kindness/reputation `recordChecklistConsent` callers stay fire-and-forget **by design** (nothing gates on them) — do NOT "fix" those to await. Family: §7-Z/FF (Firebase auth/consent state has >1 place that must line up before the next step trusts it), §7-KK (optimistic write vs the read that races it), §7-DD (a transition must settle every sibling doc a downstream reader depends on).
 
 ---
+
+### MMM. Two auth gates with mismatched persistence lifetimes bounce a logged-in user — one durable source of truth, ephemeral caches re-hydrate
+
+**Symptom:** a signed-in admin opens `/dashboard` and is bounced to `/login` (`?next=%2Fdashboard`, or plain `/login`) — intermittent, then "every time" on the main browser; **incognito works fine**; often right after a deploy.
+
+**Root cause (reproduced live + confirmed in source):** dashboard.html had TWO independent auth gates with different storage lifetimes:
+- Gate 1 (the §7-VV gate): Firebase Auth, persisted in **IndexedDB** — survives browser close + token refresh; bounces with `?next=`.
+- Gate 2 (`checkAuthentication` → `SecurityUtils.getSecureSession`): a session in **sessionStorage with a 2h TTL** (`shared/security.js:181-188`) — dies on tab/browser close or after 2h; bounces with plain `/login`.
+
+When Firebase is still authed (IndexedDB) but the sessionStorage session has lapsed (new tab, reopened browser, >2h, fresh-deploy reload), Gate 2 bounced the authenticated admin. Incognito works because the in-session fresh login keeps sessionStorage populated. Verified in the owner's browser via Chrome MCP: on `/dashboard`, `auth.currentUser = <admin>` + `firebaseReady = true` + SW/cache current — yet `getSecureSession() = null` → bounced.
+
+**Fix (#359→#361):** make the durable Firebase **admin custom claim** the source of truth in `checkAuthentication`. When the SecurityUtils session is missing/expired/non-admin, wait for the Firebase auth restore, check `getIdTokenResult().claims.admin`, and **re-hydrate** the session from Firebase instead of bouncing. Only a genuinely non-admin / logged-out user is redirected. Security IMPROVES: a server-issued claim (what Firestore rules already enforce) replaces reliance on a forgeable sessionStorage flag.
+
+**The 3-iteration trap — `firebaseReady` ≠ auth-state restored:**
+- v1 (#359): consulted the claim but read `auth.currentUser` right after `window.firebaseReady`. firebaseReady only means the SDK objects exist (`getAuth` ran) — NOT that the IndexedDB session was restored → currentUser null → still bounced.
+- v2 (#360): added `await auth.authStateReady()`. But `auth.authStateReady` is **absent in this SDK build** (that's why the §7-VV gate guards it with `typeof === 'function'` + a 12s fallback) → skipped → read currentUser too early again → still bounced (verified live: fast bounce, firebaseReady=true + currentUser=null).
+- v3 (#361, correct): use `auth.currentUser` if already restored, else wait for **`onAuthStateChanged`** to fire with the user (the ONLY reliable restore signal — the mechanism the §7-VV gate uses), with a 6s cap → treat a user-less load as logged-out. **Empirically verified:** running the exact v3 detection against the page's live Firebase auth resolved `<admin>` + `claims.admin === true`.
+
+**Verify-blocker (§7-MM):** the live full-navigation verify kept "bouncing" because the browser served a **stale `/dashboard` from its navigation cache** (old sync gate) — a §7-MM artifact that blocks the *verification*, not the fix. `fetch('/dashboard', {cache:'reload'})` returned the new code; navigation didn't. Owner confirmed working after one hard-reload. Lesson: when a deployed fix still "reproduces" on the dev's stateful browser, prove the fix LOGIC empirically (run it against live state) + have the user hard-reload — don't conclude the fix is wrong from a stale-nav-cache repro.
+
+**Diagnostic-journey lesson (§7-F):** mis-diagnosed TWICE (in-memory persistence; then SW/cache) before the dual-gate, by theorizing instead of getting one observation. The user's "**incognito works + happens after I deploy + main browser**" cracked it instantly (refuted persistence AND pointed at session-state). For a recurring auth symptom, get that ONE observation FIRST.
+
+**Detect:** a page with >1 redirect-to-login from different auth sources is the smell — `grep -n "getSecureSession\|onAuthStateChanged\|currentUser\|location.href = '/login'" dashboard.html`. Any new client auth gate must derive from ONE durable source (the Firebase claim), not a short-TTL ephemeral session. Family: §7-VV (authStateReady redirect gate), §7-A/U/Z/HH (auth/claims timing), §7-MM (stale cache hides live verify), §7-F (demand one observation before the Nth fix).
