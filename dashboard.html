@@ -5062,10 +5062,14 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
   <!-- TAB: Deposits -->
   <div id="requests-tab-deposits" class="requests-mgmt-content u-init-hide" >
-    <div class="dash-grid-3col">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.8rem;margin-bottom:1.2rem;">
       <div class="card cell-center">
         <div id="dep-kpi-holding" style="font-size:1.5rem;font-weight:800;color:#d97706;">0</div>
         <div class="dash-deposit-label">💰 ถือมัดจำ</div>
+      </div>
+      <div class="card cell-center">
+        <div id="dep-kpi-reserved" style="font-size:1.5rem;font-weight:800;color:#1e40af;">0</div>
+        <div class="dash-deposit-label">🕒 รอย้ายเข้า</div>
       </div>
       <div class="card cell-center">
         <div id="dep-kpi-returned" style="font-size:1.5rem;font-weight:800;color:#059669;">0</div>
