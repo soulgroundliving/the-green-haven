@@ -242,7 +242,7 @@ function renderDepositsPage() {
             ${phase === 'holding' ? `<button data-action="showReturnDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">บันทึกคืนมัดจำ</button>` : ''}
             ${isReserved ? `<button data-action="showReserveDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#eef2f6;color:#1e40af;border:1px solid #bfdbfe;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">💵 ชำระเพิ่ม</button>
             <button data-action="showConfirmMoveInModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#1e40af;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">✓ ยืนยันย้ายเข้า</button>
-            <button data-action="showForfeitDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">✕ ริบ</button>` : ''}
+            <button data-action="showForfeitDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">✕ ริบ</button>${(Number(r.paidSoFar) || 0) === 0 ? `<button data-action="cancelReservedDeposit" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#f9fafb;color:#6b7280;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">🗑️ ยกเลิก</button>` : ''}` : ''}
             ${(isReturned && hasEvidence) || hasHistory ? `<button data-action="showDepositEvidence" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#eef2f6;color:#334435;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📎 ${evLabel}</button>` : ''}
             ${isReturned ? `<button data-action="exportDepositReceipt" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📄 ใบรับเงิน</button>` : ''}
           </div>
@@ -1181,6 +1181,27 @@ async function _viewDepPaymentSlip(path) {
   catch (e) { console.warn('[deposit] payment slip load failed:', e?.message || e); alert('เปิดสลิปไม่สำเร็จ'); }
 }
 window._viewDepPaymentSlip = _viewDepPaymentSlip;
+
+// Cancel (DELETE) a reserved deposit that has NO money paid — the clean exit for a mistaken/orphan
+// reservation (frees the room to be reserved again). Distinct from ✕ ริบ (forfeit = no-show, KEEPS
+// the money + leaves a forfeited record). Blocked when paidSoFar > 0 (use ริบ / return instead).
+async function _cancelReservedDeposit(building, roomId) {
+  const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
+  if (!dep) return;
+  if (dep.status !== 'reserved') { alert('ยกเลิกได้เฉพาะรายการที่ "🕒 รอย้ายเข้า"'); return; }
+  const paid = Number(dep.paidSoFar) || 0;
+  if (paid > 0) {
+    alert(`ห้อง ${roomId} ชำระมัดจำแล้ว ฿${paid.toLocaleString()} — ลบไม่ได้\n\nถ้าผู้เช่าไม่ย้ายเข้า (no-show) ให้กด "✕ ริบ" แทน (เก็บมัดจำ)`);
+    return;
+  }
+  if (!confirm(`ยกเลิกการจองห้อง ${roomId}?\n\nลบรายการนี้ถาวร (ยังไม่มีเงินชำระ) — ห้องจะกลับมาจองใหม่ได้`)) return;
+  try {
+    const fs = window.firebase.firestoreFunctions, db = window.firebase.firestore();
+    await fs.deleteDoc(fs.doc(fs.collection(db, 'deposits'), `${building}_${roomId}`));
+    if (typeof showToast === 'function') showToast('🗑️ ยกเลิกการจองแล้ว — ห้องนี้จองใหม่ได้');
+  } catch (e) { alert('ยกเลิกไม่สำเร็จ: ' + (e?.message || e)); }
+}
+window._cancelReservedDeposit = _cancelReservedDeposit;
 
 // Preview the currently-selected refund slip File before upload — same lightbox
 // as the damage photos. Lets the admin confirm the right slip was picked.
