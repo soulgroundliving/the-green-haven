@@ -6,14 +6,14 @@ Loaded at every session start. Overrides any default behavior — follow exactly
 
 Two docs auto-load at session start; they are **complementary, not duplicates**:
 
-- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-LLL** (project-specific lessons that auto-load every session).
+- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-pattern STUBS A-LLL** (recognise + rule + detection grep — auto-load every session). Full incident/code/debugging-signature for each lives in `tasks/lessons_antipatterns.md` (repo-committed, on-demand) — the two-tier split keeps per-session context lean while the detail travels with the repo.
 - **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, archive.
 
 **Boundary rule for new content:**
 - Workflow / build / deploy facts → here
 - A system's behavior, lifecycle, schema → MEMORY.md as `lifecycle_*.md` or reference doc
 - A cross-project user preference → MEMORY.md as `feedback_*.md`
-- **A project-specific recurring anti-pattern** → §7 below (was previously `tasks/lessons.md`; that file is now archived as `tasks/lessons.md.archive` for git history)
+- **A project-specific recurring anti-pattern** → a STUB in §7 below + the full entry in `tasks/lessons_antipatterns.md` (two-tier — see §7 intro). (Was previously `tasks/lessons.md`; archived as `tasks/lessons.md.archive` for git history)
 
 ## 1. Workflow Orchestration
 
@@ -50,11 +50,11 @@ The full rule + incident history: [memory/feedback_verify_via_grep_doctrine.md](
 ### Self-Improvement Loop (Lessons)
 After ANY correction from the user, decide where to log it:
 
-- **Recurring anti-pattern in THIS project** (cost 2+ sessions, will likely re-occur) → add to **§7 below** as a new letter (J, K, L...). These are auto-loaded with this file every session. Format: short title · 1-2 sentence rule · code example or grep command.
+- **Recurring anti-pattern in THIS project** (cost 2+ sessions, will likely re-occur) → add a new letter as a **two-tier pair**: a STUB in **§7 below** (`### X. title` + 🔒-if-hook-enforced + **Rule:** 1-2 sentences + **Detect:** grep + `↳ … → tasks/lessons_antipatterns.md §X`) AND the full entry (incident, ✅/❌ code, debugging signature, family) in `tasks/lessons_antipatterns.md`. The STUB auto-loads every session; do NOT paste the full prose/code back into §7. Keep the same `### X.` header in both so the count + anchor stay aligned.
 - **One-off project incident** (specific commit fix, niche edge case) → don't promote; the commit message + lifecycle doc update is enough.
 - **Cross-project preference** ("user wants X always") → `~/.claude/projects/.../memory/feedback_<topic>.md`. MEMORY.md "🤝 Working style" indexes them.
 
-**Why no more `tasks/lessons.md`:** It was append-only and rarely opened (neither by user nor agent). Promoting recurring patterns to §7 (which IS auto-loaded) and routing one-offs to commit messages keeps the signal where it actually gets read. Old lessons still live in `tasks/lessons.md.archive` for git-history searches.
+**Why no more `tasks/lessons.md`:** It was append-only and rarely opened (neither by user nor agent). Promoting recurring patterns to §7 (auto-loaded) keeps the signal where it actually gets read. The 2026-06-13 two-tier split refines this — not a reversal: the **stub** (rule + detection grep) is what auto-loads and gets read; only the long incident/code detail moved to `tasks/lessons_antipatterns.md` (still repo-committed + greppable, just on-demand). This avoids the old "rarely opened" trap because recognition no longer depends on opening the detail file. Old lessons still live in `tasks/lessons.md.archive` for git-history searches.
 
 ### Verification Before Done
 - Never mark a task complete without proof: tests pass, logs show success, browser verified live, etc.
@@ -147,1534 +147,400 @@ Service Worker auto-versions from `VERCEL_GIT_COMMIT_SHA` — no manual `CACHE_V
 
 ## 7. Recurring Anti-Patterns — Read Before Touching These Areas
 
-Each pattern cost 2–5 sessions to debug. Check the relevant one BEFORE writing code, not after. Append new patterns here directly when a recurring issue surfaces — see §1 Self-Improvement Loop for routing.
+Each pattern cost 2–5 sessions to debug. Check the relevant one BEFORE writing code, not after. New pattern? Add a STUB here + a full entry in `tasks/lessons_antipatterns.md` (two-tier note below) — see §1 Self-Improvement Loop for routing.
+
+**Two-tier:** every entry here is a **stub** — recognise + rule + detection grep (what you need at every load) — with a `↳ tasks/lessons_antipatterns.md §X` pointer to the full incident, code, and debugging signature (pull only when working in that area). `🔒` on a stub = a pre-commit hook mechanically blocks the regression, so the stub is the guardrail's label, not its enforcer. To read a full entry: `grep -n "^### HH\." tasks/lessons_antipatterns.md` then read its block.
 
 ### A. Auth-gated reads in `tenant_app.html`
-ANY Firestore/RTDB read that needs `token.room`/`token.building`/`token.admin` claims:
-```js
-// ✅ CORRECT — always
-_onLiffClaimsReady(_subscribeX);
 
-// ❌ WRONG — causes bills/meter to show "ไม่มีข้อมูล" in real LIFF (admin preview works fine)
-window.addEventListener('liffLinked', _subscribeX);
-window.addEventListener('authReady', _subscribeX);
-```
-5+ sessions were lost to this. Admin preview bypasses room checks → bug invisible until LIFF test.
+🔒 **pre-commit WARNs** on `addEventListener('liffLinked')` in tenant_app; `audit:auth` BLOCKS auth-callback drift.
+**Rule:** ANY Firestore/RTDB read needing `token.room`/`token.building`/`token.admin` MUST wire through `_onLiffClaimsReady(_subscribeX)` — NOT `addEventListener('liffLinked'|'authReady')`. Admin preview bypasses room checks, so the bug is invisible until a real LIFF test ("ไม่มีข้อมูล").
+**Detect:** `grep -n "addEventListener('liffLinked'\|addEventListener('authReady'" tenant_app.html` → each should be `_onLiffClaimsReady`. Family: §7-U, §7-BB.
+↳ 5-session incident + correct/wrong code → `tasks/lessons_antipatterns.md` §A
 
 ### B. Firebase SDK — modular only, no compat API
-```js
-// ✅ CORRECT
-const ref = window.firebaseRef(window.firebaseDatabase, 'bills/rooms/15');
-const snap = await window.firebaseGet(ref);
 
-// ❌ WRONG — firebase.database is undefined (v12 modular, no compat layer)
-await window.firebase.database().ref('bills').once('value');
-```
-When in doubt: `grep "firebaseRef\|firebaseGet\|firebaseSet" dashboard.html` for the actual globals.
+🔒 **pre-commit BLOCKS** `firebase.{database,auth,storage,functions}().xxx` compat chains.
+**Rule:** v12 modular only, no compat layer. Use `window.firebaseGet(window.firebaseRef(window.firebaseDatabase, path))`, NOT `firebase.database().ref(...).once()` (`firebase.database` is undefined).
+**Detect:** `grep -n "firebaseRef\|firebaseGet\|firebaseSet" dashboard.html` for the real globals; see [[firebase_client_sdk_v11_modular]].
+↳ examples → `tasks/lessons_antipatterns.md` §B
 
 ### C. Modal display — inline style wins over class, AND `''` ≠ `'none'`
-```js
-// ✅ Modal with a CSS class binding display:none (e.g. .modal, .u-hidden)
-modal.style.display = 'flex';   // open
-modal.style.display = '';       // close — CSS class fallback wins → none
 
-// ✅ Modal that ONLY has inline style="display:none;..." (no CSS rule!)
-modal.style.display = 'flex';   // open
-modal.style.display = 'none';   // close — MUST be explicit; '' falls back to block
-
-// ❌ classList alone fails if element has inline style="display:none"
-modal.classList.remove('u-hidden');
-```
-**Decision rule:** before close handler, grep the modal's class in stylesheets. No CSS rule binding `display:none` → `= 'none'` explicit. CSS rule exists → `= ''` is fine.
-
-Debug one-liner: `({inline: m.style.display, computed: getComputedStyle(m).display})` — computed `block` after close = inline-only fallback bug.
-
-2026-05-13 incident: `checklist-template-modal` + `facility-config-modal` were inline-only `display:none` → close handlers cleared display → fell back to `block` (still visible, ปุ่มยกเลิกดู "ไม่ทำงาน"). Fixed in `32902be`.
+**Rule:** before a modal close handler, grep the modal's class in stylesheets. A CSS rule binding `display:none` → `m.style.display = ''` is fine. Inline-only `style="display:none"` (no CSS rule) → MUST be explicit `= 'none'` (`''` falls back to `block`). `classList` alone fails against an inline style.
+**Detect debug:** `({inline:m.style.display, computed:getComputedStyle(m).display})` — computed `block` after close = inline-only fallback bug. Cousin: §7-SS.
+↳ incident `32902be` (checklist/facility modals) → `tasks/lessons_antipatterns.md` §C
 
 ### D. BillStore — getByRoom not listForYear for single-room queries
-```js
-// ✅ CORRECT — RTDB bill docs have no 'room' field in the body; filter by path key
-BillStore.getByRoom(building, roomId, year)
 
-// ❌ WRONG — b.room is always undefined → returns [] silently
-BillStore.listForYear(building, y).filter(b => b.room === roomId)
-```
+🔒 **pre-commit BLOCKS** `BillStore.listForYear().filter(b => b.room)`.
+**Rule:** RTDB bill docs have no `room` field in the body — use `BillStore.getByRoom(building, roomId, year)`. `listForYear(...).filter(b => b.room === roomId)` silently returns `[]` (`b.room` always undefined).
+**Detect:** `grep -rn "listForYear" shared/ | grep "\.room"`. See [[lifecycle_stores_facade]].
+↳ `tasks/lessons_antipatterns.md` §D
 
 ### E. Year formats — 3 different formats coexist
-| Source | Format | Example |
-|--------|--------|---------|
-| `meter_data` Firestore | 2-digit BE | `69` |
-| RTDB bills (`BillStore._cache`) | 4-digit BE string | `"2569"` |
-| `synthesizeFromMeter` + grid row `y` | 4-digit BE int | `2569` |
-Convert: 2-digit BE → CE: `1957 + shortYear`. Always use `BillStore._be(b.year)` to compare.
+
+**Rule:** 3 year formats coexist — `meter_data` Firestore = 2-digit BE (`69`); RTDB bills = 4-digit BE string (`"2569"`); `synthesizeFromMeter`/grid `y` = 4-digit BE int (`2569`). Convert 2-digit BE→CE via `1957 + shortYear`. Always compare through `BillStore._be(b.year)`.
+**Detect:** any raw `b.year ===` comparison in billing code is suspect — route through `_be()`. Family: §7-D, §7-AAA, §7-BBB.
+↳ format table → `tasks/lessons_antipatterns.md` §E
 
 ### F. Recurring symptom → demand state FIRST, propose fix SECOND
-If a symptom has appeared before (bills, modals, auth): **stop, ask for ONE observation** before proposing a fix.
-```
-✅ "ช่วยเปิด DevTools แล้วบอก: currentUser?.email, token claims, network 4xx ที่เห็น"
-❌ "ลอง fix X... ถ้าไม่ได้ ลอง fix Y... ถ้าไม่ได้ ลอง fix Z..."
-```
-1 observation ตัดสาเหตุได้ 80% ของ hypothesis tree ทันที.
+
+**Rule:** if a symptom has appeared before (bills, modals, auth), STOP and ask for ONE diagnostic observation before proposing a fix — 1 observation cuts ~80% of the hypothesis tree. Never propose fix X→Y→Z in a row.
+**Detect:** you're typing a second consecutive "try this" without a new observation. See [[feedback_stop_guessing_demand_state]].
+↳ example prompts → `tasks/lessons_antipatterns.md` §F
 
 ### G. Cross-session self-conflict check
-After touching 2+ files in the same user flow: re-read ALL diffs from this session end-to-end before saying done. Two individually correct changes can conflict (happened: auth gate blocked URL that same session's login redirect was generating).
+
+**Rule:** after touching 2+ files in the same user flow, re-read ALL session diffs end-to-end before saying done — two individually-correct changes can conflict (e.g. an auth gate blocking a URL the same session's login redirect generates).
+**Detect:** `git diff` the whole session, trace the shared flow. See [[feedback_self_conflict_check_my_own_changes]].
+↳ `tasks/lessons_antipatterns.md` §G
 
 ### H. Memory identifiers — grep before typing
-When writing ANY memory file (handoff, journal, lifecycle): every backtick-quoted path/function/field name must be grep-verified BEFORE typing — not after. Paraphrasing from memory produced 19 errors in one session.
-```bash
-# Template: before writing `path/to/doc` in a memory file
-grep -r "path/to/doc" functions/ shared/ *.html | head -3
-```
+
+**Rule:** when writing ANY memory/handoff/lifecycle file, every backtick-quoted path/function/field MUST be grep-verified BEFORE typing, not after (paraphrasing from memory produced 19 errors in one session).
+**Detect:** `grep -r "path/to/doc" functions/ shared/ *.html` before writing it. See [[feedback_verify_via_grep_doctrine]].
+↳ `tasks/lessons_antipatterns.md` §H
 
 ### I. Production data actions — never automate
-Before any action that touches:
-- Financial approval (approve meter import, mark bill paid, batch writes to RTDB bills/)
-- Bulk Firestore/RTDB write outside a single user's own document
-- Admin-only CF trigger via `.click()` or `dispatchEvent`
 
-**Always**: show preview → wait for explicit user click. Never call `.click()` programmatically on approve/confirm buttons.
-```
-✅ Show the data to be written, wait for user to press the button
-❌ document.querySelector('#approveMeterBtn').click()   // blocked by pre-commit hook
-```
-Root incident (2026-05-01): auto-clicked "อนุมัติและบันทึก" → wrong building data entered Firestore production. Required manual rollback.
+🔒 **pre-commit BLOCKS** auto-clicking approve/confirm in admin code (`.click()` on approve/confirm).
+**Rule:** any financial approval / bulk Firestore-RTDB write outside one user's own doc / admin-only CF trigger MUST show a preview and WAIT for an explicit user click. Never `.click()`/`dispatchEvent` programmatically on approve/confirm.
+**Detect:** `grep -rn "querySelector.*click()\|approveMeterBtn\|dispatchEvent" shared/ *.html`. Root incident 2026-05-01 (wrong-building data → prod, manual rollback).
+↳ `tasks/lessons_antipatterns.md` §I
 
 ### J. Static deploy ≠ live-data verified
-Vercel "deploy succeeded" + HTTP smoke test + unit tests + fallback list working — none of these prove a Firestore-dependent feature works for a real signed-in user. Tier 3F (2026-05-13) shipped "verified" only to fail on first admin login because a legacy `RentRoom` doc was returned instead of canonical `rooms`.
 
-**Rule:** Before claiming done on any feature that reads Firestore at runtime:
-1. Trigger an authenticated read path (Chrome MCP login → call the read).
-2. Log/inspect the actual returned data (canonical IDs, displayName, expected fields).
-3. Cross-check vs the assumption — fallbacks/mocks hide drift silently.
-
-**Sub-lesson — empty-collection composite-index verify is trivially-passing.** 2026-05-21 (9): prior session's `firebase deploy --only firestore:indexes` was missing from production, but `OccupancyLog.getByTenant()` returned `[]` (looked "working") because the collection had zero docs and Firestore short-circuits empty queries WITHOUT consulting any composite index. After `--apply` wrote 15 docs, same query threw `failed-precondition: query requires an index`. Verify composite indexes by **state**, not by running the query: `gcloud firestore indexes composite list --format="value(name,state)"` — only `READY` counts as serving. Or seed ≥1 doc that exercises the exact `WHERE field == X` + `ORDER BY field DESC` combo before claiming the index is live.
+**Rule:** "deploy succeeded" + HTTP smoke + unit tests ≠ a Firestore-dependent feature works for a real signed-in user. Before claiming done: trigger an authenticated read path, inspect the ACTUAL returned data (canonical IDs, fields), cross-check vs assumptions (fallbacks/mocks hide drift).
+**Sub-lesson:** an empty-collection composite-index verify trivially passes — verify indexes by STATE (`gcloud firestore indexes composite list`), not by running the query. Family: §7-N, §7-M, §7-HHH.
+↳ both incidents → `tasks/lessons_antipatterns.md` §J
 
 ### K. Defined ≠ wired — grep for callers
-A function existing in the codebase doesn't mean it runs. Phase 6 audit caught `prefetchAllPeople()` defined in `shared/tenant-lookup.js:238` but with **zero callers anywhere** — slim tenant docs would have rendered "—" for every name on the admin dashboard.
 
-**Rule:** When a method looks load-bearing (cache-warming helper, prefetch, init function), grep for callers before assuming it's active. "X is defined" ≠ "X runs". Wire bulk-prefetch / cache-warming helpers in the SAME commit they're added.
-```bash
-grep -rn "prefetchAllPeople\|getPersonSync" shared/ *.html  # who actually calls it?
-```
+**Rule:** a function existing ≠ it runs. When a method looks load-bearing (cache-warm, prefetch, init), grep for callers before assuming it's active; wire bulk-prefetch helpers in the SAME commit they're added.
+**Detect:** `grep -rn "funcName" shared/ *.html` — who actually calls it? Cousins: §7-AA, §7-QQ, §7-T.
+↳ `prefetchAllPeople` (0 callers) → `tasks/lessons_antipatterns.md` §K
 
 ### L. Code-only cleanup ≠ data migrated
-`setDoc(..., { merge: true })` only WRITES the fields you specify; it never DELETES old ones. After the Phase 6 "slim tenant doc" code shipped, existing `rooms/15` still had all 40+ duplicate fields because there was no migration.
 
-**Rule:** In handoffs, separate "code-only" from "code + data migration":
-- "Future writes are slim; existing docs preserve legacy fields (reader fallback handles this) until one-shot migration runs."
-- This is intentional graceful-degradation, not a bug — readers transition cleanly.
-- For destructive cleanup, use `FieldValue.delete()` in an explicit migration script (see `tools/migrate-tenant-doc-to-slim.js` template).
+**Rule:** `setDoc(..., {merge:true})` only WRITES the named fields — never DELETES old ones. "Slim doc" code leaves existing docs fat until a one-shot migration. In handoffs separate "code-only" from "code + data migration"; destructive cleanup needs `FieldValue.delete()` in an explicit script.
+**Detect:** shipped a doc-shape change? grep for a migration script; if none, existing docs keep legacy fields (reader fallback handles it). Family: §7-DD, §7-T. See `tools/migrate-tenant-doc-to-slim.js`.
+↳ `tasks/lessons_antipatterns.md` §L
 
 ### M. "Loadable in browser" ≠ "in production flow"
-`payment.html` (923 lines) is in the CSP hash list, has Sentry monitoring, has SRI scripts — looks like a production page. Reading the code: uses `SecurityUtils.getSecureSession()` (NOT Firebase Auth), localStorage-only slip flow (NOT verifySlip CF), no LIFF SDK at all. It's a standalone legacy portal.
 
-**Rule:** Build pipelines (CSP, SRI, Sentry, bundling) don't distinguish "live in production" from "still loadable in browser". Before claiming file X integrates with flow Y:
-- Read auth model: Firebase Auth? SecurityUtils? LIFF?
-- Check CF calls: `httpsCallable`? `fetch /verifySlip`? localStorage only?
-- Verify data source: Firestore? RTDB? base64-in-doc?
-- Build-pipeline membership ≠ runtime use.
+**Rule:** build-pipeline membership (CSP/SRI/Sentry/bundle) doesn't prove a file is live in production. Before claiming file X integrates with flow Y, read its auth model (Firebase Auth? SecurityUtils? LIFF?), CF calls, and data source — `payment.html` looks production but is a standalone legacy localStorage portal.
+**Detect:** check auth + CF + data-source primitives, not the build list. See [[payment_html_legacy]].
+↳ `tasks/lessons_antipatterns.md` §M
 
 ### N. onSnapshot must have error callback
-`onSnapshot(query, onNext)` swallows errors silently. Tier 3I-9 spent ~30 min debugging "stuck loading" — turned out `failed-precondition: query requires an index` was thrown but no callback received it. UI sat at "กำลังโหลด..." forever with zero console output.
 
-**Rule:**
-```js
-// ❌ silent failure
-fs.onSnapshot(q, (snap) => { ... });
-
-// ✅ surfaces errors to console + UI
-fs.onSnapshot(q, (snap) => { ... }, (err) => {
-  console.error('[ModuleName] subscription failed:', err);
-  // also surface to UI: render error state instead of "loading..."
-});
-```
-Debug recipe when subscription doesn't fire: try `getDocs(q)` directly — `getDocs` throws visibly, `onSnapshot` swallows. Composite query needs index → add to `firestore.indexes.json` + `firebase deploy --only firestore:indexes` BEFORE UI deploy (build takes 1-5 min).
+🔒 **pre-commit WARNs** on a new `.onSnapshot()` missing an error callback.
+**Rule:** `onSnapshot(q, onNext)` swallows errors silently (UI stuck "กำลังโหลด..." forever on a missing index). Always pass the 3rd error cb; surface to console + render an error state. A composite query → add the index BEFORE the UI deploy.
+**Detect debug:** try `getDocs(q)` directly — it throws visibly where `onSnapshot` swallows. Family: §7-V, §7-KK.
+↳ `tasks/lessons_antipatterns.md` §N
 
 ### O. Pre-built feature search — Thai keywords + orphaned APIs
-Almost wrote 3-4 hours of new code for "tenant chooses bill format (personal/นิติบุคคล)" — feature was already built (`receipt-type-select` + `getReceiptMetaForBill` in `tenant_app.html`). Missed it because grepped English identifiers (`billRecipient|recipientType`) instead of the Thai keyword from the mockup.
 
-**Rule:** Before planning any new feature, search:
-1. **Thai keywords** from mockup/screenshot — user said "นิติบุคคล" → `grep "นิติบุคคล"` BEFORE `grep "recipientType"`.
-2. **Orphaned `window.X = ...` APIs** — defined but uncalled = unfinished feature waiting to be wired. Often you only need to wire it, not rebuild.
-```bash
-grep -rn "นิติบุคคล\|บุคคลธรรมดา" tenant_app.html dashboard.html shared/  # Thai-first
-grep -rn "window\.getReceiptMeta\|window\.saveCompany" shared/ *.html  # orphaned APIs?
-```
+**Rule:** before planning any new feature, grep (1) the Thai keyword from the mockup ("นิติบุคคล") BEFORE English identifiers, and (2) orphaned `window.X =` APIs (defined-but-uncalled = unfinished feature waiting to be wired — often just needs wiring, not rebuilding).
+**Detect:** `grep -rn "นิติบุคคล\|<thai-kw>" *.html shared/` then `grep -rn "window\.getReceiptMeta" shared/`. Cousin: §7-K, §7-AA.
+↳ receipt-type already-built → `tasks/lessons_antipatterns.md` §O
 
 ### P. UID-drift fixes must traverse EVERY rule layer (Firestore + Storage + CF guards)
 
-Tier 3I checklist debugging (2026-05-14) cost 4 rounds because the same UID-drift bug showed up in three different security layers and each fix only unblocked the next failure:
-
-1. Tenant queries `where tenantUid == authUid` → empty → "ยังไม่มี checklist" (Firestore rule + client query path)
-2. Tenant submits photo → permission_denied (storage.rules has same `instance.tenantUid == auth.uid` check)
-3. Admin viewer reads photo via `getDownloadURL` → tokenised URL bypasses rules so it works, but the *token itself* is the leak risk (separate concern, same root)
-
-`signInAnonymously` mints a NEW anon UID on every fresh LIFF session, so `instance.tenantUid` (frozen at admin-create time) drifts away from the current `auth.uid` quickly. Any auth check that ties `resource.data.tenantUid == request.auth.uid` will break.
-
-**Rule:** When you fix a "no permission to X" issue with the `claim-match-not-uid-match` pattern in ONE place, grep for the same `tenantUid == auth.uid` pattern in EVERY rule + CF file before declaring it fixed. The pattern lives in:
-
-```bash
-grep -rn "tenantUid == request.auth.uid\|tenantUid.*request.auth.uid" firestore.rules storage.rules functions/
-```
-
-Canonical replacement: gate by token claims (`request.auth.token.room`, `request.auth.token.building`) matching the path/doc, NOT by uid match. Custom claims survive UID rotation.
+**Rule:** `signInAnonymously` mints a NEW UID per fresh LIFF session, so any rule gating `resource.data.tenantUid == request.auth.uid` drifts and breaks. When you fix one "no permission to X" with claim-match-not-uid-match, grep the SAME pattern across Firestore + Storage + CF before declaring fixed. Gate by token claims (`request.auth.token.room/building`), not uid.
+**Detect:** `grep -rn "tenantUid == request.auth.uid\|tenantUid.*request.auth.uid" firestore.rules storage.rules functions/`. Family: §7-Z, §7-U, §7-HH.
+↳ Tier 3I checklist (4 rounds) → `tasks/lessons_antipatterns.md` §P
 
 ### Q. Native dialogs (`confirm`, `alert`, `prompt`) don't render in Chrome MCP screenshots
 
-When the user asks "show me what the dialog looks like", `confirm('...')` returns immediately (Chrome's automation API auto-dismisses it without rendering). Don't try to screenshot the native one — build a styled `<div>` overlay that mimics the OS look, screenshot that, then clean up. See the iOS-style mock-up pattern used 2026-05-14 (`#mock-dialog` injected, screenshotted, removed). The user only needs the LAYOUT preview, not a literal native screenshot.
+**Rule:** `confirm`/`alert`/`prompt` auto-dismiss in Chrome automation (no render). To screenshot "what the dialog looks like", build a styled `<div>` overlay mimicking the OS look, screenshot it, then remove. The user wants the LAYOUT, not a literal native screenshot.
+↳ iOS-mock pattern 2026-05-14 → `tasks/lessons_antipatterns.md` §Q
 
 ### R. `fetch()` from LIFF webview must always have AbortController + timeout
 
-LINE's in-app browser caches TLS connections aggressively. A stale cached connection can leave a `fetch()` hanging indefinitely (minutes) before failing, leaving the user staring at a loading overlay. Native `signInWithCustomToken` retry loops (e.g. the 5×backoff one in `_callLiffSignIn`) don't help — the fetch is upstream of them. Every fetch in tenant_app/booking inside the LIFF entry flow must be wrapped:
-
-```js
-const ctrl = new AbortController();
-const to = setTimeout(() => ctrl.abort(), 12000);  // 12s per attempt
-try {
-  const resp = await fetch(url, { ..., signal: ctrl.signal });
-  ...
-} finally { clearTimeout(to); }
-```
-
-Specific surfaces with this risk: `_callLiffSignIn`, `verifySlip`, any direct CF HTTPS call (vs httpsCallable, which already has a timeout).
+**Rule:** LINE's webview caches TLS aggressively — any await over the wire in the LIFF entry flow (`fetch`, RTDB `get`, Firestore `getDoc/getDocs`, storage `uploadBytes`) can hang indefinitely. Wrap each in `AbortController`+timeout or `Promise.race([op, timeout(5-12s)])`.
+**Detect:** `grep -n "_callLiffSignIn\|verifySlip\|firebaseDatabaseGet\|getDocs" tenant_app.html booking.html` — each LIFF-path await needs a timeout. Family: §7-S, §7-GG.
+↳ `_callLiffSignIn` + `loadRoomsConfig` hangs → `tasks/lessons_antipatterns.md` §R
 
 ### S. Multiple LIFF apps from the same LINE account share the auth handshake — second open hangs the first
 
-Opening a second LIFF app (e.g. booking) while the first (e.g. tenant_app) is still inside `liff.init` / awaiting `getIDToken` leaves the first tab stuck at "ตั้งค่าสิทธิ์" forever. The second LIFF steals the auth state the first was waiting on. This is a LINE platform constraint, not a code bug — no client retry recovers cleanly because `liff.init` never rejects, it just sits.
-
-Incident 2026-05-14: user opened booking LIFF while tenant_app LIFF was still completing auth → tenant tab hung indefinitely at "ตั้งค่าสิทธิ์".
-
-**Rule:** treat `liff.init` as *can-hang-forever* in multi-LIFF flows. Mitigations (already partly applied in `_callLiffSignIn` via the 12s fetch timeout):
-
-1. Ceiling timer around the whole init flow (e.g. 30s) that surfaces a styled "เปิด LIFF หลายแอปพร้อมกัน — กรุณาปิดแอปอื่นแล้ว Reload" overlay with a Reload button. Never silent-spin.
-2. When adding a NEW LIFF entrypoint (booking, future facility-booking-as-LIFF, etc.), call out the conflict in the user-facing instructions ("ปิด LIFF อื่นก่อนเปิด").
-3. Don't auto-redirect users between LIFF apps inside one session — force a sign-out → reopen via menu cycle so the prior auth state is cleanly torn down.
-
-Detection during debugging: if a user reports the "ตั้งค่าสิทธิ์" overlay stuck and **no** network errors / no timeouts fired, ask "เปิด LINE LIFF อื่นในเวลาใกล้กันไหม?" before chasing TLS / claim / index theories.
+**Rule:** opening a 2nd LIFF app while the 1st is mid-`liff.init`/`getIDToken` hangs the 1st at "ตั้งค่าสิทธิ์" forever (LINE platform constraint; `liff.init` never rejects). Add a ceiling timer (~30s) → styled "ปิดแอปอื่นแล้ว Reload" overlay; never auto-redirect between LIFF apps in one session.
+**Detect during debug:** user stuck at "ตั้งค่าสิทธิ์" with NO network errors/timeouts → ask "เปิด LIFF อื่นใกล้กันไหม?" before chasing TLS/claims/index. Family: §7-R, §7-GG.
+↳ 2026-05-14 incident → `tasks/lessons_antipatterns.md` §S
 
 ### T. Two admin UIs writing the same Firestore doc with different field names — reader pinned to one of them
 
-When two admin UIs edit the same `buildings/{id}` (or any shared) Firestore doc but choose different field names for the same value (one canonical, one legacy), a downstream consumer that reads only one of those names is invisibly broken from the OTHER UI's perspective. The admin "saves" but the consumer never updates.
-
-Incident 2026-05-14: `buildings/{id}.promptPayId` (written by `building-registry.js:140` Buildings page form) vs `buildings/{id}.promptpayNumber` (written by `dashboard-extra.js:1158` People Mgmt → Owner UI). Bill page (`dashboard-bill.js:655`) read only `promptpayNumber`. After re-seeding `buildings/rooms` via Buildings form, Bill page kept showing `— (ยังไม่ตั้ง)` for ห้องแถว until the user wrote `promptpayNumber` via the OTHER UI. **RESOLVED 2026-05-14** in two stages: (1) `01e88df` made all readers canonical-first + dual-wrote from People-Mgmt UI; (2) `76789c1` eliminated the root cause by deleting the duplicate writer entirely — the vestigial "ข้อมูลการชำระเงิน (ต่อตึก)" section in People Mgmt → Owner is gone, Buildings page is the sole writer. tenant_app reader also migrated to canonical-first.
-
-**Rule:** before adding a new admin UI that edits an existing Firestore doc, grep both for every WRITER of that doc AND every READER. If writer field name doesn't match reader field name, you've just created field drift.
-
-```bash
-# Template — replace YOUR_FIELD with the field your new UI is about to write
-grep -rn "YOUR_FIELD\|legacy_name_if_known" shared/ functions/ dashboard.html tenant_app.html booking.html
-# Confirm there's only ONE writer pattern and ALL readers see it.
-```
-
-Fix pattern when drift is already shipped:
-1. **Reader fix first** — extend the consumer to read BOTH (`data.canonical || data.legacy || ...`). Safe, additive.
-2. **Writer fix** — make the legacy-name writer ALSO write the canonical name (dual-write). Don't drop legacy yet.
-3. After ≥1 user-visible cycle of stable dual-write, deprecate: one-off migration `setDoc({canonical: data.legacy}, {merge:true}) + updateDoc({legacy: FieldValue.delete()})`, then drop legacy from reader + writer.
-
-Anti-pattern K (defined ≠ wired) is the function-level cousin of this. Same instinct: grep for callers/readers before assuming a value/function flows where you expect.
+**Rule:** before adding a new admin UI that edits an existing Firestore doc, grep EVERY writer AND reader of that doc. Two UIs writing the same value under different field names (`promptPayId` vs `promptpayNumber`) + a reader pinned to one = silent drift ("saved" but consumer never updates). Fix: reader reads BOTH → dual-write → migrate → drop legacy.
+**Detect:** `grep -rn "YOUR_FIELD\|legacy_name" shared/ functions/ *.html` — confirm one writer pattern, all readers see it. Cousin: §7-K, §7-CC, §7-DD.
+↳ promptPay drift (`01e88df`/`76789c1`) → `tasks/lessons_antipatterns.md` §T
 
 ### U. `_onLiffClaimsReady(fn)` + idempotency guard + claims-not-yet-set = stale subscription forever
 
-`_onLiffClaimsReady(fn)` registers `fn` on BOTH `authReady` AND `liffLinked` events (plus immediate if already ready). The `authReady` event fires TWICE in LIFF:
-1. First when `signInAnonymously` completes — **NO** `token.building` / `token.room` claims yet
-2. Second after `signInWithCustomToken` from `liffSignIn` CF — claims now present
-
-`liffLinked` fires once, after the 2nd `authReady`. The whole point of registering on both is to catch whichever fires last and re-run with proper claims.
-
-**The trap:** subscribe functions typically self-guard with `if (_xxxUnsub) return;` for idempotency. But when:
-1. First `authReady` (anonymous) fires → `_xxxUnsub = null`, function proceeds with `_taBuilding = ''`
-2. `_xxxUnsub` is SET to a stale subscription (wrong building, may even fail with `permission-denied`)
-3. `liffLinked` fires with real claims → guard `if (_xxxUnsub) return;` skips re-subscription
-4. Stale subscription persists for entire session
-
-This bit twice:
-- `_subscribeBroadcasts` (2026-05-15, `95dc4a1`) — bell never showed in LIFF
-- `_subscribePaymentConfig` (2026-05-15, `ade5648`) — Nest tenants got `buildings/rooms` PromptPay data
-
-**Rule:** every subscribe function wired through `_onLiffClaimsReady` MUST guard claim presence as the FIRST check, BEFORE setting its `_xxxUnsub`:
-
-```js
-function _subscribeXxx() {
-    if (_xxxUnsub) return;                  // idempotency
-    if (!window.firebase?.firestore) return; // SDK readiness
-    if (!_taBuilding) return;                // ← REQUIRED — wait for claims
-    // ... only NOW can we set _xxxUnsub
-    _xxxUnsub = fs.onSnapshot(query, ..., err => {
-        console.warn('[xxx] subscribe failed:', err?.message || err);
-        // Reset on permission-denied so liffLinked retry can resubscribe
-        if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-            _xxxUnsub = null;
-        }
-    });
-}
-```
-
-Audit recipe — find every `_onLiffClaimsReady` wiring and verify each callee has the guard:
-
-```bash
-grep -n "_onLiffClaimsReady(" tenant_app.html | grep -v "function _onLiff"
-# For each callee, open the function — it MUST have `if (!_taBuilding) return;`
-# OR equivalent claim guard (some need _taRoom, some need _taLease, etc.)
-```
-
-Related anti-pattern: this is a cousin of N (onSnapshot must have error callback). The error callback's job here is double — surface failures AND reset the unsub so retry can succeed. A bare `console.warn` swallows both halves of the recovery.
+🔒 **pre-commit BLOCKS** via `audit:auth` (the §7-A/U/Z auth-callback audit).
+**Rule:** every subscribe wired through `_onLiffClaimsReady` MUST guard claim presence FIRST (`if (!_taBuilding) return;`) BEFORE setting its `_xxxUnsub` — else the anonymous first `authReady` sets a stale sub and the idempotency guard (`if (_xxxUnsub) return`) skips the real re-subscribe. Reset `_xxxUnsub=null` on permission-denied/failed-precondition.
+**Detect:** `grep -n "_onLiffClaimsReady(" tenant_app.html` → each callee needs the claim guard. Difference from §7-V ("unsub before rebind"). Family: §7-A, §7-N.
+↳ `_subscribeBroadcasts`/`_subscribePaymentConfig` (`95dc4a1`/`ade5648`) → `tasks/lessons_antipatterns.md` §U
 
 ### V. `setupXxxListener` that reruns must call the prior unsub before overwriting it
 
-Dashboard `setupMeterDataListener` (and any setup function that stores its unsub in `realtimeListeners.X`) is called every time `initRoomsPage`/`initNestPage` runs — which is on every `roomconfig-updated` event (debounced 250ms, but still fires repeatedly across a session). The original implementation just did `realtimeListeners.meter = onSnapshot(...)`. The OLD unsub function was dropped on the floor, the listener it referenced stayed live in Firestore, AND a fresh listener was added. After 10 rerenders the page had 11 live `meter_data` subscriptions; every real meter write fanned out N times.
-
-Incident 2026-05-15 (`bccabdc`): user reported `✅ Real-time listeners activated for Nest page` + `✅ Meter data updated in real-time` repeating in pairs in the dashboard console. Two diagnostics from the same root cause — repeat init logs + collection-replay running once per stacked listener.
-
-**Rule:** every `setupXxxListener` that assigns into a stable slot (`realtimeListeners.X`, module-level `_xxxUnsub`, etc.) MUST tear down the prior listener first:
-
-```js
-function setupMeterDataListener() {
-    // …readiness guards…
-    if (typeof realtimeListeners.meter === 'function') {
-        try { realtimeListeners.meter(); } catch (_) { /* noop */ }
-        realtimeListeners.meter = null;
-    }
-    realtimeListeners.meter = onSnapshot(query, onNext, onError);
-}
-```
-
-Audit recipe:
-
-```bash
-# Any place that assigns into realtimeListeners.X — each must have a prior-unsub guard
-grep -n "realtimeListeners\.\w\+ *=" shared/dashboard*.js
-# Any setupXxx that returns from onSnapshot without checking — same hazard
-grep -rn "= onSnapshot\b" shared/dashboard*.js shared/checklist-manager.js
-```
-
-**Difference from U:** U is about `_onLiffClaimsReady` callbacks WANTING idempotent re-entry (`if (_xxxUnsub) return`) but failing because claims weren't ready yet on the first fire. V is about callbacks that genuinely SHOULD rebind (claims now correct, building changed, page reopened) but leak the old listener. The fix in U is "guard claim presence first"; the fix in V is "unsub before rebind".
-
-**Sibling diagnostic:** noisy `console.log` inside the onSnapshot handler made the leak visible. Once the leak was fixed, the per-event log added no diagnostic value (only fired on real changes which the UI already reflects). Per-init/per-snapshot logs in setupXxx functions are usually the *tail* of a stacking bug — drop them once the stacking is closed, not before.
+**Rule:** every `setupXxxListener` that stores its unsub in a stable slot (`realtimeListeners.X`, `_xxxUnsub`) MUST call the prior unsub before reassigning — else each rerun (e.g. `roomconfig-updated`) stacks a live listener (N rerenders → N+1 subs, each write fans out N×).
+**Detect:** `grep -n "realtimeListeners\.\w\+ *=" shared/dashboard*.js` + `grep -rn "= onSnapshot" shared/dashboard*.js` — each needs a prior-unsub guard. Difference from §7-U. Family: §7-N, §7-KK.
+↳ `bccabdc` meter-listener stacking → `tasks/lessons_antipatterns.md` §V
 
 ### W. `!important` doesn't beat higher specificity — check the cascade, don't just stamp `!important`
 
-Two cascade conflicts in tenant_app.html (2026-05-15 evening (4)) shipped through static review and were only caught by live `getComputedStyle()` on the deployed page:
-
-1. P1.5 typography — `.page-title-top { font-size: var(--fs-xl) !important }` (specificity 0,1,0) lost to existing `.app-bar h1, .app-bar h2 { font-size: var(--fs-lg) !important }` (specificity 0,1,1). Both had `!important`, so higher specificity won. Result: top-level h1s stayed at 20px instead of 24px. Fix: qualify the selector to `.app-bar h1.page-title-top` (0,2,1) so it actually beats the legacy rule.
-2. P2.13 power-card — inline `style="border-left: 4px solid var(--clay)"` (no `!important`) lost to `.card { border-left: 1px solid rgba(0,0,0,0.04) !important }`. Clay accent stripe never showed; only the 1px rgba border. Fix: add `!important` to the inline declaration too — inline styles only win when there are no `!important` rules at all.
-
-**Rule:** when adding a new style that overrides an existing one in this codebase, `!important` is a starting move, not a finishing one. Always verify on the deployed page with:
-
-```js
-// In Chrome MCP / DevTools after page load:
-getComputedStyle(document.querySelector('YOUR_SELECTOR')).propertyName
-// Then if wrong:
-[...document.styleSheets]
-  .flatMap(s => { try { return [...s.cssRules]; } catch { return []; } })
-  .filter(r => r.selectorText && el.matches(r.selectorText) && r.style[propertyName])
-  .map(r => ({ sel: r.selectorText, val: r.style[propertyName], imp: r.style.getPropertyPriority(propertyName) }))
-```
-
-This trace tells you the cascade order. If multiple `!important` rules match, the one with HIGHER selector specificity wins. Specificity primer: inline > id-selector > class/attribute/pseudo-class > element. `.a .b` beats `.b !important`. `.a h1` beats `.h1-class !important`.
-
-**Pre-commit habit:** for any new style rule meant to override an existing one, predict the live computed value out loud before pushing. If the prediction is "well, I added !important so it should win" — that's a yellow flag. Specificity check first.
-
-Related: anti-pattern Q (native dialogs don't screenshot) and S (LIFF multi-tab) — all of these only surface when the deployed page is actually loaded and inspected, not from source review.
+**Rule:** when a new style overrides an existing one, `!important` is a starting move not a finishing one — among `!important` rules the HIGHER specificity wins (`.app-bar h1.x` beats `.x`); an inline style only wins when NO `!important` rule matches. Predict the live computed value before pushing; "I added !important so it wins" is a yellow flag.
+**Detect:** `getComputedStyle(el).prop` on the DEPLOYED page + trace matching rules. Family: §7-II, §7-RR, §7-SS, §7-III.
+↳ P1.5/P2.13 cascade losses → `tasks/lessons_antipatterns.md` §W
 
 ### X. `innerHTML = ""` is a footgun — every assignment needs a non-empty fallback
 
-Three independent dead-zone bugs in tenant_app.html (2026-05-15 evening (4) scroll-reduction batch) all traced to the same root pattern: code wrote `el.innerHTML = ""` (or equivalent: `array.map(...).join("")` with empty array, or string-concat of optional values that all turned out empty) and the slot went dark with no fallback.
-
-Three sites caught:
-
-1. `renderBillsList` else branch: `if (window.GhEmptyState) { el.innerHTML = ... } else { el.innerHTML = ''; }` — race during init when GhEmptyState helper hadn't loaded yet (script tag order) → empty slot forever.
-2. `renderBillsList` main render path: `el.innerHTML = validBills.slice(0,12).map(b => ...).join('')` — when `_taBills` had items but all were orphan stubs (no `totalAmount` / no charges / no meter), `validBills` was `[]` and the join returned `""`.
-3. `showBillsSkeleton`: unconditionally overwrote the static empty-state markup in the HTML with 3 `gh-skeleton` cards, even when no fetch was about to fire (e.g. admin preview path that never gets LIFF claims). The skeletons then sat there forever with no real data to replace them — animated dead-zone.
-
-**Rule:** every `el.innerHTML = X` is a contract that says "I am now responsible for this slot's content." If `X` can be empty, you must EITHER:
-
-a. Branch before the assignment and render an empty state instead of an empty string.
-b. Guard the function with `if (!list.children.length)` so you don't wipe content that's still good (idempotent overwrite).
-c. Chain a fallback in the assignment: `el.innerHTML = primaryMarkup || fallbackMarkup` where fallback is a literal non-empty string of empty-state HTML.
-
-Detection recipe — anywhere you find `el.innerHTML = ...` in code, ask:
-
-- Can the right-hand side resolve to an empty string?
-- If the function runs before the helper it depends on is loaded?
-- If the data array is non-empty but filters down to empty?
-- If the function runs more than once (idempotency)?
-
-If any "yes", you need a fallback.
-
-**Detection signal in QA:** a card with no border-bottom-content, header above but blank below, or a UI element that vanishes after page reload but came back on force-refresh — all classic `innerHTML = ''` symptoms. Walk every assignment in the relevant render function before declaring it fixed.
-
-Related: anti-pattern N (onSnapshot must have error callback) — same family of "silent failure leaves slot dark" bugs. Both are visible only on the deployed page, not in source.
+**Rule:** every `el.innerHTML = X` is a contract — if X can be empty (empty array `.map().join('')`, a helper not loaded yet, all items filtered out, or an idempotent re-run), you MUST branch to an empty-state, guard `if (!list.children.length)`, or chain `|| fallbackMarkup`. A bare `innerHTML = ''` leaves a dark slot.
+**Detect:** for every `innerHTML =` — can the RHS be ''? run before its helper? data filter to empty? run twice? Any yes → needs a fallback. Family: §7-N.
+↳ 3 `renderBillsList`/`showBillsSkeleton` sites → `tasks/lessons_antipatterns.md` §X
 
 ### Y. `fetch('data:...')` is a network call under CSP — use atob, never fetch, for canvas/file dataURL → Blob
 
-The common cookbook recipe `const blob = await (await fetch(canvas.toDataURL('image/png'))).blob()` works on pages with no CSP. On this app it FAILS because `connect-src 'self' https: wss:` does not include `data:`, and Chromium evaluates `fetch('data:...')` against `connect-src` (treats data URLs as network destinations). The thrown error is the generic `TypeError: Failed to fetch` — same message you'd see for a real network outage, DNS failure, CORS preflight reject, or extension content-blocking. The first instinct is to chase Storage rules, IAM scopes, bucket region, CORS configuration — none of those are the cause.
-
-Incident 2026-05-18: `uploadAdminSignature` failed silently after admin clicked "บันทึกลายเซ็น" — toast "บันทึกไม่สำเร็จ", no rule denial in logs, no upload network request fired. Probe with `uploadBytes(ref, tinyBlob)` from console succeeded (proving rules + auth + bucket all fine). Root cause was the `await fetch(dataUrl)` line ABOVE the upload. Same latent bug existed in `uploadSignature` (tenant); LIFF webview seemed to tolerate it, but it's wrong-by-design either way. Fixed in `cd7f26f` by introducing `_dataUrlToBlob()` helper.
-
-**Rule:** never convert a `data:` URL to a Blob via `fetch()`. Decode the base64 payload directly:
-
-```js
-function dataUrlToBlob(dataUrl) {
-  const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
-  if (!m) throw new Error('Invalid data URL');
-  const bin = atob(m[2]);
-  const u8  = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  return new Blob([u8], { type: m[1] });
-}
-```
-
-Synchronous, no network call, no CSP exposure. Works regardless of `connect-src`.
-
-**Do NOT** "fix" by widening `connect-src` to include `data:`. That lets any script materialise arbitrary content via `fetch('data:...')` (silent data-URL handler bypass) and weakens CSP for every page. The source-side fix is one helper function — the CSP-side fix would touch every HTML in the repo.
-
-Detection recipe:
-```bash
-grep -rn "fetch(.*toDataURL\|fetch(.*dataUrl\|fetch(.*dataURL" shared/ tenant_app.html dashboard.html
-```
-Every hit is a latent bug. Inspect each — if the source is a `data:` URL, replace with the helper above.
-
-**Debugging signature for this bug class** (helps recognise it next time):
-1. Toast / error says generic "failed to save / upload / process" — no specific code
-2. Console shows `TypeError: Failed to fetch` originating from your `await fetch(...)` line
-3. Storage / API endpoint shows ZERO requests (not even a failed one) in Network panel — the fetch dies before it hits the wire
-4. Direct probe of the downstream call with hand-built Blob succeeds
-
-When you see (3) — no network request fired at all despite calling `fetch()` — CSP `connect-src` is almost always the gate. Check the request's URL scheme (`data:`, `blob:`, `chrome-extension:`) and the document CSP.
+**Rule:** `fetch('data:...')` is blocked by CSP `connect-src` (Chromium treats `data:` as a network dest) → generic `TypeError: Failed to fetch`. To turn a canvas/file dataURL into a Blob, decode the base64 directly with `atob` (synchronous, no network), never `fetch`. Do NOT widen `connect-src` to `data:`.
+**Detect:** `grep -rn "fetch(.*toDataURL\|fetch(.*dataUrl" shared/ *.html` — each is a latent bug. Signature: `TypeError: Failed to fetch` + ZERO network requests fired. Cousin: §7-XX, §7-EEE.
+↳ `uploadAdminSignature` + `_dataUrlToBlob` → `tasks/lessons_antipatterns.md` §Y
 
 ### Z. `createCustomToken(uid, claims)` developer-claims are EPHEMERAL — also call `setCustomUserClaims` to persist
 
-`admin.auth().createCustomToken(uid, { room, building, tenantId })` embeds the claims in the FIRST ID token that `signInWithCustomToken` returns. They are NOT written to the user record. Firebase auto-refreshes ID tokens roughly every hour; the new token is minted from the user record, **without** these claims unless `setCustomUserClaims` was also called for them. After that point every server-side rule check on `request.auth.token.<claim>` evaluates to `undefined` and silently rejects the read.
-
-Incident 2026-05-18: `liffSignIn` minted `{ room, building, tenantId }` claims via `createCustomToken` and trusted them. Worked perfectly for ~1 h after sign-in, then every claim-gated feature (checklist, bills, maintenance, deposits, lease, storage) returned `permission-denied` until the user closed/reopened LINE (which re-ran `liffSignIn` and minted a fresh custom token). Fixed in `a5f4e5a` by adding a fire-and-forget `setCustomUserClaims(uid, claims)` right after `createCustomToken`.
-
-**Rule:** any CF that mints a custom token with developer claims MUST also call `setCustomUserClaims`. They're complementary, not alternatives.
-
-```js
-// Mint immediate token (so signInWithCustomToken gets claims on the first ID token)
-const customToken = await admin.auth().createCustomToken(uid, claims);
-
-// Persist on the user record so EVERY future ID-token refresh re-includes them
-admin.auth().setCustomUserClaims(uid, claims)
-  .catch(e => console.warn('setCustomUserClaims failed (non-fatal):', e.message));
-
-return { customToken };
-```
-
-The `.catch` keeps it non-blocking — the initial token already has the claims, so a transient `setCustomUserClaims` failure doesn't break this session. The next sign-in retries.
-
-**Detection recipe:**
-```bash
-# Every createCustomToken call must have a setCustomUserClaims twin
-grep -rnE "createCustomToken\([^)]*,\s*\{" functions/
-# Cross-check each hit against:
-grep -rn "setCustomUserClaims" functions/
-```
-Every CF that appears in the first grep but NOT the second is a latent ~1 h bomb. The failure mode is "works for an hour, then mysteriously breaks for everyone, fixed by re-opening LINE" — extremely hard to root-cause without knowing this pattern.
-
-**Debugging signature** (this bug class is sneaky because it's time-dependent):
-1. Feature was working an hour ago for the same user
-2. No code changed; user did nothing unusual
-3. Now: `permission-denied` on Firestore/RTDB/Storage reads gated by `request.auth.token.<claim>`
-4. Closing the LIFF / re-signing-in temporarily fixes it (until next ~1 h refresh)
-5. Hardcoded admin paths still work (admin: true IS persistent — admins use the proper SDK flow)
-
-Cousin pattern to §7-P (UID-drift fixes must traverse every rule layer) and §7-U (claim-first guard in subscribe) — all three are about claims not arriving where rule eval expects them.
+🔒 **pre-commit BLOCKS** a `createCustomToken(uid,{…})` with no `setCustomUserClaims` twin (hook §3 + `audit:auth`).
+**Rule:** any CF minting a custom token with developer claims MUST also `setCustomUserClaims(uid, claims)` (fire-and-forget `.catch`). The token carries claims for the first ID token (~1h); the user record carries them across every refresh after. Miss it → works ~1h, then `permission-denied` for everyone until LINE reopen.
+**Detect:** `grep -rnE "createCustomToken\([^)]*,\s*\{" functions/` — every hit needs a `setCustomUserClaims` twin. Cousins: §7-P, §7-U, §7-FF (reverse direction).
+↳ incident `a5f4e5a` + code + time-dependent debugging signature → `tasks/lessons_antipatterns.md` §Z
 
 ### AA. Pre-existing CF search — grep `functions/` before writing a new scheduled CF
 
-Mid-S1 of the 2026-05-19 lease auto-notifier sprint, I wrote ~120 LOC of a brand-new `leaseExpiryNotifier` CF (daily-scheduled, scans tenants, writes notifications) — then discovered `functions/remindLeaseExpiry.js` already ran daily 08:00 BKK with the exact same 4 tiers (60/30/14/expired) + anti-spam + region. The new file was deleted; the sprint pivoted to **augmenting the existing CF** (added `ensureLeaseNotificationDoc()` write inside the existing fire block). Wasted ~10 min + a confusing dead-end commit before the architectural pivot.
-
-Root cause: planned from the feature name ("lease expiry notifier") without grepping `functions/` for related domain words first. The existing CF used the verb "remind" not "notify"; the doc index in MEMORY.md (`lifecycle_scheduled_jobs.md`) DID list it but I didn't read that file in the planning phase.
-
-**Rule:** before writing a new scheduled CF (or any CF in an existing feature area), grep `functions/` for related domain keywords AND read the relevant lifecycle doc. Especially:
-
-| Domain | Grep targets |
-|--------|--------------|
-| Reminders / notifications | `remind*`, `notify*` |
-| Cleanup / archival | `cleanup*`, `archive*` |
-| Sweeps / batches | filename suffix `Scheduled` |
-| Domain keywords | lease, bill, slip, expir, etc. |
-
-Detection recipe (run BEFORE writing functions/<newCF>.js):
-
-```bash
-# Tier 1: existing files in the domain
-ls functions/ | grep -iE "lease|expir|notif|remind"
-
-# Tier 2: any CF that matches the domain keyword
-grep -rln "pubsub.schedule" functions/ | xargs grep -l "<domain keyword>"
-
-# Tier 3: lifecycle doc — read it end-to-end if it exists
-grep -l "<feature name>" ~/.claude/projects/*/memory/lifecycle_*.md
-```
-
-If anything matches, READ those CFs end-to-end before designing the new one. 80% of the time you'll augment instead of duplicate.
-
-**Why this is its own anti-pattern (not just a workflow rule):** the cost is invisible until it bites. Writing 100 LOC of new code, getting halfway through deploy, then realizing you duplicated an existing CF means: revert the new file, untangle the test data, ask the user about scope, replan. The frontend cousin (anti-pattern O) catches the same class of mistake on the HTML side; this one closes the loop on the CF side.
-
-Related: §7-K (defined ≠ wired) is also about discovery — what's in the code vs what runs. §7-K assumes you found the function; this one is about finding it in the first place.
+**Rule:** before writing a new scheduled/feature CF, grep `functions/` for domain keywords AND read the relevant lifecycle doc — 80% of the time you'll augment an existing CF (e.g. `remindLeaseExpiry` already did 60/30/14/expired) instead of duplicating. "notify" vs "remind" naming hides dupes.
+**Detect:** `ls functions/ | grep -iE "<domain>"` + `grep -rln "pubsub.schedule" functions/`. Cousin: §7-K, §7-NN.
+↳ `leaseExpiryNotifier` dup → `tasks/lessons_antipatterns.md` §AA
 
 ### BB. `window._liffClaims` is a phantom — always use `_taBuilding` / `_taRoom` globals
 
-`window._liffClaims` is never assigned anywhere in this codebase. Any code that reads it gets `{}` every time, silently producing empty strings instead of real claims — causing auth-gated pages to appear stuck (⏳ forever) with no console error.
-
-```js
-// ❌ WRONG — window._liffClaims is never set; tok is always {}
-const tok = window._liffClaims || {};
-_clBuilding = tok.building || 'rooms';  // always 'rooms'
-_clRoomId   = tok.room     || '';       // always ''
-
-// ✅ CORRECT — same source every other auth-gated subscriber uses
-_clBuilding = _taBuilding || 'rooms';
-_clRoomId   = _taRoom     || '';
-```
-
-The canonical source of room and building for auth-gated code is:
-- `_taBuilding` / `_taRoom` — module-level globals in `tenant_app.html`, set by `detectRoomBuilding()` (from localStorage/sessionStorage) and overwritten with real values at `linkAuthUid()` BEFORE `liffLinked` fires (lines 9257-9258)
-- `window._tenantAppBuilding` / `window._tenantAppRoom` — same values exposed globally
-
-Audit recipe — grep for any remaining phantom reads before adding new auth-gated code:
-```bash
-grep -n "_liffClaims" tenant_app.html
-# Should return 0 results. Any hit = bug.
-```
-
-2026-05-17: fixed in `_clInitOnce`, warm-up callback, and facility-booking `showSubPage` handler (commit `55f6295`). Checklist page was stuck at ⏳ forever; facility-booking read the same phantom object. Same class as §7-A (wrong auth hook) but specifically about a non-existent object rather than a wrong event.
+**Rule:** `window._liffClaims` is NEVER assigned — reading it gives `{}` every time (silent empty claims → page stuck ⏳). Use the canonical globals `_taBuilding`/`_taRoom` (set by `detectRoomBuilding()`+`linkAuthUid()`) or `window._tenantAppBuilding`/`_tenantAppRoom`.
+**Detect:** `grep -n "_liffClaims" tenant_app.html` must return 0. Cousin: §7-A, §7-CC.
+↳ `55f6295` checklist ⏳ → `tasks/lessons_antipatterns.md` §BB
 
 ### CC. `let X` at script top-level is NOT on `window` — cross-script readers see `undefined`
 
-Multiple `<script>` tags share the global scope ONLY for `var` and `function` declarations. `let` and `const` at script top-level are **block-scoped to that one `<script>` tag** — sibling scripts cannot see them via `window.X` OR via bareword lookup.
-
-```html
-<!-- script-A.js -->
-let currentEditTenantId = null;            // block-scoped to THIS script
-function setIt() { currentEditTenantId = 'abc'; }  // implicit-global write IF non-strict — silently DIFFERENT variable from above
-
-<!-- script-B.js (sibling) -->
-console.log(window.currentEditTenantId);   // undefined — the `let` is invisible here
-```
-
-Incident 2026-05-19: PDPA §32 erasure (`dashboard-pdpa-erasure.js`) reads `window.currentEditTenantId`. The value is declared `let currentEditTenantId = null;` in `dashboard-tenant-modal.js`. Cross-script read → `undefined` → toast "ห้องนี้ยังไม่มี tenantId" even though tenant modal clearly showed สมชาย สิบห้า ห้อง 15. Latent since the PDPA admin UI shipped 2026-05-14. Fixed in `shared/dashboard-tenant-modal.js` by converting the 3 declarations + 5 assignment sites to explicit `window.X = ...`.
-
-**Rule:** anything that needs to be visible across `<script>` tags MUST be either:
-- `window.X = ...` at top-level declaration AND at each assignment site (explicit, recommended)
-- `var X = ...` (works via hoisting but easy to miss; non-strict-mode-only)
-- NEVER `let X = ...` at top level if a sibling script reads it
-
-Audit recipe — before adding a new file that reads `window.X` from a sibling file:
-```bash
-# Find the WRITER of X
-grep -rn "^\s*\(let\|const\|var\|window\.\)\s*X\b" shared/
-# If it's `let`, the read won't work. Convert writer to `window.X` first.
-```
-
-Closely related to §7-T (two writers, one reader — field-name drift) and §7-BB (phantom window object). All three are "data flows differently than the code suggests" patterns. The §1 verify-via-grep doctrine catches drift in memory docs; this anti-pattern catches it in JS module boundaries.
+**Rule:** across `<script>` tags only `var` + `function` share global scope; top-level `let`/`const` are block-scoped to that one tag — a sibling reading `window.X` (or bareword) sees `undefined`. Anything cross-script MUST be `window.X = ...` at declaration AND each assignment.
+**Detect:** `grep -rn "^\s*let X\b" shared/` for a value a sibling reads via `window.X`. Inverse of §7-EE; family §7-T, §7-BB.
+↳ PDPA `currentEditTenantId` → `tasks/lessons_antipatterns.md` §CC
 
 ### DD. Lifecycle CFs that touch one collection must also update sibling collections — UI readers fall through
 
-A specialized form of §7-L (code-only cleanup ≠ data migrated). When a CF performs a state-transition (archive, transition, revert), it must update EVERY collection that downstream readers might fall through to. Missing one ⇒ orphan rows that UI reads as if the transition never happened.
-
-Incident 2026-05-20: user reported "ห้อง 15 ยังโชว์ผู้เช่า" after `archiveTenantOnMoveOut` returned success. Investigation:
-
-1. `archiveTenantOnMoveOut.js` clears `tenants/{b}/list/{r}` (sets `name=''`, `tenantId=''`, deletes `.lease` subobject, `status='vacant'`) ✓
-2. `archiveTenantOnMoveOut.js` does **NOT** touch `leases/{b}/list/{leaseId}.status` — stays `'active'`
-3. `LeaseAgreementManager.getActiveLease(b, r)` in `shared/lease-config.js`:
-   - L62: Phase 4 SSoT path checks `ssotDoc.lease?.leaseId` — fails (lease subobject deleted) ✓
-   - L88-94: Legacy fallback iterates `getAllLeases()` and finds the orphan `status='active'` row → returns lease with tenant info
-4. `TenantLookup.getTenantByRoom(b, r)` calls `getActiveLease` → gets orphan → returns fake tenant data
-5. UI tenant modal shows "สมชาย สิบห้า · 🟢 มีผู้เช่า" even though tenant was archived
-
-Same bug present in `transitionToPlayer.js` (player transition) and `revertTransitionToPlayer.js` (kin restore — should re-activate the lease).
-
-**Rule:** every lifecycle CF must update **all collections that UI fall-through chains depend on**, not just the "main" doc it owns. For tenants the fall-through pairs are:
-
-| Primary write | Sibling that MUST also be updated |
-|---|---|
-| `tenants/{b}/list/{r}` cleared | `leases/{b}/list/{leaseId}.status` → `'ended'` |
-| `tenants/{b}/list/{r}` restored | `leases/{b}/list/{leaseId}.status` → `'active'` + delete `endedAt`/`endReason` |
-| `people/{tenantId}` upserted | `liffUsers/{lineUserId}.role` set (transitionToPlayer already does this) |
-
-Detection recipe (run when reviewing or writing a new state-transition CF):
-```bash
-# 1. Identify all places UI readers fall through to in this domain
-grep -rn "filter.*status === 'active'\|getActive\|status: 'active'" shared/
-
-# 2. For each fall-through source collection, the CF must update it.
-#    Specifically for tenant lifecycle:
-grep -nE "leases/|leaseRef|LeaseAgreement|liffUsers" functions/archiveTenantOnMoveOut.js functions/transitionToPlayer.js functions/revertTransitionToPlayer.js
-# Each CF must touch leases/{b}/list/{leaseId} — if grep returns 0 hits in a CF, the bug is back.
-```
-
-Fix shipped 2026-05-20: all 3 CFs now `batch.update` the lease doc in the SAME batch as the tenant doc clear/restore. Plus `tools/fix-orphan-leases.js` one-shot — finds existing orphans (active lease whose `tenants/{b}/list/{r}.tenantId` is empty or mismatched) and marks them `status='ended'`.
-
-Closely related to §7-L (data migration vs code cleanup), §7-T (writer/reader drift), §7-CC (cross-script identifier resolution). Family: "the write looked right, but a downstream reader sees something different than you intended."
+**Rule:** a state-transition CF (archive/transition/revert) must update EVERY collection a UI fall-through reads, not just its "main" doc. A tenant clear must also set `leases/{b}/list/{leaseId}.status='ended'` (else `getActiveLease`'s legacy fallback finds the orphan active lease → ghost tenant). Update siblings in the SAME batch.
+**Detect:** `grep -rn "getActive\|status === 'active'" shared/` for fall-throughs; each transition CF must touch `leases/`. See `tools/fix-orphan-leases.js`. Family: §7-L, §7-T, §7-CCC.
+↳ archive/transition/revert (2026-05-20) → `tasks/lessons_antipatterns.md` §DD
 
 ### EE. Top-level `function X()` + `window.X = wrapper` self-recursion — capture-before-reassign required
 
-Classic script-mode trap. In a regular `<script>` tag, top-level `function X()` only creates a property on `window` — it does NOT create a separate lexical binding. Reassigning `window.X = function() { X(); ...}` overwrites that property; the bareword `X()` inside the wrapper looks up via the global object and finds the wrapper itself → infinite recursion.
-
-Incident 2026-05-20 (Phase 2 S6 commit `48b47ed`): commit "collapsed" what it called a redundant double-assign:
-
-```js
-// BEFORE (working — captures original BEFORE reassign):
-function updateRoomStatuses() { /* repaint room pills */ }
-window.updateRoomStatuses = updateRoomStatuses;            // L572 — looked "dead"
-const originalUpdateRoomStatuses = window.updateRoomStatuses;  // freeze reference
-window.updateRoomStatuses = function() {
-  originalUpdateRoomStatuses();   // ← captured = inner fn, safe
-  updateOccupancyDashboard();
-  updateLeaseExpiryAlerts();
-};
-
-// AFTER S6 (broken — relied on bogus "JS scope precedence"):
-function updateRoomStatuses() { /* repaint room pills */ }
-window.updateRoomStatuses = function() {
-  updateRoomStatuses();           // ← bareword → global → wrapper → ∞
-  updateOccupancyDashboard();
-  updateLeaseExpiryAlerts();
-};
-```
-
-The S6 commit message claimed "Local bareword references inside this file still hit the inner `updateRoomStatuses()` function via JS scope precedence (no recursion)" — that's wrong. Top-level `function` decl in a classic script populates the global object; there is no separate "inner" lexical binding to fall back to. `RangeError: Maximum call stack size exceeded` fires on first call (DOMContentLoaded handler) → dashboard skeletons never resolve → user sees blank cards.
-
-**Rule:** any wrapper that reassigns `window.X` while wanting to call the original MUST capture the reference first:
-
-```js
-const _innerX = window.X;        // freeze the current value BEFORE the next line
-window.X = function (...args) {
-  _innerX(...args);              // captured reference — no recursion
-  /* extra work */
-};
-```
-
-The capture name should be obviously distinct (`_innerX`, `_origX`) to telegraph the pattern. `const` (not `let`) emphasises immutability.
-
-**Detection recipe** — grep for the trap shape before committing:
-
-```bash
-# Any window.X = function(){...} that calls X() inside via bareword
-grep -rnE "^window\.\w+\s*=\s*function" shared/ tenant_app.html dashboard.html | while read line; do
-  # If the wrapper body contains the same bareword as the assigned property → suspect
-  : # manual review — automated detection here is messy because the body spans lines
-done
-```
-
-Real-world test: load the deployed bundle in Chrome MCP and trigger every code path that calls the wrapper. RangeError will fire on the first invocation; "static analysis passed" + "git push succeeded" + "static smoke walked the page" all proved insufficient for S6 — the page rendered when the wrapper wasn't called, broke the moment it was.
-
-Closely related: §7-CC (`let X` at top-level isn't on `window`) is the inverse pattern. `let` creates a lexical binding but no window property; `function` declaration creates a window property but no separate lexical binding. Both cause silent cross-script breakage.
+**Rule:** in a classic `<script>`, top-level `function X(){}` is only a `window` property, not a separate lexical binding — so `window.X = function(){ X()… }` makes the bareword `X()` resolve to the wrapper → ∞ recursion (`RangeError`, blank dashboard cards). Capture FIRST: `const _innerX = window.X;` then call `_innerX(...)` inside the wrapper.
+**Detect:** `grep -rnE "^window\.\w+\s*=\s*function" shared/ tenant_app.html dashboard.html` → review each for a bareword self-call. Inverse of §7-CC (`let` at top-level isn't on `window`).
+↳ incident `48b47ed` (S6) + before/after code → `tasks/lessons_antipatterns.md` §EE
 
 ### FF. Reversing custom claims — `setCustomUserClaims({})` alone leaves a ~1h leak
 
-§7-Z established the FORWARD direction: minting a token without also calling `setCustomUserClaims` is ephemeral (claims gone after ~1h). The REVERSE direction has its own three-part contract that all sites must observe together:
-
-1. **Server (CF):** `admin.auth().setCustomUserClaims(uid, {})` strips claims from the user record. Required, but insufficient alone.
-2. **Server (CF):** `admin.auth().revokeRefreshTokens(uid)` updates `tokensValidAfterTime`. Without this, the SDK's next refresh succeeds and mints a new token from the record state (now claim-less) — but the SDK only refreshes when it decides to, typically every ~50 min.
-3. **Client (fast-path):** `user.getIdTokenResult(true)` — force-refresh — on session-restore paths. Without it, the client SDK serves the CACHED ID token (still has claims) until the token's natural ~1h expiry. The user can keep walking back into authenticated surfaces with stale claims for nearly an hour.
-
-Incident 2026-05-20: `unlinkLiffUser` shipped (1) and (2) in commit `ba084ef` but the tenant_app `_callLiffSignIn` fast-path still used `getIdTokenResult()` cached. Result: admin clicks 🔌 ยกเลิกการเชื่อม, server says "claims gone", but the user's open LIFF tab returns `linked: true` from the fast-path (cached token has full claims) → ลูกบ้านยังเข้าห้องได้. User reported it. Fix in `3e159ff` switched fast-path to `getIdTokenResult(true)` + signOut on throw + fall through to liffSignIn POST → 403 unlinked → S2 mode.
-
-**Rule:** every claim-reversal CF (unlinkLiffUser, archiveTenantOnMoveOut, transitionToPlayer when it removes a role, future kin-removal flows) must do ALL THREE legs:
-
-```js
-// In the CF, AFTER batch.commit:
-const uids = [deterministicUid];
-if (legacyUid && legacyUid !== deterministicUid) uids.push(legacyUid);
-await Promise.allSettled(uids.map(async u => {
-  try {
-    await admin.auth().setCustomUserClaims(u, {});
-    await admin.auth().revokeRefreshTokens(u);
-  } catch (e) {
-    // user-not-found expected when legacy anon UID was cleaned up earlier
-    if (e?.code !== 'auth/user-not-found') console.warn(...);
-  }
-}));
-```
-
-```js
-// In any client "is the cached session still valid?" fast-path:
-const tr = await auth.currentUser.getIdTokenResult(true);  // force network refresh
-// On throw (auth/user-token-expired post-revoke): signOut + fall through to fresh sign-in.
-```
-
-**Detection recipe:**
-
-```bash
-# Every claim-reversal CF must call BOTH setCustomUserClaims + revokeRefreshTokens
-grep -rln "setCustomUserClaims\s*(\s*\w\+\s*,\s*{}" functions/  # claim strippers
-grep -rln "revokeRefreshTokens" functions/                       # token revokers
-# Diff the two lists. Anything in the first but not the second is half-finished.
-
-# Every client fast-path that trusts a cached ID token for auth-gated rendering
-grep -rn "getIdTokenResult()" tenant_app.html dashboard.html shared/
-# Each hit needs justification — for unlinked-tolerant paths it should be (true).
-```
-
-**Backfill required when shipping this pattern late:** if a CF was deployed in the (1)-only state, run a one-shot script that walks the relevant Firestore status field and applies (1)+(2) to every existing record. Template: `tools/backfill-unlinked-claims.js` (mirror of `tools/backfill-liff-claims.js`). Without the backfill, the existing N records keep stale claims until manually re-unlinked. Cost is one Firebase Admin pass per record.
-
-Closely related to §7-Z (forward minting also needs the persistent-claims dual-write). Family: "Firebase Auth state has two halves — the user record and the cached ID token — and you must explicitly invalidate both, or one will leak."
+**Rule:** reversing claims needs ALL THREE: server `setCustomUserClaims(uid,{})` + `revokeRefreshTokens(uid)`, AND client force-refresh `getIdTokenResult(true)` on session-restore paths. Skip the force-refresh → the cached ID token (still has claims) lets the user back in for ~1h. Backfill existing records when shipping this late.
+**Detect:** `grep -rln "setCustomUserClaims.*{}" functions/` vs `grep -rln "revokeRefreshTokens" functions/` — diff = half-finished; `grep -rn "getIdTokenResult()" shared/ *.html` (no `true`). Reverse of §7-Z.
+↳ `unlinkLiffUser` (`ba084ef`/`3e159ff`) → `tasks/lessons_antipatterns.md` §FF
 
 ### GG. LIFF redirect strips URL `?query=params` — use localStorage for sticky toggles
 
-When the user opens `https://liff.line.me/<channelId>?debug=1` (or any LIFF endpoint URL with a query param), LINE's redirect to the configured webview endpoint can DROP the query string. `?debug=1`, `?next=/dashboard`, `?coupon=abc`, custom feature-flag toggles — none of these are reliable in LIFF. The same URL works perfectly in Safari/Chrome (because there's no LIFF redirect involved), so the bug is invisible during desktop testing.
-
-Incident 2026-05-21: `booking.html` shipped an on-screen debug panel gated on `/[?&]debug=1/.test(location.search)`. Tester appended `?debug=1` to the LIFF URL → LINE webview opened the page but the query param wasn't in `location.search` → panel never showed. We thought the panel was broken (`DOMContentLoaded` timing issue was a separate cousin bug also fixed in the same session) when in fact the trigger never fired.
-
-**Rule:** any URL-driven toggle that must survive LIFF redirect MUST persist to `localStorage` on first detection, then read from BOTH `location.search` AND storage on every subsequent visit:
-
-```js
-let _toggleOn = /[?&]foo=1/.test(location.search);
-const _toggleOff = /[?&]foo=0/.test(location.search);
-try {
-  if (_toggleOff) localStorage.removeItem('toggle_foo');
-  else if (_toggleOn) localStorage.setItem('toggle_foo', '1');
-  else if (localStorage.getItem('toggle_foo') === '1') _toggleOn = true;
-} catch (_) { /* storage disabled — non-fatal */ }
-```
-
-Always provide an explicit OFF trigger (`?foo=0` here) — otherwise the toggle is sticky forever once set.
-
-**Affects:** `tenant_app.html`, `booking.html`, any future LIFF entrypoint. Especially relevant for QA / debug flags, deep-link parameters, and feature-flag overrides.
-
-**Detection recipe:** any new `URLSearchParams`/`location.search` lookup added to a LIFF-entry HTML must have a sibling localStorage persistence path, OR a comment explaining why ephemeral-only is intentional.
-
-```bash
-grep -rn "location.search\|URLSearchParams" tenant_app.html booking.html
-# Every hit on a LIFF-loaded page is a candidate for query-strip bug.
-```
-
-Family with §7-S (LIFF auth multi-instance) and §7-R (LIFF webview TLS stale): all are "LIFF behaves differently from a normal browser, and the difference is invisible until you test on LINE itself."
-
-**Related extension to §7-R:** the original §7-R was scoped to `fetch()` in LIFF webview. Same session (2026-05-21) confirmed it applies equally to `firebase-database`'s `get()` — `loadRoomsConfig` hung at "🌿 กำลังโหลดข้อมูลห้อง…" indefinitely waiting on `firebaseDatabaseGet(ref(db, 'rooms_config/rooms'))` until the user gave up. Fix is identical: `Promise.race([get(ref), new Promise((_, rej) => setTimeout(() => rej(new Error('rtdb-timeout')), 5000))])`. So §7-R's rule should be read as "any await on Firebase SDK that goes over the wire (fetch, RTDB get, Firestore getDoc, getDocs, storage uploadBytes) in LIFF webview must have a Promise.race timeout" — not just fetch.
+**Rule:** LINE's LIFF redirect can DROP `?query=params` (works in Safari/Chrome, not LIFF). Any URL-driven toggle that must survive LIFF MUST persist to localStorage on first detection + read from BOTH `location.search` and storage after; always provide an explicit OFF trigger (`?foo=0`).
+**Detect:** `grep -rn "location.search\|URLSearchParams" tenant_app.html booking.html` — each needs a localStorage sibling. Family: §7-R, §7-S.
+↳ booking debug panel → `tasks/lessons_antipatterns.md` §GG
 
 ### HH. Global `onAuthStateChanged` anon fallback races with deliberate `signOut → signInWithCustomToken` swap on LIFF pages
 
-Classic recurring auth-race trap that ate ~3 sessions before root cause was found. A LIFF-entry page (tenant_app.html) had an old global handler that auto-called `signInAnonymously()` whenever `currentUser` became null — vestigial from the pre-`liffSignIn` flow but never removed. The `_callLiffSignIn` swap path deliberately calls `auth.signOut()` (to wipe a stale admin/email session from IndexedDB before installing the new `line:Uxxx` identity), which fires the global handler → kicks off `signInAnonymously()` asynchronously → races the awaited `signInWithCustomToken()`. Whichever network call resolves LAST wins. When anon wins (~20-40% of opens, depends on TLS cache state and network), the user ends up with a random Firebase anonymous UID instead of `line:Uxxx`. Every server gate keyed on `auth.uid` then sees the wrong UID — checkable via `auth.uid` not starting with `line:` or `book:` AND no useful claims.
-
-Symptoms (very specific signature — recognise this and check the global handler FIRST):
-1. Tenant works inside LIFF for one session, suddenly hits permission-denied on a feature gated by `request.auth.uid == resource.data.linkedAuthUid` (lease doc, checklist photo, custom CF SoT check)
-2. `console.log(auth.currentUser.uid)` shows a random alphanumeric UID, NOT `line:Uxxx`
-3. `getIdTokenResult()` returns claims with NO room/building/admin/role
-4. CF logs show `caller.uid=<random>` not matching `linkedAuthUid=line:Uxxx`
-5. Closing LINE + reopen sometimes fixes it (because the race resolves differently on second try)
-
-**Rule:** any page that drives auth via `signOut → signInWithCustomToken` (LIFF pages) MUST NOT have an unconditional `signInAnonymously` fallback in a global `onAuthStateChanged` handler. Either:
-
-a. **Remove the anon fallback entirely** if the page is LIFF-only (booking.html pattern — just `_authUid = user?.uid || null;`).
-b. **Gate the anon fallback on `!/Line\//i.test(navigator.userAgent)`** if the page also serves non-LIFF visitors needing isSignedIn() reads (marketplace, community feeds).
-
-```js
-// ✅ CORRECT — LIFF gate prevents the race
-onAuthStateChanged(auth, async (user) => {
-  if (user) { window._authUid = user.uid; dispatchEvent(new Event('authReady')); return; }
-  const inLine = /Line\//i.test(navigator.userAgent);
-  if (inLine) { dispatchEvent(new Event('authReady')); return; }  // _callLiffSignIn owns auth here
-  try { await signInAnonymously(auth); } catch (err) { ... }
-});
-
-// ❌ WRONG — global anon fallback races signInWithCustomToken
-onAuthStateChanged(auth, async (user) => {
-  if (user) { ... return; }
-  try { await signInAnonymously(auth); } catch (err) { ... }
-});
-```
-
-**Detection recipe** — audit every LIFF-entry HTML for this pattern:
-
-```bash
-# Find pages that call signInAnonymously
-grep -rn "signInAnonymously" tenant_app.html booking.html login.html dashboard.html
-# Cross-check against pages that also call signInWithCustomToken
-grep -rn "signInWithCustomToken" tenant_app.html booking.html login.html dashboard.html
-# Any file in BOTH lists is suspect — if its onAuthStateChanged has an unconditional
-# anon fallback, the race is latent.
-```
-
-**Why it's hard to spot in code review:**
-- The global handler and `_callLiffSignIn` are 9,000+ lines apart in tenant_app.html. Reading either in isolation looks fine.
-- The race is intermittent (depends on network timing). "Works on my machine" + "works when I reload" hide it.
-- The comment on the legacy anon fallback claimed "Anonymous MUST stay enabled" — anchoring to a constraint that no longer applied (linkAuthUid had been replaced by liffSignIn long ago, but nobody updated the comment).
-- The symptom (random anon UID) looks superficially like "user not signed in yet" — easy to attribute to a different bug class.
-
-**Lesson on vestigial code:** when an architectural change replaces an old auth flow (linkAuthUid → liffSignIn), grep for EVERY use of the old primitives (`signInAnonymously`, `signInAnonymously(auth)`) and either delete them or document why they must stay. The half-removed migration leaves race-prone hybrids that bite later. Comments that say "X is required because Y" become time bombs when Y goes away.
-
-**Sibling patterns:**
-- §7-Z (custom-token claims are ephemeral without `setCustomUserClaims`) — same "auth half-fixed during refactor" family. Both bugs ate a session before root cause was found, both fixes were 5 lines, both vestigial issues from incomplete migrations.
-- §7-P (UID-drift fixes must traverse every rule layer) — when the UID flips unexpectedly, every place that checks UID breaks. Same root cause class: the UID didn't end up where the system expects.
-- §7-U (claim-first guard in subscribe) — different bug, same lesson on multiple-auth-events-firing.
-
-Fix landed 2026-05-22 (commit `4d40328`) by gating the anon fallback at [tenant_app.html:177](tenant_app.html:177) on `!/Line\//i.test(navigator.userAgent)`. Auto-recovery in `_getLeaseSignedUrl` (§Stale LIFF webview session in auth_liff_sot.md) retained as belt-and-suspenders for one release cycle.
+**Rule:** a LIFF-entry page driving auth via `signOut → signInWithCustomToken` MUST NOT keep an unconditional `signInAnonymously()` fallback in its global `onAuthStateChanged` — the swap's `signOut()` fires it and it races the awaited custom-token sign-in (~20-40% of opens → random anon UID; every `auth.uid` gate breaks). Gate on `!/Line\//i.test(navigator.userAgent)`, or drop it on LIFF-only pages.
+**Detect:** a file in BOTH `grep -rn signInAnonymously` and `grep -rn signInWithCustomToken` is suspect. Signature: `auth.uid` not `line:`/`book:` + no claims + reopen-sometimes-fixes. Siblings: §7-Z, §7-P, §7-U.
+↳ 3-session incident `4d40328` + full symptom list + why-hard-to-spot → `tasks/lessons_antipatterns.md` §HH
 
 ### II. CSP hash drift accumulates silently during Report-Only era, bombs on enforce flip
 
-CSP hashes in `vercel.json` for inline `<style>` and `<script>` blocks must be regenerated **every time** the inline content changes. While `Content-Security-Policy-Report-Only` is the active header, drift is invisible — browsers log a CSP report (often nowhere visible) and render the page anyway. The instant the header flips to enforce mode (`Content-Security-Policy`), all accumulated drift becomes simultaneous blockers — pages render with no `<style>` applied (native browser defaults), or inline `<script>` handlers stop firing.
-
-Incident 2026-05-23: fervent-kare merged with `Content-Security-Policy` enforce flip. Login.html (commit `4ad53ce fix(login): pin input text color`), dashboard.html, tenant_app.html, tax-filing.html, audit-log-viewer.html, payment.html, booking.html, index.html — all 8 had `<style>` and/or `<script>` edits since `54ce1cb fix(csp): roll back to Report-Only mode`. None regenerated CSP hashes. Result: production-wide CSS failure on first user load after the enforce flip. User sent a before/after screenshot of login.html with "page broken" symptoms — root cause took ~3 minutes to find once the verify-via-grep doctrine pointed at `vercel.json` history.
-
-**Rule:** ANY edit to an inline `<style>` or `<script>` block in ANY tracked HTML (8 files: `index/login/dashboard/tenant_app/tax-filing/audit-log-viewer/payment/booking.html`) MUST be followed by hash regen in the same commit:
-
-```bash
-npm run csp:hash                     # rebuilds tools/csp-hashes.json
-node tools/update-vercel-csp.js      # writes the new CSP value into vercel.json (added 2026-05-23 in commit 9f29338)
-git add vercel.json tools/csp-hashes.json
-```
-
-The 2-tool sequence is mandatory because `csp:hash` only updates `tools/csp-hashes.json`; `csp:print` only prints to stdout (was designed for hand-pasting); only `update-vercel-csp.js` writes to vercel.json. Pre-2026-05-23 instructions said "copy from csp:print into vercel.json" — that's error-prone, and the error mode is silent under Report-Only.
-
-**Detection recipe — pre-commit check:**
-
-```bash
-# If you edited any of these files, regen is mandatory:
-git diff --name-only HEAD | grep -E "^(index|login|dashboard|tenant_app|tax-filing|audit-log-viewer|payment|booking)\.html$"
-
-# Then verify CSP is in sync:
-node tools/compute-csp-hashes.js > /tmp/new.json
-diff <(jq -S . tools/csp-hashes.json) <(jq -S . /tmp/new.json)
-# Non-empty diff = hashes drifted → run update-vercel-csp.js
-```
-
-**Pre-commit hook (landed 2026-05-23):** `tools/git-hooks/pre-commit` §G now detects this automatically — staging any of the 8 tracked HTMLs triggers a regen + drift compare against current `tools/csp-hashes.json` and `vercel.json`. Drift blocks the commit with the exact regen instructions. The hook backs up + restores both files so a blocked commit leaves no mutation behind. Re-installed via `npm run install:hooks` (also runs on `npm install` postinstall).
-
-**Debugging signature** (this bug class is sneaky because the symptom looks like a CSS file failure, not a CSP problem):
-
-1. Production page renders with **NATIVE browser styling** — no card layouts, no rounded corners, no brand fonts. Form elements look unstyled.
-2. CSS files (`shared/brand.css`, `shared/components.css`) load with status 200 and have rules. JS `document.styleSheets[0].cssRules.length` returns >0.
-3. `document.body.classList = ""` and `getComputedStyle(document.body).backgroundColor` returns `rgba(0,0,0,0)` (transparent default).
-4. **The inline `<style>` block exists in the HTML source** but rules from it don't apply.
-5. **No obvious console error** about CSP — the violation log lives in the dev tools "Issues" panel, NOT the console by default. Chrome MCP `read_console_messages` won't see it without explicit pattern matching `Refused to apply|Content Security Policy`.
-6. Filter network requests for the CSS files — they're 200 with content. So the page CAN load CSS, but inline `<style>` defining the page-specific classes (`.login-container`, `.user-type-btn`, etc.) is being **stripped silently by CSP**.
-
-When you see (1) + (2) + (4) simultaneously: hash drift is the first hypothesis. Run `openssl dgst -sha256 -binary <<< "$(awk '/<style>/,/<\/style>/' page.html | sed '1d;$d')" | openssl base64` and compare against vercel.json. Mismatch confirms it. (Note: the `tools/compute-csp-hashes.js` script normalizes CRLF→LF per feedback_hash_tools_lf_normalize.md; manual openssl will give a different hash on Windows checkout — trust the tool's output.)
-
-**Why "ห้องแถว" / "Nest" labels lied during this incident:** when verifying booking.html anon-prospect read of `buildings/*`, page text showed `displayName` strings → I declared "Firestore read works." False positive — those strings are HARDCODED at [booking.html:779,781](booking.html:779) ("ห้องแถว" + "Nest" appear in literal HTML as building-tab labels, NOT pulled from Firestore until the LIFF flow continues). Anti-pattern lesson: when verifying live data, never trust visible text alone — confirm via either (a) a Firestore network request to `firestore.googleapis.com/v1/projects/.../buildings/X`, OR (b) a JS dump of the in-memory state object (e.g. `state.buildings`, `window._buildingsList`). Reading the page is the WRONG primitive when content is also serveable from cached HTML.
-
-**Family:**
-- §7-W (`!important` doesn't beat higher specificity) — same family of "CSS appears to work but doesn't; needs deployed-page inspection." Both only surface on real Vercel deployments.
-- §7-G (cross-session self-conflict check) — applies here: I should have re-read all session diffs (fervent-kare's `vercel.json` change PLUS the chain of recent inline-style edits) end-to-end before declaring "deploy + verify done." A 30-second `git log -10 --oneline -- '*.html'` would have flagged the open CSP-enforce-vs-hash-drift question.
-- §7-J (static deploy ≠ live-data verified) — extension: static deploy ≠ live-page-render verified. Vercel showed "deploy succeeded" on every pre-2026-05-23 fervent-kare push. Production was broken.
-
-Fix landed 2026-05-23 (commit `9f29338`) by `npm run csp:hash && node tools/update-vercel-csp.js && git commit vercel.json tools/csp-hashes.json tools/update-vercel-csp.js` → push → Vercel redeploy → login.html visually verified back to the intended dark-green-gradient + 450px white card design.
+🔒 **pre-commit §G BLOCKS** this: staging any of the 8 tracked HTMLs regen-compares CSP hashes.
+**Rule:** ANY edit to an inline `<style>`/`<script>` in the 8 tracked HTMLs (index/login/dashboard/tenant_app/tax-filing/audit-log-viewer/payment/booking) needs hash regen in the SAME commit: `npm run csp:hash && node tools/update-vercel-csp.js && git add vercel.json tools/csp-hashes.json`.
+**Signature:** the deployed page renders with NATIVE browser styling (CSS files 200; inline `<style>` present in source but not applied); the violation shows only in DevTools → Issues, not console. Family: §7-W, §7-RR, §7-OO, §7-J.
+↳ incident `9f29338` + 6-point debugging signature + "ห้องแถว labels lied" lesson → `tasks/lessons_antipatterns.md` §II
 
 ### JJ. `btn.click()` timing race — event delegation hub not registered at 900ms checkpoint
 
-`btn.click()` routes through the event delegation hub in `shared/dashboard-main.js`. That hub is registered **inside** a `DOMContentLoaded` callback that first `await`s Firebase ready (up to 2s). Any programmatic click fired before that await resolves silently drops — no handler is listening yet.
-
-Incident 2026-05-23 (commit `c32a5d9`): the 900ms DOMContentLoaded timer in `dashboard-home-live.js` called `btn.click()` to trigger `setYear → initDashboardCharts`. On cold loads, Firebase was still initializing so the delegation hub wasn't registered yet. Click fired, nothing handled it, `initDashboardCharts` never ran, `dash-cold-skeleton` persisted indefinitely. `_initialDashboardYear = true` (timer fired) AND `_dashRenderCooldownUntil` set — so the `_waitForHistStore` onChange rerender was blocked within the 1s cooldown window. No subsequent trigger. Skeleton stuck forever.
-
-**Rule:** never use `btn.click()` for programmatic initialization that races DOMContentLoaded. Call the target function directly. Pass `btn` as an argument if the function needs it for UI highlighting.
-
-```js
-// ❌ WRONG — relies on event delegation hub being registered (may not be at 900ms)
-if (btn) btn.click();
-else if (typeof setYear === 'function') setYear(beYear, null);  // fallback never reached when btn exists
-
-// ✅ CORRECT — direct call, always works; btn passed for active-tab highlight
-setYear(beYear, btn || null);
-```
-
-Detection recipe:
-```bash
-# Timer-triggered programmatic clicks on data-action elements — potential race
-grep -rn "setTimeout" shared/ dashboard.html | grep "\.click()"
-# Cross-check: is the target function's event delegation hub registered in a DOMContentLoaded async callback?
-grep -n "DOMContentLoaded.*async\|addEventListener.*click" shared/dashboard-main.js | head -5
-```
-
-Sibling patterns: §7-A (wrong event timing for auth-gated reads), §7-U (claims not ready on first auth event fire). All three are "the trigger fired but the handler wasn't ready yet" variations.
+**Rule:** never `btn.click()` for programmatic init that races DOMContentLoaded — the event-delegation hub (`dashboard-main.js`) registers inside a `DOMContentLoaded` async cb that awaits Firebase (up to 2s); a click before that silently drops. Call the target function directly, pass `btn` as an arg for highlighting.
+**Detect:** `grep -rn "setTimeout" shared/ dashboard.html | grep "\.click()"`. Family: §7-A, §7-U.
+↳ `c32a5d9` dashboard skeleton stuck → `tasks/lessons_antipatterns.md` §JJ
 
 ### KK. Optimistic local write vs cached onSnapshot reconciliation race
 
-When a UI optimistically writes localStorage (set marker, close modal) on user action, and a parallel `onSnapshot` reconciliation block "fixes stale local state" by clearing localStorage when the server snapshot says no — there's a race window where the FIRST onSnapshot fire is from local cache (still has pre-action state). The reconciliation then ERASES the optimistic write before the second server-confirmed snapshot can deliver the new state.
-
-Symptoms:
-1. User clicks claim/bookmark/etc. → state appears applied
-2. Toast/feedback may have shown "success"
-3. On next session (or even seconds later), state is gone — appears as if action never happened
-4. localStorage marker silently vanishes — no console error
-
-Root cause timeline:
-```
-T=0       User action → optimistic localStorage write + UI feedback (modal close, toast)
-T=0+1ms   onSnapshot fires from CACHE (stale)
-          → snapshot.field is empty (pre-action state)
-          → reconciliation: "Firestore says no → clear local marker"
-          → optimistic write ERASED 💀
-T=1s      CF write completes server-side
-T=1.5s    onSnapshot fires from SERVER (fresh)
-          → snapshot.field now has today's value
-          → but local was already cleared — too late
-```
-
-**Rule:** Any onSnapshot reconciliation that CLEARS local state when server says no MUST gate on snapshot freshness:
-
-```js
-fs.onSnapshot(ref, snap => {
-  const fresh = (snap.data() || {}).someField || null;
-  // SKIP reconciliation when snapshot is from local cache OR has pending writes —
-  // cached snapshot is stale relative to optimistic write that just happened.
-  if (!fresh && !snap.metadata?.fromCache && !snap.metadata?.hasPendingWrites) {
-    if (localStorage.getItem(lsKey) === today) localStorage.removeItem(lsKey);
-  }
-});
-```
-
-Detection: grep for `localStorage.removeItem` inside onSnapshot callbacks. Each should have a `snap.metadata.fromCache` / `hasPendingWrites` guard.
-
-```bash
-# Find onSnapshot callbacks that clear localStorage — each needs a metadata guard
-grep -B1 -A20 "onSnapshot" tenant_app.html shared/*.js | grep -B5 -A5 "localStorage.removeItem"
-```
-
-Admin-reset case still works correctly: when admin clears Firestore, the server-confirmed snapshot (fromCache=false) fires → reconciliation runs → local cleared. Only the CACHED initial snapshot is skipped.
-
-Family: §7-N (onSnapshot must have error callback), §7-V (cleanup before re-attach) — same family of "silent onSnapshot lifecycle bug." Subtler than missing-callback bugs because it manifests only in the OPTIMISTIC-write + CACHED-snapshot race.
-
-Incident (2026-05-23 late evening (8)): daily-bonus modal appearing on every LIFF reopen after successful claim. Optimistic close + sync localStorage marker was correct, but `_subscribeEcoPoints` reconciliation block cleared it during the cached-snapshot fire (sub-millisecond after the marker write). Fix in commit `2dfc440` — added `!snap.metadata?.fromCache && !snap.metadata?.hasPendingWrites` to both player + tenant branches.
-
-Incident 2 (2026-06-08): the NEW LIFF approval listener (`_setupApprovalStatusListener`, tenant-liff-auth.js) acted on the FIRST onSnapshot tick of `liffUsers/{uid}` — served from the local Firestore cache, holding a STALE `'approved'` from a prior session (account history: link→unlink→relink-same-room→**rejected**). Cached `'approved'` → `location.reload()` → re-init → cache replays `'approved'` → reload … a **full-page reload loop every ~5s** that made the rejected overlay + its ส่งคำขอใหม่ form unusable. Fix `bcf0ac9`: `if (snap.metadata && snap.metadata.fromCache) return;` at the top of the handler — act only on server-confirmed status.
-
-**Generalized rule (both incidents):** ANY onSnapshot whose handler does something NON-IDEMPOTENT + hard to undo — `location.reload()`, navigation, a write, clearing localStorage, showing/hiding an overlay that traps the user — MUST gate on `!snap.metadata?.fromCache` (and `!hasPendingWrites` if optimistic local writes are in play). The first tick is almost always cache and can be stale; only server-confirmed snapshots are safe to act on. Pure UI reads (rendering a list) don't need the guard; state-changing side effects do.
+**Rule:** ANY onSnapshot handler doing something NON-IDEMPOTENT / hard-to-undo (clear localStorage, `location.reload()`, navigate, write, trap-overlay) MUST gate on `!snap.metadata?.fromCache` (+ `!hasPendingWrites` when optimistic local writes are in play). The first tick is usually stale cache — acting on it erases the optimistic write or loops the page. Pure UI reads don't need the guard; side effects do.
+**Detect:** `grep -B1 -A20 "onSnapshot" tenant_app.html shared/*.js | grep -B5 -A5 "localStorage.removeItem\|location.reload"` → each needs a fromCache guard. Family: §7-N, §7-V.
+↳ both incidents (`2dfc440` daily-bonus, `bcf0ac9` reload-loop) + timeline diagram → `tasks/lessons_antipatterns.md` §KK
 
 ### LL. Firebase RTDB JSONP fallback hits BOTH `script-src-elem` AND `frame-src` — fix in one commit
 
-Firebase RTDB SDK opens a WebSocket by default. When that fails — even momentarily (intermittent network, restrictive proxy, NAT/firewall, single CONNECTION_RESET) — the SDK silently falls back to JSONP long-polling. The fallback creates TWO different DOM elements pointing at the RTDB origin:
-
-1. `<script src="https://<project>-default-rtdb.<region>.firebasedatabase.app/...">` — JSONP payload delivery → hits **`script-src-elem`**
-2. `<iframe src="https://<gke-host>.<region>.firebasedatabase.app">` — cross-origin event channel → hits **`frame-src`** (different subdomain than the script path!)
-
-`connect-src 'self' https: wss:` does NOT matter — `connect-src` gates fetch/XHR/WebSocket, not `<script>` or `<iframe>`. So `connect-src` looking permissive misleads you into thinking RTDB is whitelisted when it isn't.
-
-**Symptom signature** (recognise this fast):
-1. DevTools Issues panel shows 10+ CSP violations per second, growing continuously
-2. Each violation says "Loading the script '<URL>'..." or "Refused to frame ..." where `<URL>` is `https://<project>-default-rtdb.<region>.firebasedatabase.app/...`
-3. Page still works (SDK has internal retry) but DevTools UI slows and the report queue fills
-4. Closing/reopening DevTools doesn't reset the count — violations keep coming until WebSocket re-establishes
-
-**Fix:** in `tools/generate-vercel-csp.js`, add to **BOTH** `SCRIPT_SRC_EXTERNAL` and `FRAME_SRC`:
-
-```js
-'https://*.firebasedatabase.app',   // current multi-region RTDB
-'https://*.firebaseio.com',         // legacy US-region (defensive)
-```
-
-Then `npm run csp:hash && node tools/update-vercel-csp.js`.
-
-**Why this is its own anti-pattern (not just a one-off):** PRs #32→#34 (2026-05-24) shipped the script-src-elem fix first, saw the 10/sec flood disappear, looked done — but a single residual violation surfaced for `s-gke-apse1-nssi2-1.asia-southeast1.firebasedatabase.app` under `frame-src` because the iframe path uses a different subdomain. Took a second deploy cycle to close. When adding an origin for RTDB JSONP fallback, ALWAYS mirror the change in BOTH directives in the same commit — partial fix burns a deploy and looks like the fix didn't land.
-
-**Detection recipe (run before tightening CSP or removing any RTDB-related directive):**
-
-```bash
-grep -oE "script-src-elem [^;]+" vercel.json | grep -c "firebasedatabase\|firebaseio"
-grep -oE "frame-src [^;]+"       vercel.json | grep -c "firebasedatabase\|firebaseio"
-# Both must return >=1
-```
-
-**Family with §7-II (CSP hash drift bombs on enforce flip)** — both are "CSP directive doesn't include something the runtime actually needs, only visible on the deployed page under specific conditions." II is about hashes drifting; LL is about origins being silently missing despite `connect-src` looking permissive. Always test CSP changes on a deploy where the actual SDK runs — static review can't see this class of bug.
+**Rule:** when RTDB's WebSocket fails it falls back to JSONP → a `<script>` (hits `script-src-elem`) AND an `<iframe>` on a DIFFERENT subdomain (hits `frame-src`); `connect-src` is irrelevant. Add `https://*.firebasedatabase.app` + `https://*.firebaseio.com` to BOTH directives in `generate-vercel-csp.js` in one commit.
+**Detect:** `grep -oE "script-src-elem [^;]+" vercel.json | grep -c firebasedatabase` AND the same for `frame-src` — both must be ≥1. Family: §7-II.
+↳ PRs #32→#34 (two deploy cycles) → `tasks/lessons_antipatterns.md` §LL
 
 ### MM. Service worker cache serves stale `function X()` even after deploy — clear SW + caches before in-browser verification
 
-When verifying a JS-level fix on Vercel via Chrome MCP, the page can load fresh HTML but the service worker (`shared/service-worker.js`) keeps the OLD `shared/*.js` in cache. The trap is that `fetch('/shared/X.js?cb=' + Date.now())` returns the NEW file content correctly — yet `(window.X || X).toString()` shows the OLD function body. The function reference in memory was bound at original parse time and isn't refreshed by a plain reload.
-
-**Symptom signature** (recognise this fast — easy to lose 20+ min):
-1. Deploy SHA matches latest (`gh api /repos/.../deployments?per_page=1` confirms)
-2. `fetch('/shared/X.js?cb=...')` returns NEW source (with your fix)
-3. `(window.X || X).toString()` returns OLD source (without your fix)
-4. Live UI behaves like OLD code — toast doesn't show, fix appears not deployed
-5. You start patching `window.X`, adding MutationObservers, inspecting CSS specificity — chasing the wrong layer
-
-**Recovery (run BEFORE the verification flow):**
-```js
-navigator.serviceWorker.getRegistrations()
-  .then(rs => Promise.all(rs.map(r => r.unregister())))
-  .then(() => caches.keys())
-  .then(ks => Promise.all(ks.map(k => caches.delete(k))))
-  .then(() => location.reload());
-```
-
-Plain `location.reload(true)` is NOT enough — the SW intercepts the request and may still serve stale. For Chrome MCP verification specifically, run the snippet above first, then wait for the reload to complete, THEN trigger your test flow.
-
-End users don't hit this — `CACHE_VERSION` in `service-worker.js` auto-bumps from `VERCEL_GIT_COMMIT_SHA` per build.js, so the SW invalidates itself on next user visit. The trap is exclusive to the DEBUGGER who has a tab open across deploys.
-
-**Detection during debugging**: when "the patch shows in the fetched file but the behavior doesn't match," check `window.functionName.toString()` first — if it's not what you shipped, it's the SW cache. Don't keep chasing other layers.
-
-Related: §7-J (static deploy ≠ live-data verified) is the dependency-direction sibling — deploy success ≠ feature works because of real data. This MM is "deploy success ≠ in-memory code matches deploy" because of SW cache.
+**Rule:** when verifying a JS fix on Vercel via Chrome MCP, the service worker can serve OLD `shared/*.js` even though a cache-busted `fetch` returns NEW source — `window.X.toString()` shows the OLD body. Clear SW + caches before verifying (unregister + `caches.delete` + reload); plain `reload(true)` isn't enough. End users auto-invalidate via `CACHE_VERSION`.
+**Detect during debug:** patch shows in the fetched file but behavior doesn't match → check `window.fn.toString()` FIRST, don't chase other layers. Cousin: §7-J, [[feedback_frontend_fix_hardreload_before_done]].
+↳ `tasks/lessons_antipatterns.md` §MM
 
 ### NN. Firestore triggers (any Gen, any region) cannot watch SE3-hosted Firestore — use HTTPS callable + client invocation
 
-Eventarc — the trigger backbone for BOTH Gen1 `firebase-functions/v1` AND Gen2 `firebase-functions/v2/firestore` Firestore triggers — does NOT support `asia-southeast3` (Jakarta), which is where this project's Firestore lives. Any new CF that needs to react to a Firestore write WILL fail at deploy time with:
-
-```
-Resource projects/the-green-haven/databases/(default)/documents/<path> is in region asia-southeast3 which is not supported.
-```
-
-The project pattern is **HTTPS callable invoked from client AFTER the Firestore write** — modeled on `functions/notifyTenantOnMeterUpload.js` (see its 13-line comment block at the top explaining the same constraint). The callable lives in SE1 (no Eventarc requirement); the client calls it as a follow-up step. Auth gates inside the CF verify the caller has permission to trigger the work (e.g. participant of the chat, owner of the post).
-
-Incident 2026-05-24: Sprint 1 + Sprint 2 marketplace-chat CFs (`cleanupMarketplaceChat` Firestore.onWrite + `notifyMarketplaceChat` Firestore.onCreate) BOTH shipped in PR #36 as triggers. Deploy after merge failed on the first attempt; full refactor to v2 `onCall` in PR #37 + 7 new client invocation sites in tenant_app.html. ~30 min lost, plus a forced `firebase functions:delete cleanupMarketplaceChat --region asia-southeast1 --force` to clear the stale "background-triggered" registration (which Firebase recorded even though the deploy itself errored — re-deploy as callable was then blocked by "Changing from a background triggered function to a callable function is not allowed").
-
-**Rule:** before writing ANY new Firestore-triggered CF in this project, stop and use a callable instead. Detection:
-
-```bash
-# Find every Firestore-trigger CF in the repo. Each is either FROZEN
-# (predates the SE3 migration — see lifecycle_marketplace.md and
-# generate_bills_cf_frozen.md) OR needs to be refactored to callable.
-grep -rn "\.firestore\.document(\|firebase-functions/v2/firestore" functions/
-```
-
-The only Firestore-trigger CF that's allowed to exist (and shouldn't be touched) is `generateBillsOnMeterUpdate` — it was deployed pre-migration and is now FROZEN per [generate_bills_cf_frozen.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\generate_bills_cf_frozen.md). Any new trigger fails at deploy.
-
-**When client invocation isn't enough (rare):** scheduled CF sweeping the Firestore collection on a cron is the only Eventarc-free fallback. Adds latency (1-15 min) but works cross-region. Used by `cleanupChecklistsScheduled.js`, `cleanupOldDocs.js`, etc.
-
-**Hotfix recipe when you discover a trigger CF in your in-flight PR:**
-
-1. Refactor the CF: `firebase-functions/v1` → `firebase-functions/v2/https`; `functions.region().firestore.document(path).onWrite/onCreate(...)` → `onCall({ region: 'asia-southeast1', secrets: [...] }, async (request) => ...)`.
-2. Move the trigger's auth gate INTO the callable body (`request.auth.uid` required; participant / owner / admin check; sender == auth.uid for spoofing protection).
-3. Wire client to invoke after the Firestore write that USED to trigger it. Order matters for cleanup-style CFs where the auth check needs the source doc to still exist (e.g. `deleteMarketItem` must call `cleanupMarketplaceChat` BEFORE `deleteDoc`, not after).
-4. Rewrite the unit test to mock `firebase-functions/v2/https.onCall` + `firebase-functions/params.defineSecret` (intercept via `Module._load`); call the handler directly with `{ auth, data }` shape.
-5. **If the trigger version already attempted to deploy** (even if it errored): run `firebase functions:delete <name> --region asia-southeast1 --force` BEFORE the new deploy. Otherwise Firebase blocks the deploy with "Changing from a background triggered function to a callable function is not allowed." The CLI lets the function exist as a stale shadow registration even after a failed deploy.
-6. Lifecycle doc must explicitly state "HTTPS callable, NOT a Firestore trigger" with a link to this anti-pattern, so future sessions don't undo the refactor.
-
-**Family with §7-K (defined ≠ wired)** — both are about discovering invariants the code suggests but reality violates. K is "X is defined doesn't mean X runs"; NN is "X.onWrite exists in the v1 SDK doesn't mean X.onWrite works in your project's region." Same instinct: don't trust the API surface — grep for project precedent first.
+**Rule:** Eventarc (both Gen1 + Gen2 Firestore triggers) does NOT support `asia-southeast3` (this project's Firestore) — any new Firestore-trigger CF FAILS at deploy. Use an HTTPS `onCall` (SE1) invoked from the client AFTER the write (model: `notifyTenantOnMeterUpload`). Only `generateBillsOnMeterUpdate` is grandfathered (FROZEN).
+**Detect:** `grep -rn "\.firestore\.document(\|firebase-functions/v2/firestore" functions/` — each is frozen or must be refactored. If a trigger already attempted deploy, `firebase functions:delete <name>` before redeploy as callable. Family: §7-AA, §7-K.
+↳ marketplace-chat refactor (PR #36→#37) → `tasks/lessons_antipatterns.md` §NN
 
 ### OO. `html-minifier-terser collapseWhitespace:true` strips inline script whitespace → CSP hash mismatch in production
 
-`build.js` runs html-minifier-terser at deploy time (Vercel-only, guarded by `VERCEL` env var). With `collapseWhitespace: true` + `minifyJS: false`, the minifier strips the **leading newline+indentation** and **trailing newline+indentation** from every multi-line inline `<script>` and `<style>` block. Single-line scripts (no surrounding whitespace) are unaffected.
-
-The CSP hash tool (`tools/compute-csp-hashes.js`) was hashing the **un-trimmed** source content — so the stored hashes matched the source but NOT the minified deployed output. Browsers compute the hash of exactly what they receive → CSP violation on every multi-line script.
-
-Incident (2026-05-31): login.html showed "Executing inline script violates CSP directive" for its `<script type="module">` (multi-line, 3077 chars in source → 3069 in deployed = 8-char difference from stripped `\n    `prefix/suffix). The pre-commit hook PASSED (both sides consistent at source-hash level) while production was broken.
-
-**Fix already applied:** `compute-csp-hashes.js` now calls `.trim()` on script/style body before hashing. Hash counts are still correct (script 0 was single-line, trim was a no-op for it):
-
-```bash
-# Verify the fix is in place:
-grep "m[2].trim()" tools/compute-csp-hashes.js  # must return both extractInlineScripts and extractInlineStyles
-```
-
-**Detection recipe** (when CSP errors appear on a page that "should be fine"):
-1. In Chrome DevTools → Console → filter "CSP" / "Content-Security-Policy"
-2. If the error says `login:637` or `tenant_app:NNN` (multi-line inline script) and no JavaScript changed recently — suspect hash drift
-3. In Chrome: compute `script.textContent.trim()` hash vs what's in vercel.json:
-   ```js
-   const ss=[...document.scripts].filter(s=>!s.src);
-   (async()=>{for(const s of ss){const e=new TextEncoder().encode(s.textContent.trim()),b=await crypto.subtle.digest('SHA-256',e);console.log(btoa(String.fromCharCode(...new Uint8Array(b))));}})()
-   ```
-4. Compare output hashes against `script-src-elem` in `vercel.json`
-5. If mismatch: run `npm run csp:hash && node tools/update-vercel-csp.js && git add vercel.json tools/csp-hashes.json && git commit`
-
-**Other pages affected:** dashboard.html (6 inline scripts) and tenant_app.html (6 inline scripts) were also at risk; verified correct after the trim fix.
-
-**Why the pre-commit hook didn't catch it:** the hook computes hashes from LOCAL source files and compares to `tools/csp-hashes.json`. Both sides were consistently using un-trimmed content, so the hook always passed — while the live site always failed. The fix makes both sides use `.trim()`.
+**Rule:** `build.js`'s minifier (Vercel-only) trims the leading/trailing whitespace of multi-line inline `<script>`/`<style>` — so CSP hashes must be computed on `.trim()`-ed content (already fixed in `compute-csp-hashes.js`). Single-line scripts are unaffected.
+**Detect:** `grep "m[2].trim()" tools/compute-csp-hashes.js` (must hit both extractors). Signature: a CSP error on a multi-line inline script with no JS change. Family: §7-II.
+↳ login.html 2026-05-31 → `tasks/lessons_antipatterns.md` §OO
 
 ### PP. `defer` + DOM order matters — adding `defer` to a script that other deferred scripts depend on breaks load order
 
-All `<script defer>` tags execute in DOM order (the order they appear in the HTML), regardless of individual load times. Adding `defer` to a script that other earlier-appearing deferred scripts depend on will cause those earlier scripts to run before the newly-deferred one.
-
-Incident (2026-05-31): added `defer` to `gamification-rules.js` (line ~136 in tenant_app.html) — but `tenant-leaderboard.js` (line ~124) appears EARLIER in the HTML and uses `window.GamificationRules.BADGE_CATALOG`. After adding `defer`, `tenant-leaderboard.js` executed before `gamification-rules.js` had defined `window.GamificationRules` → ReferenceError.
-
-**Rule:** when adding `defer` to any script, check which earlier-appearing deferred scripts depend on it. If any do, move the newly-deferred script to appear BEFORE its consumers in the HTML.
-
-```bash
-# Find load order for related scripts in tenant_app.html:
-grep -n "gamification-rules\|tenant-leaderboard" tenant_app.html
-# gamification-rules MUST appear at a LOWER line number than tenant-leaderboard
-```
-
-**Detection recipe** (ReferenceError on page load after adding defer):
-1. Error: `ReferenceError: X is not defined` on first page load
-2. BUT: `typeof window.X` returns `'object'` AFTER the page finishes loading
-3. Root cause: `X` was defined by a script that appears LATER in HTML (executes later) than the script that reads it
-4. Fix: swap the script order in HTML — the definer before the consumer
-
-**Sibling:** §7-EE (self-recursion with `window.X = wrapper`) — same family of "script ordering in a non-module world produces subtle bugs." §7-CC (`let X` at top-level ≠ on window) is the scope-level cousin.
+**Rule:** all `<script defer>` run in DOM order regardless of load time. Adding `defer` to a script an earlier-appearing deferred script depends on (`gamification-rules` ← `tenant-leaderboard`) breaks load order → `ReferenceError`. Move the definer BEFORE its consumers in the HTML.
+**Detect:** `grep -n "<definer>\|<consumer>" tenant_app.html` — the definer must be at a LOWER line number. Signature: `ReferenceError` on load but `typeof window.X` is fine after. Family: §7-EE, §7-CC.
+↳ defer load-order break → `tasks/lessons_antipatterns.md` §PP
 
 ### QQ. God-file extraction silently drops `function X()` from global scope — always export as `window.X`
 
-A top-level `function X()` inside a `<script>` tag is automatically on `window` (in non-strict mode, function declarations hoist to global). When refactoring that script into a separate `shared/*.js` file, the function is NO LONGER global unless you add an explicit `window.X = X` (or define it as `window.X = function() {...}` directly). There is no compiler error, no lint warning, and no test failure — the function is simply absent from `window` at runtime. Callers that check `if (_ta.X)` silently skip. Callers that use the bareword `X()` throw `ReferenceError` only at runtime.
-
-Incident (2026-05-31): god-file refactor (PRs #158–#185) slimmed `tenant_app.html` from 13,911 → 5,930 lines. `function showPage(id, element)` at line 3038 of the original was never moved to any module. All navigation buttons silently failed; `showPage('world-map-page')` in the `load` event threw `ReferenceError`. Discovered only after the refactor was complete and pushed — no automated check caught it. Fix: created `shared/tenant-navigation.js` with explicit `window.showPage = function(...)`.
-
-**Rule:** when extracting any function from an inline `<script>` to a `shared/*.js` module, IMMEDIATELY add `window.X = X` at the bottom of the new file. If the function is also called by bareword inside the SAME `<script>`, change those callers to `window.X(...)` at the same time.
-
-```bash
-# Audit recipe — find any function that the delegation hub expects on _ta (= window)
-# but is not explicitly exported as window.X in any module:
-grep -h "if (a === '\|_ta\." tenant_app.html | grep -oE "'[a-zA-Z]+'" | sort -u > /tmp/expected.txt
-grep -rh "window\." shared/tenant-*.js | grep -oE "window\.[a-zA-Z]+" | sort -u > /tmp/exported.txt
-# Names in expected but not in exported are candidates for missing window.X
-```
-
-**Pre-extract checklist** (run BEFORE removing any function from an inline `<script>`):
-1. `grep -n "functionName" tenant_app.html` — find every call site (delegation hub, event handlers, load callback, other inline calls)
-2. Decide which module the function belongs in
-3. Add `window.functionName = function(...) {...}` to that module
-4. Change any remaining bareword calls in the inline `<script>` to `window.functionName(...)`
-5. Push and verify live: `typeof window.functionName` must return `'function'` before marking done
-
-**Difference from §7-K (defined ≠ wired):** §7-K is "function exists in codebase but 0 callers." QQ is "function had callers and worked, then was deleted during refactor while callers remained." §7-CC (`let X` at top-level ≠ on window) is the scope-sibling — different mistake, same consequence.
+**Rule:** a top-level `function X(){}` inside a `<script>` is auto on `window`; moving it to a `shared/*.js` module is NOT — add `window.X = ...` immediately + change same-script bareword callers to `window.X(...)`. No compiler/lint/test catches the omission (silent absence at runtime).
+**Detect:** after extracting, `typeof window.X` must be `'function'` on the live page. Difference from §7-K (had callers, deleted in refactor). Family: §7-CC, §7-JJJ.
+↳ `showPage` god-file extraction → `tasks/lessons_antipatterns.md` §QQ
 
 ### SS. CSS migration from `style="display:none"` to `u-init-hide` breaks tab switchers that clear inline style to show panels
 
-Tab switchers in this codebase hide non-active panels by adding `.u-hidden` (display:none !important) and show the active panel by removing `.u-hidden` + clearing inline style (`if (el.style.display) el.style.display = ''`). This pattern relies on panels having an inline `style="display:none"` that gets cleared. When CSS migration passes replace that inline style with class `u-init-hide`, the switchers stop working:
-
-- `.u-hidden { display:none !important }` — wins over everything when present
-- `.u-init-hide { display:none }` — no `!important`, overrideable only by inline `style="block"` or by a higher-specificity rule
-
-After switching to `u-init-hide`, clearing the inline style (`el.style.display = ''`) leaves the element with only `.u-init-hide` → still hidden. No error, no warning, panel silently stays `display:none`.
-
-Incident (2026-05-31): CSS migration pass 3-6 changed all non-default tab panels from `style="display:none"` to `class="u-init-hide"`. **Seven** tab switchers (`switchTenantMainTab`, `switchBillingMainTab`, `_switchMeterTabImpl`, `switchContentTab`, `switchGamificationTab`, `switchRequestsTab`, `switchPeopleTab`) stopped showing tabs 2+ on click. Default tab (tab 1) still showed because it had neither `u-hidden` nor `u-init-hide`.
-
-**Counterexample — `switchDashboardTab` is CORRECT and must NOT be "fixed":** its panels (`dash-cat-tenants/operations/community`) use `class="u-hidden"` (toggleable, `!important`), NOT `u-init-hide`. The switcher does `el.classList.toggle('u-hidden', t !== tabName); if (el.style.display) el.style.display = ''` — removing `u-hidden` reveals the panel (default `display:block`), no inline `block` needed. It looks like the broken pattern but works because the panel class is toggleable. The deciding factor is **which class the panel uses**, not what the switcher code looks like. A future "consistency cleanup" that rewrites `switchDashboardTab` to set `display='block'` would still work — but rewriting the panels to `u-init-hide` without the `block` set would break it. Don't touch it.
-
-**Rule:** any tab switcher "show" step must set `el.style.display = 'block'` (not just clear it) to override `u-init-hide`. The "hide" step should add `u-hidden` and clear inline (`el.style.display = ''`) so `u-hidden !important` wins.
-
-```js
-// ❌ WRONG — works only if panels use inline style="display:none", not u-init-hide class
-el.classList.toggle('u-hidden', !isActive);
-if (el.style.display) el.style.display = '';    // clearing ≠ showing
-
-// ✅ CORRECT — explicitly set 'block' overrides u-init-hide; '' lets u-hidden !important win
-const isActive = (t === tab);
-el.classList.toggle('u-hidden', !isActive);
-el.style.display = isActive ? 'block' : '';
-```
-
-**Detection recipe** — any time a tab panel is invisible after clicking its button:
-```bash
-# Find panels that use u-init-hide (not inline style) in tracked tab switcher groups
-grep -n "u-init-hide" dashboard.html | grep -E "tab-|mgmt-content|meter-tab|content-mgmt"
-# Then find the corresponding switcher — if it uses `if (el.style.display) el.style.display = ''`
-# it is broken for u-init-hide panels.
-grep -n "if.*style\.display.*style\.display" shared/dashboard-main.js shared/dashboard-config.js shared/dashboard-wellness-content.js
-```
-
-**Family:** §7-C (modal display — inline style wins over class) is the close cousin — same class vs inline style precedence trap, different context.
+**Rule:** a tab switcher that shows a panel by clearing inline style (`el.style.display=''`) breaks when the panel migrates to class `u-init-hide` (no `!important`, stays hidden). The show step must SET `el.style.display='block'`; the hide step adds `u-hidden` + clears inline. NOTE: `switchDashboardTab` (toggleable `u-hidden`) is CORRECT — don't "fix" it.
+**Detect:** `grep -n "u-init-hide" dashboard.html` + `grep -n "if.*style.display.*style.display" shared/dashboard-*.js`. Cousin: §7-C.
+↳ 7 switchers (2026-05-31) → `tasks/lessons_antipatterns.md` §SS
 
 ### RR. `document.createElement('style')` is blocked by CSP `style-src-elem` — CSS must live in a static file
 
-Any JS module that injects its own styles via `document.createElement('style') + appendChild` is blocked silently when `style-src-elem` is in enforced CSP mode with only specific hashes whitelisted. The dynamically created `<style>` tag has no hash, so the browser silently discards it. The JS runs without errors, the code appears to succeed (no exception), and a `_stylesInjected = true` flag says "done" — but `getComputedStyle()` returns 0 / transparent for every affected element.
-
-Incident (2026-05-31): `rich-text-policy.js` injected `.rt-wrap / .rt-toolbar / .rt-content` CSS via `document.createElement('style')`. After CSP was enforced (2026-05-23), the editor in the Policy page lost all visual styling — no border, no gray toolbar background, no padding. The page "worked" functionally but looked broken. Root cause took a full diagnostic cycle to find because the failure is invisible: `_stylesInjected = true`, no console error, no CSP violation shown in console (only in DevTools Issues panel).
-
-**Rule:** never use `document.createElement('style')` for CSS that must survive CSP. Put the CSS in `shared/components.css` (or another static `.css` file that's already loaded). External `.css` files don't require `style-src-elem` hashes — only inline `<style>` blocks and `style=""` attributes do.
-
-```js
-// ❌ WRONG — silently blocked by CSP style-src-elem
-const style = document.createElement('style');
-style.textContent = '.my-widget { border: 1px solid #d1d5db; }';
-document.head.appendChild(style);
-
-// ✅ CORRECT — add CSS to shared/components.css instead
-// .my-widget { border: 1px solid var(--border, #d1d5db); }
-```
-
-**Detection recipe:**
-1. `getComputedStyle(el).border` returns `'0px none'` even though the element has the expected CSS class
-2. `document.styleSheets` has no rule for `.my-class` — the style tag was either never inserted or silently removed
-3. DevTools → Issues panel (NOT console) shows "Refused to apply inline style" CSP violation
-
-```bash
-# Audit all JS files for dynamic style injection:
-grep -rn "createElement.*'style'\|createElement.*\"style\"" shared/ --include="*.js"
-# Each hit must be replaced with a static CSS rule in components.css
-```
-
-**Affected pages when CSP is enforced:** any page that loads the offending JS module. This project has `style-src-elem` with explicit hashes for tracked HTML files since 2026-05-23.
-
-**Sibling:** §7-II (CSP hash drift kills inline `<style>` blocks on deploy). Both are "CSP kills styles silently" — II is about pre-existing inline blocks whose hash went stale; RR is about JS-injected blocks that never had a hash.
+**Rule:** a JS-injected `<style>` tag has no CSP hash → silently discarded under enforced `style-src-elem` (code runs, no error, `_stylesInjected=true`, but `getComputedStyle` returns 0). Put CSS in a static `.css` file (`shared/components.css`) — external sheets need no hash.
+**Detect:** `grep -rn "createElement.*'style'" shared/ --include=*.js` — each is a latent block. Violation only in DevTools → Issues. Sibling: §7-II.
+↳ `rich-text-policy.js` editor → `tasks/lessons_antipatterns.md` §RR
 
 ### TT. Bulk `sed`/regex edits across UTF-8 Thai files can silently double-encode the file — verify encoding after, never trust "it still parses"
 
-A find-and-replace pass that rewrites a file (bulk `console.info` removal, license-header swap, mass rename) can re-save it through the wrong codepage, turning correct UTF-8 Thai (`ผู้เช่า`, bytes `e0 b8 9c …`) into double-encoded mojibake (`เธเธนเนเน€เธเนเธฒ` = those bytes read as CP874/TIS-620 then re-saved as UTF-8). The file **still parses and lints clean** — the corruption is inside string literals + comments — so `node --check` and ESLint pass and the bad bytes ship. Users see garbled Thai in every affected surface; the only automated tripwire is a test that asserts an exact Thai string.
-
-Incident (2026-05-31): commit `7e5ef7b` (the prior session's P1 `[CQ-CONSOLE]` bulk `console.info` sed) double-encoded 13 user-facing lines in `shared/tenant-system.js` (default tenant name, `ห้อง <id>` label, maintenance titles/content, payment-status text) + 2 comments in `tenant-firebase-sync.js`, plus 7 em-dash `—`→`โ€"`. Last clean commit was `0ad1d8a`. It survived 3 commits because `node --check`/lint stayed green; only `npm run test:shared` was RED (84/86) — and that failure was *misread by a 9-dim audit as a CRLF/`.gitattributes` Windows flake*. It is NOT a line-ending issue: CRLF only swaps `0A`/`0D0A`, it cannot make `ผ`→`เธ`. The bytes were corrupt on every OS.
-
-**Rule:** any bulk/scripted edit of a file containing non-ASCII (Thai UI strings live in `shared/tenant-*.js`, `dashboard-*.js`, all `*.html`) MUST be encoding-verified afterward, not just syntax-checked:
-
-```bash
-# After ANY sed/regex pass over a Thai-bearing file, scan for the mojibake signature
-# ("เธ" digraph 3+ times on a line is near-certain double-encoding; clean Thai almost
-#  never produces it). Run over the whole repo — corruption can spread via later extracts.
-node -e 'const fs=require("fs"),cp=require("child_process");
-cp.execSync("git ls-files shared/*.js functions/*.js *.html accounting/*.js",{encoding:"utf8"}).trim().split(/\n/).forEach(f=>{
-  const ls=fs.readFileSync(f,"utf8").split(/\r?\n/); const bad=[];
-  ls.forEach((l,i)=>{ if((l.match(/เธ/g)||[]).length>=3 || /โ€[”"]/.test(l)) bad.push(i+1); });
-  if(bad.length) console.log(f+": "+bad.join(","));
-});'
-# 0 output = clean. Any hit = the edit corrupted encoding — DO NOT COMMIT.
-```
-
-Prefer line-oriented tools that preserve encoding (the Edit tool, or `node` reading/writing `utf8` explicitly) over shell `sed -i` on Windows, where the active console codepage (874 here) can leak into the rewrite. **Recovery** (when already shipped): never hand-retype Thai (the recovery edit can re-corrupt). Source byte-exact from the last-clean commit via ASCII-anchor matching — see `tools/fix-thai-mojibake.js` (locates each corrupted line by a unique ASCII substring, copies the clean line from `git show <good>:<file>`, types zero Thai).
-
-**Diagnostic signature:** (1) `test:shared` RED with `actual: 'เธ...'` vs `expected: 'ผู้...'`; (2) `node --check` + lint GREEN; (3) `git ls-files --eol` shows `i/lf` (committed blob fine on the ASCII axis) yet the assert still fails → it's byte corruption, not EOL. Confirm with `git log -S'<clean-thai>' -- <file>` to find the last-good commit, then diff its bytes.
-
-**Family:** §7-H (grep-verify identifiers before typing in memory) and §7-QQ/CC (refactors silently breaking things that still "look" fine). All are "the edit looked successful — parsed, linted, committed — but changed bytes/scope/encoding in a way no syntax check catches." Mechanical edits over non-ASCII need a mechanical encoding check, the same way memory claims need a grep.
+**Rule:** a bulk/scripted edit of a non-ASCII file (Thai UI strings in `shared/tenant-*.js`, `dashboard-*.js`, `*.html`) can re-save through codepage 874 → double-encoded mojibake (`ผ`→`เธ`); it still parses + lints clean. Prefer the Edit tool / explicit-utf8 Node over shell `sed -i` on Windows; verify ENCODING after, not just syntax. NOT a CRLF issue.
+**Detect:** scan for `เธ`×3+ per line or `โ€"` after any bulk pass (see `tools/fix-thai-mojibake.js`). Recovery: source byte-exact from the last-clean commit, never retype Thai. Family: §7-H, §7-QQ.
+↳ `7e5ef7b` console-strip → `tasks/lessons_antipatterns.md` §TT
 
 ### UU. Copying page CSS into a print/popup window — keep each `<style>` separate + `<link>` external sheets; never join them into one `<style>`
 
-`printDoc` (dashboard-bill.js) built the print popup by joining EVERY inline `<style>` innerHTML into ONE `<style>`. A construct in the 108KB dashboard style block corrupts CSS parsing once concatenated, so rules AFTER it silently stop applying — `.d-row{display:flex}` dropped → invoice "label … value" rows collapsed together, and brand-token colours fell back to black. Separate `<style>` elements isolate parse state; one joined block does not.
-
-**Rule:** when carrying page CSS into a `window.open` + `document.write` popup (print/export):
-
-```js
-// ❌ joining inline styles → one block's parse quirk eats every later rule
-const styles = [...document.querySelectorAll('style')].map(s => s.innerHTML).join('\n'); // then <style>${styles}</style>
-// ✅ each block its own tag (isolated parse) + external sheets as their own <link>
-const styles = [...document.querySelectorAll('style')].map(s => '<style>' + s.innerHTML + '</style>').join('\n');
-const links  = [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => '<link rel="stylesheet" href="' + l.href + '">').join('\n'); // absolute href: inlining cssRules drops brand.css :root custom-props → colours go black
-// <html data-theme="light"> for print-correct light tokens; wait for load before print(); close the popup on 'afterprint' (fires for BOTH Save & Cancel — a fixed close-timer fires mid-dialog, gets blocked, window lingers)
-```
-
-**Detection:** `grep -nE "querySelectorAll\('style'\).*join|map\(s=>s\.innerHTML\)" shared/*.js *.html` — any print/export builder doing this has the bug.
-
-**Verify-first saved this:** the first hypothesis ("missing external CSS") was WRONG — an iframe with ALL external CSS was still cramped; an A/B (separate vs joined `<style>`) pinned it to join-corruption. Build a throwaway iframe of the EXACT output HTML and `getComputedStyle()` it before shipping a print/CSS fix. (2026-06-01, PR #207/#208.)
+**Rule:** in a print/export popup (`window.open`+`document.write`), do NOT join all inline `<style>` innerHTML into ONE block (a parse quirk in one eats every later rule → collapsed invoice rows). Emit each `<style>` as its own tag + external sheets as `<link>` (absolute href); set `data-theme="light"`, wait for load before `print()`, close on `afterprint`.
+**Detect:** `grep -nE "querySelectorAll\('style'\).*join|map\(s=>s\.innerHTML\)" shared/*.js *.html`. Verify via a throwaway iframe of the EXACT output + getComputedStyle. Family: §7-W, §7-RR.
+↳ `printDoc` (PR #207/#208) → `tasks/lessons_antipatterns.md` §UU
 
 ### VV. Page auth gates must `await auth.authStateReady()` — never a fixed `setTimeout` redirect (it races cold-start session restore)
 
-The dashboard admin gate redirected to `/login` if no email-user surfaced within a fixed 4s. Firebase persisted-session restore (IndexedDB) can exceed 4s on a cold start — cleared cache, slow network, or just after login — so a FULLY signed-in admin (claim present) was bounced to `/login`, which redirected straight back once restore finished (a flap; every Firestore/RTDB read failed `PERMISSION_DENIED` in between). Restore-TIMING race, NOT a claim problem.
-
-**Rule:** a gate that redirects on "no user" MUST wait for `auth.authStateReady()` then decide off the restored `currentUser` — keep a long timer (≥10s) only as a fallback. No lockout risk: a signed-in user always has `currentUser.email` after `authStateReady`; a signed-out visitor still redirects.
-
-```js
-// ❌ races cold-start restore → bounces signed-in admins to /login then back
-setTimeout(() => { if (!auth.currentUser?.email) location.replace('/login'); }, 4000);
-// ✅ waits for restore to settle
-if (typeof auth.authStateReady === 'function') auth.authStateReady().then(decide);
-setTimeout(decide, 12000); // fallback only
-```
-
-**Detection:** `grep -nE "setTimeout.*(login|redirect)|authStateReady" *.html` on every page with a client auth gate.
-
-✅ **Both client auth gates now use `authStateReady()`:** dashboard.html (PR #209) + tax-filing.html (PR #211, 2026-06-01). Both live-verified — clear SW+cache → cold reload no longer bounces a signed-in user (tax-filing confirmed with a real admin session, IndexedDB-restored). The detection grep above should return ONLY these two `/login`-redirect gates, both on `authStateReady`; any NEW page with a client auth gate must follow the same pattern (no fixed `}, 4000)` timer). Family: §7-A/U/Z/HH — auth state/claims not where rule-eval expects them at the moment it checks.
+**Rule:** a client auth gate that redirects on "no user" MUST `await auth.authStateReady()` then decide off `currentUser` (a long ≥10s timer only as fallback) — a fixed 4s `setTimeout` redirect races cold-start IndexedDB session restore and bounces a signed-in admin to /login (a flap). Both dashboard + tax-filing gates now use this.
+**Detect:** `grep -nE "setTimeout.*(login|redirect)|authStateReady" *.html` — any NEW client gate must follow. Family: §7-A, §7-U, §7-Z, §7-HH.
+↳ PR #209/#211 → `tasks/lessons_antipatterns.md` §VV
 
 ### WW. Migrating a CF to `defineSecret` — verify the secret in the EXACT deploy project (pin `--project`) + test-deploy ONE CF first; one bad binding blocks ALL CF deploys
 
-Moving a CF from `process.env.X` (functions/.env) to Secret Manager (`defineSecret('X')` + `.runWith({ secrets:[X] })` + `X.value()`) is correct code, but the **deploy** depends on project/IAM state that `firebase functions:secrets:set` alone does NOT guarantee, and two traps make it look safe when it isn't:
-
-1. **`firebase functions:secrets:get X` without `--project` checks the ACTIVE/default project, which may not be the one CI deploys to.** 2026-06-01: `:get IQAIR_API_KEY` reported "Version 1 ENABLED" so I called it safe — but `:get IQAIR_API_KEY --project the-green-haven` (and the user's `gcloud`) returned **404: secret not found in prod**. The secret simply wasn't in the deploy project. **ALWAYS pin `--project <deploy target>` when verifying, and confirm with `gcloud secrets describe X --project <p>`.**
-2. `deploy-functions.yml` deploys every CF in ONE `firebase deploy --only "<all CFs>"`. In `--non-interactive` mode a secret that's absent (or whose value the deploy can't resolve) errors `have no value for the secret: X` and **fails the whole deploy → blocks EVERY CF deploy** — a pipeline-wide outage, not a local feature break. (WAQI got further than IQAIR only because the workflow writes `WAQI_API_TOKEN` into `.env`, giving firebase a value to auto-create from; IQAIR had neither a prod secret nor an `.env` value.)
-
-Incident 2026-06-01 (PR #216 merged → reverted `adae1cc`): trusted a non-`--project` `:get`, merged → prod deploy died on `IQAIR_API_KEY` → all CF deploys blocked → reverted within minutes (revert deploy succeeded, restored). **Decision: dropped the migration** — `functions/.env` (gitignored, CI-injected from a GitHub Actions secret) is acceptable for these non-critical AQ tokens; the Secret Manager hardening wasn't worth the friction. A revert recovers instantly because the active WAQI CF reads `WAQI_API_TOKEN` from that `.env`.
-
-**Rule — before merging ANY `defineSecret` CF migration:**
-```bash
-# 1. Verify the secret EXISTS in the project CI deploys to — pin --project (no-flag checks the wrong project):
-firebase functions:secrets:get WAQI_API_TOKEN --project the-green-haven   # metadata only — never :access in chat (§secret-files)
-gcloud secrets describe WAQI_API_TOKEN --project the-green-haven
-# 2. Confirm the deploy SA + runtime SA can read it:
-gcloud secrets get-iam-policy WAQI_API_TOKEN --project the-green-haven     # deploy SA + secretAccessor
-# 3. Test-deploy ONE migrated CF manually BEFORE merging — never let CI be the first deploy of a secret binding:
-firebase deploy --only functions:getAirQualityWAQI --project the-green-haven --non-interactive
-```
-Can't run these (no gcloud/console in-session)? Do NOT merge — a `defineSecret` migration is an **IAM/project-setup task**, hand the secret-creation + test-deploy to the user as a prerequisite. Family: §7-Z/FF (Firebase secret state has >1 place that must line up) + §7-AA/NN (deploy-time invariants the API surface doesn't reveal).
+**Rule:** a `defineSecret` CF migration is an IAM/project-setup task: verify the secret exists in the DEPLOY project (pin `--project` — the no-flag check reads the wrong project) + the SA can read it, and test-deploy ONE CF before merging. CI deploys all CFs in one command → one bad secret binding blocks EVERY CF deploy (pipeline outage). `.env` (CI-injected) is acceptable for non-critical tokens.
+**Detect:** `firebase functions:secrets:get X --project the-green-haven` (metadata only, never `:access`) + `gcloud secrets describe`. Can't run gcloud in-session → don't merge, hand to user. Family: §7-Z, §7-FF, §7-NN.
+↳ IQAIR revert `adae1cc` (PR #216) → `tasks/lessons_antipatterns.md` §WW
 
 ### XX. Live CSP `img-src` omits `blob:` (Vercel-UI override ≠ vercel.json) — preview Files via `data:`, never `URL.createObjectURL`
 
-`vercel.json` lists `img-src 'self' data: blob: https:`, but the **deployed** dashboard header is `img-src 'self' data: https:` — **no `blob:`**. The live CSP is set in the **Vercel project Settings → Headers UI**, which **overrides `vercel.json`** ([[feedback_vercel_ui_overrides_json]]). So a grep of `vercel.json` is NOT proof of what the browser enforces — only the deployed header (or the runtime violation) is.
-
-Incident 2026-06-04 (deposit evidence viewer #259): `_previewDepFile` rendered a just-picked image via `<img src=URL.createObjectURL(file)>` (a `blob:` URL). Static-harness verification used `data:` SVG URLs (passed), and the `vercel.json` grep showed `blob:` present — both **false-green**. Live, the admin got `Loading the image 'blob:https://…' violates … "img-src 'self' data: https:". The action has been blocked.` and saw no preview. Fixed by switching to `FileReader.readAsDataURL` → a `data:` URL (which the live `img-src` DOES allow). No CSP change needed — `data:` is already permitted and is the narrower grant.
-
-**Rule:** to preview a local `File` as an `<img>`/inline media on a CSP-enforced page, read it to a **`data:` URL** (`FileReader.readAsDataURL`), not a `blob:` object URL. `blob:` for an `<img src>` is blocked wherever the live `img-src` omits it — and the live header may omit it even when `vercel.json` doesn't. `blob:`/`createObjectURL` is still fine for **downloads** (`<a download href=blob:>`) and canvas export — those aren't governed by `img-src`.
-
-```js
-// ❌ blocked live — img-src has no blob:
-img.src = URL.createObjectURL(file);
-// ✅ data: is in the live img-src
-const r = new FileReader();
-r.onload = () => { img.src = String(r.result); };
-r.readAsDataURL(file);
-```
-
-PDFs can't preview inline under this CSP either (Chrome blocks top-level `data:` navigation; `frame-src` lacks `data:`) → defer PDF preview to the stored-evidence view (admin reads it back via `getDownloadURL` → an `https:` URL, which `img-src https:` allows).
-
-**Detection:**
-```bash
-grep -rn "createObjectURL" shared/ *.html      # each <img src=…createObjectURL…> is a latent live-CSP block
-curl -sI https://the-green-haven.vercel.app/dashboard.html | grep -i content-security  # the REAL img-src, not vercel.json's
-```
-
-**Verify-live caveat:** a static harness that hardcodes `data:` URLs can't catch a `blob:` regression, and a `vercel.json` grep can't see the Vercel-UI override. Only the deployed header (curl) or a real authenticated load surfaces this class. Family: §7-Y (`fetch('data:')` blocked by `connect-src`), §7-II/RR (CSP kills assets silently; only visible on the deployed page), [[feedback_vercel_ui_overrides_json]].
+**Rule:** the LIVE dashboard CSP `img-src` is set in the Vercel UI (overrides vercel.json) and omits `blob:` — preview a local File as `<img>` via `FileReader.readAsDataURL` (`data:` is allowed), never `URL.createObjectURL` (`blob:` blocked). `blob:` is fine for downloads/canvas. PDFs can't preview inline → defer to the stored-evidence view (https: `getDownloadURL`).
+**Detect:** `grep -rn "createObjectURL" shared/ *.html` + `curl -sI <url> | grep -i content-security` (the REAL img-src, not vercel.json's). Family: §7-Y, §7-II, [[feedback_vercel_ui_overrides_json]].
+↳ deposit evidence #259 → `tasks/lessons_antipatterns.md` §XX
 
 ### YY. Node 22 undici `fetch` can't serialize the `form-data` npm package — multipart uploads must use **global `FormData` + `Blob`**
 
-The CF runtime is **Node 22** (`functions/package.json` `engines.node: 22`), so `fetch` is undici's global — there is no `node-fetch`. undici's `fetch` does **NOT** understand the `form-data` npm package: passing a `new (require('form-data'))()` instance as `body` makes undici call `String(form)` → **`"[object FormData]"`** (17 bytes), sent as `Content-Type: text/plain`. The receiving API sees no file part. node-fetch *was* form-data-aware; undici is not — so the same code that worked under node-fetch (or an older deployed runtime) silently breaks once it runs on Node 22.
-
-Incident 2026-06-04: `verifyRefundSlip` (deposit refund-slip SlipOK check, #254) returned `SlipOK API returned 400: {"code":1000,"message":"…field data, files หรือ url!"}` — SlipOK got `text/plain` "[object FormData]" instead of the image. `verifySlip`/`verifyBookingSlip` use the **identical** `form-data`-package pattern and only still work because their *deployed* instances predate the Node-22 redeploy — a latent time bomb: they break the next time they're redeployed. Fixed by switching `verifyRefundSlip.callSlipOKAPI` to the spec-compliant global FormData + Blob.
-
-**Empirically proven on this runtime** (echo server, Node ≥22/undici v6):
-| construction | Content-Type sent | body bytes |
-|---|---|---|
-| `require('form-data')` instance, no headers | `text/plain` | **17** (`[object FormData]`) ❌ |
-| `require('form-data')` + `form.getHeaders()` | `multipart/...; boundary` | still **17** ❌ (header right, body still stringified) |
-| **global `FormData` + `Blob`** | `multipart/...; boundary` (undici-set) | **real file bytes** ✅ |
-
-**Rule:** to POST a file from a CF, build the body with the **global** `FormData` + `Blob`, and do **NOT** set `Content-Type` (undici derives the boundary):
-```js
-const form = new FormData();                                   // global — NOT require('form-data')
-form.append('files', new Blob([fileBuffer], { type: mime }), `slip.${ext}`);
-await fetch(url, { method: 'POST', headers: { 'x-authorization': key }, body: form }); // no Content-Type
-```
-`form.getHeaders()` does NOT rescue the package instance (the body is still stringified). The `timeout` fetch option is a node-fetch-ism and a no-op on undici — use `signal: AbortSignal.timeout(ms)` if you need one.
-
-**Detection:**
-```bash
-grep -rn "require('form-data')\|require(\"form-data\")" functions/   # each is a latent Node-22 multipart break
-grep -rln "new FormData()" functions/ | xargs grep -L "Blob"        # FormData without Blob = suspect
-```
-Lock it with a unit test that captures the fetch `body` and asserts `body instanceof FormData` + `body.get('files') instanceof Blob` (see the "§7-YY" regression test in `verifySlip.test.js` + `verifyBookingSlip.test.js`). **✅ All known SlipOK callers fixed (2026-06-07):** `verifySlip.js` + `verifyBookingSlip.js` migrated to global `FormData` + `Blob` (dropped the `form-data` pkg; also replaced the dead node-fetch `timeout` option with `AbortSignal.timeout`) and regression-locked; `verifyRefundSlip.js` was the original fix site (#262) but was **removed entirely in #264** (refund keeps the slip as evidence, no SlipOK call). The detection sweep now returns **zero** real `require('form-data')` in `functions/` (only explanatory comment lines). Deploy/live-test still gated on SlipOK subscription renewal. Family: §7-WW/AA/NN (deploy-time/runtime invariants the source doesn't reveal), §7-Y (data:/blob: vs CSP — sibling "the transport isn't what the code implies").
+**Rule:** the CF runtime is Node 22 (undici global `fetch`) — the `form-data` npm package serializes to `"[object FormData]"` (17 bytes, text/plain). Multipart uploads MUST use the GLOBAL `FormData` + `Blob` and NOT set `Content-Type` (undici sets the boundary). `form.getHeaders()` does not rescue it. The `timeout` option is a no-op → use `AbortSignal.timeout`.
+**Detect:** `grep -rn "require('form-data')" functions/` must be 0 (all migrated; dep removed 2026-06-12). Lock with a test asserting `body instanceof FormData`. Family: §7-WW, §7-NN, §7-Y.
+↳ `verifySlip`/`verifyBookingSlip` migration → `tasks/lessons_antipatterns.md` §YY
 
 ### ZZ. Never transcribe a tool-produced hash/ID from a screenshot — capture it programmatically. And for html2canvas+CSP, strip the clone (`onclone`), don't chase the hash.
 
-Two lessons from one misfire (2026-06-06, deposit receipt `style-src-elem` console flood, PRs #271/#272/#273):
-
-**1. Opaque case-sensitive values (CSP hashes, base64, tokens, IDs) read off a low-res screenshot WILL eventually be misread.** #272 allowlisted html2canvas's injected-style hash as `sha256-UP0QZg7irVSMv…` (uppercase **V**) read from the user's console screenshot. The real hash is `sha256-UP0QZg7irvSMv…` (lowercase **v**). Base64 is case-sensitive → the hash never matched → the error persisted through a deploy, and the next screenshot looked identical (same misread). One wasted deploy cycle. **Rule:** to get a hash/ID a browser or library produces, reproduce it in a harness and compute it — never eyeball it. For an injected `<style>`, run the real library with `removeContainer:false`, read `iframe.contentDocument.querySelectorAll('style')`, and `crypto.subtle.digest('SHA-256', …)` each — that gives the exact byte-for-byte hash AND proves stability (run it 3× w/ different content: stable+content-independent ⇒ allowlistable; drifts ⇒ a hash can't fix it).
-
-**2. html2canvas under enforced CSP: `onclone`-strip the clone, don't allowlist its injected styles.** html2canvas clones the WHOLE document to resolve styles, then re-injects (a) the page's reformatted `<style>` blocks and (b) a pseudoelement-reset `<style>` into its render iframe — both hit `style-src-elem`. The page-styles hash **tracks the host page's inline CSS and drifts** whenever those change, so allowlisting it is fragile. The robust fix:
-```js
-html2canvas(el, {
-  ignoreElements: (n) => n.nodeName === 'CANVAS',                 // skip tainted page canvases (e.g. chartYears)
-  onclone: (doc) => doc.querySelectorAll('style, link[rel="stylesheet"]')
-                       .forEach(s => s.remove()),                  // removes BOTH injected styles ⇒ 0 violations
-});
-```
-Verified in a real-html2canvas harness: `onclone` strip ⇒ **0** injected `<style>` left in the iframe, and an all-inline-styled target (the receipt) renders identically (it never needed the page stylesheets). `exportDepositReceipt` **and `exportChecklistPng`** use this (#274). With both dashboard exports onclone-stripping, the fragile dashboard-coupled `o/aIZnrz` cloned-stylesheet hash had no remaining consumer and was **removed** from `STYLE_SRC_RUNTIME`; only the stable `UP0QZg` pseudoelement-reset hash stays — for the class-dependent tenant_app legacy exports (`saveInvoiceImage`/`downloadBillTemplate`, which pull `.receipt-card`/`.ta-preview-wrap` class CSS, so onclone-strip would break their render — leave them on the hash). The "real fix is a CSP-friendly library" note at `ensureHtml2Canvas` (dashboard.html) is superseded: `onclone` is the cheap real fix. Family: §7-RR/II (CSP kills styles silently — deployed-page-only), §feedback_empirical_check (read/compute, don't eyeball).
+**Rule:** (1) never read an opaque case-sensitive value (CSP hash, base64, token) off a screenshot — reproduce it in a harness and COMPUTE it (a misread `V`/`v` burned a deploy). (2) html2canvas under enforced CSP: don't allowlist its injected-style hash (it drifts with page CSS) — strip the clone in `onclone` (`doc.querySelectorAll('style,link').forEach(s=>s.remove())`) + `ignoreElements` for canvases.
+**Detect:** for an injected `<style>` hash, run the real lib with `removeContainer:false` 3× + `crypto.subtle.digest`. Family: §7-RR, §7-II, [[feedback_empirical_check]].
+↳ deposit receipt PRs #271-274 → `tasks/lessons_antipatterns.md` §ZZ
 
 ### AAA. Unordered Firestore `limit()` returns the OLDEST docs — a row cap silently drops the NEWEST rows
 
-`getDocs(query(coll, where(...), limit(N)))` with **no `orderBy`** returns docs in Firestore's default `__name__` (document-ID) **ascending** order. When the collection has more matching docs than `N`, the cap keeps the LOWEST doc IDs and drops the rest — so if doc IDs sort chronologically-ascending, the **newest** rows are exactly what gets dropped.
-
-Incident 2026-06-07: the tenant usage/bills page (`shared/tenant-meter.js`) read `meter_data` via `where(building) + where(roomId) + limit(24)` with no `orderBy`. meter_data IDs are `rooms_{BE2yr}_{month}_{room}` → `rooms_67_*` (2024) < `rooms_68_*` (2025) < `rooms_69_*` (2026). Once a room had >24 monthly rows (>2 yr of history), `limit(24)` returned only 2024+2025 and dropped ALL of 2026 — so the just-uploaded latest month never reached the client synth (`synthesizeFromMeter`) and the newest bill silently vanished from the tenant view. **Recurring monthly**, worsening as rows accumulate. Verified live: the exact query returned 24 docs with `has_any_2026:false`; June meter (`rooms_69_6_15`) existed but was never fetched.
-
-**Rule:** any `limit()` on a growing collection MUST pair with an `orderBy` that puts the rows you want FIRST (usually `orderBy(<chrono field>, 'desc')`). If a desc `orderBy` would need a composite index you can't readily deploy (§7-N — verified `failed-precondition` here) and the query is already tightly scoped (one room by equality filters → naturally bounded, one doc/month), **drop the limit** and sort + filter in JS — never keep an unordered cap.
-
-```js
-// ❌ unordered cap → silently drops the newest rows once count > 24
-fs.query(coll, fs.where('building','==',b), fs.where('roomId','==',r), fs.limit(24))
-// ✅ one-room scope is bounded → fetch all, sort + boundary-filter in JS (no index)
-fs.query(coll, fs.where('building','==',b), fs.where('roomId','==',r))
-// ✅ or for an unbounded scan: orderBy(<newest> desc) + limit + composite index (§7-N)
-```
-
-**Detection — every growing-collection read with a bare `limit()`:**
-```bash
-grep -rnE "\.limit\([0-9]+\)" shared/*.js | grep -iv orderBy   # bare caps, audit each
-```
-Known siblings (admin-side, all-rooms `meter_data` scans) — **FIXED `d89b7cd` (2026-06-07)**: `dashboard-extra.js` (setupMeterDataListener watch), `dashboard-behavioral-energy.js` (trend), `dashboard-insights-operations.js` (spike) now scope by `where('year', 'in', [curBE-1, curBE, …string variants])` instead of a bare `limit(N)` — a single-field `in` is served by the automatic index (no composite, §7-N-safe), stays bounded, and always includes the NEWEST months (the cap dropped them). `dashboard-home-live.js limit(120)` deliberately left AS-IS with a KNOWN-LIMITATION comment: it reads a legacy per-building `data.rooms` shape that's already fallback-only AND broken on current flat data, so the cap isn't the real bug — a flat-shape rewrite of that aggregator is (out of scope). ✅ **Data layer PROVEN 2026-06-07** via `tools/verify-meter-year-scope.js` (read-only REST runQuery of the EXACT fixed `where('year','in',…)` against prod): 690 meter_data docs; `year` is **integer 2-digit BE** (67/68/69 — confirms the §7-E assumption the `in`-scope depends on); the watch's old `limit(500)` was **actively** dropping the 190 newest docs incl. all of June (690 > 500 → not latent, it was live-broken — exactly the "live-refresh ดึงเดือนล่าสุด" symptom); the fixed query returns 414 docs and **includes `rooms_69_6_13`** (current month, 23 docs). Render code (`snap.forEach`) was untouched by the fix, so no render-regression risk. Residual = **visual** card-render only (auth-gated → owner): Dashboard → **ปฏิบัติการ** tab → `#dashEnergyPattern` (⚡ แนวโน้มการใช้ไฟ–น้ำ, latest bar = มิ.ย.) + `#dashMeterSpike`. Family: §7-N (composite index for ordered queries), §7-D/E (BillStore room/year traps), §7-K (defined ≠ wired — here "fetched ≠ all fetched").
+**Rule:** `limit(N)` with NO `orderBy` returns docs in `__name__` ASC — so on a growing collection it keeps the lowest doc IDs and drops the NEWEST. Pair every `limit()` with `orderBy(<chrono> desc)` (+ composite index, §7-N), or for a naturally-bounded single-room scope drop the limit and sort/filter in JS.
+**Detect:** `grep -rnE "\.limit\([0-9]+\)" shared/*.js | grep -iv orderBy`. (`meter_data` `year` is int 2-digit BE, §7-E.) Family: §7-N, §7-D, §7-K.
+↳ tenant meter `limit(24)` (`d89b7cd`) → `tasks/lessons_antipatterns.md` §AAA
 
 ### BBB. Lifecycle CFs that write an embedded `.lease` subobject the tenant app reads MUST carry `moveInDate` — a future/missing boundary date hides ALL current meter rows + starves the synthesized current-month bill
 
-The tenant_app's per-room meter/bill boundary (`BillStore.tenantBoundaryYM`) reads `_taLease.moveInDate` FIRST, then falls back to `_taLease.startDate`. `filterByTenantBoundary` then hides every meter row whose `year*100+month < boundary`. So if a lifecycle CF populates the tenant doc's `.lease` subobject with a `startDate` but **no** `moveInDate`, and that startDate is in the FUTURE (e.g. a renewal `contractStart` — legitimately future when a lease renews), the boundary lands in the future → EVERY current meter row is hidden → the current-month bill (which is **synthesized from meter_data**, not a real RTDB bill until paid — see `synthesizeFromMeter`) is never generated → the tenant sees only older *real* bills.
-
-Incident 2026-06-07: real transfer ห้อง15→ห้อง13 (variation mode). `_runVariationMode` wrote `.lease.startDate = oldLeaseData.contractStart` (=`2027-01-21`) and did NOT carry `moveInDate` (novation mode DID, via `effectiveIso`). That `2027-01-21` was **NOT junk** — it was the legitimate start of a RENEWAL term (the prior lease `status:renewed` ended 2027-01-21; the active lease renews 2027→2028), while the tenant's actual occupancy `moveInDate=2026-01-21` lived only on the lease DOC. With moveInDate dropped from the subobject, `tenantBoundaryYM` fell through to the renewal `startDate` = 202701 → all of room 13's 2026 meter rows hidden → the มิ.ย. bill never synthesized → tenant saw พ.ค. as latest. ห้อง 15 showed มิ.ย. fine because its subobject still HAD `moveInDate` (the transfer is what dropped it). NOT §7-AAA (limit). Confirmed read-only REST (room 13 meter complete `rooms_69_6_13`; `bills/rooms/13` had only เม.ย.+พ.ค. real bills). **Meta-lesson (cross-room audit, same session):** the boundary must key off OCCUPANCY (`moveInDate`), never a contract-TERM date (`contractStart`/`startDate`) which can be legitimately future for renewals — AND don't "clean" a future date as junk without checking the lease lifecycle: a first data-cleanup pass wrongly overwrote `contractStart`→2026-01-21, then reverted once the all-rooms audit surfaced the renewal chain (`#1.end == #2.start == 2027-01-21`, `status:renewed`). The only data fix actually needed was *adding* `moveInDate` to the subobject.
-
-Two-layer fix:
-1. **Client defensive guard** (`filterByTenantBoundary`): a boundary in the FUTURE (> current YYYYMM) → skip filtering entirely. A tenant must ALWAYS see their current-month bill regardless of lease-date quality. (Time-robust: keyed on the wall clock, not a hardcoded month.)
-2. **CF correctness** (`_runVariationMode`): carry `moveInDate: String(oldLeaseData.moveInDate || effectiveIso || '')` into the `.lease` subobject so the boundary never falls through to a stale/future startDate. (Needs `firebase deploy --only functions:transferTenant`.)
-
-Detection:
-```bash
-# Any CF that writes a `.lease` subobject the tenant app reads — each must include moveInDate
-grep -n "lease: {" functions/*.js
-# Tenant-app boundary readers (must tolerate a bad/future date → no total blackout):
-grep -rn "tenantBoundaryYM\|filterByTenantBoundary" shared/billing-system.js
-```
-Family: §7-T (two writers / one reader — field-name/value drift), §7-DD (lifecycle CF must update every sibling reader falls through to), §7-L (code-only cleanup ≠ data migrated — here the lease DOC had the right value, the subobject didn't), §7-AAA (different root, same symptom "latest month doesn't show").
+**Rule:** the tenant app's meter/bill boundary reads `_taLease.moveInDate` then `startDate` — a `.lease` subobject written by a lifecycle CF (e.g. `transferTenant` variation mode) MUST carry `moveInDate` (occupancy), never just a contract-TERM `startDate`/`contractStart` (legitimately future for renewals → boundary in the future → ALL current meter rows hidden → current-month bill never synthesizes). Client guard: a future boundary → skip filtering.
+**Detect:** `grep -n "lease: {" functions/*.js` — each must include `moveInDate`; `grep -rn "tenantBoundaryYM\|filterByTenantBoundary" shared/billing-system.js`. Family: §7-T, §7-DD, §7-L, §7-AAA.
+↳ transfer 15→13 (2026-06-07) → `tasks/lessons_antipatterns.md` §BBB
 
 ### CCC. CI auto-deploy regex skips INDENTED/conditional `exports.X` → pushed CF fixes silently never deploy
 
-`.github/workflows/deploy-functions.yml` built its deploy list with `grep -oP '^exports\.\K\w+' functions/index.js`. The `^` anchor matches column-0 ONLY. But `verifySlip`, `notifyLiffRequest`, `notifyLiffStatusChange` are exported **indented** inside `try { if (mod.x) { exports.x = mod.x } }` optional-module guards (functions/index.js:118, 314, 323). So those 3 CFs were **silently dropped from EVERY auto-deploy** — a pushed fix to `verifySlip.js` made CI go green while prod kept running ancient code. Cost: ~a whole session of "deploy succeeded but the fix isn't live" confusion (the §7-YY form-data fix had been pushed but never deployed; prod stack traces showed OLD line numbers).
-
-**Rule:** the deploy-list builder must match `exports.X` at ANY indentation: `grep -oP '^\s*exports\.\K\w+' | sort -u`. Fixed 2026-06-08 (`1576017`).
-```bash
-# Audit: indented exports the OLD anchor would miss
-grep -nE "^[[:space:]]+exports\.[A-Za-z0-9_]+[[:space:]]*=" functions/index.js
-```
-Family: §7-AA/NN (deploy-time invariants the source doesn't reveal), §7-K (defined ≠ wired). Confirm a CF is actually in the deploy: read the CI run log for `Deploying N CFs` + the `updating … <name>` line, OR `gcloud functions describe <name> --format="value(updateTime)"`.
+**Rule:** the CI deploy-list builder must match `exports.X` at ANY indentation (`grep -oP '^\s*exports\.\K\w+'`) — a `^exports\.`-anchored grep silently drops CFs exported indented inside `try{ if(mod.x){ exports.x=... }}` guards (verifySlip, notifyLiffRequest…), so a pushed fix goes green in CI but never deploys.
+**Detect:** `grep -nE "^[[:space:]]+exports\.[A-Za-z0-9_]+" functions/index.js`. Confirm a CF deployed via the CI `updating … <name>` log or `gcloud functions describe`. Family: §7-AA, §7-K.
+↳ `1576017` → `tasks/lessons_antipatterns.md` §CCC
 
 ### DDD. An "extracted-helper" file that's actually DEAD — `grep require` BEFORE editing it
 
-`functions/_verifySlipWrite.js` *looked* like verifySlip's extracted helpers (named for it, contained `markBillPaidInRTDB`/`saveVerifiedSlip`/`logVerificationAttempt`, listed in an index.js comment). It is **never `require`d anywhere** — `verifySlip.js` defines its OWN copies of all of them inline. I edited the dead file for the entire Option-B materialize implementation (2 commits, 2 deploys) and **none of it ran**; the deployed `markBillPaidInRTDB` was verifySlip.js's untouched copy. The data:URL/trim fixes worked only because those happened to be edited in verifySlip.js directly.
-
-**Rule:** before editing any `_helper.js` / "extracted" / "split" file, confirm it's actually imported:
-```bash
-grep -rnE "require\(.*<basename-no-ext>" functions/   # 0 hits = DEAD, you're editing nothing
-```
-If a function name exists in two files, find which the entry point uses (`grep -n "function <name>\|require.*<helper>" functions/<entrypoint>.js`). Sibling of §7-K (defined ≠ wired) + §7-QQ (refactor left a function un-exported). Fixed 2026-06-08 (`a782797`): ported the logic into the LIVE `verifySlip.js`, deleted the dead file.
+**Rule:** before editing any `_helper.js`/"extracted"/"split" file, confirm it's actually `require`d — `_verifySlipWrite.js` looked like verifySlip's helpers but was never imported (verifySlip defines its own copies inline), so 2 commits of edits ran nothing.
+**Detect:** `grep -rnE "require\(.*<basename>" functions/` — 0 hits = DEAD. If a name exists in 2 files, find which the entry point uses. Sibling: §7-K, §7-QQ.
+↳ `a782797` (ported to live verifySlip) → `tasks/lessons_antipatterns.md` §DDD
 
 ### EEE. Tenant `FileReader.readAsDataURL` sends a FULL `data:` URL — CF base64-decode must strip the prefix
 
-The tenant slip path (`shared/tenant-slip-verify.js`) sent `window._slipBase64` = `FileReader.readAsDataURL` output verbatim = `"data:image/jpeg;base64,<payload>"` (the preview `<img src>` needs the prefix). The CF did `Buffer.from(file, 'base64')` — decoding the `data:…;base64,` prefix as base64 corrupts the bytes → SlipOK 400 `code:1005` "ไฟล์ไม่ใช่ไฟล์ภาพ". The **admin** path worked because it strips client-side (`r.result.split(',')[1]`). Fixed at the CF boundary 2026-06-08 (`7d93a83`): `const b64 = file.startsWith('data:') ? file.slice(file.indexOf(',')+1) : file;` — tolerates both forms, covers every caller.
-```bash
-grep -rn "readAsDataURL" shared/*.js   # each result: does it .split(',')[1] OR does the CF strip? one of them must.
-```
-Cousin of §7-Y (`fetch('data:')` blocked by CSP) — both are "a `data:` URL isn't the raw thing the consumer expected." Note: the SlipOK callers also had a `userId: params.userId` write that's `undefined` for tenant calls (no userId sent) → Firestore rejects → `verifiedSlips` never written (admin payment view + dedup silently broken); fix `params.userId || params.room || null` (same commit `a782797`).
+**Rule:** `FileReader.readAsDataURL` yields `"data:image/...;base64,<payload>"` (prefix included, needed for `<img src>` preview). A CF doing `Buffer.from(file,'base64')` corrupts it → SlipOK 400 `code:1005`. Strip at the CF boundary: `file.startsWith('data:') ? file.slice(file.indexOf(',')+1) : file` (covers both admin-stripped and tenant-full forms).
+**Detect:** `grep -rn "readAsDataURL" shared/*.js` — each result either `.split(',')[1]` client-side or the CF strips. Also `params.userId || params.room || null` (undefined → Firestore reject). Cousin: §7-Y.
+↳ `7d93a83`/`a782797` → `tasks/lessons_antipatterns.md` §EEE
 
 ### FFF. Client "is this mine?" buckets must key off stable identity (room/tenantId), NOT auth uid
 
-A client list that splits items into "mine" vs "others" by `item.ownerUid === window._authUid` mis-buckets whenever the current uid ≠ the owner identity at render time:
-1. **Before auth uid loads** — `_authUid` is `''` on the first onSnapshot tick → every item's `ownerUid !== ''` → ALL land in "others"/"available", NONE in "mine". The owner's own item flashes as actionable-by-self until a later re-render (§7-U cousin).
-2. **Admin preview** — `_authUid` = the ADMIN's uid, not the previewed tenant's → the room's own items NEVER match → stuck in "others".
-
-Incident 2026-06-09 (#318): food-share `_render` bucketed by `sharerUid === _authUid` → a tenant's OWN share showed in "เปิดให้" (looked self-claimable), corrected only after auth settled (user saw it "move back ~min later"). Fix: bucket by **room identity** `_myTenantId()` = `building_room` (the doc's `sharerTenantId`/`claimerTenantId`) — stable across uid-load AND admin-preview — and early-return `_render` until that identity is ready.
-
-**Rule:** any "my items" CLIENT filter keys off the durable identity the doc stores (tenantId, room, ownerTenantId), never the live `auth.uid`. uid stays for SERVER auth gates (e.g. claimFood's self-claim check is uid-based — correct); client ownership DISPLAY uses the stable id.
-```bash
-grep -rn "=== _authUid\|Uid === .*_authUid\|sharerUid === \|ownerUid === " shared/*.js   # client ownership filters by uid = suspect
-```
-Family: §7-U (act after claims ready), §7-BB (`window._liffClaims` phantom → use `_taBuilding`/`_taRoom`), §7-Z/HH (uid not where eval expects).
+**Rule:** a client "mine vs others" filter keying off `item.ownerUid === window._authUid` mis-buckets before auth uid loads (`''` → all "others") AND in admin preview (admin's uid). Bucket by the durable identity the doc stores (tenantId, `building_room`), not live `auth.uid`; early-return render until that identity is ready. uid stays for SERVER auth gates.
+**Detect:** `grep -rn "=== _authUid\|Uid === .*_authUid" shared/*.js`. Family: §7-U, §7-BB, §7-Z, §7-HH.
+↳ food-share #318 → `tasks/lessons_antipatterns.md` §FFF
 
 ### GGG. E2E login helpers MUST gate the submit on `window.firebaseReady` — raising the timeout does NOT fix the cold-deploy race
 
-`login.html`'s `handleLogin()` returns EARLY — shows the transient "กำลังโหลด… โปรดรอสักครู่" message and does **NOT** sign in — while `window.firebaseReady` is false ([login.html:966](login.html:966)). `firebaseReady` flips true only after `window.loadFirebaseConfig()` fetches **`/api/config` — a Vercel SERVERLESS function** — and the Firebase SDK inits ([login.html:729](login.html:729),[login.html:750](login.html:750)). The Playwright E2E suite is triggered by `deployment_status` (`.github/workflows/e2e.yml`), i.e. the instant a fresh build goes live — the COLDEST moment, when `/api/config` is a cold spin-up. A login helper that fills + clicks `#loginBtn` immediately races `firebaseReady`; if the click lands first it's a **silent no-op** (no sign-in, no redirect) → `page.waitForURL(/dashboard/)` just times out.
-
-Incident 2026-06-09: E2E ran red on EVERY commit #319→#325 (27/32 passed, 2 failed clustering on the coldest builds). The opaque symptom — `TimeoutError: page.waitForURL: Timeout 25000ms exceeded` — and the secondary "Test timeout while running beforeEach hook" (the per-test ceiling was smaller than a slow cold login that runs inside `beforeEach`) both looked like "raise the timeout." **Raising the timeout ALONE cannot fix it — a no-op submit never redirects, so it'd just time out later.** Fix (`ddc5560`, verified green 30/0/0/2): gate the submit on `firebaseReady` BEFORE clicking, in both the shared helper and any inline login spec:
-
-```js
-// e2e/helpers/login.js + e2e/login.spec.js — BEFORE fill/click:
-await page.waitForFunction(() => window.firebaseReady === true, undefined, { timeout: 30_000 });
-```
-
-Plus, as defense: wrap fill+click+`waitForURL` in a `submitAndAwaitRedirect()` retried once; raise `waitForURL` 25→45s; raise the per-test ceiling well above the in-`beforeEach` login budget (playwright.config `timeout` 30→120s, `retries`→2); and a `globalSetup` warm-up (`e2e/helpers/global-setup.js`) that GETs `/api/config` + the login/dashboard routes ONCE so the cold spin-up isn't paid per-test.
-
-**Detection** — any Playwright/Puppeteer login helper for this app:
-```bash
-grep -rn "click('#loginBtn')\|click(\"#loginBtn\")" e2e/   # each MUST be preceded by a firebaseReady waitForFunction
-grep -rn "firebaseReady" e2e/                              # the gate must exist in every login path
-```
-This is the live-page cousin of §7-A (auth-gated reads need the right ready signal, not the wrong/early one). The canonical E2E doc is [[lifecycle_smoke_test]]; the read-only `npm run smoke` REST asserter is the regression catcher that does NOT depend on this UI timing.
+**Rule:** `login.html handleLogin()` returns early (no sign-in) while `window.firebaseReady` is false (awaits `/api/config` serverless fn). E2E is triggered on `deployment_status` (the coldest moment) — a helper that fills+clicks `#loginBtn` immediately races it → silent no-op → `waitForURL(/dashboard/)` times out. Gate the submit on `await page.waitForFunction(()=>window.firebaseReady===true)`. Raising the timeout alone CANNOT fix it.
+**Detect:** `grep -rn "click('#loginBtn')" e2e/` — each preceded by a firebaseReady wait; `grep -rn "firebaseReady" e2e/`. Cousin: §7-A. See [[lifecycle_smoke_test]].
+↳ `ddc5560` (E2E red #319-325) → `tasks/lessons_antipatterns.md` §GGG
 
 ### HHH. Verify a UI behavior EXISTS in the surface BEFORE writing an E2E/playbook assertion about it — an assertion on an assumed behavior flakes like a data/timing bug
 
-The `slip.spec.js` "paid rooms … signed URL" test (a `test.fixme`) AND `tasks/smoke-test-admin-playbook.md` Flow 3 BOTH asserted that the admin bill UI displays a stored slip IMAGE loaded from a Storage signed URL. **It does not.** `showPayDetail` ([shared/dashboard-bill.js](shared/dashboard-bill.js)) renders a paid bill's slip as a metadata line (`💳 SlipOK: {sender} · ฿{amount}`); `#slipResult` ([shared/dashboard-bill-slip-verify.js](shared/dashboard-bill-slip-verify.js)) renders verified-slip fields as **text rows**. No admin surface renders a stored slip `<img>` — slip images appear only in the tenant LIFF payment history. So the test scanned for an `<img>` and clicked a PAID card expecting `#billActiveRoom` (but a paid card fires `showPayDetail` → a MODAL `#payModalOverlay`, not the bill-detail panel) and **timed out waiting for an element that never renders**. That read as "irreducible live-data flakiness" — the real cause was that it tested a non-existent behavior. Seeding a paid+slip fixture could never fix it.
-
-**Rule:** before writing — or trying to un-quarantine — any E2E / Chrome-MCP / playbook assertion about a *rendered* behavior, GREP the render path to confirm the surface actually emits the element/text you will assert. An assertion built on an assumed behavior is worse than no test: it flakes or times out in a way that mimics a data/timing problem and hides that the premise is wrong. When such a test "irreducibly" times out or goes perpetually inconclusive, do NOT first reach for retries / fixtures / longer timeouts — grep the source to confirm the behavior exists at all, and confirm what the interaction's REAL target is.
-
-```bash
-# Before asserting "<surface> shows <X>", prove <surface> renders <X>:
-grep -n "showPayDetail\|slipResult\|<img" shared/dashboard-bill.js shared/dashboard-bill-slip-verify.js
-# e.g. a PAID bill-grid card fires showPayDetail (opens #payModalOverlay), NOT the
-# #billActiveRoom panel — so "click paid card → wait for #billActiveRoom" can never resolve.
-```
-
-Family: §7-K (defined ≠ wired — a function exists but nothing calls it), §7-M ("loadable in browser" ≠ "in production flow"), §7-J (static deploy ≠ live-verified). All are "the code/assertion assumes a behavior the runtime surface does not actually produce." Incident 2026-06-10: removed the dead `test.fixme`, corrected admin playbook Flow 3, and replaced both with `e2e/signed-url.spec.js` — a §7-Y tripwire that only inspects URLs that genuinely appear (it never assumes a surface renders one). See [[lifecycle_smoke_test]].
+**Rule:** before writing/un-quarantining an E2E or playbook assertion about a RENDERED behavior, grep the render path to confirm the surface actually emits it. The admin bill UI shows a slip as a TEXT row, not an `<img>` from a signed URL — a test asserting the image times out like a data/timing flake while the premise is just wrong. A paid bill-grid card fires `showPayDetail` (modal `#payModalOverlay`), NOT `#billActiveRoom`.
+**Detect:** `grep -n "showPayDetail\|slipResult\|<img" shared/dashboard-bill*.js` before asserting. Family: §7-K, §7-M, §7-J.
+↳ `signed-url.spec.js` (2026-06-10) → `tasks/lessons_antipatterns.md` §HHH
 
 ### III. A dark-mode page that loads `components.css` MUST define the generic `--card`/`--text` aliases in `:root` — else its cards render LIGHT in dark mode
 
-`shared/components.css` styles dozens of cards with `var(--card, #fff)` / `var(--text, #2c2c2c)` (`.rep-card`, `.quest-card`, `.help-card`, `.u-msg-*`, `.status-filter-btn`, …). Those generic names are NOT brand tokens: `brand.css` defines `--surface-card`/`--ink` and flips them for dark, but NEVER `--card`/`--text`. Each consuming HTML must alias them itself, exactly as `dashboard.html:706-707` does. A page that loads `components.css`, HAS a dark theme, but is MISSING the aliases gets the LIGHT fallback (`#fff`/`#2c2c2c`) in dark mode → white cards / dark-on-dark text. Invisible in source review and in light mode; only the computed value on the deployed dark page shows it (§7-W/§7-II family).
-
-Incident 2026-06-10: `tenant_app.html` aliased `--text-dark`/`--white`/`--text-muted`/`--border` to brand tokens but NOT `--card`/`--text`, while `dashboard.html` had all six. Every `var(--card)`/`var(--text)` consumer (`.rep-card` etc.) computed `rgb(255,255,255)` in the tenant app's `[data-theme="dark"]` mode. Fixed by adding the two aliases to `:root` (tenant_app.html ~line 280). Static-harness A/B: `getComputedStyle('.rep-card--muted').backgroundColor` flipped `rgb(255,255,255)` → `rgb(22,40,37)` (#162825) once the aliases were present.
-
-**Rule:** any HTML that loads `shared/components.css` AND has a dark theme (`[data-theme="dark"]`, `@media (prefers-color-scheme: dark)`, or `.night-mode`) MUST define in `:root`:
-```css
---card:       var(--surface-card);
---text:       var(--ink);
---text-muted: var(--muted);
---border:     var(--stone);
-```
-They auto-flip for dark because `brand.css` redefines `--surface-card`/`--ink` under `[data-theme="dark"]`; the alias inherits the flip lazily, so NO dark-block override is needed — proven by `dashboard.html`, which has no `--card`/`--text` override in its dark block yet renders dark correctly. Editing the inline `<style>` of a CSP-tracked file → regen hashes (§7-II).
-
-**Detection recipe — a components.css consumer with dark mode must have the aliases:**
-```bash
-for f in *.html; do grep -q "components\.css" "$f" || continue;
-  card=$(grep -cE "^\s*--card:\s" "$f"); dark=$(grep -cE 'data-theme="dark"|prefers-color-scheme:\s*dark|\.night-mode' "$f");
-  echo "$f : --card=$card dark=$dark"; done
-# Any file with dark>=1 AND --card=0 is buggy in dark mode.
-```
-As of the fix, 4 files load `components.css` without the aliases — `booking.html`, `login.html`, `privacy.html`, `terms.html` — but all are light-only (dark=0), so they are NOT currently buggy; each becomes a latent bug the moment dark mode is added to it.
-
-Family: §7-W (cascade — verify the computed value on the deployed page, not source), §7-T (a shared resource consumed via a name each consumer must define → silent drift), §7-II/§7-RR (CSP/CSS that breaks only on the deployed page).
+**Rule:** `components.css` styles many cards via `var(--card,#fff)`/`var(--text,…)` — generic names `brand.css` never defines (it flips `--surface-card`/`--ink`). A dark-themed HTML loading components.css MUST alias in `:root`: `--card:var(--surface-card); --text:var(--ink); --text-muted:var(--muted); --border:var(--stone);` (they auto-flip, no dark override needed) — else cards render LIGHT in dark mode.
+**Detect:** a `components.css` consumer with a dark theme but `--card=0` is buggy (booking/login/privacy/terms are light-only → latent). Family: §7-W, §7-T, §7-II/RR.
+↳ tenant_app dark cards (2026-06-10) → `tasks/lessons_antipatterns.md` §III
 
 ### JJJ. A `data-action` whose handler takes an arg MUST have an explicit dispatcher case — the generic fallback passes `(el, e)`, not `data-arg`
 
-`tenant_app.html`'s `_dispatch` (and the dashboard equivalents) route `data-action` clicks. Explicitly-cased actions receive `arg` (`= el.dataset.arg`, a STRING); anything NOT explicitly cased falls through to the generic tail `if (a && typeof _ta[a] === 'function') { _ta[a](el, e); return; }` — which passes the **DOM element + event**, NOT the arg. So a handler written as `fn(someId)` that's wired ONLY via `data-action` (no explicit case) silently receives the clicked `<button>` element as its first parameter.
-
-The failure is CRYPTIC and far from the cause: a DOM element where a string path segment was expected makes the Firestore SDK throw **`i.indexOf is not a function (in 'i.indexOf("//")')`** deep inside `ResourcePath` validation — which reads like an SDK / auth / network bug, not a wiring bug. This session burned a long detour theorising `permission-denied` / `liffSignIn` failure (the room genuinely HAD an empty `linkedAuthUid`, reinforcing the false trail) before the §7-N error-code surfacing revealed the real `i.indexOf` TypeError in one screenshot.
-
-Incident 2026-06-10 (`a93f05d`): #9 added `data-action="openPetHealth"` to the pet card but no explicit dispatcher case → `openPetHealth(el)` instead of `openPetHealth(petId)` → `doc(db,…,'pets', <button>)` → `<button>.indexOf("//")` → "โหลดไม่สำเร็จ (i.indexOf is not a function)". Sibling actions `viewVaccineBook`/`prepareEditPet` had explicit cases and worked, which is why ONLY the health page broke.
-
-**Rule:** any new `data-action` whose handler takes an argument MUST get an explicit case that passes `arg`, mirroring the siblings:
-```js
-if (a === 'openPetHealth' && arg && _ta.openPetHealth) { _ta.openPetHealth(arg); return; }
-```
-Arg-less handlers (`savePetHealthEntry()` reads form state) are fine via the generic fallback — they ignore the `(el, e)` they're handed. Handlers that genuinely want the element (e.g. `updatePetHealthFilePreview(input)` via `data-action-change`) are also fine.
-
-Detection — list every action and confirm arg-taking ones are explicitly cased:
-```bash
-grep -oE "data-action=\"[a-zA-Z]+\"" tenant_app.html | sort -u   # every wired action
-grep -n "=== '<action>'" tenant_app.html                         # explicit case present?
-```
-Sibling of §7-QQ (god-file extraction drops `window.X`) and §7-K (defined ≠ wired) — same family: the function exists, but the wiring delivers the wrong thing (here: the element instead of the id). And the cure for the cryptic symptom was §7-N (surface the real error code, don't render a generic dead-end message).
+**Rule:** `_dispatch` passes `arg` (`el.dataset.arg`) only to explicitly-cased actions; the generic fallback passes `(el, e)`. So a `data-action="openPetHealth"` handler written `openPetHealth(petId)` with NO explicit case receives the `<button>` element → cryptic `i.indexOf is not a function` deep in the Firestore SDK. Add an explicit case passing `arg`.
+**Detect:** `grep -oE "data-action=\"[a-zA-Z]+\"" tenant_app.html | sort -u` then confirm each arg-taking one has `=== '<action>'`. The cure for the cryptic symptom = §7-N (surface the real error code). Family: §7-QQ, §7-K.
+↳ `a93f05d` pet health → `tasks/lessons_antipatterns.md` §JJJ
 
 ### KKK. Billing "paid" state spans 4 stores + 3 date semantics — reconcile ALL on every read / write / reset
 
-A room/month's paid status lives in **four** places, written by different paths, and dated by **three** different fields. Touch one without the others and the views silently disagree. One QA pass (2026-06-10, ~10 commits) surfaced a whole cluster of this.
-
-**The 4 stores:**
-1. RTDB `bills/{bld}/{room}/{billId}` — `status:'paid'` + `paidAt` (admin `saveBillToFirebase`; CF materialize). `paidAt` was MISSING on admin bills until `cd5f996`.
-2. Firestore `verifiedSlips/{id}` — SlipOK (`manualEntry:false`) OR admin-manual/cash (`manualEntry:true`, `sender:'(บันทึกโดย admin)'`).
-3. localStorage `payment_status` — legacy mirror; the global verifiedSlips subscription RE-writes it on every snapshot (so clearing it alone is futile).
-4. `bills_YYYY` (localStorage, BillingSystem).
-
-**The 3 date fields (NOT interchangeable):**
-- `verifiedSlips.timestamp` = billing-month anchor (5th) for manual entries — NOT activity time.
-- `verifiedAt` = when the payment was recorded (real activity) → use for the live "what came in" feed/filters.
-- `bill.paidAt` = when marked paid → the "ชำระวันนี้" bucket needs this.
-
-**Readers diverge — map which store + date each uses before editing:**
-- ออกบิล grid + `showPayDetail` modal → `PaymentStore.listForMonth` **with no building arg** = verifiedSlips + localStorage only.
-- Meter table (`renderMeterTable`) → scans `BillStore._cache` (`status==='paid' || paidAt`).
-- Live-payment counts (`updatePVStats`) → BillStore for room counts, verifiedSlips for the feed.
-- `showPayDetail` uses `getByMonth` (returns ONE bill); `renderMeterTable` scans ALL → they disagree when a room/month has duplicate bills.
-
-**Bugs this caused (all same root):** reset flipped RTDB but left verifiedSlips → grid re-showed paid (subscription re-mirrored it + ignored `'removed'`); modal said unpaid (RTDB pending) while meter table said paid (verifiedSlips leftover); live feed dated by `timestamp` (5th) → "today"/"7-วัน" looked empty; "ชำระวันนี้" stuck 0 (bills lacked `paidAt`); "N slip" counted manual/cash as slips; feed unsorted + omitted cash-no-slip bills.
-
-**Rules:**
-- A **reset/correction** must clear EVERY paid signal: delete the RTDB bill(s) for the room/month (ALL of them — duplicates exist), delete the verifiedSlips doc(s), clear localStorage, `PaymentStore._remove`, re-render. Half-clearing = the leftover store wins.
-- A **"what came in" feed** dates by `verifiedAt` + sorts newest-first; a **"which bills paid"** count uses billing-month/BillStore; a **"paid today"** bucket needs `paidAt` (now written by `saveBillToFirebase`). For room counts also union slip-verified rooms (bills don't always have `paidAt`).
-- A **complete bill list** must union BillStore-paid-without-slip (cash) entries — `verifiedSlips` alone omits cash payments (`_pvAugmentBills`).
-- The global verifiedSlips `onSnapshot` MUST handle `'removed'` (drop from cache + localStorage) — it ignored removals, so deletes never reflected without a reload.
-
-```bash
-# every paid-state source + date field — read before editing any billing tally/reset
-grep -rn "verifiedSlips\|payment_status\|bills_YYYY\|saveBillToFirebase\|_pvAugmentBills" shared/dashboard-bill*.js shared/dashboard-payment-verify.js
-grep -rn "manualEntry\|verifiedAt\|paidAt\|_pvEffectiveDate\|_remove" shared/dashboard-payment-verify.js shared/dashboard-bill-payment-status.js shared/dashboard-bill.js
-```
-
-Family: §7-T (writer/reader field drift), §7-DD (lifecycle must update every sibling reader falls through to), §7-E (year-format traps in bill matching), §7-N/V/KK (onSnapshot lifecycle — error cb, unsub-before-rebind, cached-tick guard). Fixed across `9e68fb0`→`9bf6257`.
+**Rule:** "paid" lives in 4 stores (RTDB `bills/`+`paidAt`, Firestore `verifiedSlips`, localStorage `payment_status`, `bills_YYYY`) dated by 3 fields (`timestamp`=billing-month anchor, `verifiedAt`=activity, `paidAt`=marked-paid). Reconcile ALL on every read/write/RESET (a reset must delete every signal incl. duplicate RTDB bills + verifiedSlips). The verifiedSlips `onSnapshot` MUST handle `'removed'`. Feed dates by `verifiedAt`; "today" by `paidAt`; the complete list unions cash (BillStore-paid-no-slip).
+**Detect:** `grep -rn "verifiedSlips\|payment_status\|saveBillToFirebase\|_pvAugmentBills" shared/dashboard-bill*.js shared/dashboard-payment-verify.js`. Family: §7-T, §7-DD, §7-E, §7-N/V/KK.
+↳ QA cluster `9e68fb0`→`9bf6257` → `tasks/lessons_antipatterns.md` §KKK
 
 ### LLL. Fire-and-forget consent/prerequisite write that a CF GATES on must be `await`ed before the gated call — else a `failed-precondition` race
 
-`recordChecklistConsent({purpose})` is fired **fire-and-forget** in the kindness/reputation badge flows — SAFE there, because nothing downstream gates on the consent doc; it only reveals a local tenant badge. Cloning that pattern into a flow where a CF **server-gates on the consent doc already existing** breaks: the unawaited write races the gated call and loses.
-
-Incident 2026-06-11 (#10 Pet Social, commit `afc00c0`): `_acceptConsent` (cloned from `tenant-kindness.js`) fired `recordChecklistConsent({purpose:'pet_profile_v1'})` fire-and-forget, then immediately called `_doPublish` → `upsertPetProfile`. But `upsertPetProfile` enforces the PDPA §19 disclosure gate server-side — it reads `consents/{tenantId}_pet_profile_v1` and throws `failed-precondition` if absent (functions/upsertPetProfile.js — "consent gate — must be recorded BEFORE going public"). The publish raced the consent write → hit `failed-precondition` BEFORE the consent doc landed → the pet stayed unpublished with only a transient toast (owner symptom: กดเปิดน้องแล้วไม่ขึ้น). Root cause = the unawaited consent write, NOT the gate.
-
-**Rule:** a fire-and-forget write is safe ONLY when nothing downstream gates on it. The moment a CF (or a later client step) reads that doc as a precondition, the write MUST be `await`ed before the gated call:
-
-```js
-// ❌ WRONG — a safe badge-reveal pattern cloned into a consent-GATED publish
-recordChecklistConsent({ purpose: 'pet_profile_v1' });   // fire-and-forget
-upsertPetProfile({ isPublic: true });                    // server reads the consent doc → races → failed-precondition
-
-// ✅ CORRECT — await the prerequisite, THEN the gated call (afc00c0)
-async function _acceptConsent() {
-  await fns.httpsCallable('recordChecklistConsent')({ purpose: 'pet_profile_v1', /* … */ });
-  await _doPublish(petId, bio);   // consent doc now exists → the server gate passes
-}
-```
-
-Also preserve any user input across the consent re-render — `_pendingPublishBio` stashes the typed bio so the gated step never looks like data loss.
-
-**Detection tripwire:** the `npm run preview:pet-social` asserter's **INV2** — every published `petProfiles/{petId}` must have a matching `consents/{ownerTenantId}_pet_profile_v1`. A published pet with NO consent doc is this race firing (`tools/preview-pet-social.js` → prints `🔴 NO CONSENT DOC (§7-LLL race?)`).
-
-**Detection recipe** — a client consent write is suspect when a CF reads the same purpose as a precondition:
-```bash
-grep -rn "recordChecklistConsent" shared/*.js          # each call: awaited, or fire-and-forget?
-grep -rln "_pet_profile_v1\|consents/" functions/      # which purposes does a CF read as a gate?
-# A purpose written fire-and-forget on the client AND read server-side as a precondition = this race.
-```
-
-The kindness/reputation `recordChecklistConsent` callers stay fire-and-forget **by design** (nothing gates on them) — do NOT "fix" those to await. Family: §7-Z/FF (Firebase auth/consent state has >1 place that must line up before the next step trusts it), §7-KK (optimistic write vs the read that races it), §7-DD (a transition must settle every sibling doc a downstream reader depends on).
-
----
+**Rule:** `recordChecklistConsent` is fire-and-forget where nothing downstream gates on it (kindness/reputation — keep those). But where a CF server-gates on the consent doc existing (`upsertPetProfile` reads `consents/{tid}_pet_profile_v1` → `failed-precondition` if absent), the consent write MUST be `await`ed BEFORE the gated call — else the publish races the write and the pet stays unpublished.
+**Detect:** `grep -rn "recordChecklistConsent" shared/*.js` (awaited or not?) × `grep -rln "consents/" functions/` (read as a gate?). Tripwire: `npm run preview:pet-social` INV2. Family: §7-Z, §7-FF, §7-KK, §7-DD.
+↳ #10 pet publish (`afc00c0`) → `tasks/lessons_antipatterns.md` §LLL
 
 ## 6. Cross-references — where to look in MEMORY.md
 
