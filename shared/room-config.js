@@ -381,6 +381,20 @@ if (typeof window !== 'undefined') {
   setTimeout(() => RoomConfigManager.subscribeFromFirebase(), 1000);
 }
 
+// Narrow cross-script accessor (§7-CC/§7-QQ): the top-level `class RoomConfigManager` is
+// block-scoped to this <script>, so consumers in other tags can't reach it by bareword/window.
+// Expose ONLY the rent-price lookup (not the whole class — keeps blast radius minimal) for the
+// pre-move-in deposit modal, which auto-fills มัดจำ = rentPrice × 2. Returns 0 for an unknown
+// room so the modal skips the auto-fill (admin types the amount) rather than guessing a fallback.
+if (typeof window !== 'undefined') {
+  window.getRoomRentPrice = (building, roomId) => {
+    try {
+      const room = RoomConfigManager.getRoom(building, roomId);
+      return room && Number(room.rentPrice) > 0 ? Number(room.rentPrice) : 0;
+    } catch (_) { return 0; }
+  };
+}
+
 /**
  * Global SSoT for active rooms — used throughout the system wherever
  * room lists are needed (billing, occupancy KPIs, payment status, etc.).

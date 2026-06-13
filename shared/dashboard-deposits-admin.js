@@ -200,7 +200,7 @@ function renderDepositsPage() {
 
   const list = document.getElementById('depList');
   if (!list) return;
-  const createBtn = `<div style="margin-bottom:12px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;"><button data-action="showLumpDepositModal" style="padding:7px 14px;background:#eef2f6;color:#1e40af;border:1px solid #bfdbfe;border-radius:9px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">💰 จ่ายรวมหลายห้อง</button><button data-action="showReserveDepositModal" style="padding:7px 14px;background:#1e40af;color:#fff;border:none;border-radius:9px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">+ บันทึกมัดจำก่อนย้ายเข้า</button></div>`;
+  const createBtn = `<div style="margin-bottom:12px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;"><button data-action="showLumpDepositModal" style="padding:7px 14px;background:#eef2f6;color:#1e40af;border:1px solid #bfdbfe;border-radius:9px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">💰 จ่ายมัดจำรวมหลายห้อง</button><button data-action="showReserveDepositModal" style="padding:7px 14px;background:#1e40af;color:#fff;border:none;border-radius:9px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">+ บันทึกมัดจำก่อนย้ายเข้า</button></div>`;
   if (!rows.length) {
     list.innerHTML = createBtn + '<div style="text-align:center;padding:2rem;color:var(--text-muted);">ไม่มีรายการมัดจำ</div>';
     return;
@@ -557,6 +557,27 @@ function showReserveDepositModal(building, roomId) {
     </div>`;
   document.body.appendChild(modal);
   window._depReserveCtx = { isAdd, building: building || '', roomId: roomId || '' };
+
+  // Auto-fill มัดจำทั้งหมด = the room's rentPrice × 2 (the standard 2-month deposit) once a room is
+  // entered. Admin can still override; once they manually edit the amount the auto-fill stops. Only
+  // on a fresh reserve (the อาคาร/ห้อง/มัดจำ fields exist when !isAdd). Source: window.getRoomRentPrice
+  // (room-config.js) — 0 for an unknown room → no fill, admin types it.
+  if (!isAdd) {
+    const roomEl = modal.querySelector('#dep-res-room');
+    const amtEl = modal.querySelector('#dep-res-amount');
+    const bldEl = modal.querySelector('#dep-res-building');
+    let amtTouched = false;
+    amtEl?.addEventListener('input', () => { amtTouched = true; });
+    const autofillAmount = () => {
+      if (amtTouched || !amtEl) return;
+      const b = (bldEl?.value || building || 'rooms');
+      const rm = (roomEl?.value || '').trim();
+      const rent = (rm && typeof window.getRoomRentPrice === 'function') ? window.getRoomRentPrice(b, rm) : 0;
+      amtEl.value = rent > 0 ? String(rent * 2) : '';
+    };
+    roomEl?.addEventListener('input', autofillAmount);
+    bldEl?.addEventListener('change', autofillAmount);
+  }
 }
 window.showReserveDepositModal = showReserveDepositModal;
 
@@ -683,7 +704,7 @@ function showLumpDepositModal() {
   modal.innerHTML = `
     <div style="background:#fff;border-radius:16px;width:100%;max-width:460px;max-height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);">
       <div style="flex-shrink:0;padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
-        <h3 style="margin:0;font-size:1.05rem;color:#334435;font-weight:800;">💰 จ่ายรวมหลายห้อง (1 ครั้ง)</h3>
+        <h3 style="margin:0;font-size:1.05rem;color:#334435;font-weight:800;">💰 จ่ายมัดจำรวมหลายห้อง (1 ครั้ง)</h3>
         <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">เลือกห้อง + ใส่ยอดที่จ่ายให้แต่ละห้อง</div>
       </div>
       <div style="flex:1 1 auto;overflow-y:auto;padding:14px 22px;">
