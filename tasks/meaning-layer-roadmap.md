@@ -19,7 +19,7 @@
 
 ---
 
-## Status (12 shipped · 4 pending)
+## Status (13 shipped · 4 pending)
 
 | # | ตัว | Pillar | Status |
 |---|-----|--------|--------|
@@ -30,7 +30,7 @@
 | 4 | Food sharing feed | Micro-Econ | ✅ SHIPPED (#314 server + UI) |
 | 5 | Trade history memory | Micro-Econ | ✅ SHIPPED (#325 — achievement, NOT points) |
 | 6 | Kindness score | Trust | ✅ SHIPPED — server+admin (#329/#330/#331) + tenant tier badge v1.x (#333 server+rules · #334 frontend); prod-verified 2026-06-11 (rules ✅ `kindnessTier` in deployed ruleset · sweep mirrored `nest/N101.kindnessTier=kind`); on-device 🤲 "มีน้ำใจ" render owner-confirmed on real LINE 2026-06-11 ✅ |
-| 7 | Verified Helper | Trust | 🟡 gated on #2 job history |
+| 7 | Verified Helper | Trust | ✅ SHIPPED 2026-06-12 (PR1 server `39e24a4` + PR2 tenant badge `5b2a55f`/#337); score accrual-gated (provisional < 3 done jobs) — owner real-LINE verify pending |
 | 8 | Resident Rank | Trust | ✅ SHIPPED (#338 server+rules+admin + #339 tenant badge); owner real-LINE verify pending |
 | — | Reputation v2 (engagement dim) | Trust | ✅ SHIPPED 2026-06-13 (#343 — additive engagement bonus, early) |
 | 9 | Pet health memory | Pet | ✅ SHIPPED (#327 — append-only timeline + DSR export) |
@@ -108,11 +108,11 @@
 **Pending sub-phase:** tenant-facing tier badge v1.x (consent-gated, tier-only) — mirror reputation #288/#289 (`kindnessTier` enum + sweep mirror onto tenant doc + protected-field rule + `kindness_v1` consent + DSR; `tenant-kindness.js`). Capture-CF cleanup (write canonical tenantId + migrate) is an optional separate revisit — the sweep join handles it robustly without migration.
 **Guardrails honoured:** §6 Trust ≠ points (reads only the kind-EARN subset, never spendable `gamification.points`); server-computed only; §7-N/§7-AAA (single-field `in`, no composite, no limit).
 
-### 7 — Verified Helper · 🟡 gated on #2 job history
-**What:** "ผู้ช่วยชุมชนที่ยืนยันตัวตน" — safe-to-hire badge → gates paid helper market (**revenue Tier 3**).
-**Captures:** *none new* — derives from KYC (#236) AND ≥N completed+rated #2 jobs AND avg rating ≥ threshold → `trustScores/{tenantId}.verifiedHelper` {bool, tier}.
-**Depends:** #2 live + accrued. **Reuses:** #236 KYC gate, #2 rating data.
-**Guardrails:** liability/ToS depth = owner decision (phase-3.2 §8 Q4).
+### 7 — Verified Helper · ✅ SHIPPED 2026-06-12 (PR1 server `39e24a4` + PR2 tenant badge `5b2a55f`/#337)
+**What:** "ผู้ช่วยชุมชนที่ยืนยันตัวตน" — safe-to-hire helper credential (foundation for a future paid helper market, revenue Tier 3).
+**Shipped:** pure `functions/_verifiedHelper.js` `computeVerifiedHelper` — volume `completedCount/8·0.6` + breadth `distinctRequesters/4·0.4` (anti-farm: distinct neighbours, not repeat favours) + small appreciation-tag bonus (≤0.10) → 0–100; `provisional` below **VH_MIN_JOBS=3**; tiers `trusted|seasoned|helper|newcomer` (70/40/10). Additive `verifiedHelper`/`Provisional`/`Factors` on `trustScores/{tid}` in the SAME daily sweep (`computeTrustScoresScheduled:67,317`). Admin card `dashboard-verified-helper.js` (`#dashVerifiedHelper`); tenant badge `tenant-verified-helper.js` (consent `verified_helper_v1` → `consents/{tid}_verified_helper_v1`); `verifiedHelperTier` protected-field rule (firestore.rules:475, §6). #8 Resident Rank reads `0.30·vh`.
+**⛔ Owner decision (D2 2026-06-12) — the planned KYC precondition + 1–5 star rating were DROPPED:** the shipped model is pure peer-confirmed JOB HISTORY (`helpRequests` `status==='done'` where this tenant is the requester-confirmed helper, §6 never self-claim) + appreciation tags. Trust ≠ points (NOT the `help_completed` ledger #6 sums). KYC-free.
+**Gate = ACCRUAL only:** score stays `provisional` until ≥3 requester-confirmed `done` jobs — the old "🟡 gated on #2" conflated SCORE maturity with CODE status (code is complete). **Open:** owner real-LINE verify once #2 accrues.
 
 ### 8 — Resident Rank · ✅ SHIPPED 2026-06-12 (PR1 #338 server+rules+admin + PR2 #339 tenant badge)
 **What:** "แรงก์ตามการมีส่วนร่วม" — composite growth ladder. **The Emotional-Lock-in display** (blueprint Core Metric 3 — "you'd lose แกนนำ rank if you leave").
@@ -185,7 +185,7 @@ Added the engagement-consistency dimension to #0 as an **ADDITIVE, positive-only
 | 1–5, 9, 10, 13, 15, 16 | none | now |
 | 11, 12, 14 | #10 live | after #10 |
 | 6 (Kindness) | ~weeks of #1–5 accrual | after #1–5 + accrual |
-| 7 (Verified Helper) | #2 job history | after #2 + accrual |
+| 7 (Verified Helper) | #2 job accrual (score provisional < 3 done jobs) | ✅ code SHIPPED 2026-06-12 (`39e24a4`/#337); score matures on accrual |
 | 8 (Resident Rank) | #6 + #7 live | ✅ SHIPPED 2026-06-12 |
 | Reputation v2 | ~1–3 mo pointsLedger | ✅ SHIPPED 2026-06-13 (early — daily_login had history) |
 
@@ -207,3 +207,4 @@ Added the engagement-consistency dimension to #0 as an **ADDITIVE, positive-only
 - **2026-06-13 — Reputation v2 (engagement dim) SHIPPED EARLY (PR [#343](https://github.com/soulgroundliving/the-green-haven/pull/343)).** Closes the LAST open Trust item → **Trust pillar #0/#6/#7/#8 + Reputation v2 ALL COMPLETE.** Additive, positive-only engagement-consistency bonus on Reputation (#0): `min(100, v1_base + round(activeWeeks/8·10))`, +10 max — can only RAISE (owner decision — never re-weights/lowers; no-history → bonus 0 = v1, so it shipped before the ~Aug gate since `daily_login` already had cadence history). §6: PRESENCE per week (distinct active weeks), never points value → not farmable. Pure `computeEngagement()` in `_reputation.js` (14 tests) + one `pointsLedger in ENGAGEMENT_SOURCES` sweep read (§7-J room-key join, +1 test) + admin `⚡ +N`. No rules/CSP/consent/tenant change (badge auto-reflects the new number; resident-rank #8 reads it automatically). functions 2408/0; backward-compat (31 v1 + 12 sweep tests unchanged). deploy-functions ✅. Lifecycle [[lifecycle_trust_reputation]] (Reputation v2 section). **Forward:** Pet #11/#13/#14 · Tenant follow-ups · Reputation v3.
 - **2026-06-12 — #8 Resident Rank SHIPPED (PR1 [#338](https://github.com/soulgroundliving/the-green-haven/pull/338) server+rules+admin + PR2 [#339](https://github.com/soulgroundliving/the-green-haven/pull/339) tenant badge).** The 4th + FINAL Trust dim → **Trust pillar #0/#6/#7/#8 COMPLETE.** DERIVED composite (no new capture): `_residentRank.js` `round(0.40·rep + 0.30·kind + 0.30·vh)` (owner "สมดุล") → 5-rung growth ladder `taproot|canopy|rooted|sprout|seed` (owner ladder; bounds 75/55/35/15). Top rungs unreachable on reputation alone (cap 40) → participation lock-in by design. Additive `trustScores` dim + 4th tier in the combined mirror (§7-T) + `residentRankTier` protected (§6) + `resident_rank_v1` consent; admin card `dashboard-resident-rank.js` + tenant `.rr-card` badge `tenant-resident-rank.js`. 43 new tests (functions 2393/0, shared 676/0, rules 344/0); verify:memory green; no CSP drift; static-harness light+dark verified. Both PRs merged + deployed (deploy-rules ✅ + deploy-functions ✅ + Vercel ✅). **Open:** owner real-LINE verify. Next Trust = Reputation v2 (~Aug accrual); other buildable = Pet #11/#13/#14. Lifecycle [[lifecycle_trust_reputation]].
 - **2026-06-12 — #16 Farewell card v1 SHIPPED (PR [#336](https://github.com/soulgroundliving/the-green-haven/pull/336)).** Derive-only farewell / journey-summary card atop the 🪴 Life Timeline page (`#tlf-card`): tenure + 2×2 stat grid (badges/points/trades/streak) + a message that turns FAREWELL-toned when `lease.endDate ≤ 45d` / ended. From the tenant's own doc only — no new collection/index/capture/CF/**AI**. `shared/tenant-farewell.js` pure `deriveFarewell()` 12 tests; full shared 611/0; static-harness light+dark (§7-III). Worktree off origin/main, rebased onto `37fe555` (pet-social asserter — no shared files touched). **v2 deferred:** move-out hook (admin gift at archive) + AI prose + archive read. **Open:** owner real-LINE verify; write `lifecycle_farewell.md` on merge. **Both Tenant-pillar ตัว (#15+#16) now shipped** — next buildable = Pet #11/#13 (collide w/ pet session) or accrual-gated Trust #7/#8.
+- **2026-06-13 — #7 Verified Helper status RECONCILED (doc-drift fix §7-K — NO code change).** The roadmap showed #7 🟡 but the full stack shipped 2026-06-12 with the #8 batch (it had to — #8 reads `0.30·vh`): server PR1 `39e24a4` + tenant badge PR2 `5b2a55f`/#337. Verified live this session: `tenant_app.html:145` + `dashboard.html:3436/5952` script tags, `verified_helper_v1` consent (`recordChecklistConsent.js:39`), sweep computes+mirrors (`computeTrustScoresScheduled:67,317`), `verifiedHelperTier` protected (`firestore.rules:475`). The shipped model **dropped the planned KYC gate + 1–5 star rating** → pure peer-confirmed job-history + appreciation tags (owner D2). **Trust pillar #0/#6/#7/#8 + Rep v2 now all ✅ in the table.** Only remaining gate = score is `provisional` until ≥3 `done` jobs accrue; owner real-LINE verify pending. (Found while planning the remaining ML ตัว — see `tasks/meaning-layer-remaining-plans.md` §0.)
