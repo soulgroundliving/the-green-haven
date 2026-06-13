@@ -1,5 +1,7 @@
 # 9-Dimension Re-Audit Remediation Plan (run 2)
 
+> **▶ NEWEST ACTIVE PLAN (2026-06-13):** [todo-deposit-premovein.md](todo-deposit-premovein.md) — Deposit pre-move-in lifecycle (จอง 500 → reserved → no-show ริบ → เดือนแรก waiver; move-out #253 untouched). ⏳ awaiting owner approval.
+
 > **▶ NEW forward-looking program (2026-06-02):** [core-readiness-roadmap.md](core-readiness-roadmap.md) — Core readiness for "เปิดตรวจจริง" (accountant/tax/investor) + the blueprint's 3 future features (Behavioral Intelligence · Trust System · Autonomous Ops). ✅ approved 2026-06-02; **Phase 0 (pointsLedger append-only event log) shipped** (PR #227 `96ca28a`, deployed). This file below = the (mostly-done) 9-dim audit remediation.
 
 ---

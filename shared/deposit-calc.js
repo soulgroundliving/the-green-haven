@@ -88,7 +88,56 @@
     return p + (c & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
   }
 
-  const api = { depositPaid, depositDue, isFullyPaid, deductionDesc, deductionsTotal, netRefund, validPromptPay, promptPayPayload };
+  // ── Pre-move-in lifecycle (Phase 1, 2026-06-13) ─────────────────────────
+  // The deposit can be taken BEFORE move-in (จอง ฿500 → ส่วนที่เหลือ) and is not
+  // guaranteed to convert. `depositPhase` is the doc's lifecycle state; legacy
+  // docs (no `status`) read as 'holding' — the only pre-2026-06-13 non-returned
+  // state, so existing data keeps working untouched (§7-L).
+  function depositPhase(dep) {
+    const s = dep && dep.status;
+    if (s === 'reserved' || s === 'returned' || s === 'forfeited') return s;
+    return 'holding';
+  }
+
+  // Record one deposit payment chunk (จอง / ส่วนที่เหลือ; method 'slip' OR 'cash').
+  // Returns a NEW { paidSoFar, payments } patch — never mutates `dep` (immutable).
+  // paidSoFar accrues and CLAMPS to the deposit amount. In the recording flow an
+  // absent paidSoFar means "nothing recorded yet" = 0 — DISTINCT from depositPaid()
+  // where absent = fully paid (§7-L legacy read). `at` is caller-supplied (pure —
+  // no Date.now here, keeps the helper deterministic + unit-testable).
+  function recordDepositPayment(dep, payment) {
+    const amount = Math.max(0, Number(payment && payment.amount) || 0);
+    const prevPaid = Math.max(0, Number(dep && dep.paidSoFar) || 0);
+    const cap = _amount(dep);
+    const paidSoFar = cap > 0 ? Math.min(cap, prevPaid + amount) : prevPaid + amount;
+    const prior = (dep && Array.isArray(dep.payments)) ? dep.payments : [];
+    const entry = {
+      label: (payment && payment.label) || 'มัดจำ',
+      amount,
+      method: (payment && payment.method) === 'cash' ? 'cash' : 'slip',
+    };
+    if (payment && payment.slipPath) entry.slipPath = String(payment.slipPath);
+    if (payment && payment.lumpRef) entry.lumpRef = String(payment.lumpRef);
+    if (payment && payment.txid) entry.txid = String(payment.txid); // SlipOK transactionId (verified slip)
+    if (payment && payment.at != null) entry.at = payment.at;
+    return { paidSoFar, payments: prior.concat([entry]) };
+  }
+
+  // Validate ONE lump CASH payment split across several rooms' deposits.
+  // allocations = [{ building, roomId, amount }]. valid ⇔ every row is a real room
+  // with a positive amount AND Σ amounts === total (±฿1, mirrors the slip tolerance).
+  function splitLumpCash(total, allocations) {
+    const t = Number(total) || 0;
+    const list = Array.isArray(allocations) ? allocations : [];
+    const allocated = list.reduce((s, a) => s + Math.max(0, Number(a && a.amount) || 0), 0);
+    const everyValid = list.length > 0 && list.every(
+      (a) => a && a.building && a.roomId && (Number(a.amount) || 0) > 0
+    );
+    const remainder = Math.round((t - allocated) * 100) / 100;
+    return { valid: everyValid && Math.abs(remainder) <= 1, total: t, allocated, remainder };
+  }
+
+  const api = { depositPaid, depositDue, isFullyPaid, deductionDesc, deductionsTotal, netRefund, validPromptPay, promptPayPayload, depositPhase, recordDepositPayment, splitLumpCash };
   if (typeof window !== 'undefined') window.DepositCalc = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

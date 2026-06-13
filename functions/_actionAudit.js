@@ -59,6 +59,8 @@ const VALID_ACTIONS = new Set([
   'BILL_VOIDED',           // admin voids an issued invoice (Phase 1.3)
   'BILL_REFUNDED',         // admin refunds a PAID bill — money returned (Phase 2)
   'DEPOSIT_RETURNED',      // admin settles + returns a security deposit at move-out (Slice C)
+  'DEPOSIT_FORFEITED',     // admin forfeits a reserved pre-move-in deposit on no-show (Phase 2)
+  'DEPOSIT_VERIFIED',      // admin SlipOK-verifies a pre-move-in deposit payment (Phase 2 verifyDepositSlip)
   'PAYMENT_RESET',         // admin resets a room's payment — deletes its verifiedSlips (clearRoomPaymentSlips)
 ]);
 

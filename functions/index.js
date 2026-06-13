@@ -63,6 +63,12 @@ exports.expireBookingLocks = require('./expireBookingLocks').expireBookingLocks;
 exports.verifyBookingSlip = require('./verifyBookingSlip').verifyBookingSlip;
 // Admin-only conversion of paid booking → real tenant doc + liffUsers approval.
 exports.convertBookingToTenant = require('./convertBookingToTenant').convertBookingToTenant;
+// Admin-only: activate a reserved pre-move-in deposit → holding + stamp moveInDate (deposit Phase 2).
+exports.confirmMoveIn = require('./confirmMoveIn').confirmMoveIn;
+// Admin-only: forfeit a reserved pre-move-in deposit on no-show (deposit Phase 2).
+exports.forfeitReservedDeposit = require('./forfeitReservedDeposit').forfeitReservedDeposit;
+// Admin-only: SlipOK-verify a pre-move-in deposit payment (single OR lump multi-room) (deposit Phase 2).
+exports.verifyDepositSlip = require('./verifyDepositSlip').verifyDepositSlip;
 // Server-verified KYC submission — confirms idCardFront + idCardBack exist in Storage.
 exports.submitBookingKyc = require('./submitBookingKyc').submitBookingKyc;
 

@@ -996,6 +996,18 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'saveDepositReturn')       { typeof window._saveDepositReturn === 'function' && window._saveDepositReturn(el.dataset.id, el.dataset.arg); return; }
     if (a === 'closeDepositInstallmentModal') { document.getElementById('depositInstallmentModal')?.remove(); return; }
     if (a === 'saveDepositInstallment')  { typeof window._saveDepositInstallment === 'function' && window._saveDepositInstallment(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'showReserveDepositModal') { typeof showReserveDepositModal === 'function' && showReserveDepositModal(el.dataset.building, el.dataset.room); return; }
+    if (a === 'closeReserveDepositModal'){ document.getElementById('reserveDepositModal')?.remove(); return; }
+    if (a === 'saveReserveDeposit')      { typeof window._saveReserveDeposit === 'function' && window._saveReserveDeposit(); return; }
+    if (a === 'showConfirmMoveInModal')  { typeof showConfirmMoveInModal === 'function' && showConfirmMoveInModal(el.dataset.building, el.dataset.room); return; }
+    if (a === 'closeConfirmMoveInModal') { document.getElementById('confirmMoveInModal')?.remove(); return; }
+    if (a === 'confirmMoveIn')           { typeof window._confirmMoveIn === 'function' && window._confirmMoveIn(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'showForfeitDepositModal') { typeof showForfeitDepositModal === 'function' && showForfeitDepositModal(el.dataset.building, el.dataset.room); return; }
+    if (a === 'closeForfeitDepositModal'){ document.getElementById('forfeitDepositModal')?.remove(); return; }
+    if (a === 'forfeitReservedDeposit')  { typeof window._forfeitReservedDeposit === 'function' && window._forfeitReservedDeposit(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'showLumpDepositModal')    { typeof showLumpDepositModal === 'function' && showLumpDepositModal(); return; }
+    if (a === 'closeLumpDepositModal')   { document.getElementById('lumpDepositModal')?.remove(); return; }
+    if (a === 'saveLumpDeposit')         { typeof window._saveLumpDeposit === 'function' && window._saveLumpDeposit(); return; }
     if (a === 'removeDepDeduction') {
       const idx = parseInt(el.dataset.index);
       if (!isNaN(idx) && window._depPendingDeductions) {

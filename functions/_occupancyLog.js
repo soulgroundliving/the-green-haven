@@ -52,6 +52,7 @@ if (!admin.apps.length) admin.initializeApp();
 // alongside any new CF that calls appendLog.
 const VALID_SOURCES = new Set([
   'convertBookingToTenant',
+  'confirmMoveIn',
   'transferTenant.variation',
   'transferTenant.novation',
   'archiveTenantOnMoveOut',
