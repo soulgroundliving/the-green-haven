@@ -226,7 +226,9 @@ function renderDepositsPage() {
           ${(deductTotal || finalBillTotal) ? `${finalBillTotal ? `<div style="font-size:11px;color:#dc2626;">บิลเดือนสุดท้าย ${fmt(finalBillTotal)}</div>` : ''}${deductTotal ? `<div style="font-size:11px;color:#dc2626;">หักเสียหาย ${fmt(deductTotal)}</div>` : ''}<div style="font-size:var(--fs-sm);font-weight:700;color:#059669;">คืนสุทธิ ${fmt(netRefund)}</div>` : ''}
           <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap;">
             ${phase === 'holding' ? `<button data-action="showReturnDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#334435;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">บันทึกคืนมัดจำ</button>` : ''}
-            ${isReserved ? `<button data-action="showReserveDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#1e40af;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">💵 บันทึกชำระเพิ่ม</button>` : ''}
+            ${isReserved ? `<button data-action="showReserveDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#eef2f6;color:#1e40af;border:1px solid #bfdbfe;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">💵 ชำระเพิ่ม</button>
+            <button data-action="showConfirmMoveInModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#1e40af;color:white;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">✓ ยืนยันย้ายเข้า</button>
+            <button data-action="showForfeitDepositModal" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">✕ ริบ</button>` : ''}
             ${(isReturned && hasEvidence) || hasHistory ? `<button data-action="showDepositEvidence" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#eef2f6;color:#334435;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📎 ${evLabel}</button>` : ''}
             ${isReturned ? `<button data-action="exportDepositReceipt" data-building="${r.building}" data-room="${r.roomId}" style="padding:5px 12px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">📄 ใบรับเงิน</button>` : ''}
           </div>
@@ -610,6 +612,105 @@ async function _saveReserveDeposit() {
   }
 }
 window._saveReserveDeposit = _saveReserveDeposit;
+
+// ── Pre-move-in transitions (Phase 2): confirm move-in / forfeit (no-show) ───
+// Each opens a styled preview and calls an admin SE1 CF on an EXPLICIT click
+// (confirmMoveIn / forfeitReservedDeposit) — §7-I: never auto-click a financial
+// action. The deposits onSnapshot re-renders the card once the CF flips status.
+function showConfirmMoveInModal(building, roomId) {
+  const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
+  if (!dep) return;
+  const due = window.DepositCalc ? window.DepositCalc.depositDue(dep) : 0;
+  const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('confirmMoveInModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'confirmMoveInModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.28);overflow:hidden;">
+      <div style="padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
+        <h3 style="margin:0;font-size:1.05rem;color:#334435;font-weight:800;">✓ ยืนยันย้ายเข้าจริง</h3>
+        <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">ห้อง ${roomId} <span style="color:#9ca3af;">· ${building}</span></div>
+      </div>
+      <div style="padding:16px 22px;">
+        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">วันที่ย้ายเข้าจริง</label>
+        <input id="dep-confirm-movein-date" type="date" value="${today}" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;">
+        ${due > 0 ? `<div style="margin-top:10px;background:#fef9ec;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;font-size:11px;color:#92400e;">⚠️ ยังค้างมัดจำ ${fmt(due)} — ยืนยันได้ ส่วนที่ค้างจะตามเก็บภายหลัง (ยอดค้าง)</div>` : ''}
+        <div style="margin-top:10px;font-size:11px;color:#6b7280;">มัดจำจะเปลี่ยนเป็นสถานะ "ถือมัดจำ" และบันทึกวันย้ายเข้าจริงลงสัญญา (ใช้คิดบิลเดือนแรกแบบรายวัน)</div>
+      </div>
+      <div style="display:flex;gap:10px;padding:14px 22px;border-top:1px solid #eef0ee;">
+        <button data-action="closeConfirmMoveInModal" style="flex:1;padding:11px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">ยกเลิก</button>
+        <button data-action="confirmMoveIn" data-id="${building}" data-arg="${roomId}" style="flex:2;padding:11px;background:#1e40af;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">✅ ยืนยันย้ายเข้า</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+window.showConfirmMoveInModal = showConfirmMoveInModal;
+
+async function _confirmMoveIn(building, roomId) {
+  const moveInDate = document.getElementById('dep-confirm-movein-date')?.value || '';
+  if (!moveInDate) { alert('กรุณาเลือกวันที่ย้ายเข้า'); return; }
+  const btn = document.querySelector('#confirmMoveInModal [data-action="confirmMoveIn"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'กำลังยืนยัน…'; }
+  try {
+    const callable = window.firebase?.functions?.httpsCallable?.('confirmMoveIn');
+    if (!callable) throw new Error('ฟังก์ชันยังไม่พร้อม');
+    await callable({ building, roomId, moveInDate });
+    document.getElementById('confirmMoveInModal')?.remove();
+    if (typeof showToast === 'function') showToast('✅ ยืนยันย้ายเข้าแล้ว — ถือมัดจำ');
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '✅ ยืนยันย้ายเข้า'; }
+    alert('ยืนยันไม่สำเร็จ: ' + (e?.message || e));
+  }
+}
+window._confirmMoveIn = _confirmMoveIn;
+
+function showForfeitDepositModal(building, roomId) {
+  const dep = _depositsCache.find(r => r.building === building && r.roomId === roomId);
+  if (!dep) return;
+  const forfeitAmt = window.DepositCalc ? window.DepositCalc.depositPaid(dep) : (Number(dep.paidSoFar) || 0);
+  const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
+  document.getElementById('forfeitDepositModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'forfeitDepositModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.28);overflow:hidden;">
+      <div style="padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
+        <h3 style="margin:0;font-size:1.05rem;color:#b91c1c;font-weight:800;">✕ ริบมัดจำ (ไม่ย้ายเข้า)</h3>
+        <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">ห้อง ${roomId} <span style="color:#9ca3af;">· ${building}</span></div>
+      </div>
+      <div style="padding:16px 22px;">
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;font-size:var(--fs-sm);color:#991b1b;">จะ <strong>ริบเงินที่จ่ายมาทั้งหมด ${fmt(forfeitAmt)}</strong> — ไม่คืน. ใช้เมื่อผู้เช่า<strong>ไม่ย้ายเข้าจริง</strong> (no-show)</div>
+        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin:12px 0 5px;">เหตุผล <span style="font-weight:400;color:#9ca3af;">(ไม่บังคับ)</span></label>
+        <input id="dep-forfeit-reason" type="text" placeholder="เช่น ไม่ติดต่อกลับ" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);">
+      </div>
+      <div style="display:flex;gap:10px;padding:14px 22px;border-top:1px solid #eef0ee;">
+        <button data-action="closeForfeitDepositModal" style="flex:1;padding:11px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">ยกเลิก</button>
+        <button data-action="forfeitReservedDeposit" data-id="${building}" data-arg="${roomId}" style="flex:2;padding:11px;background:#b91c1c;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">✕ ยืนยันริบ</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+window.showForfeitDepositModal = showForfeitDepositModal;
+
+async function _forfeitReservedDeposit(building, roomId) {
+  const reason = document.getElementById('dep-forfeit-reason')?.value || '';
+  const btn = document.querySelector('#forfeitDepositModal [data-action="forfeitReservedDeposit"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'กำลังริบ…'; }
+  try {
+    const callable = window.firebase?.functions?.httpsCallable?.('forfeitReservedDeposit');
+    if (!callable) throw new Error('ฟังก์ชันยังไม่พร้อม');
+    await callable({ building, roomId, reason });
+    document.getElementById('forfeitDepositModal')?.remove();
+    if (typeof showToast === 'function') showToast('✅ ริบมัดจำแล้ว');
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '✕ ยืนยันริบ'; }
+    alert('ริบไม่สำเร็จ: ' + (e?.message || e));
+  }
+}
+window._forfeitReservedDeposit = _forfeitReservedDeposit;
 
 async function _saveDepositReturn(building, roomId) {
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
