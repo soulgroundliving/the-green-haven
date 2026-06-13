@@ -1,6 +1,6 @@
 # Plan — Make `verifiedSlips` truly CF-only, then deny client writes
 
-**Status:** awaiting approval (plan-first: security rule + auth-model change, 5+ files, not single-revert).
+**Status:** APPROVED + IN PROGRESS. **Phases 1+2 DONE** (`9d4b81b`, branch `verifiedslips-cf-only` off `origin/main`): both CFs (`recordManualPayment` + `clearRoomPaymentSlips`) + 19 tests + `PAYMENT_RESET` audit + index registration — server-side, NO prod impact until deployed (suite 2428/2428). **REMAINING: Phase 3 (rewire the 3 client sites) + Phase 4 (flip the rule + rules test) — one unit, must deploy in LOCKSTEP with the CFs.** Phase 4 needs the Firestore emulator for `npm run test:rules`.
 **Origin:** security review of `verifyDepositSlip.js` flagged `verifiedSlips/{id}` `allow write: if isAdmin();` lets a live admin browser token poison/forge/delete the SlipOK dedup fence (block a legit verify, plant a fake dedup record, corrupt the audit).
 **Why the obvious one-liner was rejected:** grep gate (`feedback_rule_tighten_trace_clients`) found **3 live, wired admin client write/delete paths** that depend on the current rule. Flipping to `write: if false` would break all three AND fail `npm run test:rules` (the `email admin can write` → `assertSucceeds` test). Unlike the `actionAudit` sibling — which has **zero** client writers — `verifiedSlips` does.
 
@@ -22,7 +22,7 @@ Path-1 SlipOK branch is redundant server-side (`verifySlip` already wrote the ca
 
 ## Design: 2 new admin callable CFs (SE1), then flip the rule
 
-### Phase 1 — `recordManualPayment` CF (replaces paths 1-cash + 2)
+### Phase 1 — `recordManualPayment` CF (replaces paths 1-cash + 2) — ✅ DONE (`9d4b81b`)
 - [ ] **New `functions/recordManualPayment.js`** — `functions.region('asia-southeast1').https.onCall`, admin-guard copied from `refundBill.js:58-65` (`context.auth.token.admin !== true` → `permission-denied`).
   - Input: `{ building, room, year, month, amount, mode: 'cash'|'override', txid?, sender?, bankCode?, receiptNo?, overrideReason?, slipMeta? }`. Validate at boundary (room, amount>0; `override` requires `overrideReason` + `txid` for traceability — mirror refundBill's "reason is part of the audit trail").
   - **Dedup-fence aware** (`verifyDepositSlip.js:295-310` pattern): `runTransaction` → `tx.get(verifiedRef)`; if an existing doc has no `manualEntry`/`manualOverride` flag (i.e. a CF-written SlipOK record), **return success without clobbering** (idempotent no-op) — never overwrite the canonical dedup record. Else upsert the manual doc.
@@ -32,7 +32,7 @@ Path-1 SlipOK branch is redundant server-side (`verifySlip` already wrote the ca
 - [ ] **Export** `exports.recordManualPayment = require('./recordManualPayment').recordManualPayment;` at **top-level** in `functions/index.js` (§7-CCC: never indented, or CI skips it).
 - [ ] **Unit test** `functions/__tests__/recordManualPayment.test.js` — mirror `verifyDepositSlip.test.js` tx-mock style: admin-guard rejects non-admin; cash upsert writes manual doc + audit; override requires reason; **dedup guard refuses to clobber an existing SlipOK doc**; idempotent re-call.
 
-### Phase 2 — `clearRoomPaymentSlips` CF (replaces path 3)
+### Phase 2 — `clearRoomPaymentSlips` CF (replaces path 3) — ✅ DONE (`9d4b81b`)
 - [ ] **New `functions/clearRoomPaymentSlips.js`** — same admin-guard + region. Input `{ building, room, year, month }`.
   - Admin SDK: delete deterministic `manual_*` ids + query `verifiedSlips where room == room`, filter by `timestamp`→(yearBE, month), delete matches (the `dashboard-bill.js:1290-1310` logic, server-side, no rules friction).
   - In-tx/batch `appendActionAudit({ action:'PAYMENT_RESET', ... })`.
