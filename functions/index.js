@@ -232,6 +232,17 @@ exports.requestPetLink   = require('./requestPetLink').requestPetLink;
 exports.respondPetLink   = require('./respondPetLink').respondPetLink;
 exports.removePetLink    = require('./removePetLink').removePetLink;
 
+// Lost Pet Alert (Meaning Layer #13) — a tenant raises an URGENT building-wide
+// alert ("วันนี้น้องหาย") → every approved neighbour gets a 🆘 LINE push and
+// watches for the pet; the owner taps "✅ เจอแล้ว" to resolve it. Top-level
+// building-scoped petAlerts/{alertId}, CF-only-write; reads the pet REGISTRY
+// (tenants/{b}/list/{r}/pets), NOT petProfiles (#10). Awards NO points. The
+// building-wide push is a mass action → hard 2/day server-side rate limit (§7-I).
+// Reuses LINE_CHANNEL_ACCESS_TOKEN (§7-WW). cleanupPetAlertsScheduled is a follow-up
+// (expired alerts are filtered client-side by status + expiresAt > now).
+exports.raisePetAlert   = require('./raisePetAlert').raisePetAlert;
+exports.resolvePetAlert = require('./resolvePetAlert').resolvePetAlert;
+
 // Immutable admin-action audit trail (Core Readiness Phase 1.1). Client-side admin
 // mutations call this after the write; in-tx CF actions log via _actionAudit directly.
 exports.recordAdminAction = require('./recordAdminAction').recordAdminAction;
