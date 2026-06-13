@@ -533,7 +533,7 @@ function showReserveDepositModal(building, roomId) {
         ${isAdd ? '' : `
         <div style="display:flex;gap:10px;margin-bottom:12px;">
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">อาคาร</label>${bField}</div>
-          <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">ห้อง</label><input id="dep-res-room" type="text" placeholder="เช่น N101" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
+          <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">ห้อง</label><select id="dep-res-room" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"><option value="">— เลือกห้อง —</option></select></div>
         </div>
         <div style="display:flex;gap:10px;margin-bottom:12px;">
           <div style="flex:1;"><label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">มัดจำทั้งหมด (2 เดือน)</label><input id="dep-res-amount" type="number" min="0" placeholder="บาท" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;box-sizing:border-box;font-size:var(--fs-sm);"></div>
@@ -558,16 +558,27 @@ function showReserveDepositModal(building, roomId) {
   document.body.appendChild(modal);
   window._depReserveCtx = { isAdd, building: building || '', roomId: roomId || '' };
 
-  // Auto-fill มัดจำทั้งหมด = the room's rentPrice × 2 (the standard 2-month deposit) once a room is
-  // entered. Admin can still override; once they manually edit the amount the auto-fill stops. Only
-  // on a fresh reserve (the อาคาร/ห้อง/มัดจำ fields exist when !isAdd). Source: window.getRoomRentPrice
-  // (room-config.js) — 0 for an unknown room → no fill, admin types it.
+  // ห้อง dropdown + auto-fill (fresh reserve only — the อาคาร/ห้อง/มัดจำ fields exist when !isAdd).
+  // Picking a room fills มัดจำทั้งหมด = its rentPrice × 2 (the standard 2-month deposit); admin can
+  // override (a manual edit to the amount stops the auto-fill). The room list + rent come from the
+  // narrow window.getRoomList / window.getRoomRentPrice helpers (room-config.js, §7-CC/§7-QQ).
   if (!isAdd) {
     const roomEl = modal.querySelector('#dep-res-room');
     const amtEl = modal.querySelector('#dep-res-amount');
     const bldEl = modal.querySelector('#dep-res-building');
     let amtTouched = false;
     amtEl?.addEventListener('input', () => { amtTouched = true; });
+    // Populate the ห้อง dropdown from the selected building's active rooms; repopulate on building
+    // change, preserving the current pick if it still exists in the new building.
+    const populateRooms = () => {
+      if (!roomEl) return;
+      const b = (bldEl?.value || building || 'rooms');
+      const rooms = (typeof window.getRoomList === 'function') ? window.getRoomList(b) : [];
+      const cur = roomEl.value;
+      roomEl.innerHTML = '<option value="">— เลือกห้อง —</option>'
+        + rooms.map(r => `<option value="${r}">ห้อง ${r}</option>`).join('');
+      if (rooms.indexOf(cur) !== -1) roomEl.value = cur;
+    };
     const autofillAmount = () => {
       if (amtTouched || !amtEl) return;
       const b = (bldEl?.value || building || 'rooms');
@@ -575,8 +586,9 @@ function showReserveDepositModal(building, roomId) {
       const rent = (rm && typeof window.getRoomRentPrice === 'function') ? window.getRoomRentPrice(b, rm) : 0;
       amtEl.value = rent > 0 ? String(rent * 2) : '';
     };
-    roomEl?.addEventListener('input', autofillAmount);
-    bldEl?.addEventListener('change', autofillAmount);
+    populateRooms();
+    roomEl?.addEventListener('change', autofillAmount);
+    bldEl?.addEventListener('change', () => { populateRooms(); autofillAmount(); });
   }
 }
 window.showReserveDepositModal = showReserveDepositModal;

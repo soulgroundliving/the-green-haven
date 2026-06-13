@@ -393,6 +393,12 @@ if (typeof window !== 'undefined') {
       return room && Number(room.rentPrice) > 0 ? Number(room.rentPrice) : 0;
     } catch (_) { return 0; }
   };
+  // Active room IDs for a building (not soft-deleted) — feeds the deposit reserve modal's
+  // ห้อง dropdown so admin picks a room instead of free-typing.
+  window.getRoomList = (building) => {
+    try { return RoomConfigManager.getAllRooms(building) || []; }
+    catch (_) { return []; }
+  };
 }
 
 /**
