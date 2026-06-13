@@ -1005,6 +1005,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'showForfeitDepositModal') { typeof showForfeitDepositModal === 'function' && showForfeitDepositModal(el.dataset.building, el.dataset.room); return; }
     if (a === 'closeForfeitDepositModal'){ document.getElementById('forfeitDepositModal')?.remove(); return; }
     if (a === 'forfeitReservedDeposit')  { typeof window._forfeitReservedDeposit === 'function' && window._forfeitReservedDeposit(el.dataset.id, el.dataset.arg); return; }
+    if (a === 'showLumpDepositModal')    { typeof showLumpDepositModal === 'function' && showLumpDepositModal(); return; }
+    if (a === 'closeLumpDepositModal')   { document.getElementById('lumpDepositModal')?.remove(); return; }
+    if (a === 'saveLumpDeposit')         { typeof window._saveLumpDeposit === 'function' && window._saveLumpDeposit(); return; }
     if (a === 'removeDepDeduction') {
       const idx = parseInt(el.dataset.index);
       if (!isNaN(idx) && window._depPendingDeductions) {

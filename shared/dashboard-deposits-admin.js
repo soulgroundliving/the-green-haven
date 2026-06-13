@@ -51,6 +51,18 @@ async function _uploadDepositFile(building, roomId, file, prefix) {
   return path;
 }
 
+// Read a picked File as a data: URL (base64) for the verifyDepositSlip CF. The CF
+// tolerates the full "data:...;base64," prefix (§7-EEE strips it server-side), so we
+// send readAsDataURL output verbatim — same contract as the tenant slip-verify path.
+function _fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error('อ่านไฟล์สลิปไม่สำเร็จ'));
+    r.readAsDataURL(file);
+  });
+}
+
 function initDepositsPage() {
   if (_depositsUnsub) { renderDepositsPage(); return; }
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
@@ -188,7 +200,7 @@ function renderDepositsPage() {
 
   const list = document.getElementById('depList');
   if (!list) return;
-  const createBtn = `<div style="margin-bottom:12px;display:flex;justify-content:flex-end;"><button data-action="showReserveDepositModal" style="padding:7px 14px;background:#1e40af;color:#fff;border:none;border-radius:9px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">+ บันทึกมัดจำก่อนย้ายเข้า</button></div>`;
+  const createBtn = `<div style="margin-bottom:12px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;"><button data-action="showLumpDepositModal" style="padding:7px 14px;background:#eef2f6;color:#1e40af;border:1px solid #bfdbfe;border-radius:9px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">💰 จ่ายรวมหลายห้อง</button><button data-action="showReserveDepositModal" style="padding:7px 14px;background:#1e40af;color:#fff;border:none;border-radius:9px;font-size:var(--fs-sm);font-weight:700;cursor:pointer;font-family:inherit;">+ บันทึกมัดจำก่อนย้ายเข้า</button></div>`;
   if (!rows.length) {
     list.innerHTML = createBtn + '<div style="text-align:center;padding:2rem;color:var(--text-muted);">ไม่มีรายการมัดจำ</div>';
     return;
@@ -532,10 +544,10 @@ function showReserveDepositModal(building, roomId) {
           <div style="display:flex;gap:8px;margin-bottom:8px;">
             <input id="dep-res-pay-label" type="text" value="${isAdd ? 'มัดจำ' : 'จอง'}" style="width:84px;flex-shrink:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;">
             <input id="dep-res-pay-amount" type="number" min="0" placeholder="บาท" value="${isAdd ? '' : '500'}" style="flex:1;min-width:0;padding:8px 10px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;">
-            <select id="dep-res-pay-method" style="width:84px;flex-shrink:0;padding:8px 6px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;"><option value="cash">เงินสด</option><option value="slip">สลิป</option></select>
+            <select id="dep-res-pay-method" style="width:92px;flex-shrink:0;padding:8px 6px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;"><option value="cash">เงินสด</option><option value="slip">สลิป</option><option value="slipverify">ตรวจสลิป</option></select>
           </div>
           <input id="dep-res-pay-slip" type="file" accept="image/*,application/pdf" style="width:100%;font-size:10px;font-family:inherit;color:#6b7280;">
-          <div style="font-size:10px;color:#9ca3af;margin-top:6px;">📎 สลิป = เก็บเป็นหลักฐาน (ตรวจ SlipOK ขั้น Phase 2)</div>
+          <div style="font-size:10px;color:#9ca3af;margin-top:6px;">📎 "สลิป" = เก็บหลักฐาน · "ตรวจสลิป" = ยืนยันยอดอัตโนมัติด้วย SlipOK</div>
         </div>
       </div>
       <div style="flex-shrink:0;display:flex;gap:10px;padding:14px 22px;border-top:1px solid #eef0ee;">
@@ -561,7 +573,9 @@ async function _saveReserveDeposit() {
 
   const payLabel  = (document.getElementById('dep-res-pay-label')?.value || 'มัดจำ').trim();
   const payAmount = Number(document.getElementById('dep-res-pay-amount')?.value) || 0;
-  const payMethod = document.getElementById('dep-res-pay-method')?.value === 'slip' ? 'slip' : 'cash';
+  const payMethodRaw = document.getElementById('dep-res-pay-method')?.value;
+  const isVerify  = payMethodRaw === 'slipverify';
+  const payMethod = (payMethodRaw === 'slip' || payMethodRaw === 'slipverify') ? 'slip' : 'cash';
   const slipFile  = document.getElementById('dep-res-pay-slip')?.files?.[0] || null;
   if (payAmount <= 0) { alert('กรุณากรอกจำนวนเงินที่ชำระ'); return; }
 
@@ -587,8 +601,36 @@ async function _saveReserveDeposit() {
 
   const saveBtn = document.querySelector('#reserveDepositModal [data-action="saveReserveDeposit"]');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'กำลังบันทึก…'; }
+  const _reEnable = () => { if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✅ บันทึก'; } };
 
-  // Slip stored as evidence (Phase 1); SlipOK verification = Phase 2 verifyDepositSlip CF.
+  // ── "ตรวจสลิป" path: verifyDepositSlip CF SlipOK-verifies the slip AND credits
+  // paidSoFar server-side — so do NOT write paidSoFar client-side (double-count). The
+  // CF reads the deposit doc, so on a NEW deposit write the reserved shell first
+  // (paidSoFar:0, no chunk) and let the CF record + credit the verified chunk.
+  if (isVerify) {
+    if (!slipFile) { _reEnable(); alert('แนบไฟล์สลิปเพื่อตรวจ SlipOK'); return; }
+    if (!ctx.isAdd) {
+      try { await fs.setDoc(fs.doc(db, 'deposits', docId), baseDoc, { merge: true }); }
+      catch (e) { _reEnable(); alert('สร้างรายการมัดจำไม่สำเร็จ: ' + e.message); return; }
+    }
+    let dataUrl;
+    try { dataUrl = await _fileToDataUrl(slipFile); }
+    catch (e) { _reEnable(); alert(e.message || 'อ่านไฟล์ไม่สำเร็จ'); return; }
+    try {
+      const callable = window.firebase?.functions?.httpsCallable?.('verifyDepositSlip');
+      if (!callable) throw new Error('ฟังก์ชันยังไม่พร้อม');
+      const res = await callable({ allocations: [{ building, roomId, amount: payAmount, label: payLabel }], file: dataUrl });
+      const out = (res && res.data) || res || {};
+      if (out.success === false && out.retryable) { _reEnable(); alert(out.message || 'สลิปยังตรวจไม่ได้ กรุณารอสักครู่แล้วลองใหม่'); return; }
+      document.getElementById('reserveDepositModal')?.remove();
+      if (typeof showToast === 'function') showToast('✅ ตรวจสลิป SlipOK + บันทึกมัดจำแล้ว');
+    } catch (e) {
+      _reEnable(); alert('ตรวจสลิปไม่สำเร็จ: ' + (e?.message || e));
+    }
+    return;
+  }
+
+  // Slip stored as evidence (Phase 1); SlipOK verification = the "ตรวจสลิป" path above.
   let slipPath = '';
   if (payMethod === 'slip' && slipFile) {
     try { slipPath = await _uploadDepositFile(building, roomId, slipFile, 'payment'); }
@@ -612,6 +654,131 @@ async function _saveReserveDeposit() {
   }
 }
 window._saveReserveDeposit = _saveReserveDeposit;
+
+// ── Pre-move-in deposit: LUMP — one payment covering several rooms (owner D5) ─
+// One transfer/cash payment can cover the deposit for several reserved rooms. Cash
+// = recorded per-room here with a shared lumpRef; slip = sent to verifyDepositSlip,
+// which SlipOK-verifies that the slip total equals the sum of the per-room amounts.
+// Only rooms with an outstanding deposit (reserved/holding, due>0) are offered.
+function showLumpDepositModal() {
+  const D = window.DepositCalc;
+  const phase = r => D ? D.depositPhase(r) : (r.status || 'holding');
+  const due   = r => D ? D.depositDue(r) : Math.max(0, (Number(r.amount) || 0) - (Number(r.paidSoFar) || 0));
+  const candidates = _depositsCache.filter(r => ['reserved', 'holding'].includes(phase(r)) && due(r) > 0);
+  if (!candidates.length) { alert('ไม่มีห้องที่ยังค้างมัดจำ'); return; }
+  const fmt = n => '฿' + (Number(n) || 0).toLocaleString();
+
+  document.getElementById('lumpDepositModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'lumpDepositModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  const rows = candidates.map(r => {
+    const key = `${r.building}_${r.roomId}`;
+    return `<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f1f3f1;">
+      <input type="checkbox" class="dep-lump-cb" data-key="${key}" data-building="${r.building}" data-room="${r.roomId}" style="width:16px;height:16px;flex-shrink:0;">
+      <span style="flex:1;font-size:var(--fs-sm);color:#374151;">ห้อง ${r.roomId} <span style="color:#9ca3af;">· ${r.building} · ค้าง ${fmt(due(r))}</span></span>
+      <input type="number" class="dep-lump-amt" data-key="${key}" min="0" value="${due(r)}" style="width:92px;padding:6px 8px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:8px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;">
+    </label>`;
+  }).join('');
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:460px;max-height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);">
+      <div style="flex-shrink:0;padding:18px 22px 14px;border-bottom:1px solid #eef0ee;">
+        <h3 style="margin:0;font-size:1.05rem;color:#334435;font-weight:800;">💰 จ่ายรวมหลายห้อง (1 ครั้ง)</h3>
+        <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">เลือกห้อง + ใส่ยอดที่จ่ายให้แต่ละห้อง</div>
+      </div>
+      <div style="flex:1 1 auto;overflow-y:auto;padding:14px 22px;">
+        <label style="font-size:var(--fs-sm);font-weight:600;color:#374151;display:block;margin-bottom:5px;">วิธีชำระ</label>
+        <select id="dep-lump-method" style="width:100%;padding:9px 12px;border:1px solid ${DashColors.BORDER_LIGHT};border-radius:9px;font-family:inherit;font-size:var(--fs-sm);box-sizing:border-box;margin-bottom:10px;"><option value="cash">เงินสด (บันทึกเอง)</option><option value="slipverify">สลิป · ตรวจ SlipOK</option></select>
+        <input id="dep-lump-file" type="file" accept="image/*,application/pdf" style="width:100%;font-size:10px;font-family:inherit;color:#6b7280;">
+        <div style="font-size:10px;color:#9ca3af;margin:6px 0 12px;">📎 แนบสลิปเมื่อเลือก "ตรวจ SlipOK" — ยอดสลิปต้องเท่ากับผลรวมที่จัดสรร</div>
+        <div style="border:1px solid #eef0ee;border-radius:10px;padding:2px 12px;">${rows}</div>
+      </div>
+      <div style="flex-shrink:0;padding:12px 22px;border-top:1px solid #eef0ee;">
+        <div style="text-align:right;font-size:var(--fs-sm);color:#334435;font-weight:800;margin-bottom:10px;">รวมจัดสรร <span id="dep-lump-total">฿0</span></div>
+        <div style="display:flex;gap:10px;">
+          <button data-action="closeLumpDepositModal" style="flex:1;padding:11px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">ยกเลิก</button>
+          <button data-action="saveLumpDeposit" style="flex:2;padding:11px;background:#1e40af;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">✅ บันทึก</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  // CSP-safe live total (no inline handlers): recompute the allocated sum on any change.
+  modal.querySelectorAll('.dep-lump-cb, .dep-lump-amt').forEach(el => el.addEventListener('input', _lumpRecalc));
+  _lumpRecalc();
+}
+window.showLumpDepositModal = showLumpDepositModal;
+
+function _lumpRecalc() {
+  const modal = document.getElementById('lumpDepositModal');
+  if (!modal) return;
+  let total = 0;
+  modal.querySelectorAll('.dep-lump-cb').forEach(cb => {
+    if (!cb.checked) return;
+    const amt = modal.querySelector(`.dep-lump-amt[data-key="${cb.dataset.key}"]`);
+    total += Number(amt?.value) || 0;
+  });
+  const el = document.getElementById('dep-lump-total');
+  if (el) el.textContent = '฿' + total.toLocaleString();
+}
+window._lumpRecalc = _lumpRecalc;
+
+async function _saveLumpDeposit() {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  const D = window.DepositCalc;
+  const modal = document.getElementById('lumpDepositModal');
+  if (!modal) return;
+  const method = document.getElementById('dep-lump-method')?.value === 'slipverify' ? 'slipverify' : 'cash';
+
+  const allocations = [];
+  modal.querySelectorAll('.dep-lump-cb').forEach(cb => {
+    if (!cb.checked) return;
+    const amt = Number(modal.querySelector(`.dep-lump-amt[data-key="${cb.dataset.key}"]`)?.value) || 0;
+    if (amt > 0) allocations.push({ building: cb.dataset.building, roomId: cb.dataset.room, amount: amt, label: 'มัดจำ (รวม)' });
+  });
+  if (!allocations.length) { alert('เลือกห้องและกรอกยอดอย่างน้อย 1 ห้อง'); return; }
+
+  const saveBtn = modal.querySelector('[data-action="saveLumpDeposit"]');
+  const reEnable = () => { if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✅ บันทึก'; } };
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'กำลังบันทึก…'; }
+
+  if (method === 'slipverify') {
+    const file = document.getElementById('dep-lump-file')?.files?.[0] || null;
+    if (!file) { reEnable(); alert('แนบไฟล์สลิปเพื่อตรวจ SlipOK'); return; }
+    let dataUrl;
+    try { dataUrl = await _fileToDataUrl(file); } catch (e) { reEnable(); alert(e.message || 'อ่านไฟล์ไม่สำเร็จ'); return; }
+    try {
+      const callable = window.firebase?.functions?.httpsCallable?.('verifyDepositSlip');
+      if (!callable) throw new Error('ฟังก์ชันยังไม่พร้อม');
+      const res = await callable({ allocations, file: dataUrl });
+      const out = (res && res.data) || res || {};
+      if (out.success === false && out.retryable) { reEnable(); alert(out.message || 'สลิปยังตรวจไม่ได้ กรุณารอสักครู่'); return; }
+      modal.remove();
+      if (typeof showToast === 'function') showToast(`✅ ตรวจสลิป SlipOK + บันทึก ${allocations.length} ห้องแล้ว`);
+    } catch (e) { reEnable(); alert('ตรวจสลิปไม่สำเร็จ: ' + (e?.message || e)); }
+    return;
+  }
+
+  // Cash: record each room's chunk client-side with a shared lumpRef. Admin-initiated
+  // bulk write across the admin's own deposit docs — the modal is the preview and this
+  // save is the explicit click (§7-I: no auto-click on a financial action).
+  const lumpRef = 'cash_' + Date.now();
+  try {
+    for (const a of allocations) {
+      const dep = _depositsCache.find(r => r.building === a.building && r.roomId === a.roomId);
+      if (!dep) continue;
+      const patch = D
+        ? D.recordDepositPayment(dep, { label: a.label, amount: a.amount, method: 'cash', lumpRef })
+        : { paidSoFar: (Number(dep.paidSoFar) || 0) + a.amount, payments: (dep.payments || []).concat([{ label: a.label, amount: a.amount, method: 'cash', lumpRef }]) };
+      await fs.setDoc(fs.doc(db, 'deposits', `${a.building}_${a.roomId}`),
+        { paidSoFar: patch.paidSoFar, payments: patch.payments, updatedAt: new Date().toISOString() }, { merge: true });
+    }
+    modal.remove();
+    if (typeof showToast === 'function') showToast(`✅ บันทึกจ่ายรวม ${allocations.length} ห้องแล้ว`);
+  } catch (e) { reEnable(); alert('บันทึกไม่สำเร็จ: ' + (e?.message || e)); }
+}
+window._saveLumpDeposit = _saveLumpDeposit;
 
 // ── Pre-move-in transitions (Phase 2): confirm move-in / forfeit (no-show) ───
 // Each opens a styled preview and calls an admin SE1 CF on an EXPLICIT click
