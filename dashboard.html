@@ -449,13 +449,17 @@
       for (let i = 0; i < 50 && !window.firebaseReady; i++) await new Promise(r => setTimeout(r, 100));
       const fbUser = await new Promise((resolve) => {
         if (!auth) return resolve(null);
-        let done = false;
-        const finish = (u) => { if (!done) { done = true; resolve(u || null); } };
-        try {
-          const unsub = onAuthStateChanged(auth, (u) => { finish(u); try { unsub(); } catch (_) {} });
-        } catch (_) { finish(auth.currentUser); }
-        try { auth.authStateReady?.().then(() => finish(auth.currentUser)); } catch (_) {}
-        setTimeout(() => finish(auth && auth.currentUser), 8000); // hard cap so we never hang
+        let done = false, unsub = () => {};
+        const finish = (u) => { if (!done) { done = true; try { unsub(); } catch (_) {} resolve(u || null); } };
+        // If the persisted session is already restored, use it. Otherwise wait for the
+        // restore — it fires onAuthStateChanged with the user (the ONLY reliable signal;
+        // window.firebaseReady fires earlier and auth.authStateReady is absent in this
+        // SDK build, which is why v1/v2 read currentUser too early and bounced admins).
+        if (auth.currentUser) { finish(auth.currentUser); }
+        else {
+          try { unsub = onAuthStateChanged(auth, (u) => { if (u) finish(u); }); } catch (_) {}
+          setTimeout(() => finish(auth.currentUser), 6000); // cap: no user ⇒ treat as logged-out
+        }
       });
       let isAdmin = false;
       if (fbUser) {
@@ -468,6 +472,7 @@
         try { window.SecurityUtils.saveSecureSession(user); } catch (_) {}
       } else {
         // No valid session AND Firebase is not an authed admin → genuinely not allowed.
+        console.warn('[authgate] redirecting to /login —', { hasFbUser: !!fbUser, isAdmin, firebaseReady: window.firebaseReady });
         if (fbUser && !isAdmin) {
           alert('เฉพาะ Admin เท่านั้นที่สามารถเข้าถึง Dashboard');
         }
