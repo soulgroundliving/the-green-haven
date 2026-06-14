@@ -78,6 +78,9 @@ exports.submitBookingKyc = require('./submitBookingKyc').submitBookingKyc;
 
 // Admin-only archive of a tenant on move-out — preserves identity + history.
 exports.archiveTenantOnMoveOut = require('./archiveTenantOnMoveOut').archiveTenantOnMoveOut;
+// Admin-only: AI-written Thai farewell keepsake at move-out (Meaning Layer #16-v2).
+// Generates a DRAFT from anonymized stats (§7-I preview); publish writes farewellSummary.
+exports.composeFarewellSummary = require('./composeFarewellSummary').composeFarewellSummary;
 // Admin-only single-pet delete (Firestore doc + Storage files).
 exports.deletePetMedia = require('./deletePetMedia').deletePetMedia;
 // Transition active tenant to community-member (player) — archives contract, creates people/{tenantId} doc.

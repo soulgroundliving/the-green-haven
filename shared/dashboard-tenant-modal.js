@@ -900,6 +900,126 @@ async function archiveTenantOnMoveOut() {
 // Expose globally so dashboard-main.js's data-action dispatcher can find it
 window.archiveTenantOnMoveOut = archiveTenantOnMoveOut;
 
+// ─── Compose farewell AI summary (Meaning Layer #16-v2) ───────────────────
+// 🎁 admin gift at move-out: composeFarewellSummary CF generates a Thai DRAFT
+// from ANONYMIZED stats only (no PII crosses the border — name templated in
+// server-side after the prose returns). §7-I: preview the draft → admin clicks
+// ส่ง → publish writes farewellSummary{status:'published'} onto the live tenant
+// doc, which rides into the archive automatically. The published prose shows in
+// the tenant's 🪴 Life Timeline farewell card (tenant-farewell.js .tlf-ai block).
+async function composeFarewellSummary() {
+  const building = currentEditBuilding;
+  const roomId = currentEditRoomId;
+  if (!building || !roomId) {
+    showToast('ไม่พบข้อมูลห้อง — เปิด modal ก่อนแล้วลองใหม่', 'error');
+    return;
+  }
+  const occupancy = TenantLookup.getRoomOccupancyInfo(building, roomId);
+  const tenant = occupancy.tenant || {};
+  const tenantName = String(tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`).trim();
+  if (!tenant.tenantId) {
+    showToast('ห้องนี้ไม่มีผู้เช่าอยู่ — ยังสร้างการ์ดอำลาไม่ได้', 'info');
+    return;
+  }
+  if (!window.firebase?.functions?.httpsCallable) {
+    showToast('Firebase functions ไม่พร้อม — รีโหลดหน้า', 'error');
+    return;
+  }
+  if (!window.GhModal) {
+    showToast('UI modal ไม่พร้อม — รีโหลดหน้า', 'error');
+    return;
+  }
+
+  const callable = window.firebase.functions.httpsCallable('composeFarewellSummary');
+
+  // Generate a draft (CF returns { draft, model }; writes NOTHING — §7-I).
+  async function generate() {
+    const res = await callable({ building, roomId });
+    return (res && res.data) || {};
+  }
+
+  let draftText = '';
+  try {
+    showToast('กำลังสร้างการ์ดอำลา…', 'info');
+    const out = await generate();
+    draftText = String(out.draft || '').trim();
+  } catch (e) {
+    console.error('composeFarewellSummary (generate) failed:', e);
+    showToast('สร้างการ์ดอำลาไม่สำเร็จ: ' + (e?.message || String(e)), 'error');
+    return;
+  }
+  if (!draftText) {
+    showToast('AI คืนข้อความว่าง — ลองใหม่อีกครั้ง', 'error');
+    return;
+  }
+
+  // ── Preview modal — DOM API only (escaped textContent, never innerHTML) ──
+  const wrap = document.createElement('div');
+  const hint = document.createElement('p');
+  hint.textContent = `การ์ดอำลาสำหรับ "${tenantName || 'ผู้เช่า'}" (ห้อง ${roomId}) — ตรวจสอบแล้วกด "ส่ง" เพื่อบันทึก. AI ได้รับเฉพาะตัวเลขสถิติแบบไม่ระบุตัวตน (ชื่อถูกเติมในเครื่องภายหลัง).`;
+  hint.style.cssText = 'margin:0 0 12px;font-size:.85rem;color:#6b7280;line-height:1.6;';
+  const quote = document.createElement('p');
+  quote.textContent = draftText; // escaped — model output never via innerHTML
+  quote.style.cssText = 'margin:0;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:1rem;line-height:1.8;color:#14532d;white-space:pre-wrap;';
+  wrap.appendChild(hint);
+  wrap.appendChild(quote);
+
+  let busy = false;
+  const modal = window.GhModal.open({
+    title: '🎁 การ์ดอำลา (ตัวอย่าง)',
+    body: wrap,
+    size: 'default',
+    actions: [
+      { label: 'ยกเลิก', variant: 'ghost', onClick: (m) => m.close() },
+      {
+        label: '🔄 สร้างใหม่',
+        variant: 'secondary',
+        onClick: async (m, ev) => {
+          if (busy) return;
+          busy = true;
+          const btn = ev && ev.target;
+          if (btn) btn.disabled = true;
+          try {
+            const out = await generate();
+            const next = String(out.draft || '').trim();
+            if (next) quote.textContent = next, draftText = next;
+            else showToast('AI คืนข้อความว่าง — ลองใหม่อีกครั้ง', 'error');
+          } catch (e) {
+            console.error('composeFarewellSummary (regenerate) failed:', e);
+            showToast('สร้างใหม่ไม่สำเร็จ: ' + (e?.message || String(e)), 'error');
+          } finally {
+            busy = false;
+            if (btn) btn.disabled = false;
+          }
+        },
+      },
+      {
+        label: 'ส่ง',
+        variant: 'primary',
+        onClick: async (m, ev) => {
+          if (busy) return;
+          busy = true;
+          const btn = ev && ev.target;
+          if (btn) btn.disabled = true;
+          try {
+            // §7-I confirm step: publish the previewed text.
+            await callable({ building, roomId, publish: true, text: draftText });
+            showToast('✓ บันทึกการ์ดอำลาแล้ว — ผู้เช่าจะเห็นในหน้า 🪴', 'success');
+            m.close();
+          } catch (e) {
+            console.error('composeFarewellSummary (publish) failed:', e);
+            showToast('บันทึกไม่สำเร็จ: ' + (e?.message || String(e)), 'error');
+            busy = false;
+            if (btn) btn.disabled = false;
+          }
+        },
+      },
+    ],
+  });
+  return modal;
+}
+window.composeFarewellSummary = composeFarewellSummary;
+
 // ─── Transition tenant to community member / player role ──────────────────
 // Calls transitionToPlayer CF — archives contract, creates people/{tenantId},
 // sets role:'player' claim. Person stays in LINE with community/wellness/

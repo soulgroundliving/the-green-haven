@@ -1794,6 +1794,11 @@ body.gh-tour-open {
 .tlf-stat__val { font-size: var(--fs-md, 0.95rem); font-weight: 700; color: var(--text, #2c2c2c); }
 .tlf-stat__label { font-size: var(--fs-xs, 0.72rem); color: var(--text-muted, #8a8f98); }
 .tlf-msg { margin: 0; font-size: var(--fs-sm, 0.82rem); color: var(--text-muted, #8a8f98); line-height: 1.5; }
+/* AI farewell keepsake (Meaning Layer #16-v2) — shown above the stat grid when
+   farewellSummary.status === 'published'. Token-driven (§7-III dark aliases). */
+.tlf-ai { margin: 0 0 14px; padding: 12px 14px; background: var(--surface-sunken, #eef6f2); border-left: 3px solid var(--brand-primary, #2d8653); border-radius: 10px; }
+.tlf-ai__label { display: block; margin: 0 0 6px; font-size: var(--fs-xs, 0.72rem); font-weight: 700; letter-spacing: 0.02em; color: var(--brand-primary, #2d8653); }
+.tlf-ai__text { margin: 0; font-size: var(--fs-sm, 0.82rem); line-height: 1.7; color: var(--text, #2c2c2c); white-space: pre-wrap; }
 
 /* ── Neighbour Bonds card (Tenant-pillar, derive-only) ────────────────────────
    Rendered by shared/tenant-neighbor-bonds.js into #neighbor-bonds-card at the

@@ -797,6 +797,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     // Save / action buttons
     if (a === 'saveTenantInfo') { saveTenantInfo(); return; }
     if (a === 'archiveTenantOnMoveOut') { typeof archiveTenantOnMoveOut === 'function' && archiveTenantOnMoveOut(); return; }
+    if (a === 'composeFarewellSummary') { typeof window.composeFarewellSummary === 'function' && window.composeFarewellSummary(); return; }
     if (a === 'transitionToPlayer') { typeof transitionToPlayer === 'function' && transitionToPlayer(); return; }
     if (a === 'revertTransitionToPlayer') { typeof revertTransitionToPlayer === 'function' && revertTransitionToPlayer(); return; }
     if (a === 'openRenewLeaseModal') { typeof window.openRenewLeaseModal === 'function' && window.openRenewLeaseModal(); return; }
