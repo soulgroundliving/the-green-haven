@@ -1812,6 +1812,104 @@ body.gh-tour-open {
 .nb-item__tally { flex: 0 0 auto; font-size: var(--fs-sm, 0.82rem); font-weight: 700; color: var(--brand-primary, #2d8653); font-variant-numeric: tabular-nums; }
 .nb-empty { margin: 8px 0 0; padding: 22px 16px; text-align: center; font-size: var(--fs-sm, 0.82rem); color: var(--text-muted, #8a8f98); background: var(--surface-sunken, #eef6f2); border-radius: 12px; line-height: 1.5; }
 
+/* ── Pet Playdate booking (Meaning Layer #11) — tenant #pet-playdate-list.
+   Rendered by shared/tenant-pet-playdate.js (escaped, §7-X). Token-driven so it
+   auto-flips in dark mode; mirrors the .pet-dir__* vocabulary (§7-RR/III — static
+   CSS, never a JS-injected <style>). Light mode is the default; only the faint
+   green-pale tints get a dark-mode nudge at the bottom (matches .pet-dir). */
+.pet-play__muted,
+.pet-play__empty {
+  text-align: center; padding: 2.2rem 1rem;
+  color: var(--text-muted, #8a8f98); font-size: 0.9rem; line-height: 1.5;
+}
+.pet-play__empty {
+  background: var(--green-pale, #f3f7f3); border-radius: 14px; margin: 6px 0 12px;
+}
+.pet-play__section-title {
+  margin: 18px 2px 10px; font-size: 0.78rem; font-weight: 800;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted, #8a8f98);
+}
+.pet-play__section-title:first-child { margin-top: 6px; }
+
+.pet-play__card {
+  padding: 14px 16px; margin: 0 0 10px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border-subtle, #ebe9e2);
+  border-left: 3px solid var(--green, #2d8653);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.pet-play__card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.pet-play__title { flex: 1; min-width: 0; font-size: 1rem; font-weight: 800; color: var(--text, #2c2c2c); }
+.pet-play__meta { font-size: var(--fs-sm, 0.84rem); color: var(--text-muted, #6b7280); line-height: 1.7; }
+.pet-play__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.pet-play__chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 600;
+  background: var(--green-pale, #eef5ee); color: var(--text, #2c2c2c);
+}
+
+.pet-play__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.pet-play__hint { font-size: var(--fs-sm, 0.8rem); color: var(--text-muted, #8a8f98); }
+.pet-play__btn {
+  border: none; border-radius: 12px; padding: 9px 16px;
+  font-family: inherit; font-size: 0.88rem; font-weight: 700;
+  cursor: pointer; transition: transform 0.12s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+.pet-play__btn:active { transform: scale(0.97); }
+.pet-play__btn:disabled { opacity: 0.55; cursor: default; }
+.pet-play__btn--primary { background: var(--green, #2d8653); color: #fff; }
+.pet-play__btn--primary:hover { background: var(--green-dark, #1a5c38); }
+.pet-play__btn--ghost {
+  background: transparent; color: var(--green, #2d8653);
+  border: 1px solid var(--green, #2d8653);
+}
+.pet-play__btn--mute {
+  background: transparent; color: var(--text-muted, #8a8f98);
+  border: 1px solid var(--border-subtle, #ddd);
+}
+.pet-play__open-form { width: 100%; }
+
+.pet-play__pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 700;
+}
+.pet-play__pill--host { background: var(--green-pale, #eef5ee); color: var(--green-dark, #1a5c38); }
+.pet-play__pill--on { background: var(--green-pale, #e8f5ec); color: var(--green-dark, #1a5c38); }
+.pet-play__pill--full { background: var(--green-pale, #f3f3ee); color: var(--text-muted, #8a8f98); }
+
+/* Host create form. */
+.pet-play__form {
+  display: block; padding: 16px; margin: 6px 0 14px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border-subtle, #ebe9e2); border-radius: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.pet-play__label {
+  display: block; margin: 0 0 12px;
+  font-size: var(--fs-sm, 0.82rem); font-weight: 700; color: var(--text, #2c2c2c);
+}
+.pet-play__row { display: flex; gap: 10px; }
+.pet-play__label--grow { flex: 1; min-width: 0; }
+.pet-play__input,
+.pet-play__select {
+  display: block; width: 100%; box-sizing: border-box; margin-top: 6px;
+  padding: 9px 10px; border: 1px solid var(--border-subtle, #ebe9e2);
+  border-radius: 10px; font-family: inherit; font-size: 0.9rem;
+  font-weight: 500; color: var(--text, #2c2c2c); background: var(--card, #fff);
+}
+.pet-play__input:focus,
+.pet-play__select:focus { outline: none; border-color: var(--green, #2d8653); }
+
+/* Dark mode — the brand tokens already flip; only the hardcoded green-pale tints
+   read muddy on the dark card, so nudge them (mirrors .pet-dir, §7-W/III). */
+[data-theme="dark"] .pet-play__chip { background: #19302a; color: #d7e3da; }
+[data-theme="dark"] .pet-play__pill--host,
+[data-theme="dark"] .pet-play__pill--on { background: #19302a; color: #8fe9c4; }
+[data-theme="dark"] .pet-play__pill--full { background: #20242a; color: #9aa3ad; }
+[data-theme="dark"] .pet-play__empty { background: #19302a; color: #cdd6cf; }
 /* ── Lost Pet Alert (Meaning Layer #13) — tenant #pet-alert-list (raise form +
    building-wide active alerts). Rendered by shared/tenant-pet-alerts.js. Static
    here, never injected via createElement('style') (§7-RR). Token-only so it
