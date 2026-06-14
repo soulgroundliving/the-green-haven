@@ -201,6 +201,19 @@ exports.acceptHelpRequest   = require('./acceptHelpRequest').acceptHelpRequest;
 exports.completeHelpRequest = require('./completeHelpRequest').completeHelpRequest;
 exports.cancelHelpRequest   = require('./cancelHelpRequest').cancelHelpRequest;
 
+// Emergency Caretaker lifecycle (Meaning Layer #14) — an owner posts an urgent
+// pet-sitting request, a neighbour in the same building accepts, the OWNER
+// confirms the care is done (§6 peer-confirmed; the caretaker never self-marks).
+// open→accepted→done (+cancelled), ONE callable per transition. PER-REQUEST
+// opt-in (D1): anyone in the building can accept — NO persistent flag, never
+// touches petProfiles/#10. POINT-FREE (D2 — care is its own reward). §7-NN
+// callables (Eventarc can't watch SE3 Firestore); accept/complete reuse the
+// existing LINE_CHANNEL_ACCESS_TOKEN secret for the owner/caretaker push (§7-WW).
+exports.postCaretakerRequest     = require('./postCaretakerRequest').postCaretakerRequest;
+exports.acceptCaretakerRequest   = require('./acceptCaretakerRequest').acceptCaretakerRequest;
+exports.completeCaretakerRequest = require('./completeCaretakerRequest').completeCaretakerRequest;
+exports.cancelCaretakerRequest   = require('./cancelCaretakerRequest').cancelCaretakerRequest;
+
 // Community requests board (Meaning Layer #3) — the micro-economy sibling of the
 // Helper board: a tenant asks to borrow/be-given an ITEM, a neighbour offers it,
 // the requester confirms received. open→offered→fulfilled (+cancelled), ONE
@@ -234,6 +247,29 @@ exports.upsertPetProfile = require('./upsertPetProfile').upsertPetProfile;
 exports.requestPetLink   = require('./requestPetLink').requestPetLink;
 exports.respondPetLink   = require('./respondPetLink').respondPetLink;
 exports.removePetLink    = require('./removePetLink').removePetLink;
+
+// Pet Playdate booking (Meaning Layer #11) — a Pet-pillar CONSUMER of #10. A tenant
+// with an APPROVED pet opens a playdate slot (petPlaydates/{auto}), neighbours' pets
+// join up to a capacity. ONE callable per transition (§7-NN); the capacity/dup race is
+// guarded by joinPetPlaydate's atomic runTransaction (cloned from createFacilityBooking).
+// Awards NO points (social-only, like #3/#10). cancelPetPlaydate reuses the existing
+// LINE_CHANNEL_ACCESS_TOKEN secret to notify attendees (§7-WW). NOTE: the past-event
+// sweep (cleanupPetPlaydatesScheduled) is a documented follow-up — past playdates are
+// hidden client-side by status+time, so the feature is complete without it.
+exports.createPetPlaydate = require('./createPetPlaydate').createPetPlaydate;
+exports.joinPetPlaydate   = require('./joinPetPlaydate').joinPetPlaydate;
+exports.leavePetPlaydate  = require('./leavePetPlaydate').leavePetPlaydate;
+exports.cancelPetPlaydate = require('./cancelPetPlaydate').cancelPetPlaydate;
+// Lost Pet Alert (Meaning Layer #13) — a tenant raises an URGENT building-wide
+// alert ("วันนี้น้องหาย") → every approved neighbour gets a 🆘 LINE push and
+// watches for the pet; the owner taps "✅ เจอแล้ว" to resolve it. Top-level
+// building-scoped petAlerts/{alertId}, CF-only-write; reads the pet REGISTRY
+// (tenants/{b}/list/{r}/pets), NOT petProfiles (#10). Awards NO points. The
+// building-wide push is a mass action → hard 2/day server-side rate limit (§7-I).
+// Reuses LINE_CHANNEL_ACCESS_TOKEN (§7-WW). cleanupPetAlertsScheduled is a follow-up
+// (expired alerts are filtered client-side by status + expiresAt > now).
+exports.raisePetAlert   = require('./raisePetAlert').raisePetAlert;
+exports.resolvePetAlert = require('./resolvePetAlert').resolvePetAlert;
 
 // Immutable admin-action audit trail (Core Readiness Phase 1.1). Client-side admin
 // mutations call this after the write; in-tx CF actions log via _actionAudit directly.

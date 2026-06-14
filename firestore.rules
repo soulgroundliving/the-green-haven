@@ -68,6 +68,19 @@ service cloud.firestore {
                     && resource.data.building == request.auth.token.building);
       allow write: if false;
     }
+    // Emergency Caretaker lifecycle (Meaning Layer #14) — the urgent pet-sitting
+    // board. Same building-scoped read + CF-only-write contract as helpRequests
+    // above (PDPA: owner/caretaker room labels + the SAFE pet snapshot — name +
+    // type-emoji only, NEVER health/vaccine — are visible within the building
+    // only; admin reads all for the moderation monitor). Writes via the callables
+    // postCaretakerRequest / acceptCaretakerRequest / completeCaretakerRequest /
+    // cancelCaretakerRequest (admin SDK bypasses rules; every transition is a callable).
+    match /caretakerRequests/{requestId} {
+      allow read:  if isAdmin()
+                || (isSignedIn() && request.auth.token.building != null
+                    && resource.data.building == request.auth.token.building);
+      allow write: if false;
+    }
     // Community requests board (Meaning Layer #3) — neighbour borrow/share board.
     // Same building-scoped read + CF-only-write contract as helpRequests above
     // (PDPA: requester/offerer room labels are visible within the building only;
@@ -108,6 +121,33 @@ service cloud.firestore {
     // read + CF-only-write contract; every transition is a callable
     // (requestPetLink / respondPetLink / removePetLink — admin SDK bypasses rules).
     match /petLinks/{linkId} {
+      allow read:  if isAdmin()
+                || (isSignedIn() && request.auth.token.building != null
+                    && resource.data.building == request.auth.token.building);
+      allow write: if false;
+    }
+    // Pet Playdate booking (Meaning Layer #11) — a tenant opens a playdate slot,
+    // neighbours' pets join up to a capacity. Same building-scoped read + CF-only-
+    // write contract as the boards above: a tenant sees ONLY their own building's
+    // playdates (PDPA scope); every transition is a callable (createPetPlaydate /
+    // joinPetPlaydate / leavePetPlaydate / cancelPetPlaydate — admin SDK bypasses
+    // rules). The atomic capacity/dup guard runs inside joinPetPlaydate's tx.
+    // Attendee snapshots carry only safe display fields (name + type emoji); health
+    // /vaccine NEVER live here.
+    match /petPlaydates/{playdateId} {
+      allow read:  if isAdmin()
+                || (isSignedIn() && request.auth.token.building != null
+                    && resource.data.building == request.auth.token.building);
+      allow write: if false;
+    }
+    // Lost Pet Alert (Meaning Layer #13) — building-wide urgent "pet is missing"
+    // broadcast. Same building-scoped read + CF-only-write contract as the boards
+    // above: an approved tenant sees ONLY their own building's active alerts (PDPA:
+    // a SAFE pet snapshot + owner room label are visible within the building only;
+    // health/vaccine NEVER live here — raisePetAlert copies safe fields only). Admin
+    // reads all. Every transition is a callable (raisePetAlert / resolvePetAlert —
+    // admin SDK bypasses rules; the building-wide push is rate-limited 2/day server-side).
+    match /petAlerts/{alertId} {
       allow read:  if isAdmin()
                 || (isSignedIn() && request.auth.token.building != null
                     && resource.data.building == request.auth.token.building);

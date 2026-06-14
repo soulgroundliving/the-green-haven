@@ -149,6 +149,9 @@
     <script src="./shared/tenant-pets.js" defer></script>
     <script src="./shared/tenant-pet-health.js" defer></script>
     <script src="./shared/tenant-pet-social.js" defer></script>
+    <script src="./shared/tenant-pet-caretaker.js" defer></script>
+    <script src="./shared/tenant-pet-playdate.js" defer></script>
+    <script src="./shared/tenant-pet-alerts.js" defer></script>
     <script src="./shared/tenant-profile-ui.js" defer></script>
     <script src="./shared/tenant-render.js" defer></script>
     <script src="./shared/tenant-auth.js" defer></script>
@@ -4353,6 +4356,46 @@
             </button>
         </div>
 
+        <!-- Emergency Caretaker entry (Meaning Layer #14). Opens #pet-caretaker-page;
+             generic showSubPage dispatch case — no arg, no hub edit (§7-JJJ-safe). -->
+        <div style="padding:0 16px 8px;">
+            <button type="button" data-action="showSubPage" data-page="pet-caretaker-page"
+                style="width:100%; display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid var(--border-subtle,#ebe9e2); background:var(--card,#fff); border-radius:18px; cursor:pointer; text-align:left; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <span style="font-size:1.6rem;" aria-hidden="true">🆘</span>
+                <span style="flex:1; min-width:0;">
+                    <strong style="display:block; font-size:var(--fs-md); color:var(--text-dark,#334435);">หาคนช่วยดูแลน้องยามฉุกเฉิน</strong>
+                    <small style="color:var(--text-muted,#8a8f98); font-size:var(--fs-sm);">ขอเพื่อนบ้านช่วยดูแลสัตว์เลี้ยงเมื่อคุณไม่อยู่</small>
+                </span>
+                <i class="fas fa-chevron-right u-color-green" aria-hidden="true"></i>
+            </button>
+        </div>
+        <!-- Pet Playdate booking entry (Meaning Layer #11). Opens #pet-playdate-page;
+             generic showSubPage dispatch case — no arg, no hub edit (§7-JJJ-safe). -->
+        <div style="padding:0 16px 4px;">
+            <button type="button" data-action="showSubPage" data-page="pet-playdate-page"
+                style="width:100%; display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid var(--border-subtle,#ebe9e2); background:var(--card,#fff); border-radius:18px; cursor:pointer; text-align:left; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <span style="font-size:1.6rem;" aria-hidden="true">🗓️</span>
+                <span style="flex:1; min-width:0;">
+                    <strong style="display:block; font-size:var(--fs-md); color:var(--text-dark,#334435);">นัดเล่นของน้อง</strong>
+                    <small style="color:var(--text-muted,#8a8f98); font-size:var(--fs-sm);">เปิดนัดเล่นกลุ่ม หรือชวนน้องไปเล่นกับเพื่อนบ้าน</small>
+                </span>
+                <i class="fas fa-chevron-right u-color-green" aria-hidden="true"></i>
+            </button>
+        </div>
+        <!-- Lost Pet Alert entry (Meaning Layer #13). Opens #pet-alert-page; generic
+             showSubPage dispatch case — no arg, no hub edit (§7-JJJ-safe). -->
+        <div style="padding:0 16px 8px;">
+            <button type="button" data-action="showSubPage" data-page="pet-alert-page"
+                style="width:100%; display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid var(--alert,#dc2626); background:var(--card,#fff); border-radius:18px; cursor:pointer; text-align:left; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <span style="font-size:1.6rem;" aria-hidden="true">🆘</span>
+                <span style="flex:1; min-width:0;">
+                    <strong style="display:block; font-size:var(--fs-md); color:var(--text-dark,#334435);">น้องหาย — แจ้งทั้งอาคาร</strong>
+                    <small style="color:var(--text-muted,#8a8f98); font-size:var(--fs-sm);">ส่งแจ้งเตือนด่วนให้เพื่อนบ้านช่วยกันตามหาน้อง</small>
+                </span>
+                <i class="fas fa-chevron-right" style="color:var(--alert,#dc2626);" aria-hidden="true"></i>
+            </button>
+        </div>
+
         <div id="pet-list-container" style="padding:0 16px 24px;">
             <div data-action="showSubPage" data-page="add-pet-page"
                 style="border: 2px dashed #e0e0e0; padding: 30px 20px; border-radius: 25px; text-align: center; cursor: pointer; background: #fff; transition: 0.3s;">
@@ -4856,6 +4899,96 @@
         </div>
         <div id="pet-directory-list" class="pet-dir" style="padding:0 16px 48px;">
             <div class="pet-dir__muted">กำลังโหลด…</div>
+        </div>
+    </div>
+
+    <!-- Emergency Caretaker board (Meaning Layer #14) — urgent pet-sitting requests.
+         Rendered by shared/tenant-pet-caretaker.js (window.renderPetCaretaker via the
+         showSubPage hook). The list rows are built by that module (escaped, §7-X
+         non-empty paths); styling is static .pc-* in components.css (§7-RR). The pet
+         picker is filled at runtime from the tenant's own approved pets (D1, read-only).
+         Markup-only here → no CSP hash regen (§7-II). -->
+    <div id="pet-caretaker-page" class="page">
+        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding: 20px 20px 18px;">
+            <div class="ta-icon-circle" data-action="showSubPage" data-page="pet-park-page" aria-label="กลับไปหน้า Pet Park">
+                <i class="fas fa-chevron-left u-color-green"></i>
+            </div>
+            <h1 style="margin:0; font-size: var(--fs-lg); color: var(--text-dark);">🆘 หาคนช่วยดูแลน้อง</h1>
+        </div>
+
+        <div style="padding:0 16px;">
+            <button type="button" id="pc-post-toggle" class="btn-main" style="width:100%; margin-bottom:12px;">+ ขอคนช่วยดูแลน้อง</button>
+
+            <!-- Empty state: no approved pets → guide to registration (§7-X). -->
+            <div id="pc-no-pets" class="pc-empty u-hidden" style="margin-bottom:12px;">
+                ยังไม่มีน้องที่อนุมัติ — เพิ่มและรออนุมัติสัตว์เลี้ยงก่อน จึงจะขอผู้ดูแลได้
+                <button type="button" data-action="showSubPage" data-page="add-pet-page"
+                    style="display:block; margin-top:8px; background:none; border:none; color:var(--primary-green); font-weight:600; cursor:pointer; padding:0;">+ เพิ่มสัตว์เลี้ยง</button>
+            </div>
+
+            <div id="pc-post-form" class="card u-hidden" style="margin-bottom:16px;">
+                <label class="ta-field-label">เลือกสัตว์เลี้ยง *</label>
+                <select id="pc-post-pet" style="width:100%; margin-bottom:10px;"></select>
+                <label class="ta-field-label">ต้องการให้ช่วยอะไร? *</label>
+                <textarea id="pc-post-need" maxlength="300" rows="2" placeholder="เช่น ให้อาหารเช้า-เย็น พาเดินเล่น เปลี่ยนน้ำ" style="width:100%; margin-bottom:10px;"></textarea>
+                <label class="ta-field-label">ความเร่งด่วน</label>
+                <select id="pc-post-urgency" style="width:100%; margin-bottom:10px;">
+                    <option value="scheduled">🗓️ ตามนัด (วางแผนล่วงหน้า)</option>
+                    <option value="urgent">🚨 ด่วน (ต้องการคนช่วยเร็ว)</option>
+                </select>
+                <label class="ta-field-label">เริ่มดูแล *</label>
+                <input type="datetime-local" id="pc-post-from" style="width:100%; margin-bottom:10px;">
+                <label class="ta-field-label">ถึง *</label>
+                <input type="datetime-local" id="pc-post-to" style="width:100%; margin-bottom:12px;">
+                <button type="button" id="pc-post-submit" class="btn-main" style="width:100%;">โพสต์คำขอ</button>
+            </div>
+
+            <div class="pc-section">
+                <div class="pc-section__head">🐾 คำขอในตึก <span class="pc-section__count" id="pc-open-count">0</span></div>
+                <div id="pc-open-list"><div class="pc-empty">กำลังโหลด…</div></div>
+            </div>
+            <div class="pc-section">
+                <div class="pc-section__head">📩 คำขอของฉัน <span class="pc-section__count" id="pc-mine-count">0</span></div>
+                <div id="pc-mine-list"><div class="pc-empty">—</div></div>
+            </div>
+            <div class="pc-section">
+                <div class="pc-section__head">💚 ที่ฉันรับดูแล <span class="pc-section__count" id="pc-jobs-count">0</span></div>
+                <div id="pc-jobs-list"><div class="pc-empty">—</div></div>
+            </div>
+        </div>
+    </div>
+    <!-- ===== PET PLAYDATE BOOKING (Meaning Layer #11) ===== -->
+    <!-- A tenant opens a playdate slot; neighbours' pets join up to a capacity.
+         Rendered by shared/tenant-pet-playdate.js (window.renderPetPlaydates via the
+         showSubPage hook). All content is built by that module (escaped, §7-X
+         non-empty paths); styling is static .pet-play-* in components.css (§7-RR).
+         Markup-only here → no CSP hash regen (§7-II). -->
+    <div id="pet-playdate-page" class="page">
+        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding: 20px 20px 18px;">
+            <div class="ta-icon-circle" data-action="showSubPage" data-page="pet-park-page" aria-label="กลับไปหน้า Pet Park">
+                <i class="fas fa-chevron-left u-color-green"></i>
+            </div>
+            <h1 style="margin:0; font-size: var(--fs-lg); color: var(--text-dark);">🐾 นัดเล่นของน้อง</h1>
+        </div>
+        <div id="pet-playdate-list" class="pet-play" style="padding:0 16px 48px;">
+            <div class="pet-play__muted">กำลังโหลด…</div>
+        </div>
+    </div>
+    <!-- Lost Pet Alert (Meaning Layer #13) — raise a building-wide 🆘 alert + see
+         active alerts. Rendered by shared/tenant-pet-alerts.js (window.renderPetAlerts
+         via the showSubPage hook). All content built by that module (escaped, §7-X
+         non-empty paths); styling is static .pet-alert__* in components.css (§7-RR).
+         Markup-only here → no CSP hash regen (§7-II). The 🆘 LINE Flex deep-links to
+         ?page=pet-alert → the module self-routes here. -->
+    <div id="pet-alert-page" class="page">
+        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding: 20px 20px 18px;">
+            <div class="ta-icon-circle" data-action="showSubPage" data-page="pet-park-page" aria-label="กลับไปหน้า Pet Park">
+                <i class="fas fa-chevron-left u-color-green"></i>
+            </div>
+            <h1 style="margin:0; font-size: var(--fs-lg); color: var(--text-dark);">🆘 น้องหาย</h1>
+        </div>
+        <div id="pet-alert-list" class="pet-alert" style="padding:0 16px 48px;">
+            <div class="pet-alert__muted">กำลังโหลด…</div>
         </div>
     </div>
 
