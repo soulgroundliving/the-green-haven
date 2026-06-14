@@ -198,6 +198,19 @@ exports.acceptHelpRequest   = require('./acceptHelpRequest').acceptHelpRequest;
 exports.completeHelpRequest = require('./completeHelpRequest').completeHelpRequest;
 exports.cancelHelpRequest   = require('./cancelHelpRequest').cancelHelpRequest;
 
+// Emergency Caretaker lifecycle (Meaning Layer #14) — an owner posts an urgent
+// pet-sitting request, a neighbour in the same building accepts, the OWNER
+// confirms the care is done (§6 peer-confirmed; the caretaker never self-marks).
+// open→accepted→done (+cancelled), ONE callable per transition. PER-REQUEST
+// opt-in (D1): anyone in the building can accept — NO persistent flag, never
+// touches petProfiles/#10. POINT-FREE (D2 — care is its own reward). §7-NN
+// callables (Eventarc can't watch SE3 Firestore); accept/complete reuse the
+// existing LINE_CHANNEL_ACCESS_TOKEN secret for the owner/caretaker push (§7-WW).
+exports.postCaretakerRequest     = require('./postCaretakerRequest').postCaretakerRequest;
+exports.acceptCaretakerRequest   = require('./acceptCaretakerRequest').acceptCaretakerRequest;
+exports.completeCaretakerRequest = require('./completeCaretakerRequest').completeCaretakerRequest;
+exports.cancelCaretakerRequest   = require('./cancelCaretakerRequest').cancelCaretakerRequest;
+
 // Community requests board (Meaning Layer #3) — the micro-economy sibling of the
 // Helper board: a tenant asks to borrow/be-given an ITEM, a neighbour offers it,
 // the requester confirms received. open→offered→fulfilled (+cancelled), ONE
