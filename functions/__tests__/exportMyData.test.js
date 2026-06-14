@@ -19,6 +19,9 @@ let trustScoreDocs; // keyed by tenantId
 let petsDocs;       // keyed by `${building}/${roomId}` → [{ id, data() }]
 let petProfileDocs; // [{ id, data() }] returned for petProfiles where ownerTenantId
 let petLinkDocs;    // [{ id, data() }] returned for petLinks where requester|recipientTenantId
+let petAlertDocs;   // [{ id, data() }] returned for petAlerts where ownerTenantId (#13)
+let petPlaydateDocs;// [{ id, data() }] returned for petPlaydates where hostTenantId (#11)
+let caretakerDocs;  // [{ id, data() }] returned for caretakerRequests where requesterUid (#14)
 
 function resetStubs() {
   tenantDocs = {};
@@ -31,6 +34,9 @@ function resetStubs() {
   petsDocs = {};
   petProfileDocs = [];
   petLinkDocs = [];
+  petAlertDocs = [];
+  petPlaydateDocs = [];
+  caretakerDocs = [];
 }
 resetStubs();
 
@@ -115,6 +121,15 @@ Module._load = function (id, parent, ...rest) {
           // queried once per field (requesterTenantId / recipientTenantId); the
           // SUT dedups by doc id, so returning the same set both times is fine.
           return { where: () => ({ get: async () => ({ docs: petLinkDocs }) }) };
+        }
+        if (name === 'petAlerts') {
+          return { where: () => ({ get: async () => ({ docs: petAlertDocs }) }) };
+        }
+        if (name === 'petPlaydates') {
+          return { where: () => ({ get: async () => ({ docs: petPlaydateDocs }) }) };
+        }
+        if (name === 'caretakerRequests') {
+          return { where: () => ({ get: async () => ({ docs: caretakerDocs }) }) };
         }
         throw new Error('unexpected collection: ' + name);
       },
@@ -256,6 +271,28 @@ describe('exportMyData — auth gate', () => {
     const r = await handler({}, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
     assert.deepEqual(r.petProfiles, []);
     assert.deepEqual(r.petLinks, []);
+  });
+
+  it('includes the tenant\'s petAlerts + petPlaydates + caretakerRequests in the DSR export (#11/#13/#14)', async () => {
+    tenantDocs['rooms/15'] = { name: 'T15', tenantId: 't-15' };
+    petAlertDocs = [{ id: 'a1', data: () => ({ ownerTenantId: 't-15', petName: 'มะลิ', status: 'active' }) }];
+    petPlaydateDocs = [{ id: 'pd1', data: () => ({ hostTenantId: 't-15', title: 'นัดเล่นสวนหน้าตึก' }) }];
+    caretakerDocs = [{ id: 'cr1', data: () => ({ requesterUid: 'line:U1', need: 'ให้อาหารเช้า-เย็น' }) }];
+    const r = await handler({}, ctx({ uid: 'line:U1', room: '15', building: 'rooms', tenantId: 't-15' }));
+    assert.equal(r.petAlerts.length, 1);
+    assert.equal(r.petAlerts[0].petName, 'มะลิ');
+    assert.equal(r.petPlaydates.length, 1);
+    assert.equal(r.petPlaydates[0].title, 'นัดเล่นสวนหน้าตึก');
+    assert.equal(r.caretakerRequests.length, 1);
+    assert.equal(r.caretakerRequests[0].need, 'ให้อาหารเช้า-เย็น');
+  });
+
+  it('petAlerts/petPlaydates/caretakerRequests are empty arrays when the tenant has none', async () => {
+    tenantDocs['rooms/15'] = { name: 'T15', tenantId: 't-15' };
+    const r = await handler({}, ctx({ room: '15', building: 'rooms', tenantId: 't-15' }));
+    assert.deepEqual(r.petAlerts, []);
+    assert.deepEqual(r.petPlaydates, []);
+    assert.deepEqual(r.caretakerRequests, []);
   });
 
   it('export payload sanitises liffIdToken from liffUser', async () => {

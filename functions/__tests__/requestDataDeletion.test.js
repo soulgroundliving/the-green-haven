@@ -411,6 +411,27 @@ describe('requestDataDeletion — happy admin path', () => {
     assert.ok(state.firestoreDeletedPaths.includes('petLinks/p1_p9'));
     assert.ok(state.firestoreDeletedPaths.includes('petLinks/p2_p7'));
   });
+
+  it('cascades pet meaning-layer feeds — petAlerts + petPlaydates + caretakerRequests (#11/#13/#14)', async () => {
+    state.firestoreQueries['petAlerts|ownerTenantId==T_PLAYER_001'] = [
+      { id: 'a1', data: { ownerTenantId: 'T_PLAYER_001' } },
+    ];
+    state.firestoreQueries['petPlaydates|hostTenantId==T_PLAYER_001'] = [
+      { id: 'pd1', data: { hostTenantId: 'T_PLAYER_001' } },
+      { id: 'pd2', data: { hostTenantId: 'T_PLAYER_001' } },
+    ];
+    state.firestoreQueries['caretakerRequests|requesterUid==line:U_PLAYER'] = [
+      { id: 'cr1', data: { requesterUid: 'line:U_PLAYER' } },
+    ];
+    const res = await handler(validInput, adminCtx());
+    assert.equal(res.summary.deleted.petAlerts, 1);
+    assert.equal(res.summary.deleted.petPlaydates, 2);
+    assert.equal(res.summary.deleted.caretakerRequests, 1);
+    assert.ok(state.firestoreDeletedPaths.includes('petAlerts/a1'));
+    assert.ok(state.firestoreDeletedPaths.includes('petPlaydates/pd1'));
+    assert.ok(state.firestoreDeletedPaths.includes('petPlaydates/pd2'));
+    assert.ok(state.firestoreDeletedPaths.includes('caretakerRequests/cr1'));
+  });
 });
 
 // ── Idempotency ──────────────────────────────────────────────────────────────

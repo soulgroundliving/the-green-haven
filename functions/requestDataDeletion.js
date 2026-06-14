@@ -18,10 +18,12 @@
  * to archive the contract, then call this CF on the resulting player.
  *
  * Cascade is grouped into DELETE vs RETAIN buckets per PDPA §32(2):
- *   DELETE: checklists+storage, consents, liffUsers, RTDB
- *           complaints/maintenance, bookings (+KYC images, slips),
+ *   DELETE: checklists+storage, consents, pet social graph (profiles+links),
+ *           pet meaning-layer feeds (alerts #13 / playdates #11 / caretaker #14),
+ *           liffUsers, RTDB complaints/maintenance, bookings (+KYC images, slips),
  *           lineRetryQueue pending pushes, rateLimits prefix, all
- *           tenants/{b}/archive/{contractId} docs with this tenantId,
+ *           tenants/{b}/archive/{contractId} docs with this tenantId (incl. the
+ *           #16 farewellSummary field that archives with the doc),
  *           people/{tenantId} recursiveDelete.
  *   RETAIN: RTDB bills (Revenue Code §87 5yr), leases (Civil Code
  *           §193/34 5yr), payments, BigQuery audit archives
@@ -125,6 +127,40 @@ async function deletePetSocial(ctx, summary) {
     summary.deleted.petLinks = links;
   } catch (e) {
     summary.errors.push({ step: 'petSocial', error: e.message });
+  }
+}
+
+async function deletePetMeaningLayerFeeds(ctx, summary) {
+  // Pet meaning-layer feeds (#11 playdates / #13 alerts / #14 caretaker) — the
+  // departed tenant's own ephemeral pet-feature docs. The scheduled sweeps
+  // (cleanupPetAlerts/PetPlaydatesScheduled) already auto-expire these by time;
+  // this is the §32 immediate-erasure pass for any still-live doc they own.
+  // petAlerts/petPlaydates key the canonical tenantId (ownerTenantId/hostTenantId,
+  // same id as consents/trustScores); caretakerRequests keys requesterUid (its
+  // requesterTenantId is `building_room`, not the canonical id). All single-field
+  // equality (§7-N). NOTE: a residual attendee SNAPSHOT (name + pet emoji) inside
+  // ANOTHER tenant's still-open playdate is building-scoped + auto-expires via the
+  // sweep — accepted as a time-bounded residual under §32 + the ephemeral design.
+  const jobs = [];
+  if (ctx.tenantId) {
+    jobs.push(['petAlerts', firestore.collection('petAlerts').where('ownerTenantId', '==', ctx.tenantId)]);
+    jobs.push(['petPlaydates', firestore.collection('petPlaydates').where('hostTenantId', '==', ctx.tenantId)]);
+  }
+  if (ctx.authUid) {
+    jobs.push(['caretakerRequests', firestore.collection('caretakerRequests').where('requesterUid', '==', ctx.authUid)]);
+  }
+  for (const [name, baseQuery] of jobs) {
+    let n = 0;
+    try {
+      const snap = await baseQuery.limit(PAGE_SIZE).get();
+      for (const doc of snap.docs) {
+        try { await doc.ref.delete(); n++; }
+        catch (e) { summary.errors.push({ step: `${name}/${doc.id}`, error: e.message }); }
+      }
+    } catch (e) {
+      summary.errors.push({ step: `${name}.query`, error: e.message });
+    }
+    summary.deleted[name] = n;
   }
 }
 
@@ -456,6 +492,7 @@ async function handler(data, context) {
     () => deleteChecklistsByRoom(ctx, summary),
     () => deleteConsents(ctx, summary),
     () => deletePetSocial(ctx, summary),
+    () => deletePetMeaningLayerFeeds(ctx, summary),
     () => deleteLiffUser(ctx, summary),
     () => deleteRtdbPaths(ctx, summary),
     () => deleteBookingsByOwner(ctx, summary),
@@ -505,6 +542,7 @@ exports._helpers = {
   deleteChecklistsByRoom,
   deleteConsents,
   deletePetSocial,
+  deletePetMeaningLayerFeeds,
   deleteLiffUser,
   deleteRtdbPaths,
   deleteBookingsByOwner,
