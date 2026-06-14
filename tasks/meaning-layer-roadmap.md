@@ -35,12 +35,12 @@
 | — | Reputation v2 (engagement dim) | Trust | ✅ SHIPPED 2026-06-13 (#343 — additive engagement bonus, early) |
 | 9 | Pet health memory | Pet | ✅ SHIPPED (#327 — append-only timeline + DSR export) |
 | 10 | Pet Social Graph | Pet | ✅ SHIPPED — PR1 server (`f174f02`, callables+rules live) + PR2 frontend (`4dd1ba3`, directory+opt-in+friend UI, Vercel deployed); owner real-LINE live-verify pending |
-| 11 | Pet playdate booking | Pet | 🔴 after #10 |
-| 12 | Pet-friendly matching floors | Pet | 🔴 after #10 |
-| 13 | Lost pet alert | Pet | 🔴 buildable now |
-| 14 | Emergency caretaker | Pet | 🔴 after #10 |
+| 11 | Pet playdate booking | Pet | ✅ SHIPPED ([#385](https://github.com/soulgroundliving/the-green-haven/pull/385)) — `petPlaydates` + atomic capacity tx (clone of facility-booking); owner real-LINE verify pending |
+| 12 | Pet-friendly matching floors | Pet | 🔴 after #10 — DEFERRED (not built) |
+| 13 | Lost pet alert | Pet | ✅ SHIPPED ([#384](https://github.com/soulgroundliving/the-green-haven/pull/384) + §7-GG deep-link #387) — building-wide 🆘 broadcast, CF-deployed; owner real-LINE 🆘 test pending |
+| 14 | Emergency caretaker | Pet | ✅ SHIPPED ([#386](https://github.com/soulgroundliving/the-green-haven/pull/386)) — `caretakerRequests` per-request pet-sitting board (mirror of #2) |
 | 15 | Life Timeline | Tenant | ✅ SHIPPED ([#335](https://github.com/soulgroundliving/the-green-haven/pull/335)) — owner real-LINE verify pending |
-| 16 | Farewell Archive + AI Summary | Tenant | 🟡 v1 SHIPPED ([#336](https://github.com/soulgroundliving/the-green-haven/pull/336)) — AI summary = v2 |
+| 16 | Farewell Archive + AI Summary | Tenant | ✅ SHIPPED — v1 card ([#336](https://github.com/soulgroundliving/the-green-haven/pull/336)) + v2 AI summary ([#383](https://github.com/soulgroundliving/the-green-haven/pull/383), `composeFarewellSummary`); ⛔ PDPA DSR cascade pending before 🎁 used on a real tenant |
 
 **Sequencing logic:** capture flows (1–5) first because they unlock the retention-moat scores (6–8 = blueprint Core Metric 3 "Emotional Lock-in") → then Pet ecosystem (9–14) → then Tenant memory (15–16). Within a pillar, build the shared primitive (e.g. #10 graph) before its consumers (#11/#12/#14).
 
@@ -136,7 +136,7 @@ Added the engagement-consistency dimension to #0 as an **ADDITIVE, positive-only
 **Captures (proposed):** public pet profile (opt-in) + `petLinks/{id}` (friend edges). Foundation for #11/#12/#14.
 **Depends / Reuses:** pet registry. **Gate:** none. **Guardrails:** owner consent to make a pet profile building-visible (PDPA opt-in).
 
-### 11 — Pet playdate booking · 🔴 after #10
+### 11 — Pet playdate booking · ✅ SHIPPED 2026-06-14 (PR #385)
 **What:** "ระบบนัดหมายกลุ่มเล่นของสัตว์เลี้ยง (Pet playdate booking)."
 **Captures (proposed):** `petPlaydates/{id}` slot + attendees, atomic conflict-check.
 **Depends:** #10. **Reuses:** facility-booking atomic tx (verified: `functions/createFacilityBooking.js` + `shared/facility-booking.js`) — clone the slot/lock pattern.
@@ -146,13 +146,13 @@ Added the engagement-consistency dimension to #0 as an **ADDITIVE, positive-only
 **What:** "จับคู่อยู่อาศัยในชั้นที่เป็นมิตรต่อสัตว์เลี้ยงประเภทเดียวกัน."
 **Captures:** derived suggestion from #10 graph + pet type + room/floor data. **Depends:** #10. **Gate:** none.
 
-### 13 — Lost pet alert · 🔴 buildable now
+### 13 — Lost pet alert · ✅ SHIPPED 2026-06-14 (PR #384 + §7-GG #387)
 **What:** "วันนี้แมวหาย" → urgent building-wide broadcast so everyone watches.
 **Captures (proposed):** `petAlerts/{id}` (active flag, photo, last-seen) → fan-out push.
 **Depends / Reuses:** LINE notification + broadcast infra (verified: `shared/broadcasts.js`, [[lifecycle_line_notification]]).
 **Gate:** none. **Guardrails:** rate-limit (no alert spam); auto-expire.
 
-### 14 — Emergency caretaker · 🔴 after #10
+### 14 — Emergency caretaker · ✅ SHIPPED 2026-06-14 (PR #386)
 **What:** "ระบบหาคนช่วยดูแลยามฉุกเฉิน."
 **Captures (proposed):** caretaker opt-in flag on pet profile + a request→accept flow (mirror #2). **Depends:** #10 (+ #2 pattern). **Gate:** none.
 
@@ -164,7 +164,7 @@ Added the engagement-consistency dimension to #0 as an **ADDITIVE, positive-only
 **Captures:** mostly **reads existing data** (lease start, milestones, events) + a few milestone markers. Low-risk — derive a timeline view from data already captured.
 **Depends / Reuses:** lease (`leases/{b}/list`), occupancyLog, events. **Gate:** none.
 
-### 16 — Farewell Archive + AI Summary · 🟡 v1 SHIPPED 2026-06-12 (PR #336)
+### 16 — Farewell Archive + AI Summary · ✅ SHIPPED — v1 card 2026-06-12 (#336) + v2 AI 2026-06-14 (#383); ⛔ PDPA DSR cascade pending before 🎁 use
 **Shipped (v1, no AI):** a derive-only farewell / journey-summary card at the top of the 🪴 Life Timeline page (`#tlf-card`) — built ENTIRELY from the tenant's own doc `tenants/{b}/list/{r}` (no new collection / index / capture / CF). Tenure + a 2×2 stat grid (🏅 badges · ✨ points · 🤝 trades · 🔥 streak) + a warm message that shifts to a FAREWELL tone when `lease.endDate ≤ 45d` or `status:ended` (the only client-readable move-out signal — `leaseRequests` is admin-read-only). Always visible (testable now). `shared/tenant-farewell.js` (pure `deriveFarewell()` 12 tests) + `.tlf-*` (components.css) + `#tlf-card` slot + `showSubPage` hook. Static-harness light + dark (§7-III). **Open:** owner real-LINE live-verify. Lifecycle: [[lifecycle_farewell]] (write on merge).
 **What (v2):** on move-out — "Memory wall" + AI summary of the tenant's life in the community, gifted before they leave.
 **Captures / Reuses:** `archiveTenantOnMoveOut` already moves docs to `archive/{contractId}/*` (verified earlier) — add a memory-wall compose + AI summary step (callable). **Depends:** #15 helps. **Gate:** none. **Guardrails:** PDPA (summary = personal data, consent + DSR); AI cost/latency = callable not inline.

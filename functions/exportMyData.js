@@ -25,6 +25,9 @@
  *   pets: [...],                      // tenants/{b}/list/{r}/pets/* incl. healthLog[]
  *   petProfiles: [...],               // petProfiles/* the tenant published (#10)
  *   petLinks: [...],                  // petLinks/* the tenant is a party to (#10)
+ *   petAlerts: [...],                 // petAlerts/* the tenant raised (#13)
+ *   petPlaydates: [...],              // petPlaydates/* the tenant hosted (#11)
+ *   caretakerRequests: [...],         // caretakerRequests/* the tenant posted (#14)
  *   complaints: [...],                // RTDB complaints/{building}/{room}
  *   maintenance: [...],               // RTDB maintenance/{building}/{room}
  *   bills: [...]                      // RTDB bills/{building}/{room}
@@ -200,6 +203,40 @@ exports.exportMyData = functions
       }
     }
 
+    // ---- pet meaning-layer feeds (#11/#13/#14) ----
+    // The tenant's own pet-feature docs are personal data (pet name + room +
+    // free-text notes, some published building-wide) — PDPA §30. All single-field
+    // equality queries (§7-N auto-indexed): petAlerts/petPlaydates key the canonical
+    // tenantId (ownerTenantId / hostTenantId — same id as consents/trustScores);
+    // caretakerRequests keys requesterUid (its requesterTenantId is `building_room`,
+    // NOT the canonical id). (farewellSummary #16 already rides in `tenant` above.)
+    const petAlerts = [];
+    const petPlaydates = [];
+    const caretakerRequests = [];
+    if (effectiveTenantId) {
+      try {
+        const q = await firestore.collection('petAlerts')
+          .where('ownerTenantId', '==', effectiveTenantId).get();
+        q.docs.forEach(d => petAlerts.push({ id: d.id, ...d.data() }));
+      } catch (err) {
+        console.warn('[exportMyData] petAlerts query failed:', err.message);
+      }
+      try {
+        const q = await firestore.collection('petPlaydates')
+          .where('hostTenantId', '==', effectiveTenantId).get();
+        q.docs.forEach(d => petPlaydates.push({ id: d.id, ...d.data() }));
+      } catch (err) {
+        console.warn('[exportMyData] petPlaydates query failed:', err.message);
+      }
+    }
+    try {
+      const q = await firestore.collection('caretakerRequests')
+        .where('requesterUid', '==', authUid).get();
+      q.docs.forEach(d => caretakerRequests.push({ id: d.id, ...d.data() }));
+    } catch (err) {
+      console.warn('[exportMyData] caretakerRequests query failed:', err.message);
+    }
+
     // ---- RTDB: complaints, maintenance, bills ----
     const db = admin.database();
     const [complaints, maintenance, bills] = await Promise.all([
@@ -226,6 +263,9 @@ exports.exportMyData = functions
       pets,
       petProfiles,
       petLinks,
+      petAlerts,
+      petPlaydates,
+      caretakerRequests,
       complaints,
       maintenance,
       bills,
