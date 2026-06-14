@@ -42,6 +42,17 @@
   var MAX_LAST_SEEN_LEN = 200;       // mirrors functions/_petAlertEngine.js
   var MAX_CONTACT_LEN = 200;
 
+  // §7-GG: LIFF's auth handshake can DROP ?query= before _maybeRoute() runs (it
+  // fires on _onLiffClaimsReady, AFTER auth). Capture the ?page=pet-alert intent
+  // into localStorage NOW — at module load (this <script> at tenant_app.html runs
+  // before tenant-liff-auth's flow) — so the 🆘 Flex deep-link survives a stripped
+  // query. _maybeRoute() recovers + clears it on route (one-shot, never sticky).
+  var DEEPLINK_LS_KEY = 'petAlertDeepLink';
+  try {
+    var _dlPage = (new URLSearchParams(window.location.search).get('page') || '').toLowerCase();
+    if (_dlPage === 'pet-alert' || _dlPage === 'pet-alert-page') localStorage.setItem(DEEPLINK_LS_KEY, '1');
+  } catch (_) {}
+
   // ── PURE helpers (tested; safe in the node test realm) ──────────────────────
 
   /** Trim + length-cap the free-text "last seen". Mirrors the engine safeLastSeen. */
@@ -418,8 +429,13 @@
     if (_routedOnce) return;
     var target = '';
     try { target = (new URLSearchParams(window.location.search).get('page') || '').toLowerCase(); } catch (_) {}
-    if (target === 'pet-alert' || target === 'pet-alert-page') {
+    var wantAlert = (target === 'pet-alert' || target === 'pet-alert-page');
+    // §7-GG fallback: recover the intent persisted at module load if a LIFF
+    // redirect stripped the query between load and now.
+    if (!wantAlert) { try { wantAlert = localStorage.getItem(DEEPLINK_LS_KEY) === '1'; } catch (_) {} }
+    if (wantAlert) {
       _routedOnce = true;
+      try { localStorage.removeItem(DEEPLINK_LS_KEY); } catch (_) {}  // one-shot — never sticky
       if (typeof window.showSubPage === 'function') { try { window.showSubPage('pet-alert-page'); } catch (_) {} }
     }
   }
