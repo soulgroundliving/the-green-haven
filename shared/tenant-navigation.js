@@ -97,6 +97,7 @@ window.showSubPage = function showSubPage(id) {
     if (id === 'life-timeline' && typeof window.renderFarewell === 'function') window.renderFarewell();
     if (id === 'life-timeline' && typeof window.renderNeighborBonds === 'function') window.renderNeighborBonds();
     if (id === 'pet-directory-page' && typeof window.renderPetDirectory === 'function') window.renderPetDirectory();
+    if (id === 'pet-alert-page' && typeof window.renderPetAlerts === 'function') window.renderPetAlerts();
 
     window.scrollTo(0, 0);
 };
