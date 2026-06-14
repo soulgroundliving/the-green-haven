@@ -500,6 +500,40 @@ describe('helpRequests — building-scoped read, CF-only write (Meaning Layer #2
   });
 });
 
+describe('caretakerRequests — building-scoped read, CF-only write (Meaning Layer #14)', () => {
+  it('admin can read any building\'s caretaker request', async () => {
+    await seedDoc('caretakerRequests/k1', { building: 'nest', room: 'N1', status: 'open' });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'caretakerRequests/k1')));
+  });
+
+  it('LIFF tenant can read a request in their OWN building', async () => {
+    await seedDoc('caretakerRequests/k1', { building: 'rooms', room: '101', status: 'open' });
+    await assertSucceeds(getDoc(doc(LIFF_TENANT().firestore(), 'caretakerRequests/k1')));
+  });
+
+  it('LIFF tenant CANNOT read a request in a DIFFERENT building (PDPA scope)', async () => {
+    await seedDoc('caretakerRequests/k1', { building: 'nest', room: 'N1', status: 'open' });
+    await assertFails(getDoc(doc(LIFF_TENANT().firestore(), 'caretakerRequests/k1')));
+  });
+
+  it('anonymous user (no building claim) CANNOT read', async () => {
+    await seedDoc('caretakerRequests/k1', { building: 'rooms', room: '101', status: 'open' });
+    await assertFails(getDoc(doc(ANON().firestore(), 'caretakerRequests/k1')));
+  });
+
+  it('LIFF tenant CANNOT client-write — create or update (CF-only)', async () => {
+    await assertFails(addDoc(collection(LIFF_TENANT().firestore(), 'caretakerRequests'),
+      { building: 'rooms', room: '101', petName: 'x', status: 'open' }));
+    await seedDoc('caretakerRequests/k1', { building: 'rooms', status: 'open' });
+    await assertFails(updateDoc(doc(LIFF_TENANT().firestore(), 'caretakerRequests/k1'), { status: 'accepted' }));
+  });
+
+  it('admin CANNOT client-write either (every transition is a callable)', async () => {
+    await assertFails(addDoc(collection(EMAIL_ADMIN().firestore(), 'caretakerRequests'),
+      { building: 'rooms', petName: 'x', status: 'open' }));
+  });
+});
+
 describe('communityRequests — building-scoped read, CF-only write (Meaning Layer #3)', () => {
   it('admin can read any building\'s community request', async () => {
     await seedDoc('communityRequests/c1', { building: 'nest', room: 'N1', status: 'open' });
