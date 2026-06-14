@@ -113,6 +113,20 @@ service cloud.firestore {
                     && resource.data.building == request.auth.token.building);
       allow write: if false;
     }
+    // Pet Playdate booking (Meaning Layer #11) — a tenant opens a playdate slot,
+    // neighbours' pets join up to a capacity. Same building-scoped read + CF-only-
+    // write contract as the boards above: a tenant sees ONLY their own building's
+    // playdates (PDPA scope); every transition is a callable (createPetPlaydate /
+    // joinPetPlaydate / leavePetPlaydate / cancelPetPlaydate — admin SDK bypasses
+    // rules). The atomic capacity/dup guard runs inside joinPetPlaydate's tx.
+    // Attendee snapshots carry only safe display fields (name + type emoji); health
+    // /vaccine NEVER live here.
+    match /petPlaydates/{playdateId} {
+      allow read:  if isAdmin()
+                || (isSignedIn() && request.auth.token.building != null
+                    && resource.data.building == request.auth.token.building);
+      allow write: if false;
+    }
     // Trade history memory (Meaning Layer #5) — durable record of every completed
     // marketplace trade. PERSONAL, not building-scoped: the owner reads their own
     // trade log (resource.data.ownerUid == auth.uid); admin reads all (the
