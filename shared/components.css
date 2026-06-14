@@ -2049,3 +2049,75 @@ body.gh-tour-open {
    hardcoded pale danger pill needs a nudge. Light mode untouched (§7-III). */
 [data-theme="dark"] .pet-alert__pill--live { background: #3a1d1d; color: #fca5a5; }
 [data-theme="dark"] .pet-alert__avatar { background-color: #19302a; }
+
+/* ── Pet match suggestions (Meaning Layer #12) — tenant #pet-match-list. Rendered
+   by shared/tenant-pet-matching.js (escaped, §7-X). Token-driven so it dark-flips
+   via the brand.css aliases (--card/--text/--text-muted/--border-subtle/--green)
+   the directory + #13/#16 cards already use; static here, never a JS-injected
+   <style> (§7-RR). Mirrors .pet-dir__*/.pet-alert__* vocabulary. */
+.pet-match { display: flex; flex-direction: column; }
+.pet-match__muted,
+.pet-match__empty {
+  text-align: center; padding: 2.2rem 1rem;
+  color: var(--text-muted, #8a8f98); font-size: 0.9rem; line-height: 1.5;
+}
+.pet-match__empty {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  background: var(--green-pale, #f3f7f3); border-radius: 14px; margin: 6px 0 12px;
+}
+.pet-match__lead {
+  margin: 4px 2px 14px; font-size: var(--fs-sm, 0.86rem); line-height: 1.55;
+  color: var(--text-muted, #6b7280);
+}
+.pet-match__card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; margin: 0 0 10px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border-subtle, #ebe9e2);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+/* The strongest match gets a quiet green accent edge — hierarchy, not noise. */
+.pet-match__card--top { border-left: 3px solid var(--green, #2d8653); }
+.pet-match__avatar {
+  width: 48px; height: 48px; flex-shrink: 0; overflow: hidden;
+  border-radius: 14px; background: var(--green-pale, #eef5ee);
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
+}
+.pet-match__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pet-match__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pet-match__name { font-size: 0.98rem; font-weight: 800; color: var(--text, #2c2c2c); }
+.pet-match__sub { font-size: var(--fs-sm, 0.82rem); color: var(--text-muted, #8a8f98); line-height: 1.4; }
+.pet-match__sub--room { font-size: var(--fs-xs, 0.76rem); }
+.pet-match__chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.pet-match__chip {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 600;
+  background: var(--green-pale, #eef5ee); color: var(--green-dark, #1a5c38);
+}
+.pet-match__pill {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 700;
+}
+.pet-match__pill--friend { background: var(--surface-sunken, #f1f3f0); color: var(--text-muted, #8a8f98); }
+.pet-match__btn {
+  flex-shrink: 0; border: none; border-radius: 12px; padding: 8px 13px;
+  font-family: inherit; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; transition: transform 0.12s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+.pet-match__btn:active { transform: scale(0.97); }
+.pet-match__btn--ghost {
+  background: transparent; color: var(--green, #2d8653);
+  border: 1px solid var(--green, #2d8653); white-space: nowrap;
+}
+.pet-match__btn--primary { width: 100%; background: var(--green, #2d8653); color: #fff; padding: 11px 16px; font-size: 0.9rem; }
+.pet-match__btn--primary:hover { background: var(--green-dark, #1a5c38); }
+.pet-match__foot { margin-top: 8px; }
+
+/* Dark mode: brand tokens (--card/--text/--green) already flip; only the hardcoded
+   green-pale tints read muddy on the dark card, so nudge them (§7-III). */
+[data-theme="dark"] .pet-match__chip { background: #19302a; color: #8fe9c4; }
+[data-theme="dark"] .pet-match__avatar { background-color: #19302a; }
+[data-theme="dark"] .pet-match__empty { background: #19302a; color: #cdd6cf; }
+[data-theme="dark"] .pet-match__pill--friend { background: #20242a; color: #9aa3ad; }

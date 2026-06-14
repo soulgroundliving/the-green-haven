@@ -36,7 +36,7 @@
 | 9 | Pet health memory | Pet | ✅ SHIPPED (#327 — append-only timeline + DSR export) |
 | 10 | Pet Social Graph | Pet | ✅ SHIPPED — PR1 server (`f174f02`, callables+rules live) + PR2 frontend (`4dd1ba3`, directory+opt-in+friend UI, Vercel deployed); owner real-LINE live-verify pending |
 | 11 | Pet playdate booking | Pet | ✅ SHIPPED ([#385](https://github.com/soulgroundliving/the-green-haven/pull/385)) — `petPlaydates` + atomic capacity tx (clone of facility-booking); owner real-LINE verify pending |
-| 12 | Pet-friendly matching floors | Pet | 🔴 after #10 — DEFERRED (not built) |
+| 12 | Pet-friendly matching floors | Pet | ✅ SHIPPED 2026-06-14 — derive-only `tenant-pet-matching.js`: ranks #10 `petProfiles` by pet-type + floor proximity (hundreds-digit, per config-unified) → funnels to the directory; zero new infra |
 | 13 | Lost pet alert | Pet | ✅ SHIPPED ([#384](https://github.com/soulgroundliving/the-green-haven/pull/384) + §7-GG deep-link #387) — building-wide 🆘 broadcast, CF-deployed; owner real-LINE 🆘 test pending |
 | 14 | Emergency caretaker | Pet | ✅ SHIPPED ([#386](https://github.com/soulgroundliving/the-green-haven/pull/386)) — `caretakerRequests` per-request pet-sitting board (mirror of #2) |
 | 15 | Life Timeline | Tenant | ✅ SHIPPED ([#335](https://github.com/soulgroundliving/the-green-haven/pull/335)) — owner real-LINE verify pending |
@@ -142,7 +142,7 @@ Added the engagement-consistency dimension to #0 as an **ADDITIVE, positive-only
 **Depends:** #10. **Reuses:** facility-booking atomic tx (verified: `functions/createFacilityBooking.js` + `shared/facility-booking.js`) — clone the slot/lock pattern.
 **Gate:** none.
 
-### 12 — Pet-friendly matching floors · 🔴 after #10
+### 12 — Pet-friendly matching floors · ✅ SHIPPED 2026-06-14
 **What:** "จับคู่อยู่อาศัยในชั้นที่เป็นมิตรต่อสัตว์เลี้ยงประเภทเดียวกัน."
 **Captures:** derived suggestion from #10 graph + pet type + room/floor data. **Depends:** #10. **Gate:** none.
 
